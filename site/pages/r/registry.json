@@ -55,7 +55,7 @@
       "description": "The narrow shadcn Nova Dialog visual port backed by Base GPUI behavior.",
       "registryDependencies": [
         "https://raw.githubusercontent.com/devaryakjha/ui/3f7a78825d4ca05c49b4152495e4f183ed3e2e17/site/pages/r/theme.json",
-        "https://raw.githubusercontent.com/devaryakjha/ui/3d6b0f92051365867e504035038a69730b985b21/site/pages/r/button.json"
+        "https://raw.githubusercontent.com/devaryakjha/ui/4cdc205f47de6b906f960ac4062189f9d0cd1ce2/site/pages/r/button.json"
       ],
       "files": [
         {
