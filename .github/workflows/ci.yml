@@ -36,3 +36,24 @@ jobs:
           npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
           cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
       - run: cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-08-17
+          targets: wasm32-unknown-unknown
+          components: rust-src
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: site
+      - uses: jetli/trunk-action@v0.5.0
+        with:
+          version: "v0.21.14"
+      - name: Build shared GPUI/WASM preview
+        working-directory: site
+        env:
+          CARGO_UNSTABLE_BUILD_STD: std,panic_abort
+        run: trunk build --release --public-url /ui/demo/
