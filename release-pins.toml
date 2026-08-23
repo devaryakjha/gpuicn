@@ -1,0 +1,21 @@
+[rust]
+toolchain = "1.95.0"
+
+[shadcn]
+version = "4.19.0"
+commit = "1773ecfeeb4a04366978d353e69b5c7ded78dcb2"
+style = "nova"
+base = "base-ui"
+theme = "neutral"
+font_sans = "geist"
+font_mono = "geist-mono"
+
+[base_gpui]
+commit = "64b22337b6a790c636aab248e768e4875bb28ba8"
+
+[gpui]
+version = "0.2.2"
+commit = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d"
+
+[wasm]
+wasm_bindgen = "0.2.120"

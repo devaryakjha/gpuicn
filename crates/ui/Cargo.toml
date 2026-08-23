@@ -1,0 +1,26 @@
+[package]
+name = "imajha-ui"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Open-code shadcn visual ports for GPUI."
+publish = false
+
+[features]
+native-fixture = ["dep:gpui_platform"]
+
+[dependencies]
+gpui.workspace = true
+gpui_platform = { workspace = true, optional = true }
+
+[dev-dependencies]
+gpui = { workspace = true, features = ["test-support"] }
+
+[[example]]
+name = "theme_native"
+required-features = ["native-fixture"]
+
+[lints.rust]
+missing_docs = "deny"
