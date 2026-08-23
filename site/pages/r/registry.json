@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "imajha/ui",
+  "homepage": "https://devaryakjha.github.io/ui/",
+  "items": [
+    {
+      "name": "theme",
+      "type": "registry:theme",
+      "title": "Neutral theme",
+      "description": "The app-owned shadcn Neutral light and dark theme for GPUI.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        }
+      ]
+    }
+  ]
+}
