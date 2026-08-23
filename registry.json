@@ -47,6 +47,23 @@
           "target": "~/src/ui/checkbox.rs"
         }
       ]
+    },
+    {
+      "name": "dialog",
+      "type": "registry:ui",
+      "title": "Dialog",
+      "description": "The narrow shadcn Nova Dialog visual port backed by Base GPUI behavior.",
+      "registryDependencies": [
+        "https://raw.githubusercontent.com/devaryakjha/ui/5cef8a15dad3093fd00ca83d9ff122a055311167/site/pages/r/theme.json",
+        "https://raw.githubusercontent.com/devaryakjha/ui/3d6b0f92051365867e504035038a69730b985b21/site/pages/r/button.json"
+      ],
+      "files": [
+        {
+          "path": "registry/dialog/dialog.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/dialog.rs"
+        }
+      ]
     }
   ]
 }
