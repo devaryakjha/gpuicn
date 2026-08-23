@@ -1,0 +1,69 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "imajha/ui",
+  "homepage": "https://devaryakjha.github.io/ui/",
+  "items": [
+    {
+      "name": "theme",
+      "type": "registry:item",
+      "title": "Neutral theme",
+      "description": "The app-owned shadcn Neutral light and dark theme for GPUI.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        }
+      ]
+    },
+    {
+      "name": "button",
+      "type": "registry:item",
+      "title": "Button",
+      "description": "The shadcn Nova Button visual port backed by Base GPUI behavior.",
+      "registryDependencies": [
+        "https://raw.githubusercontent.com/devaryakjha/ui/3f7a78825d4ca05c49b4152495e4f183ed3e2e17/site/pages/r/theme.json"
+      ],
+      "files": [
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        }
+      ]
+    },
+    {
+      "name": "checkbox",
+      "type": "registry:item",
+      "title": "Checkbox",
+      "description": "The shadcn Nova Checkbox visual port backed by Base GPUI behavior.",
+      "registryDependencies": [
+        "https://raw.githubusercontent.com/devaryakjha/ui/3f7a78825d4ca05c49b4152495e4f183ed3e2e17/site/pages/r/theme.json"
+      ],
+      "files": [
+        {
+          "path": "registry/checkbox/checkbox.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/checkbox.rs"
+        }
+      ]
+    },
+    {
+      "name": "dialog",
+      "type": "registry:item",
+      "title": "Dialog",
+      "description": "The narrow shadcn Nova Dialog visual port backed by Base GPUI behavior.",
+      "registryDependencies": [
+        "https://raw.githubusercontent.com/devaryakjha/ui/3f7a78825d4ca05c49b4152495e4f183ed3e2e17/site/pages/r/theme.json",
+        "https://raw.githubusercontent.com/devaryakjha/ui/4cdc205f47de6b906f960ac4062189f9d0cd1ce2/site/pages/r/button.json"
+      ],
+      "files": [
+        {
+          "path": "registry/dialog/dialog.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/dialog.rs"
+        }
+      ]
+    }
+  ]
+}

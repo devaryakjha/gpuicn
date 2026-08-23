@@ -1,0 +1,58 @@
+name: Deploy catalog
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  CARGO_BUILD_JOBS: "2"
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-08-17
+          targets: wasm32-unknown-unknown
+          components: rust-src
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: site
+      - uses: jetli/trunk-action@v0.5.0
+        with:
+          version: "v0.21.14"
+      - name: Build GPUI/WASM previews
+        working-directory: site
+        env:
+          CARGO_UNSTABLE_BUILD_STD: std,panic_abort
+        run: trunk build --release --public-url /ui/demo/
+      - name: Add catalog pages
+        run: |
+          cp -R site/pages/. site/dist/
+          cp site/coi-serviceworker.js site/dist/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

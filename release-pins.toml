@@ -1,0 +1,37 @@
+[rust]
+toolchain = "1.95.0"
+
+[shadcn]
+version = "4.19.0"
+commit = "1773ecfeeb4a04366978d353e69b5c7ded78dcb2"
+style = "nova"
+base = "base-ui"
+theme = "neutral"
+font_sans = "geist"
+font_mono = "geist-mono"
+
+[base_gpui]
+commit = "64b22337b6a790c636aab248e768e4875bb28ba8"
+
+[gpui]
+version = "0.2.2"
+commit = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d"
+
+[gpui_icons]
+version = "0.1.0"
+commit = "53a54cfe5efc8eacb546de0c9742339b667381b2"
+lucide_version = "1.33.0"
+lucide_commit = "59978cecf84986af59f1f9f503bcebdc89c6d166"
+
+[geist]
+version = "1.7.1"
+commit = "8b8b75fa63e339db10a3cd52fb28536615b5cc63"
+license = "OFL-1.1"
+sans_regular_sha256 = "85a1c6b18a6b0a06dfe9fd4f6d6a5d4979f74ec861eaef4bc7868b5492b8a117"
+sans_medium_sha256 = "3a3b36f0d0b981f4857f7f00eeef4a5ee123605575d362ab31ee7c19e3d11f2f"
+mono_regular_sha256 = "5a0de4b3d54ab272f76a1d8c84b7fb24c67bbec6591d5300e61c7bc10094b6c8"
+
+[wasm]
+rust = "nightly-2026-08-17"
+wasm_bindgen = "0.2.120"
+trunk = "0.21.14"

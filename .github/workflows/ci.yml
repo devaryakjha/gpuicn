@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+env:
+  CARGO_BUILD_JOBS: "2"
+  CARGO_INCREMENTAL: "0"
+  CARGO_TARGET_DIR: target
+
+jobs:
+  rust:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.95.0
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo test -p imajha-ui --lib --locked
+      - run: cargo clippy -p imajha-ui --lib --tests --locked -- -D warnings
+      - run: cargo check -p imajha-ui-showcase --locked
+      - name: Verify stock registry install
+        run: |
+          npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
+          npx -y shadcn@4.19.0 add "$PWD/site/pages/r/checkbox.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
+          cmp registry/theme/theme.rs fixtures/registry-install/src/ui/theme.rs
+          cmp registry/button/button.rs fixtures/registry-install/src/ui/button.rs
+          cmp registry/checkbox/checkbox.rs fixtures/registry-install/src/ui/checkbox.rs
+          cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
+          perl -0pi -e 's/The narrow shadcn Nova Dialog visual port/Changed by the overwrite gate/' fixtures/registry-install/src/ui/dialog.rs
+          npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
+          cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
+      - run: cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-08-17
+          targets: wasm32-unknown-unknown
+          components: rust-src
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: site
+      - uses: jetli/trunk-action@v0.5.0
+        with:
+          version: "v0.21.14"
+      - name: Build shared GPUI/WASM preview
+        working-directory: site
+        env:
+          CARGO_UNSTABLE_BUILD_STD: std,panic_abort
+        run: trunk build --release --public-url /ui/demo/
