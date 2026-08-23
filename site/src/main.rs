@@ -15,7 +15,7 @@ use imajha_ui::{
 
 #[cfg(target_family = "wasm")]
 #[wasm_bindgen::prelude::wasm_bindgen(
-    inline_js = "export function previewReady(){window.parent.postMessage({imajhaUi:'preview-ready'},'*')}"
+    inline_js = "export function previewReady(){let sent=false;const send=()=>{if(sent)return;sent=true;document.documentElement.dataset.imajhaUiReady='true';window.parent.postMessage({imajhaUi:'preview-ready'},'*')};requestAnimationFrame(()=>requestAnimationFrame(send));setTimeout(send,1000)}"
 )]
 extern "C" {
     #[wasm_bindgen::prelude::wasm_bindgen(js_name = previewReady)]
@@ -70,8 +70,6 @@ fn launch(cx: &mut App) {
             ..Default::default()
         },
         move |_window, cx| {
-            #[cfg(target_family = "wasm")]
-            _window.on_next_frame(|window, _| window.on_next_frame(|_, _| preview_ready()));
             cx.new(move |_| Showcase {
                 demo,
                 count: 0,
@@ -80,6 +78,8 @@ fn launch(cx: &mut App) {
         },
     )
     .expect("failed to open showcase window");
+    #[cfg(target_family = "wasm")]
+    preview_ready();
     #[cfg(target_family = "wasm")]
     cx.activate(true);
     #[cfg(not(target_family = "wasm"))]
