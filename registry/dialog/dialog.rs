@@ -117,6 +117,7 @@ pub fn dialog_description(id: impl Into<ElementId>, cx: &App) -> DialogDescripti
 /// Creates the styled, icon-only Dialog close control.
 pub fn dialog_close(id: impl Into<ElementId>, cx: &App) -> DialogClose<()> {
     let theme = UiTheme::read(cx).clone();
+    let icon_color = theme.colors.popover_foreground;
     DialogClose::new()
         .id(id)
         .aria_label("Close")
@@ -132,5 +133,5 @@ pub fn dialog_close(id: impl Into<ElementId>, cx: &App) -> DialogClose<()> {
                 &theme,
             )
         })
-        .child(lucide(LucideIcon::X).size(px(16.0)))
+        .child(lucide(LucideIcon::X).size(px(16.0)).text_color(icon_color))
 }

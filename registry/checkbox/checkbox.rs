@@ -98,6 +98,7 @@ impl Checkbox {
 impl RenderOnce for Checkbox {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
+        let indicator_color = theme.colors.primary_foreground;
         let mut root = CheckboxRoot::new()
             .id(self.id)
             .default_checked(self.default_checked)
@@ -117,7 +118,11 @@ impl RenderOnce for Checkbox {
                     .style_with_state(|state, base| {
                         base.opacity(if show_check(state.root) { 1.0 } else { 0.0 })
                     })
-                    .child(lucide(LucideIcon::Check).size(px(14.0))),
+                    .child(
+                        lucide(LucideIcon::Check)
+                            .size(px(14.0))
+                            .text_color(indicator_color),
+                    ),
             )
             .child(
                 CheckboxIndicator::new()
@@ -130,7 +135,11 @@ impl RenderOnce for Checkbox {
                     .style_with_state(|state, base| {
                         base.opacity(if show_minus(state.root) { 1.0 } else { 0.0 })
                     })
-                    .child(lucide(LucideIcon::Minus).size(px(14.0))),
+                    .child(
+                        lucide(LucideIcon::Minus)
+                            .size(px(14.0))
+                            .text_color(indicator_color),
+                    ),
             );
 
         if let Some(checked) = self.checked {
