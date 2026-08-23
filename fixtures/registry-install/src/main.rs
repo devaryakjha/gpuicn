@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod ui;
 
 use gpui_icons::LucideAssetSource;

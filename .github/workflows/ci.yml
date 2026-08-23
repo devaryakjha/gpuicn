@@ -8,6 +8,7 @@ on:
 env:
   CARGO_BUILD_JOBS: "2"
   CARGO_INCREMENTAL: "0"
+  CARGO_TARGET_DIR: target
 
 jobs:
   rust:
@@ -23,3 +24,15 @@ jobs:
       - run: cargo test -p imajha-ui --lib --locked
       - run: cargo clippy -p imajha-ui --lib --tests --locked -- -D warnings
       - run: cargo check -p imajha-ui-showcase --locked
+      - name: Verify stock registry install
+        run: |
+          npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
+          npx -y shadcn@4.19.0 add "$PWD/site/pages/r/checkbox.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
+          cmp registry/theme/theme.rs fixtures/registry-install/src/ui/theme.rs
+          cmp registry/button/button.rs fixtures/registry-install/src/ui/button.rs
+          cmp registry/checkbox/checkbox.rs fixtures/registry-install/src/ui/checkbox.rs
+          cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
+          perl -0pi -e 's/The narrow shadcn Nova Dialog visual port/Changed by the overwrite gate/' fixtures/registry-install/src/ui/dialog.rs
+          npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
+          cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
+      - run: cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked
