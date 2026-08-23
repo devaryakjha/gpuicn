@@ -180,105 +180,101 @@ impl UiTheme {
 
 fn neutral_light_colors() -> UiColors {
     UiColors {
-        background: oklch(1.0, 0.0, 0.0),
-        foreground: oklch(0.145, 0.0, 0.0),
-        card: oklch(1.0, 0.0, 0.0),
-        card_foreground: oklch(0.145, 0.0, 0.0),
-        popover: oklch(1.0, 0.0, 0.0),
-        popover_foreground: oklch(0.145, 0.0, 0.0),
-        primary: oklch(0.205, 0.0, 0.0),
-        primary_foreground: oklch(0.985, 0.0, 0.0),
-        secondary: oklch(0.97, 0.0, 0.0),
-        secondary_foreground: oklch(0.205, 0.0, 0.0),
-        muted: oklch(0.97, 0.0, 0.0),
-        muted_foreground: oklch(0.556, 0.0, 0.0),
-        accent: oklch(0.97, 0.0, 0.0),
-        accent_foreground: oklch(0.205, 0.0, 0.0),
-        destructive: oklch(0.577, 0.245, 27.325),
-        border: oklch(0.922, 0.0, 0.0),
-        input: oklch(0.922, 0.0, 0.0),
-        ring: oklch(0.708, 0.0, 0.0),
-        chart_1: oklch(0.87, 0.0, 0.0),
-        chart_2: oklch(0.556, 0.0, 0.0),
-        chart_3: oklch(0.439, 0.0, 0.0),
-        chart_4: oklch(0.371, 0.0, 0.0),
-        chart_5: oklch(0.269, 0.0, 0.0),
-        sidebar: oklch(0.985, 0.0, 0.0),
-        sidebar_foreground: oklch(0.145, 0.0, 0.0),
-        sidebar_primary: oklch(0.205, 0.0, 0.0),
-        sidebar_primary_foreground: oklch(0.985, 0.0, 0.0),
-        sidebar_accent: oklch(0.97, 0.0, 0.0),
-        sidebar_accent_foreground: oklch(0.205, 0.0, 0.0),
-        sidebar_border: oklch(0.922, 0.0, 0.0),
-        sidebar_ring: oklch(0.708, 0.0, 0.0),
+        background: neutral(1.0),
+        foreground: neutral(0.145),
+        card: neutral(1.0),
+        card_foreground: neutral(0.145),
+        popover: neutral(1.0),
+        popover_foreground: neutral(0.145),
+        primary: neutral(0.205),
+        primary_foreground: neutral(0.985),
+        secondary: neutral(0.97),
+        secondary_foreground: neutral(0.205),
+        muted: neutral(0.97),
+        muted_foreground: neutral(0.556),
+        accent: neutral(0.97),
+        accent_foreground: neutral(0.205),
+        destructive: srgb(0xdc, 0x26, 0x26),
+        border: neutral(0.922),
+        input: neutral(0.922),
+        ring: neutral(0.708),
+        chart_1: neutral(0.87),
+        chart_2: neutral(0.556),
+        chart_3: neutral(0.439),
+        chart_4: neutral(0.371),
+        chart_5: neutral(0.269),
+        sidebar: neutral(0.985),
+        sidebar_foreground: neutral(0.145),
+        sidebar_primary: neutral(0.205),
+        sidebar_primary_foreground: neutral(0.985),
+        sidebar_accent: neutral(0.97),
+        sidebar_accent_foreground: neutral(0.205),
+        sidebar_border: neutral(0.922),
+        sidebar_ring: neutral(0.708),
     }
 }
 
 fn neutral_dark_colors() -> UiColors {
     UiColors {
-        background: oklch(0.145, 0.0, 0.0),
-        foreground: oklch(0.985, 0.0, 0.0),
-        card: oklch(0.205, 0.0, 0.0),
-        card_foreground: oklch(0.985, 0.0, 0.0),
-        popover: oklch(0.205, 0.0, 0.0),
-        popover_foreground: oklch(0.985, 0.0, 0.0),
-        primary: oklch(0.922, 0.0, 0.0),
-        primary_foreground: oklch(0.205, 0.0, 0.0),
-        secondary: oklch(0.269, 0.0, 0.0),
-        secondary_foreground: oklch(0.985, 0.0, 0.0),
-        muted: oklch(0.269, 0.0, 0.0),
-        muted_foreground: oklch(0.708, 0.0, 0.0),
-        accent: oklch(0.269, 0.0, 0.0),
-        accent_foreground: oklch(0.985, 0.0, 0.0),
-        destructive: oklch(0.704, 0.191, 22.216),
-        border: oklch_alpha(1.0, 0.0, 0.0, 0.10),
-        input: oklch_alpha(1.0, 0.0, 0.0, 0.15),
-        ring: oklch(0.556, 0.0, 0.0),
-        chart_1: oklch(0.87, 0.0, 0.0),
-        chart_2: oklch(0.556, 0.0, 0.0),
-        chart_3: oklch(0.439, 0.0, 0.0),
-        chart_4: oklch(0.371, 0.0, 0.0),
-        chart_5: oklch(0.269, 0.0, 0.0),
-        sidebar: oklch(0.205, 0.0, 0.0),
-        sidebar_foreground: oklch(0.985, 0.0, 0.0),
-        sidebar_primary: oklch(0.488, 0.243, 264.376),
-        sidebar_primary_foreground: oklch(0.985, 0.0, 0.0),
-        sidebar_accent: oklch(0.269, 0.0, 0.0),
-        sidebar_accent_foreground: oklch(0.985, 0.0, 0.0),
-        sidebar_border: oklch_alpha(1.0, 0.0, 0.0, 0.10),
-        sidebar_ring: oklch(0.556, 0.0, 0.0),
+        background: neutral(0.145),
+        foreground: neutral(0.985),
+        card: neutral(0.205),
+        card_foreground: neutral(0.985),
+        popover: neutral(0.205),
+        popover_foreground: neutral(0.985),
+        primary: neutral(0.922),
+        primary_foreground: neutral(0.205),
+        secondary: neutral(0.269),
+        secondary_foreground: neutral(0.985),
+        muted: neutral(0.269),
+        muted_foreground: neutral(0.708),
+        accent: neutral(0.269),
+        accent_foreground: neutral(0.985),
+        destructive: srgb(0xff, 0x64, 0x67),
+        border: neutral_alpha(1.0, 0.10),
+        input: neutral_alpha(1.0, 0.15),
+        ring: neutral(0.556),
+        chart_1: neutral(0.87),
+        chart_2: neutral(0.556),
+        chart_3: neutral(0.439),
+        chart_4: neutral(0.371),
+        chart_5: neutral(0.269),
+        sidebar: neutral(0.205),
+        sidebar_foreground: neutral(0.985),
+        sidebar_primary: srgb(0x14, 0x47, 0xe6),
+        sidebar_primary_foreground: neutral(0.985),
+        sidebar_accent: neutral(0.269),
+        sidebar_accent_foreground: neutral(0.985),
+        sidebar_border: neutral_alpha(1.0, 0.10),
+        sidebar_ring: neutral(0.556),
     }
 }
 
-fn oklch(l: f64, c: f64, h: f64) -> Rgba {
-    oklch_alpha(l, c, h, 1.0)
+pub(super) fn neutral(l: f64) -> Rgba {
+    neutral_alpha(l, 1.0)
 }
 
-fn oklch_alpha(l: f64, c: f64, h: f64, alpha: f64) -> Rgba {
-    let hue = h.to_radians();
-    let a = c * hue.cos();
-    let b = c * hue.sin();
-
-    let l_root = l + 0.396_337_777_4 * a + 0.215_803_757_3 * b;
-    let m_root = l - 0.105_561_345_8 * a - 0.063_854_172_8 * b;
-    let s_root = l - 0.089_484_177_5 * a - 1.291_485_548 * b;
-    let l = l_root * l_root * l_root;
-    let m = m_root * m_root * m_root;
-    let s = s_root * s_root * s_root;
-
-    let linear_r = 4.076_741_662_1 * l - 3.307_711_591_3 * m + 0.230_969_929_2 * s;
-    let linear_g = -1.268_438_004_6 * l + 2.609_757_401_1 * m - 0.341_319_396_5 * s;
-    let linear_b = -0.004_196_086_3 * l - 0.703_418_614_7 * m + 1.707_614_701 * s;
+fn neutral_alpha(l: f64, alpha: f64) -> Rgba {
+    let channel = srgb_channel(l * l * l) as f32;
 
     Rgba {
-        r: srgb(linear_r) as f32,
-        g: srgb(linear_g) as f32,
-        b: srgb(linear_b) as f32,
+        r: channel,
+        g: channel,
+        b: channel,
         a: alpha.clamp(0.0, 1.0) as f32,
     }
 }
 
-fn srgb(channel: f64) -> f64 {
+const fn srgb(red: u8, green: u8, blue: u8) -> Rgba {
+    Rgba {
+        r: red as f32 / 255.0,
+        g: green as f32 / 255.0,
+        b: blue as f32 / 255.0,
+        a: 1.0,
+    }
+}
+
+fn srgb_channel(channel: f64) -> f64 {
     if channel >= 0.003_130_8 {
         (1.055 * channel.powf(1.0 / 2.4) - 0.055).clamp(0.0, 1.0)
     } else {
@@ -293,7 +289,7 @@ mod tests {
     #[test]
     fn converts_pinned_neutral_tokens() {
         assert_eq!(
-            oklch(1.0, 0.0, 0.0),
+            neutral(1.0),
             Rgba {
                 r: 1.0,
                 g: 1.0,
@@ -302,7 +298,7 @@ mod tests {
             }
         );
         assert_eq!(
-            oklch(0.0, 0.0, 0.0),
+            neutral(0.0),
             Rgba {
                 r: 0.0,
                 g: 0.0,
@@ -311,10 +307,12 @@ mod tests {
             }
         );
 
-        let destructive = oklch(0.577, 0.245, 27.325);
-        assert!((destructive.r - 0.906_46).abs() < 0.000_01);
-        assert_eq!(destructive.g, 0.0);
-        assert!((destructive.b - 0.042_21).abs() < 0.000_01);
+        assert_eq!(neutral_light_colors().destructive, srgb(0xdc, 0x26, 0x26));
+        assert_eq!(neutral_dark_colors().destructive, srgb(0xff, 0x64, 0x67));
+        assert_eq!(
+            neutral_dark_colors().sidebar_primary,
+            srgb(0x14, 0x47, 0xe6)
+        );
     }
 
     #[test]

@@ -5,9 +5,17 @@
 //! such as `settings.save`; never derive an ID from visible text, list position,
 //! a pointer, or a random value. Changing an ID resets GPUI's keyed state.
 
+#[path = "../../../registry/button/button.rs"]
+pub mod button;
+#[path = "../../../registry/checkbox/checkbox.rs"]
+pub mod checkbox;
+#[path = "../../../registry/dialog/dialog.rs"]
+pub mod dialog;
 #[path = "../../../registry/theme/theme.rs"]
 pub mod theme;
 
+pub use button::{Button, ButtonSize, ButtonVariant};
+pub use checkbox::Checkbox;
 pub use theme::{ThemeMode, UiColors, UiFonts, UiRadius, UiSpacing, UiTheme};
 
 /// Registers the Base GPUI actions used by the v0.1 component slice.
