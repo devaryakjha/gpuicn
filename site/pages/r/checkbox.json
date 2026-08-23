@@ -14,5 +14,5 @@
       "target": "~/src/ui/checkbox.rs"
     }
   ],
-  "type": "registry:ui"
+  "type": "registry:item"
 }

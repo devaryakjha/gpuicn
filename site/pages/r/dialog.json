@@ -15,5 +15,5 @@
       "target": "~/src/ui/dialog.rs"
     }
   ],
-  "type": "registry:ui"
+  "type": "registry:item"
 }

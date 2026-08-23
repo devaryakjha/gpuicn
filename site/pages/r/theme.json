@@ -11,5 +11,5 @@
       "target": "~/src/ui/theme.rs"
     }
   ],
-  "type": "registry:theme"
+  "type": "registry:item"
 }

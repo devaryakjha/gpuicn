@@ -5,7 +5,7 @@
   "items": [
     {
       "name": "theme",
-      "type": "registry:theme",
+      "type": "registry:item",
       "title": "Neutral theme",
       "description": "The app-owned shadcn Neutral light and dark theme for GPUI.",
       "files": [
@@ -18,7 +18,7 @@
     },
     {
       "name": "button",
-      "type": "registry:ui",
+      "type": "registry:item",
       "title": "Button",
       "description": "The shadcn Nova Button visual port backed by Base GPUI behavior.",
       "registryDependencies": [
@@ -34,7 +34,7 @@
     },
     {
       "name": "checkbox",
-      "type": "registry:ui",
+      "type": "registry:item",
       "title": "Checkbox",
       "description": "The shadcn Nova Checkbox visual port backed by Base GPUI behavior.",
       "registryDependencies": [
@@ -50,7 +50,7 @@
     },
     {
       "name": "dialog",
-      "type": "registry:ui",
+      "type": "registry:item",
       "title": "Dialog",
       "description": "The narrow shadcn Nova Dialog visual port backed by Base GPUI behavior.",
       "registryDependencies": [
