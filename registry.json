@@ -15,6 +15,38 @@
           "target": "~/src/ui/theme.rs"
         }
       ]
+    },
+    {
+      "name": "button",
+      "type": "registry:ui",
+      "title": "Button",
+      "description": "The shadcn Nova Button visual port backed by Base GPUI behavior.",
+      "registryDependencies": [
+        "https://raw.githubusercontent.com/devaryakjha/ui/5cef8a15dad3093fd00ca83d9ff122a055311167/site/pages/r/theme.json"
+      ],
+      "files": [
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        }
+      ]
+    },
+    {
+      "name": "checkbox",
+      "type": "registry:ui",
+      "title": "Checkbox",
+      "description": "The shadcn Nova Checkbox visual port backed by Base GPUI behavior.",
+      "registryDependencies": [
+        "https://raw.githubusercontent.com/devaryakjha/ui/5cef8a15dad3093fd00ca83d9ff122a055311167/site/pages/r/theme.json"
+      ],
+      "files": [
+        {
+          "path": "registry/checkbox/checkbox.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/checkbox.rs"
+        }
+      ]
     }
   ]
 }
