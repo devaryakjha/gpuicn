@@ -9,3 +9,10 @@
 pub mod theme;
 
 pub use theme::{ThemeMode, UiColors, UiFonts, UiRadius, UiSpacing, UiTheme};
+
+/// Registers the Base GPUI actions used by the v0.1 component slice.
+pub fn init(cx: &mut gpui::App) {
+    base_gpui::button::init(cx);
+    base_gpui::checkbox::init(cx);
+    base_gpui::dialog::init(cx);
+}

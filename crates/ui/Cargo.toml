@@ -12,7 +12,9 @@ publish = false
 native-fixture = ["dep:gpui_platform"]
 
 [dependencies]
+base-gpui.workspace = true
 gpui.workspace = true
+gpui-icons.workspace = true
 gpui_platform = { workspace = true, optional = true }
 
 [dev-dependencies]

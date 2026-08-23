@@ -9,8 +9,10 @@ license = "MIT"
 repository = "https://github.com/devaryakjha/ui"
 
 [workspace.dependencies]
+base-gpui = { git = "https://github.com/LukeTandjung/base-gpui", rev = "64b22337b6a790c636aab248e768e4875bb28ba8", package = "base-gpui" }
 gpui = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d", package = "gpui" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d", package = "gpui_platform" }
+gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "53a54cfe5efc8eacb546de0c9742339b667381b2", package = "gpui-icons" }
 
 [profile.dev]
 debug = 1

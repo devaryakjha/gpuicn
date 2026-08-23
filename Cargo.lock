@@ -525,6 +525,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "base-gpui"
+version = "0.1.0"
+source = "git+https://github.com/LukeTandjung/base-gpui?rev=64b22337b6a790c636aab248e768e4875bb28ba8#64b22337b6a790c636aab248e768e4875bb28ba8"
+dependencies = [
+ "derive_setters",
+ "gpui",
+ "unicode-segmentation",
+ "web-time",
+]
+
+[[package]]
 name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1229,6 +1240,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "darling"
+version = "0.21.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9cdf337090841a411e2a7f3deb9187445851f91b309c0c0a29e05f74a00a48c0"
+dependencies = [
+ "darling_core",
+ "darling_macro",
+]
+
+[[package]]
+name = "darling_core"
+version = "0.21.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1247195ecd7e3c85f83c8d2a366e4210d588e802133e1e355180a9870b517ea4"
+dependencies = [
+ "fnv",
+ "ident_case",
+ "proc-macro2",
+ "quote",
+ "strsim",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "darling_macro"
+version = "0.21.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d38308df82d1080de0afee5d069fa14b0326a88c14f15c5ccda35b4a6c414c81"
+dependencies = [
+ "darling_core",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "data-url"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1268,6 +1314,18 @@ name = "derive_refineable"
 version = "0.1.0"
 source = "git+https://github.com/zed-industries/zed?rev=59b2ebf10351b5c0b5cd4403f01ed0460eeec06d#59b2ebf10351b5c0b5cd4403f01ed0460eeec06d"
 dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
+name = "derive_setters"
+version = "0.1.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7e6f6fa1f03c14ae082120b84b3c7fbd7b8588d924cf2d7c3daf9afd49df8b9"
+dependencies = [
+ "darling",
  "proc-macro2",
  "quote",
  "syn 2.0.119",
@@ -2056,6 +2114,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "gpui-icons"
+version = "0.1.0"
+source = "git+https://github.com/devaryakjha/gpui-icons?rev=53a54cfe5efc8eacb546de0c9742339b667381b2#53a54cfe5efc8eacb546de0c9742339b667381b2"
+dependencies = [
+ "gpui",
+]
+
+[[package]]
 name = "gpui_linux"
 version = "0.1.0"
 source = "git+https://github.com/zed-industries/zed?rev=59b2ebf10351b5c0b5cd4403f01ed0460eeec06d#59b2ebf10351b5c0b5cd4403f01ed0460eeec06d"
@@ -2542,6 +2608,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ident_case"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
+
+[[package]]
 name = "idna"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2605,7 +2677,9 @@ checksum = "09e54e57b4c48b40f7aec75635392b12b3421fa26fe8b4332e63138ed278459c"
 name = "imajha-ui"
 version = "0.1.0"
 dependencies = [
+ "base-gpui",
  "gpui",
+ "gpui-icons",
  "gpui_platform",
 ]
 
@@ -4996,6 +5070,12 @@ checksum = "6637bab7722d379c8b41ba849228d680cc12d0a45ba1fa2b48f2a30577a06731"
 dependencies = [
  "float-cmp",
 ]
+
+[[package]]
+name = "strsim"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"

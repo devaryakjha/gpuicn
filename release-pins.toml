@@ -17,5 +17,11 @@ commit = "64b22337b6a790c636aab248e768e4875bb28ba8"
 version = "0.2.2"
 commit = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d"
 
+[gpui_icons]
+version = "0.1.0"
+commit = "53a54cfe5efc8eacb546de0c9742339b667381b2"
+lucide_version = "1.33.0"
+lucide_commit = "59978cecf84986af59f1f9f503bcebdc89c6d166"
+
 [wasm]
 wasm_bindgen = "0.2.120"
