@@ -4,7 +4,7 @@
   "title": "Button",
   "description": "The shadcn Nova Button visual port backed by Base GPUI behavior.",
   "registryDependencies": [
-    "https://raw.githubusercontent.com/devaryakjha/ui/5cef8a15dad3093fd00ca83d9ff122a055311167/site/pages/r/theme.json"
+    "https://raw.githubusercontent.com/devaryakjha/ui/3f7a78825d4ca05c49b4152495e4f183ed3e2e17/site/pages/r/theme.json"
   ],
   "files": [
     {

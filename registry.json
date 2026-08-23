@@ -22,7 +22,7 @@
       "title": "Button",
       "description": "The shadcn Nova Button visual port backed by Base GPUI behavior.",
       "registryDependencies": [
-        "https://raw.githubusercontent.com/devaryakjha/ui/5cef8a15dad3093fd00ca83d9ff122a055311167/site/pages/r/theme.json"
+        "https://raw.githubusercontent.com/devaryakjha/ui/3f7a78825d4ca05c49b4152495e4f183ed3e2e17/site/pages/r/theme.json"
       ],
       "files": [
         {
@@ -38,7 +38,7 @@
       "title": "Checkbox",
       "description": "The shadcn Nova Checkbox visual port backed by Base GPUI behavior.",
       "registryDependencies": [
-        "https://raw.githubusercontent.com/devaryakjha/ui/5cef8a15dad3093fd00ca83d9ff122a055311167/site/pages/r/theme.json"
+        "https://raw.githubusercontent.com/devaryakjha/ui/3f7a78825d4ca05c49b4152495e4f183ed3e2e17/site/pages/r/theme.json"
       ],
       "files": [
         {
@@ -54,7 +54,7 @@
       "title": "Dialog",
       "description": "The narrow shadcn Nova Dialog visual port backed by Base GPUI behavior.",
       "registryDependencies": [
-        "https://raw.githubusercontent.com/devaryakjha/ui/5cef8a15dad3093fd00ca83d9ff122a055311167/site/pages/r/theme.json",
+        "https://raw.githubusercontent.com/devaryakjha/ui/3f7a78825d4ca05c49b4152495e4f183ed3e2e17/site/pages/r/theme.json",
         "https://raw.githubusercontent.com/devaryakjha/ui/3d6b0f92051365867e504035038a69730b985b21/site/pages/r/button.json"
       ],
       "files": [
