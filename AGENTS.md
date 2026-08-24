@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues live in GitHub Issues and the dedicated `imajha/ui` GitHub Project. See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues and the dedicated `gpuicn` GitHub Project. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

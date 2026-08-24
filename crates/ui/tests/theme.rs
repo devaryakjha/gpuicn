@@ -1,7 +1,7 @@
 //! Theme global-state integration checks.
 
 use gpui::TestAppContext;
-use imajha_ui::{ThemeMode, UiTheme};
+use gpuicn::{ThemeMode, UiTheme};
 
 #[gpui::test]
 fn switches_the_app_owned_theme(cx: &mut TestAppContext) {

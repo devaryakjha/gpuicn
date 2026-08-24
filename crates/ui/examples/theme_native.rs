@@ -1,6 +1,6 @@
 //! Minimal native proof that an application can install and switch `UiTheme`.
 
-use imajha_ui::{ThemeMode, UiTheme};
+use gpuicn::{ThemeMode, UiTheme};
 
 fn main() {
     gpui_platform::headless().run(|cx| {

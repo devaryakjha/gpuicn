@@ -1,8 +1,8 @@
 # Issue tracker: GitHub
 
-Issues and specs for this repo live in GitHub Issues and are tracked in the dedicated `imajha/ui` GitHub Project.
+Issues and specs for this repo live in GitHub Issues and are tracked in the dedicated `gpuicn` GitHub Project.
 
-- Repository: <https://github.com/devaryakjha/ui>
+- Repository: <https://github.com/devaryakjha/gpuicn>
 - Project: <https://github.com/users/devaryakjha/projects/5>
 - Use the `gh` CLI for all operations.
 - Add each created issue to the project with `gh project item-add 5 --owner devaryakjha --url <issue-url>`.

@@ -2328,6 +2328,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "gpuicn"
+version = "0.2.0"
+dependencies = [
+ "base-gpui",
+ "gpui",
+ "gpui-icons",
+ "gpui_platform",
+]
+
+[[package]]
+name = "gpuicn-showcase"
+version = "0.2.0"
+dependencies = [
+ "gpui",
+ "gpui-icons",
+ "gpui_platform",
+ "gpuicn",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "grid"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2672,28 +2694,6 @@ name = "imagesize"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09e54e57b4c48b40f7aec75635392b12b3421fa26fe8b4332e63138ed278459c"
-
-[[package]]
-name = "imajha-ui"
-version = "0.1.0"
-dependencies = [
- "base-gpui",
- "gpui",
- "gpui-icons",
- "gpui_platform",
-]
-
-[[package]]
-name = "imajha-ui-showcase"
-version = "0.1.0"
-dependencies = [
- "gpui",
- "gpui-icons",
- "gpui_platform",
- "imajha-ui",
- "wasm-bindgen",
- "web-sys",
-]
 
 [[package]]
 name = "imgref"

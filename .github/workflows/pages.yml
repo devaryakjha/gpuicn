@@ -38,10 +38,11 @@ jobs:
         working-directory: site
         env:
           CARGO_UNSTABLE_BUILD_STD: std,panic_abort
-        run: trunk build --release --public-url /ui/demo/
+        run: trunk build --release --public-url /gpuicn/demo/
       - name: Add catalog pages
         run: |
           cp -R site/pages/. site/dist/
+          cp -R site/assets site/dist/assets
           cp site/coi-serviceworker.js site/dist/
       - uses: actions/upload-pages-artifact@v3
         with:
