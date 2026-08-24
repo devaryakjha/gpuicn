@@ -9,8 +9,10 @@ pub use base_gpui::accordion::{
     AccordionTrigger,
 };
 use gpui::{
-    App, BoxShadow, FontWeight, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px,
+    App, BoxShadow, FontWeight, InteractiveElement as _, ParentElement as _, Styled,
+    prelude::FluentBuilder as _, px,
 };
+use gpui_icons::{LucideIcon, lucide};
 
 use super::theme::UiTheme;
 
@@ -36,37 +38,47 @@ pub fn accordion_header<T: Clone + Eq + 'static>() -> AccordionHeader<T> {
     AccordionHeader::new().flex()
 }
 
-/// Creates a Nova Accordion trigger. Add the caller's label and chevron as children.
+/// Creates a Nova Accordion trigger with its chevron. Add the caller's label as a child.
 pub fn accordion_trigger<T: Clone + Eq + 'static>(cx: &App) -> AccordionTrigger<T> {
     let theme = UiTheme::read(cx).clone();
-    AccordionTrigger::new().style_with_state(move |state, base| {
-        let colors = theme.colors;
-        base.w_full()
-            .flex()
-            .items_start()
-            .justify_between()
-            .rounded(theme.radius.base)
-            .border_1()
-            .border_color(colors.background.alpha(0.0))
-            .py(px(10.0))
-            .text_left()
-            .font_family(theme.fonts.body.clone())
-            .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0))
-            .text_color(colors.foreground)
-            .when(!state.item.disabled, |base| {
-                base.cursor_pointer().hover(|style| style.underline())
-            })
-            .when(state.item.disabled, |base| {
-                base.opacity(0.50).cursor_not_allowed()
-            })
-            .focus_visible(move |style| {
-                style.border_color(colors.ring).shadow(vec![
-                    BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                        .spread_radius(px(3.0)),
-                ])
-            })
-    })
+    let icon_color = theme.colors.muted_foreground;
+    AccordionTrigger::new()
+        .style_with_state(move |state, base| {
+            let colors = theme.colors;
+            base.w_full()
+                .flex()
+                .items_start()
+                .justify_between()
+                .rounded(theme.radius.base)
+                .border_1()
+                .border_color(colors.background.alpha(0.0))
+                .py(px(10.0))
+                .text_left()
+                .font_family(theme.fonts.body.clone())
+                .font_weight(FontWeight::MEDIUM)
+                .text_size(px(14.0))
+                .text_color(colors.foreground)
+                .when(!state.item.disabled, |base| {
+                    base.cursor_pointer().hover(|style| style.underline())
+                })
+                .when(state.item.disabled, |base| {
+                    base.opacity(0.50).cursor_not_allowed()
+                })
+                .focus_visible(move |style| {
+                    style
+                        .bg(colors.background)
+                        .border_color(colors.ring)
+                        .shadow(vec![
+                            BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
+                                .spread_radius(px(3.0)),
+                        ])
+                })
+        })
+        .child(
+            lucide(LucideIcon::ChevronDown)
+                .size(px(16.0))
+                .text_color(icon_color),
+        )
 }
 
 /// Creates an Accordion panel with the pinned content inset.

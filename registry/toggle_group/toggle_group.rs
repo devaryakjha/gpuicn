@@ -41,13 +41,20 @@ impl ToggleGroupItem {
         self.aria_label = Some(value.into());
         self
     }
-    fn render(self, theme: &UiTheme, joined: bool) -> BaseToggle<SharedString> {
+    fn render(
+        self,
+        theme: &UiTheme,
+        joined: bool,
+        first: bool,
+        last: bool,
+    ) -> BaseToggle<SharedString> {
         let colors = theme.colors;
         let mut toggle = BaseToggle::new()
             .id(self.id)
             .value(self.value)
             .disabled(self.disabled)
             .style_with_state(move |state, base| {
+                let pressed = state.pressed;
                 base.flex()
                     .items_center()
                     .justify_center()
@@ -56,21 +63,36 @@ impl ToggleGroupItem {
                     .min_w(px(32.))
                     .px(px(10.))
                     .rounded(px(if joined { 0. } else { 10. }))
+                    .when(joined && first, |base| base.rounded_l(px(10.)))
+                    .when(joined && last, |base| base.rounded_r(px(10.)))
+                    .border_1()
+                    .border_color(colors.background.alpha(0.0))
                     .text_size(px(14.))
-                    .text_color(colors.muted_foreground)
+                    .text_color(colors.foreground)
                     .bg(if state.pressed {
                         colors.muted
                     } else {
                         colors.background.alpha(0.)
                     })
                     .focus_visible(move |style| {
-                        style.border_color(colors.ring).shadow(vec![
-                            BoxShadow::new(px(0.), px(0.), colors.ring.alpha(0.50).into())
-                                .spread_radius(px(3.)),
-                        ])
+                        style
+                            .bg(if pressed {
+                                colors.muted
+                            } else {
+                                colors.background
+                            })
+                            .border_color(colors.ring)
+                            .shadow(vec![
+                                BoxShadow::new(px(0.), px(0.), colors.ring.alpha(0.50).into())
+                                    .spread_radius(px(3.)),
+                            ])
                     })
                     .when(state.disabled, |base| {
                         base.opacity(0.50).cursor_not_allowed()
+                    })
+                    .when(!state.disabled, |base| {
+                        base.cursor_pointer()
+                            .hover(move |style| style.bg(colors.muted))
                     })
             })
             .children(self.children);
@@ -173,10 +195,9 @@ impl RenderOnce for ToggleGroup {
                 handler(values, details, window, cx)
             });
         }
-        group.children(
-            self.items
-                .into_iter()
-                .map(|item| item.render(&theme, self.joined)),
-        )
+        let item_count = self.items.len();
+        group.children(self.items.into_iter().enumerate().map(|(index, item)| {
+            item.render(&theme, self.joined, index == 0, index + 1 == item_count)
+        }))
     }
 }

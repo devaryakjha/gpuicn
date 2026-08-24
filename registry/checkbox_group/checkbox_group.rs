@@ -8,8 +8,9 @@ use base_gpui::checkbox_group::{
     CheckboxGroup as BaseCheckboxGroup, CheckboxGroupValueChangeDetails,
 };
 use gpui::{
-    App, BoxShadow, ElementId, InteractiveElement as _, IntoElement, ParentElement as _,
-    RenderOnce, SharedString, Styled, Window, prelude::FluentBuilder as _, px,
+    AnyElement, App, BoxShadow, ElementId, InteractiveElement as _, IntoElement,
+    ParentElement as _, RenderOnce, SharedString, Styled, Window, div, prelude::FluentBuilder as _,
+    px,
 };
 use gpui_icons::{LucideIcon, lucide};
 
@@ -25,6 +26,7 @@ pub struct CheckboxGroupItem {
     value: SharedString,
     disabled: bool,
     aria_label: Option<SharedString>,
+    label: Option<SharedString>,
 }
 impl CheckboxGroupItem {
     pub fn new(id: impl Into<ElementId>, value: impl Into<SharedString>) -> Self {
@@ -33,6 +35,7 @@ impl CheckboxGroupItem {
             value: value.into(),
             disabled: false,
             aria_label: None,
+            label: None,
         }
     }
     pub fn disabled(mut self, value: bool) -> Self {
@@ -43,7 +46,11 @@ impl CheckboxGroupItem {
         self.aria_label = Some(value.into());
         self
     }
-    fn render(self, theme: &UiTheme) -> CheckboxRoot {
+    pub fn label(mut self, value: impl Into<SharedString>) -> Self {
+        self.label = Some(value.into());
+        self
+    }
+    fn render(self, theme: &UiTheme) -> AnyElement {
         let colors = theme.colors;
         let mode = theme.mode;
         let mut checkbox = CheckboxRoot::new()
@@ -95,7 +102,19 @@ impl CheckboxGroupItem {
         if let Some(label) = self.aria_label {
             checkbox = checkbox.aria_label(label);
         }
-        checkbox
+        match self.label {
+            Some(label) => div()
+                .flex()
+                .items_center()
+                .gap(px(8.))
+                .font_family(theme.fonts.body.clone())
+                .text_size(px(14.))
+                .text_color(theme.colors.foreground)
+                .child(checkbox)
+                .child(label)
+                .into_any_element(),
+            None => checkbox.into_any_element(),
+        }
     }
 }
 

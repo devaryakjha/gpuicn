@@ -11,12 +11,15 @@ pub use base_gpui::menu::{
     MenuSide, MenuSubmenuRoot, MenuSubmenuTrigger, MenuTrigger,
 };
 use gpui::{
-    App, BoxShadow, Div, ElementId, FontWeight, InteractiveElement as _, ParentElement as _,
-    Styled, prelude::FluentBuilder as _, px,
+    App, BoxShadow, Div, ElementId, FontWeight, ParentElement as _, Styled,
+    prelude::FluentBuilder as _, px,
 };
 use gpui_icons::{LucideIcon, lucide};
 
-use super::theme::UiTheme;
+use super::{
+    button::{ButtonSize, ButtonVariant, style_button},
+    theme::UiTheme,
+};
 
 /// Creates a dropdown menu root with a caller-owned stable ID.
 pub fn menu_root<P: Clone + 'static>(id: impl Into<ElementId>) -> MenuRoot<P> {
@@ -29,22 +32,17 @@ pub fn menu_trigger<P: Clone + 'static>(id: impl Into<ElementId>, cx: &App) -> M
     MenuTrigger::new()
         .id(id)
         .style_with_state(move |state, base| {
-            base.flex()
-                .items_center()
-                .rounded(theme.radius.base)
-                .px(px(10.))
-                .py(px(6.))
-                .font_family(theme.fonts.body.clone())
-                .font_weight(FontWeight::MEDIUM)
-                .text_size(px(14.))
-                .text_color(theme.colors.foreground)
-                .when(state.open || state.focused, |base| {
-                    base.bg(theme.colors.muted)
-                })
-                .when(!state.disabled, |base| {
-                    base.hover(move |style| style.bg(theme.colors.muted))
-                })
-                .when(state.disabled, |base| base.opacity(0.5))
+            style_button(
+                base,
+                state.disabled,
+                ButtonVariant::Outline,
+                ButtonSize::Default,
+                &theme,
+            )
+            .when(state.open, |base| {
+                base.bg(theme.colors.muted)
+                    .text_color(theme.colors.foreground)
+            })
         })
 }
 
@@ -85,6 +83,7 @@ pub fn menu_checkbox_item<P: Clone + 'static>(
         .style_with_state(move |state, base| {
             item_style(base, state.highlighted, state.disabled, &theme, true)
         })
+        .child(menu_checkbox_item_indicator(cx))
 }
 
 /// Creates a check indicator for [`menu_checkbox_item`].
@@ -116,6 +115,7 @@ pub fn menu_radio_item<P: Clone + 'static, V: Clone + Eq + 'static>(
         .style_with_state(move |state, base| {
             item_style(base, state.highlighted, state.disabled, &theme, true)
         })
+        .child(menu_radio_item_indicator(cx))
 }
 
 /// Creates a check indicator for [`menu_radio_item`].
@@ -167,13 +167,13 @@ pub fn menu_submenu_root<P: Clone + 'static>(id: impl Into<ElementId>) -> MenuSu
     MenuSubmenuRoot::new().id(id)
 }
 
-/// Creates a styled submenu trigger. Add a trailing ChevronRight icon when
-/// callers need the visual affordance in custom content.
+/// Creates a styled submenu trigger with Nova's trailing chevron.
 pub fn menu_submenu_trigger<P: Clone + 'static>(
     id: impl Into<ElementId>,
     cx: &App,
 ) -> MenuSubmenuTrigger<P> {
     let theme = UiTheme::read(cx).clone();
+    let icon_color = theme.colors.muted_foreground;
     MenuSubmenuTrigger::new()
         .id(id)
         .style_with_state(move |state, base| {
@@ -185,6 +185,11 @@ pub fn menu_submenu_trigger<P: Clone + 'static>(
                 false,
             )
         })
+        .child(
+            lucide(LucideIcon::ChevronRight)
+                .size(px(16.))
+                .text_color(icon_color),
+        )
 }
 
 pub(crate) fn popup_style(base: Div, theme: &UiTheme, min_width: gpui::Pixels) -> Div {

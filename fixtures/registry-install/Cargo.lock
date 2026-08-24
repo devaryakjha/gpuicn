@@ -1429,8 +1429,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-icons"
-version = "0.1.0"
-source = "git+https://github.com/devaryakjha/gpui-icons?rev=53a54cfe5efc8eacb546de0c9742339b667381b2#53a54cfe5efc8eacb546de0c9742339b667381b2"
+version = "0.2.0"
+source = "git+https://github.com/devaryakjha/gpui-icons?rev=ae5db0868cb972e958473f93a80158c6c20a65a3#ae5db0868cb972e958473f93a80158c6c20a65a3"
 dependencies = [
  "gpui",
 ]

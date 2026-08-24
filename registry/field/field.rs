@@ -36,7 +36,7 @@ pub fn field_root(id: impl Into<ElementId>, orientation: FieldOrientation, cx: &
             let base = base
                 .flex()
                 .w_full()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .font_family(theme.fonts.body.clone())
                 .text_size(px(14.0))
                 .text_color(if state.invalid {
@@ -170,8 +170,8 @@ fn style_field_control(
     };
 
     base.w_full()
-        .h(px(36.0))
-        .px(px(12.0))
+        .h(px(32.0))
+        .px(px(10.0))
         .rounded(theme.radius.base)
         .border_1()
         .border_color(border)

@@ -109,6 +109,7 @@ impl RenderOnce for Toggle {
             .default_pressed(self.default_pressed)
             .disabled(self.disabled)
             .style_with_state(move |state, base| {
+                let pressed = state.pressed;
                 let base = base
                     .flex()
                     .items_center()
@@ -118,21 +119,34 @@ impl RenderOnce for Toggle {
                     .h(px(height))
                     .px(px(10.))
                     .rounded(px(radius))
+                    .border_1()
+                    .border_color(colors.background.alpha(0.0))
                     .text_size(px(text_size))
-                    .text_color(colors.muted_foreground)
+                    .text_color(colors.foreground)
                     .bg(if state.pressed {
                         colors.muted
                     } else {
                         colors.background.alpha(0.)
                     })
                     .focus_visible(move |style| {
-                        style.border_color(colors.ring).shadow(vec![
-                            BoxShadow::new(px(0.), px(0.), colors.ring.alpha(0.50).into())
-                                .spread_radius(px(3.)),
-                        ])
+                        style
+                            .bg(if pressed {
+                                colors.muted
+                            } else {
+                                colors.background
+                            })
+                            .border_color(colors.ring)
+                            .shadow(vec![
+                                BoxShadow::new(px(0.), px(0.), colors.ring.alpha(0.50).into())
+                                    .spread_radius(px(3.)),
+                            ])
                     })
                     .when(state.disabled, |base| {
                         base.opacity(0.50).cursor_not_allowed()
+                    })
+                    .when(!state.disabled, |base| {
+                        base.cursor_pointer()
+                            .hover(move |style| style.bg(colors.muted))
                     });
                 match variant {
                     ToggleVariant::Default => base,

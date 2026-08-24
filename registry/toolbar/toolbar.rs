@@ -62,10 +62,13 @@ pub fn toolbar_button(cx: &App) -> ToolbarButton {
                 base.opacity(0.50).cursor_not_allowed()
             })
             .focus_visible(move |style| {
-                style.border_color(colors.ring).shadow(vec![
-                    BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                        .spread_radius(px(3.0)),
-                ])
+                style
+                    .bg(colors.background)
+                    .border_color(colors.ring)
+                    .shadow(vec![
+                        BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
+                            .spread_radius(px(3.0)),
+                    ])
             })
     })
 }
@@ -90,10 +93,13 @@ pub fn toolbar_link(cx: &App) -> ToolbarLink {
             .cursor_pointer()
             .hover(move |style| style.bg(colors.muted))
             .focus_visible(move |style| {
-                style.border_color(colors.ring).shadow(vec![
-                    BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                        .spread_radius(px(3.0)),
-                ])
+                style
+                    .bg(colors.background)
+                    .border_color(colors.ring)
+                    .shadow(vec![
+                        BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
+                            .spread_radius(px(3.0)),
+                    ])
             })
     })
 }

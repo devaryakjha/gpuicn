@@ -8,6 +8,6 @@ publish = false
 [dependencies]
 base-gpui = { git = "https://github.com/LukeTandjung/base-gpui", rev = "64b22337b6a790c636aab248e768e4875bb28ba8" }
 gpui = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d" }
-gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "53a54cfe5efc8eacb546de0c9742339b667381b2" }
+gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "ae5db0868cb972e958473f93a80158c6c20a65a3" }
 
 [workspace]

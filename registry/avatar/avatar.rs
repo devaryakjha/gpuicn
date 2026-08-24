@@ -72,9 +72,7 @@ impl RenderOnce for Avatar {
             .flex_shrink_0()
             .size(px(size))
             .rounded_full()
-            .overflow_hidden()
-            .border_1()
-            .border_color(theme.colors.border);
+            .overflow_hidden();
         if let Some(label) = self.aria_label {
             root = root.aria_label(label);
         }

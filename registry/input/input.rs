@@ -79,16 +79,32 @@ impl RenderOnce for Input {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
         let background = match theme.mode {
-            ThemeMode::Light => colors.background.alpha(0.0),
-            ThemeMode::Dark => colors.input.alpha(0.30),
+            ThemeMode::Light => colors.background,
+            ThemeMode::Dark => colors.background.blend(colors.input.alpha(0.30)),
         };
         let mut input = BaseInput::new()
             .id(self.id)
             .disabled(self.disabled)
             .read_only(self.read_only)
             .required(self.required)
-            .font_family(theme.fonts.body)
+            .font_family(theme.fonts.body.clone())
             .style_with_state(move |state, base| {
+                let ring = if state.invalid {
+                    colors.destructive.alpha(match theme.mode {
+                        ThemeMode::Light => 0.20,
+                        ThemeMode::Dark => 0.40,
+                    })
+                } else {
+                    colors.ring.alpha(0.50)
+                };
+                let border = if state.invalid {
+                    colors.destructive.alpha(match theme.mode {
+                        ThemeMode::Light => 1.0,
+                        ThemeMode::Dark => 0.50,
+                    })
+                } else {
+                    colors.input
+                };
                 base.w_full()
                     .min_w_0()
                     .h(px(32.))
@@ -96,23 +112,23 @@ impl RenderOnce for Input {
                     .py(px(4.))
                     .rounded(px(10.))
                     .border_1()
-                    .border_color(if state.invalid {
-                        colors.destructive
+                    .border_color(border)
+                    .bg(if state.disabled {
+                        colors.input.alpha(match theme.mode {
+                            ThemeMode::Light => 0.50,
+                            ThemeMode::Dark => 0.80,
+                        })
                     } else {
-                        colors.input
+                        background
                     })
-                    .bg(background)
                     .text_color(colors.foreground)
                     .text_size(px(14.))
                     .focus_visible(move |style| {
-                        style.border_color(colors.ring).shadow(vec![
-                            BoxShadow::new(px(0.), px(0.), colors.ring.alpha(0.50).into())
-                                .spread_radius(px(3.)),
+                        style.border_color(border).shadow(vec![
+                            BoxShadow::new(px(0.), px(0.), ring.into()).spread_radius(px(3.)),
                         ])
                     })
-                    .when(state.disabled, |base| {
-                        base.opacity(0.50).cursor_not_allowed()
-                    })
+                    .when(state.disabled, |base| base.cursor_not_allowed())
             });
         if let Some(value) = self.value {
             input = input.value(value);

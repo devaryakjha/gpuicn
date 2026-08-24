@@ -7,7 +7,10 @@ use base_gpui::slider::{
     SliderControl, SliderIndicator, SliderRoot, SliderThumb, SliderTrack, SliderValueChangeDetails,
     SliderValues,
 };
-use gpui::{App, BoxShadow, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window, px};
+use gpui::{
+    App, BoxShadow, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window,
+    prelude::FluentBuilder as _, px,
+};
 
 use super::theme::UiTheme;
 
@@ -85,7 +88,12 @@ impl RenderOnce for Slider {
             .step(self.step)
             .disabled(self.disabled)
             .w_full()
-            .h(px(20.));
+            .h(px(20.))
+            .style_with_state(|state, base| {
+                base.when(state.disabled, |base| {
+                    base.opacity(0.50).cursor_not_allowed()
+                })
+            });
         if let Some(value) = self.value {
             root = root.value(SliderValues::Single(value));
         }
@@ -126,7 +134,7 @@ impl RenderOnce for Slider {
                         .border_color(colors.ring)
                         .bg(colors.background)
                         .style_with_state(move |state, style| {
-                            if state.focused {
+                            if state.focused || state.active {
                                 style.shadow(vec![
                                     BoxShadow::new(px(0.), px(0.), colors.ring.alpha(0.50).into())
                                         .spread_radius(px(3.)),

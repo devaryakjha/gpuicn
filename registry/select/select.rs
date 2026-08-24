@@ -57,6 +57,7 @@ pub fn select_trigger<T: Clone + Eq + 'static>(
                 })
                 .when(state.root.disabled, |base| base.opacity(0.5))
         })
+        .child(select_icon(cx))
 }
 
 /// Creates the styled select value text.
@@ -71,14 +72,19 @@ pub fn select_value<T: Clone + Eq + 'static>(cx: &App) -> SelectValue<T> {
     })
 }
 
-/// Creates a styled select icon with Base GPUI's default glyph.
+/// Creates Nova's select chevron icon.
 pub fn select_icon<T: Clone + Eq + 'static>(cx: &App) -> SelectIcon<T> {
     let theme = UiTheme::read(cx).clone();
-    SelectIcon::new().style_with_state(move |_state, base| {
-        base.flex_shrink_0()
-            .text_size(px(16.))
-            .text_color(theme.colors.muted_foreground)
-    })
+    SelectIcon::new()
+        .style_with_state(move |_state, base| {
+            base.flex_shrink_0()
+                .text_color(theme.colors.muted_foreground)
+        })
+        .child(
+            lucide(LucideIcon::ChevronDown)
+                .size(px(16.))
+                .text_color(theme.colors.muted_foreground),
+        )
 }
 
 /// Creates the in-canvas select portal.
@@ -132,6 +138,7 @@ pub fn select_item<T: Clone + Eq + 'static>(id: impl Into<ElementId>, cx: &App) 
                 &theme,
             )
         })
+        .child(select_item_indicator(cx))
 }
 
 /// Creates the text region within a select item.
@@ -172,17 +179,27 @@ pub fn select_separator(cx: &App) -> SelectSeparator {
 /// Creates the styled select scroll-up affordance.
 pub fn select_scroll_up_arrow<T: Clone + Eq + 'static>(cx: &App) -> SelectScrollUpArrow<T> {
     let theme = UiTheme::read(cx).clone();
+    let icon_color = theme.colors.muted_foreground;
     SelectScrollUpArrow::new()
         .style_with_state(move |_state, base| scroll_arrow_style(base, &theme))
-        .child("⌃")
+        .child(
+            lucide(LucideIcon::ChevronUp)
+                .size(px(16.))
+                .text_color(icon_color),
+        )
 }
 
 /// Creates the styled select scroll-down affordance.
 pub fn select_scroll_down_arrow<T: Clone + Eq + 'static>(cx: &App) -> SelectScrollDownArrow<T> {
     let theme = UiTheme::read(cx).clone();
+    let icon_color = theme.colors.muted_foreground;
     SelectScrollDownArrow::new()
         .style_with_state(move |_state, base| scroll_arrow_style(base, &theme))
-        .child("⌄")
+        .child(
+            lucide(LucideIcon::ChevronDown)
+                .size(px(16.))
+                .text_color(icon_color),
+        )
 }
 
 fn popup_style(base: Div, theme: &UiTheme) -> Div {

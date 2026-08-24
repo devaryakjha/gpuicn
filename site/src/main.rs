@@ -4,7 +4,7 @@ use gpui::{
     App, AppContext as _, Application, Bounds, Context, IntoElement, ParentElement as _, Render,
     Styled as _, Window, WindowBounds, WindowOptions, div, px, size,
 };
-use gpui_icons::LucideAssetSource;
+use gpui_icons::{LucideAssetSource, LucideIcon, lucide};
 use gpuicn::{
     Button, ButtonSize, ButtonVariant, Checkbox, ThemeMode, UiTheme,
     accordion::{
@@ -12,8 +12,8 @@ use gpuicn::{
     },
     alert_dialog::{
         alert_dialog_action, alert_dialog_backdrop, alert_dialog_cancel, alert_dialog_description,
-        alert_dialog_popup, alert_dialog_portal, alert_dialog_root, alert_dialog_title,
-        alert_dialog_trigger, alert_dialog_viewport,
+        alert_dialog_footer, alert_dialog_header, alert_dialog_popup, alert_dialog_portal,
+        alert_dialog_root, alert_dialog_title, alert_dialog_trigger, alert_dialog_viewport,
     },
     autocomplete::{
         autocomplete_empty, autocomplete_input, autocomplete_item, autocomplete_list,
@@ -23,16 +23,17 @@ use gpuicn::{
     checkbox_group::{CheckboxGroup, CheckboxGroupItem},
     collapsible::{collapsible, collapsible_content, collapsible_trigger},
     combobox::{
-        combobox_empty, combobox_input, combobox_input_group, combobox_item, combobox_list,
+        combobox_empty, combobox_group_input, combobox_input_group, combobox_item, combobox_list,
         combobox_popup, combobox_portal, combobox_positioner, combobox_root, combobox_trigger,
     },
     context_menu::{
-        context_menu_item, context_menu_popup, context_menu_portal, context_menu_positioner,
-        context_menu_root, context_menu_trigger,
+        context_menu_checkbox_item, context_menu_item, context_menu_popup, context_menu_portal,
+        context_menu_positioner, context_menu_radio_group, context_menu_radio_item,
+        context_menu_root, context_menu_separator, context_menu_trigger,
     },
     dialog::{
-        dialog_backdrop, dialog_close, dialog_description, dialog_popup, dialog_portal,
-        dialog_root, dialog_title, dialog_trigger, dialog_viewport,
+        dialog_backdrop, dialog_close, dialog_description, dialog_footer, dialog_header,
+        dialog_popup, dialog_portal, dialog_root, dialog_title, dialog_trigger, dialog_viewport,
     },
     drawer::{
         drawer_backdrop, drawer_close, drawer_content, drawer_description, drawer_popup,
@@ -43,9 +44,14 @@ use gpuicn::{
     fieldset::{FieldsetLegendVariant, fieldset_legend, fieldset_root},
     form::{FormSubmitAction, form},
     input::Input,
-    menu::{menu_item, menu_popup, menu_portal, menu_positioner, menu_root, menu_trigger},
+    menu::{
+        menu_checkbox_item, menu_group, menu_group_label, menu_item, menu_popup, menu_portal,
+        menu_positioner, menu_radio_group, menu_radio_item, menu_root, menu_separator,
+        menu_trigger,
+    },
     menubar::{
-        menubar, menubar_content, menubar_item, menubar_menu, menubar_portal, menubar_trigger,
+        menubar, menubar_checkbox_item, menubar_content, menubar_item, menubar_menu,
+        menubar_portal, menubar_separator, menubar_trigger,
     },
     meter::Meter,
     navigation_menu::{
@@ -56,7 +62,7 @@ use gpuicn::{
     number_field::NumberField,
     otp_field::OtpField,
     popover::{
-        popover_close, popover_popup, popover_portal, popover_positioner, popover_root,
+        popover_description, popover_popup, popover_portal, popover_positioner, popover_root,
         popover_title, popover_trigger,
     },
     preview_card::{
@@ -70,8 +76,8 @@ use gpuicn::{
         scroll_area_thumb, scroll_area_viewport,
     },
     select::{
-        select_icon, select_item, select_item_text, select_list, select_popup, select_portal,
-        select_positioner, select_root, select_trigger, select_value,
+        select_item, select_item_text, select_list, select_popup, select_portal, select_positioner,
+        select_root, select_trigger, select_value,
     },
     separator::Separator,
     slider::Slider,
@@ -140,7 +146,7 @@ fn launch(cx: &mut App) {
     };
     UiTheme::switch(cx, mode);
 
-    let bounds = Bounds::centered(None, size(px(720.0), px(480.0)), cx);
+    let bounds = Bounds::centered(None, size(px(640.0), px(288.0)), cx);
     cx.open_window(
         WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(bounds)),
@@ -312,7 +318,7 @@ impl Showcase {
             Demo::Tabs => self.tabs_preview(cx).into_any_element(),
             Demo::Toast => self.toast_preview(cx).into_any_element(),
             Demo::Toggle => self.toggle_preview(cx).into_any_element(),
-            Demo::ToggleGroup => self.toggle_group_preview().into_any_element(),
+            Demo::ToggleGroup => self.toggle_group_preview(cx).into_any_element(),
             Demo::Toolbar => self.toolbar_preview(cx).into_any_element(),
             Demo::Tooltip => self.tooltip_preview(cx).into_any_element(),
         }
@@ -377,13 +383,30 @@ impl Showcase {
     }
 
     fn accordion_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        accordion(cx).child(
-            accordion_item("first", cx)
-                .child(accordion_header().child(accordion_trigger(cx).child("Is it styled?")))
-                .child(
-                    accordion_content(cx).child("Yes. This uses the Base GPUI disclosure runtime."),
-                ),
-        )
+        let items = [
+            (
+                "accessible",
+                "Is it accessible?",
+                "Yes. It follows the WAI-ARIA accordion pattern.",
+            ),
+            (
+                "styled",
+                "Is it styled?",
+                "Yes. It matches the rest of the shadcn visual system.",
+            ),
+            (
+                "native",
+                "Is it native?",
+                "Yes. Base GPUI owns focus, keyboard input, and disclosure state.",
+            ),
+        ];
+        accordion(cx)
+            .w(px(480.0))
+            .children(items.into_iter().map(|(value, trigger, content)| {
+                accordion_item(value, cx)
+                    .child(accordion_header().child(accordion_trigger(cx).child(trigger)))
+                    .child(accordion_content(cx).child(content))
+            }))
     }
 
     fn autocomplete_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -416,6 +439,7 @@ impl Showcase {
                                         autocomplete_item("preview.autocomplete.menu", cx)
                                             .value("menu")
                                             .label("Menu")
+                                            .disabled(true)
                                             .child_any("Menu"),
                                     ),
                             )
@@ -432,19 +456,22 @@ impl Showcase {
                 alert_dialog_portal().child(alert_dialog_backdrop()).child(
                     alert_dialog_viewport().child(
                         alert_dialog_popup("preview.alert-dialog.popup", "Confirm deletion", cx)
-                            .child(
-                                alert_dialog_title("preview.alert-dialog.title", cx)
-                                    .child("Are you sure?"),
-                            )
-                            .child(
-                                alert_dialog_description("preview.alert-dialog.description", cx)
-                                    .child("This action cannot be undone."),
+                            .child_any(
+                                alert_dialog_header()
+                                    .child(
+                                        alert_dialog_title("preview.alert-dialog.title", cx)
+                                            .child("Are you sure?"),
+                                    )
+                                    .child(
+                                        alert_dialog_description(
+                                            "preview.alert-dialog.description",
+                                            cx,
+                                        )
+                                        .child("This action cannot be undone."),
+                                    ),
                             )
                             .child_any(
-                                div()
-                                    .flex()
-                                    .justify_end()
-                                    .gap(px(8.0))
+                                alert_dialog_footer(cx)
                                     .child(
                                         alert_dialog_cancel("preview.alert-dialog.cancel", cx)
                                             .child("Cancel"),
@@ -478,10 +505,30 @@ impl Showcase {
     }
 
     fn collapsible_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = UiTheme::read(cx).clone();
         collapsible(cx)
-            .w(px(320.0))
-            .child(collapsible_trigger(cx).child("More details"))
-            .child(collapsible_content(cx).child("This panel opens with Base GPUI state."))
+            .w(px(350.0))
+            .gap(px(8.0))
+            .child(
+                collapsible_trigger(cx)
+                    .w_full()
+                    .justify_between()
+                    .child("@gpuicn starred 3 repositories")
+                    .child(
+                        lucide(LucideIcon::ChevronDown)
+                            .size(px(16.0))
+                            .text_color(theme.colors.muted_foreground),
+                    ),
+            )
+            .child(
+                collapsible_content(cx)
+                    .flex()
+                    .flex_col()
+                    .gap(px(8.0))
+                    .child(repo_row("devaryakjha/gpuicn", &theme))
+                    .child(repo_row("zed-industries/zed", &theme))
+                    .child(repo_row("shadcn-ui/ui", &theme)),
+            )
     }
 
     fn checkbox_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -530,32 +577,26 @@ impl Showcase {
     }
 
     fn checkbox_group_preview(&self) -> impl IntoElement {
-        div()
-            .flex()
-            .gap(px(10.0))
-            .child(
-                CheckboxGroup::new("preview.checkbox-group")
-                    .aria_label("Notifications")
-                    .default_value(["updates"])
-                    .all_values(["updates", "digest", "mentions"])
-                    .item(
-                        CheckboxGroupItem::new("preview.checkbox-group.updates", "updates")
-                            .aria_label("Product updates"),
-                    )
-                    .item(
-                        CheckboxGroupItem::new("preview.checkbox-group.digest", "digest")
-                            .aria_label("Weekly digest"),
-                    )
-                    .item(
-                        CheckboxGroupItem::new("preview.checkbox-group.mentions", "mentions")
-                            .aria_label("Mentions"),
-                    ),
+        CheckboxGroup::new("preview.checkbox-group")
+            .aria_label("Notifications")
+            .default_value(["updates"])
+            .all_values(["updates", "digest", "mentions"])
+            .item(
+                CheckboxGroupItem::new("preview.checkbox-group.updates", "updates")
+                    .aria_label("Product updates")
+                    .label("Product updates"),
             )
-            .child(div().flex().flex_col().gap(px(12.0)).children([
-                "Product updates",
-                "Weekly digest",
-                "Mentions",
-            ]))
+            .item(
+                CheckboxGroupItem::new("preview.checkbox-group.digest", "digest")
+                    .aria_label("Weekly digest")
+                    .label("Weekly digest"),
+            )
+            .item(
+                CheckboxGroupItem::new("preview.checkbox-group.mentions", "mentions")
+                    .aria_label("Mentions")
+                    .disabled(true)
+                    .label("Mentions"),
+            )
     }
 
     fn combobox_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -565,11 +606,11 @@ impl Showcase {
             .child(
                 combobox_input_group(cx)
                     .child(
-                        combobox_input("preview.combobox.input", cx)
+                        combobox_group_input("preview.combobox.input", cx)
                             .placeholder("Search fruits…")
                             .aria_label("Fruits"),
                     )
-                    .child(combobox_trigger("preview.combobox.trigger", cx).child("⌄")),
+                    .child(combobox_trigger("preview.combobox.trigger", cx)),
             )
             .child(
                 combobox_portal().child(
@@ -593,6 +634,7 @@ impl Showcase {
                                         combobox_item("preview.combobox.orange", cx)
                                             .value("orange")
                                             .label("Orange")
+                                            .disabled(true)
                                             .child_any("Orange"),
                                     ),
                             )
@@ -624,12 +666,45 @@ impl Showcase {
                             .child(
                                 context_menu_item("preview.context-menu.back", cx)
                                     .label("Back")
-                                    .child("Back"),
+                                    .child("Back")
+                                    .child(shortcut("⌘[", cx)),
+                            )
+                            .child(
+                                context_menu_item("preview.context-menu.forward", cx)
+                                    .label("Forward")
+                                    .disabled(true)
+                                    .child("Forward")
+                                    .child(shortcut("⌘]", cx)),
                             )
                             .child(
                                 context_menu_item("preview.context-menu.reload", cx)
                                     .label("Reload")
-                                    .child("Reload"),
+                                    .child("Reload")
+                                    .child(shortcut("⌘R", cx)),
+                            )
+                            .child(context_menu_separator(cx))
+                            .child(
+                                context_menu_checkbox_item("preview.context-menu.bookmarks", cx)
+                                    .label("Show Bookmarks")
+                                    .default_checked(true)
+                                    .child_any("Show Bookmarks"),
+                            )
+                            .child(context_menu_separator(cx))
+                            .child(
+                                context_menu_radio_group::<(), &'static str>()
+                                    .default_value(Some("pedro"))
+                                    .child(
+                                        context_menu_radio_item("preview.context-menu.pedro", cx)
+                                            .value("pedro")
+                                            .label("Pedro Duarte")
+                                            .child_any("Pedro Duarte"),
+                                    )
+                                    .child(
+                                        context_menu_radio_item("preview.context-menu.colm", cx)
+                                            .value("colm")
+                                            .label("Colm Tuite")
+                                            .child_any("Colm Tuite"),
+                                    ),
                             ),
                     ),
                 ),
@@ -643,10 +718,42 @@ impl Showcase {
                 dialog_portal().child(dialog_backdrop()).child(
                     dialog_viewport().child(
                         dialog_popup("preview.dialog.popup", "Edit profile", cx)
-                            .child(dialog_title("preview.dialog.title", cx).child("Edit profile"))
-                            .child(
-                                dialog_description("preview.dialog.description", cx)
-                                    .child("Make changes to your profile, then close this dialog."),
+                            .child_any(
+                                dialog_header()
+                                    .child(
+                                        dialog_title("preview.dialog.title", cx)
+                                            .child("Edit profile"),
+                                    )
+                                    .child(
+                                        dialog_description("preview.dialog.description", cx).child(
+                                            "Make changes to your profile here. Click save when you're done.",
+                                        ),
+                                    ),
+                            )
+                            .child_any(
+                                div()
+                                    .flex()
+                                    .flex_col()
+                                    .gap(px(12.0))
+                                    .child(dialog_field(
+                                        "Name",
+                                        Input::new("preview.dialog.name")
+                                            .default_value("Pedro Duarte")
+                                            .aria_label("Name"),
+                                        cx,
+                                    ))
+                                    .child(dialog_field(
+                                        "Username",
+                                        Input::new("preview.dialog.username")
+                                            .default_value("@peduarte")
+                                            .aria_label("Username"),
+                                        cx,
+                                    )),
+                            )
+                            .child_any(
+                                dialog_footer(cx).child(
+                                    Button::new("preview.dialog.save").child("Save changes"),
+                                ),
                             )
                             .child(dialog_close("preview.dialog.close", cx)),
                     ),
@@ -739,11 +846,28 @@ impl Showcase {
     }
 
     fn input_preview(&self) -> impl IntoElement {
-        div().w(px(320.0)).child(
-            Input::new("preview.input")
-                .default_value("hello@example.com")
-                .aria_label("Email address"),
-        )
+        div()
+            .w(px(320.0))
+            .flex()
+            .flex_col()
+            .gap(px(12.0))
+            .child(
+                Input::new("preview.input")
+                    .placeholder("Email")
+                    .aria_label("Email address"),
+            )
+            .child(
+                Input::new("preview.input.read-only")
+                    .default_value("read-only@example.com")
+                    .read_only(true)
+                    .aria_label("Read-only email address"),
+            )
+            .child(
+                Input::new("preview.input.disabled")
+                    .default_value("disabled@example.com")
+                    .disabled(true)
+                    .aria_label("Disabled email address"),
+            )
     }
 
     fn menu_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -753,16 +877,61 @@ impl Showcase {
                 menu_portal().child(
                     menu_positioner().child(
                         menu_popup("preview.menu.popup", cx)
-                            .child(menu_item("preview.menu.cut", cx).label("Cut").child("Cut"))
                             .child(
-                                menu_item("preview.menu.copy", cx)
-                                    .label("Copy")
-                                    .child("Copy"),
+                                menu_group()
+                                    .child(
+                                        menu_group_label(cx)
+                                            .label("My Account")
+                                            .child("My Account"),
+                                    )
+                                    .child(
+                                        menu_item("preview.menu.profile", cx)
+                                            .label("Profile")
+                                            .child("Profile")
+                                            .child(shortcut("⇧⌘P", cx)),
+                                    )
+                                    .child(
+                                        menu_item("preview.menu.billing", cx)
+                                            .label("Billing")
+                                            .child("Billing")
+                                            .child(shortcut("⌘B", cx)),
+                                    )
+                                    .child(
+                                        menu_item("preview.menu.settings", cx)
+                                            .label("Settings")
+                                            .disabled(true)
+                                            .child("Settings")
+                                            .child(shortcut("⌘,", cx)),
+                                    ),
+                            )
+                            .child(menu_separator(cx))
+                            .child(
+                                menu_checkbox_item("preview.menu.status", cx)
+                                    .label("Show Status Bar")
+                                    .default_checked(true)
+                                    .child_any("Show Status Bar"),
                             )
                             .child(
-                                menu_item("preview.menu.paste", cx)
-                                    .label("Paste")
-                                    .child("Paste"),
+                                menu_checkbox_item("preview.menu.activity", cx)
+                                    .label("Show Activity Bar")
+                                    .child_any("Show Activity Bar"),
+                            )
+                            .child(menu_separator(cx))
+                            .child(
+                                menu_radio_group::<(), &'static str>()
+                                    .default_value(Some("pedro"))
+                                    .child(
+                                        menu_radio_item("preview.menu.pedro", cx)
+                                            .value("pedro")
+                                            .label("Pedro Duarte")
+                                            .child_any("Pedro Duarte"),
+                                    )
+                                    .child(
+                                        menu_radio_item("preview.menu.colm", cx)
+                                            .value("colm")
+                                            .label("Colm Tuite")
+                                            .child_any("Colm Tuite"),
+                                    ),
                             ),
                     ),
                 ),
@@ -782,12 +951,28 @@ impl Showcase {
                                     .child(
                                         menubar_item("preview.menubar.new", cx)
                                             .label("New File")
-                                            .child("New File"),
+                                            .child("New File")
+                                            .child(shortcut("⌘N", cx)),
                                     )
                                     .child(
                                         menubar_item("preview.menubar.open", cx)
                                             .label("Open")
-                                            .child("Open…"),
+                                            .child("Open…")
+                                            .child(shortcut("⌘O", cx)),
+                                    )
+                                    .child(
+                                        menubar_item("preview.menubar.save", cx)
+                                            .label("Save")
+                                            .disabled(true)
+                                            .child("Save")
+                                            .child(shortcut("⌘S", cx)),
+                                    )
+                                    .child(menubar_separator(cx))
+                                    .child(
+                                        menubar_checkbox_item("preview.menubar.autosave", cx)
+                                            .label("Auto Save")
+                                            .default_checked(true)
+                                            .child_any("Auto Save"),
                                     ),
                             ),
                         ),
@@ -831,11 +1016,26 @@ impl Showcase {
     }
 
     fn number_field_preview(&self) -> impl IntoElement {
-        div().w(px(160.0)).child(
-            NumberField::new("preview.number-field")
-                .default_value(4.0)
-                .range(Some(0.0), Some(10.0)),
-        )
+        div()
+            .w(px(160.0))
+            .flex()
+            .flex_col()
+            .gap(px(12.0))
+            .child(
+                NumberField::new("preview.number-field")
+                    .default_value(4.0)
+                    .range(Some(0.0), Some(10.0)),
+            )
+            .child(
+                NumberField::new("preview.number-field.read-only")
+                    .default_value(6.0)
+                    .read_only(true),
+            )
+            .child(
+                NumberField::new("preview.number-field.disabled")
+                    .default_value(8.0)
+                    .disabled(true),
+            )
     }
 
     fn navigation_menu_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -847,7 +1047,7 @@ impl Showcase {
                     .child(
                         navigation_menu_item()
                             .value("docs")
-                            .child(navigation_menu_trigger(cx).child_any("Docs").child_any("⌄"))
+                            .child(navigation_menu_trigger(cx).child_any("Docs"))
                             .child(
                                 navigation_menu_content(cx)
                                     .w(px(200.0))
@@ -870,7 +1070,28 @@ impl Showcase {
     }
 
     fn otp_field_preview(&self) -> impl IntoElement {
-        OtpField::new("preview.otp-field", 6).aria_label("Verification code")
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(16.0))
+            .child(
+                OtpField::new("preview.otp-field", 6)
+                    .default_value("123")
+                    .aria_label("Verification code"),
+            )
+            .child(
+                OtpField::new("preview.otp-field.disabled", 6)
+                    .default_value("123456")
+                    .disabled(true)
+                    .aria_label("Disabled verification code"),
+            )
+            .child(
+                OtpField::new("preview.otp-field.read-only", 6)
+                    .default_value("654321")
+                    .read_only(true)
+                    .aria_label("Read-only verification code"),
+            )
     }
 
     fn popover_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -881,12 +1102,29 @@ impl Showcase {
                     popover_positioner().child(
                         popover_popup("preview.popover.popup", "Dimensions", cx)
                             .child(popover_title(cx).child("Dimensions"))
-                            .child_any(
-                                Input::new("preview.popover.width")
-                                    .default_value("100%")
-                                    .aria_label("Width"),
+                            .child(
+                                popover_description(cx).child("Set the dimensions for the layer."),
                             )
-                            .child(popover_close("preview.popover.close", cx).child("Close")),
+                            .child_any(
+                                div()
+                                    .flex()
+                                    .flex_col()
+                                    .gap(px(8.0))
+                                    .child(popover_field(
+                                        "Width",
+                                        Input::new("preview.popover.width")
+                                            .default_value("100%")
+                                            .aria_label("Width"),
+                                        cx,
+                                    ))
+                                    .child(popover_field(
+                                        "Height",
+                                        Input::new("preview.popover.height")
+                                            .default_value("25px")
+                                            .aria_label("Height"),
+                                        cx,
+                                    )),
+                            ),
                     ),
                 ),
             )
@@ -898,9 +1136,34 @@ impl Showcase {
             .child(
                 preview_card_portal().child(
                     preview_card_positioner().child(
-                        preview_card_popup("preview.preview-card.popup", cx)
-                            .child_any("gpuicn")
-                            .child_any("Open-code GPUI components."),
+                        preview_card_popup("preview.preview-card.popup", cx).child_any(
+                            div()
+                                .flex()
+                                .gap(px(12.0))
+                                .child(Avatar::new("preview.preview-card.avatar").child("CN"))
+                                .child(
+                                    div()
+                                        .flex()
+                                        .flex_col()
+                                        .gap(px(4.0))
+                                        .child(
+                                            div()
+                                                .font_weight(gpui::FontWeight::MEDIUM)
+                                                .child("@gpuicn"),
+                                        )
+                                        .child(
+                                            "Open-code shadcn visual ports for native GPUI apps.",
+                                        )
+                                        .child(
+                                            div()
+                                                .mt(px(4.0))
+                                                .text_color(
+                                                    UiTheme::read(cx).colors.muted_foreground,
+                                                )
+                                                .child("Joined August 2026"),
+                                        ),
+                                ),
+                        ),
                     ),
                 ),
             )
@@ -942,14 +1205,19 @@ impl Showcase {
                     )
                     .item(
                         RadioItem::new("preview.radio-group.spacious", "spacious")
-                            .aria_label("Spacious"),
+                            .aria_label("Spacious")
+                            .disabled(true),
                     ),
             )
-            .child(div().flex().flex_col().gap(px(8.0)).children([
-                "Compact",
-                "Comfortable",
-                "Spacious",
-            ]))
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(8.0))
+                    .child("Compact")
+                    .child("Comfortable")
+                    .child(div().opacity(0.50).child("Spacious")),
+            )
     }
 
     fn scroll_area_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -992,8 +1260,7 @@ impl Showcase {
             .child(
                 select_trigger("preview.select.trigger", cx)
                     .aria_label("Theme")
-                    .child(select_value(cx).placeholder("Theme"))
-                    .child(select_icon(cx).child("⌄")),
+                    .child(select_value(cx).placeholder("Theme")),
             )
             .child(
                 select_portal().child(
@@ -1016,6 +1283,7 @@ impl Showcase {
                                     select_item("preview.select.dark", cx)
                                         .value("dark")
                                         .label("Dark")
+                                        .disabled(true)
                                         .child(select_item_text().text("Dark")),
                                 ),
                         ),
@@ -1036,20 +1304,31 @@ impl Showcase {
     }
 
     fn slider_preview(&self) -> impl IntoElement {
-        div().w(px(320.0)).child(
-            Slider::new("preview.slider")
-                .default_value(48.0)
-                .aria_label("Volume"),
-        )
+        div()
+            .w(px(320.0))
+            .flex()
+            .flex_col()
+            .gap(px(20.0))
+            .child(
+                Slider::new("preview.slider")
+                    .default_value(48.0)
+                    .aria_label("Volume"),
+            )
+            .child(
+                Slider::new("preview.slider.disabled")
+                    .default_value(64.0)
+                    .disabled(true)
+                    .aria_label("Disabled volume"),
+            )
     }
 
     fn switch_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let view = cx.entity().downgrade();
         div()
             .flex()
-            .items_center()
-            .gap(px(10.0))
-            .child(
+            .flex_col()
+            .gap(px(14.0))
+            .child(switch_row(
                 Switch::new("preview.switch")
                     .checked(self.checked)
                     .aria_label("Airplane mode")
@@ -1060,16 +1339,37 @@ impl Showcase {
                         })
                         .ok();
                     }),
-            )
-            .child(if self.checked {
-                "Airplane mode on"
-            } else {
-                "Airplane mode off"
-            })
+                if self.checked {
+                    "Airplane mode on"
+                } else {
+                    "Airplane mode"
+                },
+            ))
+            .child(switch_row(
+                Switch::new("preview.switch.checked")
+                    .default_checked(true)
+                    .aria_label("Notifications"),
+                "Notifications",
+            ))
+            .child(switch_row(
+                Switch::new("preview.switch.disabled")
+                    .default_checked(true)
+                    .disabled(true)
+                    .aria_label("Disabled setting"),
+                "Disabled",
+            ))
+            .child(switch_row(
+                Switch::new("preview.switch.read-only")
+                    .default_checked(true)
+                    .read_only(true)
+                    .aria_label("Read-only setting"),
+                "Read only",
+            ))
     }
 
     fn tabs_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         tabs(cx)
+            .w(px(420.0))
             .default_value(Some("account"))
             .child(
                 tabs_list(cx)
@@ -1087,11 +1387,13 @@ impl Showcase {
             .child(
                 tabs_content(cx)
                     .value("account")
+                    .pt(px(12.0))
                     .child("Make changes to your account here."),
             )
             .child(
                 tabs_content(cx)
                     .value("password")
+                    .pt(px(12.0))
                     .child("Change your password here."),
             )
     }
@@ -1121,7 +1423,7 @@ impl Showcase {
                             toast_content_from_theme(&theme)
                                 .child(toast_title_from_theme(&theme))
                                 .child(toast_description_from_theme(&theme))
-                                .child(toast_close_from_theme(&theme).child_any("Dismiss")),
+                                .child(toast_close_from_theme(&theme)),
                         )
                     },
                 )),
@@ -1130,42 +1432,88 @@ impl Showcase {
 
     fn toggle_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let view = cx.entity().downgrade();
-        Toggle::new("preview.toggle")
-            .pressed(self.pressed)
-            .variant(ToggleVariant::Outline)
-            .aria_label("Bold")
-            .on_pressed_change(move |pressed, _, _, cx| {
-                view.update(cx, |this, cx| {
-                    this.pressed = pressed;
-                    cx.notify();
-                })
-                .ok();
-            })
-            .child("Bold")
+        let icon_color = UiTheme::read(cx).colors.foreground;
+        div()
+            .flex()
+            .items_center()
+            .gap(px(8.0))
+            .child(
+                Toggle::new("preview.toggle")
+                    .pressed(self.pressed)
+                    .variant(ToggleVariant::Outline)
+                    .aria_label("Bold")
+                    .on_pressed_change(move |pressed, _, _, cx| {
+                        view.update(cx, |this, cx| {
+                            this.pressed = pressed;
+                            cx.notify();
+                        })
+                        .ok();
+                    })
+                    .child(
+                        lucide(LucideIcon::Bold)
+                            .size(px(16.0))
+                            .text_color(icon_color),
+                    ),
+            )
+            .child(
+                Toggle::new("preview.toggle.pressed")
+                    .default_pressed(true)
+                    .aria_label("Italic")
+                    .child(
+                        lucide(LucideIcon::Italic)
+                            .size(px(16.0))
+                            .text_color(icon_color),
+                    ),
+            )
+            .child(
+                Toggle::new("preview.toggle.disabled")
+                    .disabled(true)
+                    .aria_label("Underline")
+                    .child(
+                        lucide(LucideIcon::Underline)
+                            .size(px(16.0))
+                            .text_color(icon_color),
+                    ),
+            )
     }
 
-    fn toggle_group_preview(&self) -> impl IntoElement {
+    fn toggle_group_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let icon_color = UiTheme::read(cx).colors.foreground;
         ToggleGroup::new("preview.toggle-group")
             .aria_label("Text alignment")
             .default_value(["left"])
             .item(
                 ToggleGroupItem::new("preview.toggle-group.left", "left")
                     .aria_label("Align left")
-                    .child("L"),
+                    .child(
+                        lucide(LucideIcon::TextAlignStart)
+                            .size(px(16.0))
+                            .text_color(icon_color),
+                    ),
             )
             .item(
                 ToggleGroupItem::new("preview.toggle-group.center", "center")
                     .aria_label("Align center")
-                    .child("C"),
+                    .child(
+                        lucide(LucideIcon::TextAlignCenter)
+                            .size(px(16.0))
+                            .text_color(icon_color),
+                    ),
             )
             .item(
                 ToggleGroupItem::new("preview.toggle-group.right", "right")
                     .aria_label("Align right")
-                    .child("R"),
+                    .disabled(true)
+                    .child(
+                        lucide(LucideIcon::TextAlignEnd)
+                            .size(px(16.0))
+                            .text_color(icon_color),
+                    ),
             )
     }
 
     fn toolbar_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let icon_color = UiTheme::read(cx).colors.foreground;
         toolbar(cx)
             .id("preview.toolbar")
             .aria_label("Formatting")
@@ -1177,19 +1525,31 @@ impl Showcase {
                         toolbar_button(cx)
                             .id("preview.toolbar.bold")
                             .aria_label("Bold")
-                            .child("B"),
+                            .child(
+                                lucide(LucideIcon::Bold)
+                                    .size(px(16.0))
+                                    .text_color(icon_color),
+                            ),
                     )
                     .child(
                         toolbar_button(cx)
                             .id("preview.toolbar.italic")
                             .aria_label("Italic")
-                            .child("I"),
+                            .child(
+                                lucide(LucideIcon::Italic)
+                                    .size(px(16.0))
+                                    .text_color(icon_color),
+                            ),
                     )
                     .child(
                         toolbar_button(cx)
                             .id("preview.toolbar.underline")
                             .aria_label("Underline")
-                            .child("U"),
+                            .child(
+                                lucide(LucideIcon::Underline)
+                                    .size(px(16.0))
+                                    .text_color(icon_color),
+                            ),
                     ),
             )
             .child(toolbar_separator(cx).h(px(16.0)).w(px(1.0)))
@@ -1221,33 +1581,115 @@ impl Showcase {
 fn toast_root_from_theme(theme: &UiTheme) -> ToastRoot<()> {
     ToastRoot::new()
         .w(px(320.0))
-        .rounded(px(12.0))
+        .rounded(px(16.0))
         .border_1()
         .border_color(theme.colors.border)
         .bg(theme.colors.popover)
         .text_color(theme.colors.popover_foreground)
-        .p(px(16.0))
 }
 
-fn toast_content_from_theme(_theme: &UiTheme) -> ToastContent<()> {
-    ToastContent::new().flex().flex_col().gap(px(4.0))
+fn toast_content_from_theme(theme: &UiTheme) -> ToastContent<()> {
+    ToastContent::new()
+        .relative()
+        .flex()
+        .flex_col()
+        .items_start()
+        .gap(px(4.0))
+        .p(px(16.0))
+        .pr(px(48.0))
+        .font_family(theme.fonts.body.clone())
 }
 
 fn toast_title_from_theme(theme: &UiTheme) -> ToastTitle<()> {
     ToastTitle::new()
-        .text_color(theme.colors.popover_foreground)
         .font_weight(gpui::FontWeight::MEDIUM)
+        .text_size(px(14.0))
+        .text_color(theme.colors.popover_foreground)
 }
 
 fn toast_description_from_theme(theme: &UiTheme) -> ToastDescription<()> {
-    ToastDescription::new().text_color(theme.colors.muted_foreground)
+    ToastDescription::new()
+        .text_size(px(14.0))
+        .text_color(theme.colors.muted_foreground)
 }
 
 fn toast_close_from_theme(theme: &UiTheme) -> ToastClose<()> {
     ToastClose::new()
         .aria_label("Close toast")
-        .mt(px(8.0))
+        .absolute()
+        .top(px(8.0))
+        .right(px(8.0))
+        .flex()
+        .size(px(28.0))
+        .items_center()
+        .justify_center()
+        .rounded(px(8.0))
         .text_color(theme.colors.muted_foreground)
+        .child_any(
+            lucide(LucideIcon::X)
+                .size(px(16.0))
+                .text_color(theme.colors.muted_foreground),
+        )
+}
+
+fn repo_row(name: &'static str, theme: &UiTheme) -> gpui::Div {
+    div()
+        .rounded(theme.radius.base)
+        .border_1()
+        .border_color(theme.colors.border)
+        .px(px(12.0))
+        .py(px(8.0))
+        .text_size(px(14.0))
+        .child(name)
+}
+
+fn shortcut(value: &'static str, cx: &App) -> gpui::Div {
+    div()
+        .ml_auto()
+        .font_family(UiTheme::read(cx).fonts.mono.clone())
+        .text_size(px(12.0))
+        .text_color(UiTheme::read(cx).colors.muted_foreground)
+        .child(value)
+}
+
+fn dialog_field(label: &'static str, input: Input, cx: &App) -> gpui::Div {
+    div()
+        .flex()
+        .items_center()
+        .gap(px(12.0))
+        .child(
+            div()
+                .w(px(80.0))
+                .text_right()
+                .text_size(px(14.0))
+                .text_color(UiTheme::read(cx).colors.foreground)
+                .child(label),
+        )
+        .child(div().flex_1().child(input))
+}
+
+fn popover_field(label: &'static str, input: Input, cx: &App) -> gpui::Div {
+    div()
+        .grid()
+        .grid_cols(3)
+        .items_center()
+        .gap(px(8.0))
+        .child(
+            div()
+                .text_size(px(14.0))
+                .text_color(UiTheme::read(cx).colors.foreground)
+                .child(label),
+        )
+        .child(div().col_span(2).child(input))
+}
+
+fn switch_row(switch: Switch, label: &'static str) -> gpui::Div {
+    div()
+        .flex()
+        .items_center()
+        .gap(px(10.0))
+        .child(switch)
+        .child(label)
 }
 
 fn checkbox_row(checkbox: Checkbox, label: &'static str) -> impl IntoElement {
