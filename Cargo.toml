@@ -6,7 +6,7 @@ resolver = "3"
 edition = "2024"
 rust-version = "1.95"
 license = "MIT"
-repository = "https://github.com/devaryakjha/ui"
+repository = "https://github.com/devaryakjha/gpuicn"
 
 [workspace.dependencies]
 base-gpui = { git = "https://github.com/LukeTandjung/base-gpui", rev = "64b22337b6a790c636aab248e768e4875bb28ba8", package = "base-gpui" }

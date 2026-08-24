@@ -21,17 +21,22 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
-      - run: cargo test -p imajha-ui --lib --locked
-      - run: cargo clippy -p imajha-ui --lib --tests --locked -- -D warnings
-      - run: cargo check -p imajha-ui-showcase --locked
+      - run: cargo test -p gpuicn --lib --locked
+      - run: cargo clippy -p gpuicn --lib --tests --locked -- -D warnings
+      - run: cargo check -p gpuicn-showcase --locked
       - name: Verify stock registry install
         run: |
-          npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
-          npx -y shadcn@4.19.0 add "$PWD/site/pages/r/checkbox.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
-          cmp registry/theme/theme.rs fixtures/registry-install/src/ui/theme.rs
-          cmp registry/button/button.rs fixtures/registry-install/src/ui/button.rs
-          cmp registry/checkbox/checkbox.rs fixtures/registry-install/src/ui/checkbox.rs
-          cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
+          node scripts/build-registry.mjs
+          npx -y shadcn@4.19.0 build registry.json --output site/pages/r
+          git diff --exit-code -- registry.json site/pages/r
+          items=()
+          for item in "$PWD"/site/pages/r/*.json; do
+            [[ "$item" == */registry.json ]] || items+=("$item")
+          done
+          npx -y shadcn@4.19.0 add "${items[@]}" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
+          for source in registry/*/*.rs; do
+            cmp "$source" "fixtures/registry-install/src/ui/$(basename "$source")"
+          done
           perl -0pi -e 's/The narrow shadcn Nova Dialog visual port/Changed by the overwrite gate/' fixtures/registry-install/src/ui/dialog.rs
           npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
           cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
@@ -56,4 +61,4 @@ jobs:
         working-directory: site
         env:
           CARGO_UNSTABLE_BUILD_STD: std,panic_abort
-        run: trunk build --release --public-url /ui/demo/
+        run: trunk build --release --public-url /gpuicn/demo/

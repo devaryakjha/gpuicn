@@ -1,4 +1,4 @@
-//! The app-owned shadcn Neutral theme for imajha/ui.
+//! The app-owned shadcn Neutral theme for gpuicn.
 //!
 //! Source: shadcn/ui 4.19.0 at
 //! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, Nova style.

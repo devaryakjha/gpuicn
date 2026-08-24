@@ -18,7 +18,7 @@
   function fail(reason) {
     if (window.parent === window) return;
     var message = reason && reason.message ? reason.message : String(reason || "unknown error");
-    window.parent.postMessage({ imajhaUi: "preview-error", message: message.slice(0, 300) }, "*");
+    window.parent.postMessage({ gpuicn: "preview-error", message: message.slice(0, 300) }, "*");
   }
 
   window.addEventListener("pagehide", stopWorkers);

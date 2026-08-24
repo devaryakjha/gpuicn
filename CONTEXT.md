@@ -1,4 +1,4 @@
-# imajha/ui
+# gpuicn
 
 An open-code component catalog that brings shadcn's visual system to GPUI applications while keeping the installed source owned and editable by each application.
 
@@ -9,7 +9,7 @@ A GPUI component that preserves a shadcn component's visual identity, themes, va
 _Avoid_: API port, React port
 
 **Component catalog**:
-The pinned set of standard shadcn UI components that imajha/ui intends to make available for GPUI.
+The pinned set of standard shadcn UI components that gpuicn intends to make available for GPUI.
 _Avoid_: Blocks, templates, examples
 
 **Component preview**:

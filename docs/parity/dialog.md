@@ -1,7 +1,7 @@
 # Dialog parity
 
 - Upstream: shadcn/ui `4.19.0` at `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, `apps/v4/registry/bases/base/ui/dialog.tsx` and the Dialog section of `apps/v4/registry/styles/style-nova.css`.
-- imajha/ui: `registry/dialog/dialog.rs`.
+- gpuicn: `registry/dialog/dialog.rs`.
 - Difference types: platform, interaction, accessibility, and visual.
 
 The v0.1 Dialog keeps Base GPUI's Trigger, Escape, outside-press, Close, focus-return, and registered Popup/Close Tab cycle. It does not claim arbitrary-child focus trapping, relationship attributes, outside-content inertness, nested-dialog safety, non-modal parity, or a browser accessibility-tree bridge. Base GPUI scopes the registered parts but the pinned Backdrop still uses a fixed element ID, which is another reason nested dialogs remain out of scope.

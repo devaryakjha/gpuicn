@@ -1,6 +1,6 @@
 [package]
-name = "imajha-ui-showcase"
-version = "0.1.0"
+name = "gpuicn-showcase"
+version = "0.2.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -14,7 +14,7 @@ path = "src/main.rs"
 gpui.workspace = true
 gpui-icons.workspace = true
 gpui_platform.workspace = true
-imajha-ui = { path = "../crates/ui" }
+gpuicn = { path = "../crates/ui" }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 wasm-bindgen = "=0.2.120"

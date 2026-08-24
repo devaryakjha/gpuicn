@@ -4,7 +4,7 @@ The registry copies editable Rust files into `src/ui`. It never edits `Cargo.tom
 
 ## One-time setup
 
-Pin the same dependencies used by the v0.1 registry:
+Pin the same dependencies used by the registry:
 
 ```toml
 [dependencies]
@@ -13,7 +13,7 @@ gpui = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b
 gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "53a54cfe5efc8eacb546de0c9742339b667381b2" }
 ```
 
-Create `src/ui/mod.rs` and declare only the items you install:
+Create `src/ui/mod.rs` and declare the items you install. For example:
 
 ```rust
 pub mod theme;
@@ -26,10 +26,12 @@ Declare `mod ui;` from your crate root. At app startup, register the Base GPUI a
 
 ## Install
 
-Use the stock shadcn CLI. Dialog pulls its immutable Button and theme dependencies first.
+Use the stock shadcn CLI. Replace `dialog` with any component slug listed in
+the [catalog](https://devaryakjha.github.io/gpuicn/).
 
 ```sh
-npx -y shadcn@4.19.0 add https://devaryakjha.github.io/ui/r/dialog.json --overwrite
+npx -y shadcn@4.19.0 add https://devaryakjha.github.io/gpuicn/r/dialog.json --overwrite
 ```
 
-Replace `dialog.json` with `button.json`, `checkbox.json`, or `theme.json` for a smaller install. Re-running the command with `--overwrite` restores the pinned source exactly.
+Each item installs its required shared source. Re-running the command with
+`--overwrite` restores the pinned source exactly.

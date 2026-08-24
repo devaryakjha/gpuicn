@@ -1,1 +1,4 @@
 /target/
+/fixtures/registry-install/target/
+/fixtures/registry-install/src/ui/*.rs
+!/fixtures/registry-install/src/ui/mod.rs

@@ -1,7 +1,7 @@
 # Checkbox parity
 
 - Upstream: shadcn/ui `4.19.0` at `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, `apps/v4/registry/bases/base/ui/checkbox.tsx` and the Checkbox section of `apps/v4/registry/styles/style-nova.css`.
-- imajha/ui: `registry/checkbox/checkbox.rs`.
+- gpuicn: `registry/checkbox/checkbox.rs`.
 - Difference type: platform accessibility and hit target.
 
 The pinned GPUI revision has no builder for `aria-disabled` or `aria-readonly`. Base GPUI keeps disabled controls out of tab order and blocks disabled and read-only changes, but assistive technology cannot inspect those two states. The 16px control also has no Nova mobile pseudo-element that expands its pointer hit target.
