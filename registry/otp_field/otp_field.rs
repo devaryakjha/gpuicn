@@ -94,7 +94,7 @@ impl RenderOnce for OtpField {
             .disabled(self.disabled)
             .read_only(self.read_only)
             .flex()
-            .gap(px(8.));
+            .gap(px(0.));
         if let Some(value) = self.value {
             root = root.value(value);
         }
@@ -119,7 +119,10 @@ impl RenderOnce for OtpField {
                         .items_center()
                         .justify_center()
                         .size(px(32.))
-                        .border_1()
+                        .border_t_1()
+                        .border_b_1()
+                        .border_r_1()
+                        .when(index == 0, |base| base.border_l_1())
                         .border_color(if state.root.invalid {
                             colors.destructive
                         } else if state.active {
@@ -128,9 +131,9 @@ impl RenderOnce for OtpField {
                             colors.input
                         })
                         .bg(if mode == ThemeMode::Dark {
-                            colors.input.alpha(0.30)
+                            colors.background.blend(colors.input.alpha(0.30))
                         } else {
-                            colors.background.alpha(0.)
+                            colors.background
                         })
                         .text_color(colors.foreground)
                         .text_size(px(14.))

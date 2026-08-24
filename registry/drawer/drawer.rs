@@ -49,7 +49,15 @@ pub fn drawer_backdrop() -> DrawerBackdrop<()> {
 
 /// Creates the full-window Drawer viewport.
 pub fn drawer_viewport() -> DrawerViewport<()> {
-    DrawerViewport::new().absolute().inset_0()
+    DrawerViewport::new()
+        .absolute()
+        .inset_0()
+        .style_with_state(|state, base| match state.swipe_direction {
+            DrawerSwipeDirection::Down => base.flex().flex_col().justify_end(),
+            DrawerSwipeDirection::Up => base.flex().flex_col().justify_start(),
+            DrawerSwipeDirection::Left => base.flex().justify_start(),
+            DrawerSwipeDirection::Right => base.flex().justify_end(),
+        })
 }
 
 /// Creates the side-aware Drawer surface. The root's swipe direction controls its edge.

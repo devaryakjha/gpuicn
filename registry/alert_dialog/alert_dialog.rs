@@ -6,7 +6,7 @@ pub use base_gpui::alert_dialog::{
     AlertDialogBackdrop, AlertDialogClose, AlertDialogDescription, AlertDialogPopup,
     AlertDialogPortal, AlertDialogRoot, AlertDialogTitle, AlertDialogTrigger, AlertDialogViewport,
 };
-use gpui::{App, BoxShadow, ElementId, FontWeight, SharedString, Styled, black, px};
+use gpui::{App, BoxShadow, Div, ElementId, FontWeight, SharedString, Styled, black, div, px};
 
 use super::{
     button::{ButtonSize, ButtonVariant, style_button},
@@ -58,6 +58,27 @@ pub fn alert_dialog_viewport() -> AlertDialogViewport<()> {
         .p(px(16.0))
 }
 
+/// Creates Nova's stacked Alert Dialog header.
+pub fn alert_dialog_header() -> Div {
+    div().flex().flex_col().gap(px(6.0))
+}
+
+/// Creates Nova's inset Alert Dialog footer surface.
+pub fn alert_dialog_footer(cx: &App) -> Div {
+    let theme = UiTheme::read(cx);
+    div()
+        .mx(px(-16.0))
+        .mb(px(-16.0))
+        .flex()
+        .justify_end()
+        .gap(px(8.0))
+        .rounded_b(theme.radius.base * 1.2)
+        .border_t_1()
+        .border_color(theme.colors.border)
+        .bg(theme.colors.muted.alpha(0.50))
+        .p(px(16.0))
+}
+
 /// Creates the Nova dialog surface. Callers choose the root's controlled/open state.
 pub fn alert_dialog_popup(
     id: impl Into<ElementId>,
@@ -81,8 +102,8 @@ pub fn alert_dialog_popup(
                 .font_family(theme.fonts.body.clone())
                 .text_size(px(14.0))
                 .shadow(vec![
-                    BoxShadow::new(px(0.0), px(8.0), theme.colors.foreground.alpha(0.12).into())
-                        .blur_radius(px(16.0)),
+                    BoxShadow::new(px(0.0), px(0.0), theme.colors.foreground.alpha(0.10).into())
+                        .spread_radius(px(1.0)),
                 ])
         })
 }

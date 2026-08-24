@@ -5,9 +5,10 @@ use base_gpui::number_field::{
     NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput, NumberFieldRoot,
 };
 use gpui::{
-    App, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window,
+    App, BoxShadow, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window,
     prelude::FluentBuilder as _, px,
 };
+use gpui_icons::{LucideIcon, lucide};
 
 use super::theme::{ThemeMode, UiTheme};
 
@@ -72,9 +73,9 @@ impl RenderOnce for NumberField {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
         let background = if theme.mode == ThemeMode::Dark {
-            colors.input.alpha(0.30)
+            colors.background.blend(colors.input.alpha(0.30))
         } else {
-            colors.background.alpha(0.)
+            colors.background
         };
         let input = NumberFieldInput::new().style_with_state(move |state, base| {
             base.flex_1()
@@ -98,6 +99,7 @@ impl RenderOnce for NumberField {
             .disabled(self.disabled)
             .read_only(self.read_only)
             .style_with_state(move |state, base| {
+                let ring = colors.ring.alpha(0.50);
                 base.w_full()
                     .h(px(32.))
                     .rounded(px(10.))
@@ -108,6 +110,11 @@ impl RenderOnce for NumberField {
                         colors.input
                     })
                     .bg(background)
+                    .when(state.focused, |base| {
+                        base.border_color(colors.ring).shadow(vec![
+                            BoxShadow::new(px(0.), px(0.), ring.into()).spread_radius(px(3.)),
+                        ])
+                    })
                     .when(state.disabled, |base| base.cursor_not_allowed())
             })
             .child(
@@ -119,15 +126,33 @@ impl RenderOnce for NumberField {
                     .child(input)
                     .child(
                         NumberFieldDecrement::new()
-                            .px(px(6.))
+                            .flex()
+                            .size(px(30.))
+                            .items_center()
+                            .justify_center()
+                            .border_l_1()
+                            .border_color(colors.input)
                             .text_color(colors.muted_foreground)
-                            .child("−"),
+                            .child(
+                                lucide(LucideIcon::Minus)
+                                    .size(px(14.))
+                                    .text_color(colors.muted_foreground),
+                            ),
                     )
                     .child(
                         NumberFieldIncrement::new()
-                            .px(px(6.))
+                            .flex()
+                            .size(px(30.))
+                            .items_center()
+                            .justify_center()
+                            .border_l_1()
+                            .border_color(colors.input)
                             .text_color(colors.muted_foreground)
-                            .child("+"),
+                            .child(
+                                lucide(LucideIcon::Plus)
+                                    .size(px(14.))
+                                    .text_color(colors.muted_foreground),
+                            ),
                     ),
             );
         if let Some(value) = self.value {

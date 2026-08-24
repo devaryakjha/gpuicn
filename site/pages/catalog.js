@@ -55,7 +55,7 @@
       <a class="brand" href="${prefix}">gpuicn</a>
       <nav class="top-nav" aria-label="Main navigation">
         <a class="top-link" href="${prefix}">Docs</a>
-        <a class="top-link" href="${prefix}" aria-current="page">Components</a>
+        <a class="top-link" href="${prefix}">Components</a>
         <a class="top-link" href="${prefix}r/registry.json">Registry</a>
       </nav>
       <div class="header-actions">
@@ -74,7 +74,7 @@
     return `<aside class="sidebar" data-sidebar>
       <div class="side-group"><div class="side-label">Sections</div>
         <a class="side-link" href="${prefix}">Introduction</a>
-        <a class="side-link" href="${prefix}" ${!isComponent ? 'aria-current="page"' : ""}>Components</a>
+        <a class="side-link" href="${prefix}" aria-current="page">Components</a>
         <a class="side-link" href="${prefix}r/registry.json">Installation</a>
         <a class="side-link" href="${prefix}r/theme.json">Theming</a>
         <a class="side-link" href="${prefix}r/registry.json">Registry</a>
@@ -109,6 +109,7 @@
         ${previous ? `<a class="icon-button" href="../${previous[0]}/" aria-label="Previous">←</a>` : ""}
         ${next ? `<a class="icon-button" href="../${next[0]}/" aria-label="Next">→</a>` : ""}
       </nav></header>
+      <div class="engine-tabs" role="tablist" aria-label="Runtime"><button class="engine-tab" role="tab" aria-selected="true">Base GPUI</button></div>
       <section class="preview-card"><div class="preview"><iframe data-demo="${key}" title="Interactive ${title} GPUI preview" hidden></iframe><div data-status="loading">Preview waits until visible.</div></div>
         <div class="code-peek"><pre>${escapeHtml(source)}</pre><button class="view-code" type="button">View Code</button></div>
       </section>

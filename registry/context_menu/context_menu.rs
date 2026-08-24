@@ -74,6 +74,7 @@ pub fn context_menu_checkbox_item<P: Clone + 'static>(
         .style_with_state(move |state, base| {
             menu::item_style(base, state.highlighted, state.disabled, &theme, true)
         })
+        .child(context_menu_checkbox_item_indicator(cx))
 }
 
 /// Creates the check indicator for a context-menu checkbox item.
@@ -108,6 +109,7 @@ pub fn context_menu_radio_item<P: Clone + 'static, V: Clone + Eq + 'static>(
         .style_with_state(move |state, base| {
             menu::item_style(base, state.highlighted, state.disabled, &theme, true)
         })
+        .child(context_menu_radio_item_indicator(cx))
 }
 
 /// Creates the check indicator for a context-menu radio item.
@@ -167,6 +169,7 @@ pub fn context_menu_submenu_trigger<P: Clone + 'static>(
     cx: &App,
 ) -> ContextMenuSubmenuTrigger<P> {
     let theme = UiTheme::read(cx).clone();
+    let icon_color = theme.colors.muted_foreground;
     ContextMenuSubmenuTrigger::new()
         .id(id)
         .style_with_state(move |state, base| {
@@ -178,4 +181,9 @@ pub fn context_menu_submenu_trigger<P: Clone + 'static>(
                 false,
             )
         })
+        .child(
+            lucide(LucideIcon::ChevronRight)
+                .size(px(16.))
+                .text_color(icon_color),
+        )
 }

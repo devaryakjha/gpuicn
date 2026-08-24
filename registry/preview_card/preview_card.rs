@@ -40,7 +40,7 @@ pub fn preview_card_popup(id: impl Into<ElementId>, cx: &App) -> PreviewCardPopu
         .id(id)
         .style_with_state(move |_state, base| {
             base.w(px(256.0))
-                .rounded(px(8.0))
+                .rounded(theme.radius.base)
                 .border_1()
                 .border_color(theme.colors.foreground.alpha(0.10))
                 .p(px(10.0))
@@ -49,6 +49,8 @@ pub fn preview_card_popup(id: impl Into<ElementId>, cx: &App) -> PreviewCardPopu
                 .font_family(theme.fonts.body.clone())
                 .text_size(px(14.0))
                 .shadow(vec![
+                    BoxShadow::new(px(0.0), px(0.0), theme.colors.foreground.alpha(0.10).into())
+                        .spread_radius(px(1.0)),
                     BoxShadow::new(px(0.0), px(4.0), theme.colors.foreground.alpha(0.12).into())
                         .blur_radius(px(8.0)),
                 ])

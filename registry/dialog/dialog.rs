@@ -9,7 +9,8 @@ pub use base_gpui::dialog::{
     DialogTitle, DialogTrigger, DialogViewport,
 };
 use gpui::{
-    App, BoxShadow, ElementId, FontWeight, ParentElement as _, SharedString, Styled, black, px,
+    App, BoxShadow, Div, ElementId, FontWeight, ParentElement as _, SharedString, Styled, black,
+    div, px,
 };
 use gpui_icons::{LucideIcon, lucide};
 
@@ -60,6 +61,27 @@ pub fn dialog_viewport() -> DialogViewport<()> {
         .flex()
         .items_center()
         .justify_center()
+        .p(px(16.0))
+}
+
+/// Creates Nova's stacked Dialog header.
+pub fn dialog_header() -> Div {
+    div().flex().flex_col().gap(px(8.0))
+}
+
+/// Creates Nova's inset Dialog footer surface.
+pub fn dialog_footer(cx: &App) -> Div {
+    let theme = UiTheme::read(cx);
+    div()
+        .mx(px(-16.0))
+        .mb(px(-16.0))
+        .flex()
+        .justify_end()
+        .gap(px(8.0))
+        .rounded_b(theme.radius.base * 1.4)
+        .border_t_1()
+        .border_color(theme.colors.border)
+        .bg(theme.colors.muted.alpha(0.50))
         .p(px(16.0))
 }
 

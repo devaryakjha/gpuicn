@@ -28,6 +28,7 @@ pub fn scroll_area_viewport(cx: &App) -> ScrollAreaViewport {
         let colors = theme.colors;
         base.size_full()
             .rounded(theme.radius.base)
+            .bg(colors.background)
             .focus_visible(move |style| {
                 style.border_color(colors.ring).shadow(vec![
                     BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())

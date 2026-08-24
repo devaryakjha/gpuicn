@@ -45,10 +45,13 @@ pub fn collapsible_trigger(cx: &App) -> CollapsibleTrigger {
                 base.opacity(0.50).cursor_not_allowed()
             })
             .focus_visible(move |style| {
-                style.border_color(colors.ring).shadow(vec![
-                    BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                        .spread_radius(px(3.0)),
-                ])
+                style
+                    .bg(colors.background)
+                    .border_color(colors.ring)
+                    .shadow(vec![
+                        BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
+                            .spread_radius(px(3.0)),
+                    ])
             })
     })
 }

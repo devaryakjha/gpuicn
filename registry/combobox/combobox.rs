@@ -57,6 +57,24 @@ pub fn combobox_input<T: Clone + Eq + 'static>(
         })
 }
 
+/// Creates the borderless input used inside [`combobox_input_group`].
+pub fn combobox_group_input<T: Clone + Eq + 'static>(
+    id: impl Into<ElementId>,
+    cx: &App,
+) -> ComboboxInput<T> {
+    let theme = UiTheme::read(cx).clone();
+    ComboboxInput::new()
+        .id(id)
+        .style_with_state(move |_state, base| base.h(px(30.)).flex_1())
+        .input_style_with_state(move |_state, base| {
+            base.w_full()
+                .h_full()
+                .font_family(theme.fonts.body.clone())
+                .text_size(px(14.))
+                .text_color(theme.colors.foreground)
+        })
+}
+
 /// Creates the styled input group used by chips and custom combobox layouts.
 pub fn combobox_input_group<T: Clone + Eq + 'static>(cx: &App) -> ComboboxInputGroup<T> {
     let theme = UiTheme::read(cx).clone();
@@ -70,21 +88,28 @@ pub fn combobox_input_group<T: Clone + Eq + 'static>(cx: &App) -> ComboboxInputG
             .border_color(theme.colors.input)
             .px(px(10.))
             .py(px(4.))
-            .bg(theme.colors.background)
+            .bg(if theme.mode == super::theme::ThemeMode::Dark {
+                theme.colors.input.alpha(0.30)
+            } else {
+                theme.colors.background
+            })
             .when(state.root.focused, |base| {
-                base.border_color(theme.colors.ring)
+                base.border_color(theme.colors.ring).shadow(vec![
+                    BoxShadow::new(px(0.), px(0.), theme.colors.ring.alpha(0.50).into())
+                        .spread_radius(px(3.)),
+                ])
             })
             .when(state.root.disabled, |base| base.opacity(0.5))
     })
 }
 
-/// Creates the styled combobox trigger. Add a chevron as child content when
-/// the trigger is rendered outside a custom input group.
+/// Creates the styled combobox trigger with Nova's chevron.
 pub fn combobox_trigger<T: Clone + Eq + 'static>(
     id: impl Into<ElementId>,
     cx: &App,
 ) -> ComboboxTrigger<T> {
     let theme = UiTheme::read(cx).clone();
+    let icon_color = theme.colors.muted_foreground;
     ComboboxTrigger::new()
         .id(id)
         .style_with_state(move |state, base| {
@@ -99,6 +124,11 @@ pub fn combobox_trigger<T: Clone + Eq + 'static>(
                     base.hover(move |style| style.bg(theme.colors.muted))
                 })
         })
+        .child(
+            lucide(LucideIcon::ChevronDown)
+                .size(px(16.))
+                .text_color(icon_color),
+        )
 }
 
 /// Creates the styled clear control for a combobox.
@@ -176,6 +206,7 @@ pub fn combobox_item<T: Clone + Eq + 'static>(
                 })
                 .when(state.disabled, |base| base.opacity(0.5))
         })
+        .child(combobox_item_indicator(cx))
 }
 
 /// Creates the selected-item check indicator.

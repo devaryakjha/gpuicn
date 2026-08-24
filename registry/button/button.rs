@@ -215,6 +215,23 @@ pub(super) fn style_button(
         ButtonVariant::Destructive => colors.destructive.alpha(focus_alpha),
         _ => colors.ring.alpha(focus_alpha),
     };
+    let focus_background =
+        match variant {
+            ButtonVariant::Default => colors.primary,
+            ButtonVariant::Outline => match theme.mode {
+                ThemeMode::Light => colors.background,
+                ThemeMode::Dark => colors.background.blend(colors.input.alpha(0.30)),
+            },
+            ButtonVariant::Secondary => colors.secondary,
+            ButtonVariant::Ghost | ButtonVariant::Link => colors.background,
+            ButtonVariant::Destructive => colors.background.blend(colors.destructive.alpha(
+                if theme.mode == ThemeMode::Light {
+                    0.10
+                } else {
+                    0.20
+                },
+            )),
+        };
 
     let base = base
         .flex()
@@ -231,9 +248,12 @@ pub(super) fn style_button(
         .font_weight(FontWeight::MEDIUM)
         .text_size(px(metrics.text_size))
         .focus_visible(move |style| {
-            style.border_color(focus_border).shadow(vec![
-                BoxShadow::new(px(0.0), px(0.0), focus_ring.into()).spread_radius(px(3.0)),
-            ])
+            style
+                .bg(focus_background)
+                .border_color(focus_border)
+                .shadow(vec![
+                    BoxShadow::new(px(0.0), px(0.0), focus_ring.into()).spread_radius(px(3.0)),
+                ])
         })
         .when(metrics.icon_only, |base| base.w(px(metrics.height)).p_0())
         .when(!metrics.icon_only, |base| {

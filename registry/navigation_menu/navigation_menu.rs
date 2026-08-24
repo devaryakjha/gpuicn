@@ -12,8 +12,10 @@ pub use base_gpui::navigation_menu::{
     NavigationMenuViewport,
 };
 use gpui::{
-    App, BoxShadow, FontWeight, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px,
+    App, BoxShadow, FontWeight, InteractiveElement as _, ParentElement as _, Styled,
+    prelude::FluentBuilder as _, px,
 };
+use gpui_icons::{LucideIcon, lucide};
 
 use super::theme::UiTheme;
 
@@ -38,39 +40,51 @@ pub fn navigation_menu_item<T: Clone + Eq + 'static>() -> NavigationMenuItem<T> 
     NavigationMenuItem::new().relative()
 }
 
-/// Creates a Nova trigger. Add the label and optional `navigation_menu_icon()` as children.
+/// Creates a Nova trigger with its rotating-chevron slot.
 pub fn navigation_menu_trigger<T: Clone + Eq + 'static>(cx: &App) -> NavigationMenuTrigger<T> {
     let theme = UiTheme::read(cx).clone();
-    NavigationMenuTrigger::new().style_with_state(move |state, base| {
-        let colors = theme.colors;
-        base.flex()
-            .items_center()
-            .justify_center()
-            .h(px(36.0))
-            .rounded(theme.radius.base)
-            .border_1()
-            .border_color(colors.background.alpha(0.0))
-            .px(px(10.0))
-            .py(px(6.0))
-            .font_family(theme.fonts.body.clone())
-            .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0))
-            .text_color(colors.foreground)
-            .when(state.open, |base| base.bg(colors.muted.alpha(0.50)))
-            .when(!state.disabled, |base| {
-                base.cursor_pointer()
-                    .hover(move |style| style.bg(colors.muted))
-            })
-            .when(state.disabled, |base| {
-                base.opacity(0.50).cursor_not_allowed()
-            })
-            .focus_visible(move |style| {
-                style.border_color(colors.ring).shadow(vec![
-                    BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                        .spread_radius(px(3.0)),
-                ])
-            })
-    })
+    let icon_color = theme.colors.muted_foreground;
+    NavigationMenuTrigger::new()
+        .style_with_state(move |state, base| {
+            let colors = theme.colors;
+            base.flex()
+                .items_center()
+                .justify_center()
+                .h(px(32.0))
+                .rounded(theme.radius.base)
+                .border_1()
+                .border_color(colors.background.alpha(0.0))
+                .px(px(10.0))
+                .py(px(6.0))
+                .font_family(theme.fonts.body.clone())
+                .font_weight(FontWeight::MEDIUM)
+                .text_size(px(14.0))
+                .text_color(colors.foreground)
+                .when(state.open, |base| base.bg(colors.muted.alpha(0.50)))
+                .when(!state.disabled, |base| {
+                    base.cursor_pointer()
+                        .hover(move |style| style.bg(colors.muted))
+                })
+                .when(state.disabled, |base| {
+                    base.opacity(0.50).cursor_not_allowed()
+                })
+                .focus_visible(move |style| {
+                    style
+                        .bg(colors.muted)
+                        .border_color(colors.ring)
+                        .shadow(vec![
+                            BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
+                                .spread_radius(px(3.0)),
+                        ])
+                })
+        })
+        .child(
+            navigation_menu_icon(cx).child(
+                lucide(LucideIcon::ChevronDown)
+                    .size(px(12.0))
+                    .text_color(icon_color),
+            ),
+        )
 }
 
 /// Creates the popup content container.
@@ -126,7 +140,7 @@ pub fn navigation_menu_link<T: Clone + Eq + 'static>(cx: &App) -> NavigationMenu
         base.flex()
             .items_center()
             .gap(px(8.0))
-            .rounded(px(6.0))
+            .rounded(theme.radius.base)
             .border_1()
             .border_color(colors.popover.alpha(0.0))
             .p(px(8.0))

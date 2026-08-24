@@ -61,10 +61,13 @@ pub fn toast_content(cx: &App) -> ToastContent<()> {
     let theme = UiTheme::read(cx).clone();
     ToastContent::new().style_with_state(move |_state, base| {
         base.flex()
-            .items_center()
-            .gap(px(12.0))
+            .relative()
+            .flex_col()
+            .items_start()
+            .gap(px(4.0))
             .overflow_hidden()
             .p(px(16.0))
+            .pr(px(48.0))
             .font_family(theme.fonts.body.clone())
     })
 }
@@ -104,6 +107,9 @@ pub fn toast_close(cx: &App) -> ToastClose<()> {
     let icon_color = theme.colors.muted_foreground;
     ToastClose::new()
         .aria_label("Close toast")
+        .absolute()
+        .top(px(8.0))
+        .right(px(8.0))
         .style_with_state(move |_state, base| {
             style_button(
                 base,
