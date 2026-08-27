@@ -84,7 +84,7 @@ pub mod tooltip;
 
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use checkbox::Checkbox;
-pub use theme::{ThemeMode, UiColors, UiFonts, UiRadius, UiSpacing, UiTheme};
+pub use theme::{ThemeMode, UiColors, UiFonts, UiRadius, UiShadows, UiSpacing, UiTheme};
 
 /// Registers every Base GPUI action used by the component catalog.
 pub fn init(cx: &mut gpui::App) {

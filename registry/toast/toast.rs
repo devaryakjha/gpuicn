@@ -6,7 +6,7 @@ pub use base_gpui::toast::{
     ToastAction, ToastClose, ToastContent, ToastDescription, ToastOptions, ToastPortal,
     ToastProvider, ToastRoot, ToastTitle, ToastViewport, create_toast_manager,
 };
-use gpui::{App, BoxShadow, ElementId, FontWeight, Styled, px};
+use gpui::{App, ElementId, FontWeight, Styled, px};
 use gpui_icons::{LucideIcon, lucide};
 
 use super::{
@@ -29,9 +29,9 @@ pub fn toast_viewport(id: impl Into<ElementId>) -> ToastViewport<()> {
     ToastViewport::new()
         .id(id)
         .absolute()
+        .left(px(16.0))
         .right(px(16.0))
         .bottom(px(16.0))
-        .w(px(384.0))
         .max_w(px(384.0))
         .flex()
         .flex_col()
@@ -43,16 +43,12 @@ pub fn toast_root(cx: &App) -> ToastRoot<()> {
     let theme = UiTheme::read(cx).clone();
     ToastRoot::new().style_with_state(move |_state, base| {
         base.w_full()
-            .rounded(px(16.0))
+            .rounded(theme.radius.two_xl)
             .border_1()
             .border_color(theme.colors.border)
             .bg(theme.colors.popover)
             .text_color(theme.colors.popover_foreground)
             .font_family(theme.fonts.body.clone())
-            .shadow(vec![
-                BoxShadow::new(px(0.0), px(8.0), theme.colors.foreground.alpha(0.16).into())
-                    .blur_radius(px(16.0)),
-            ])
     })
 }
 

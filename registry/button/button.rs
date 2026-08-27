@@ -8,9 +8,8 @@ use std::rc::Rc;
 
 use base_gpui::button::ButtonRoot;
 use gpui::{
-    AnyElement, App, BoxShadow, ClickEvent, Div, ElementId, FontWeight, InteractiveElement as _,
-    IntoElement, ParentElement, RenderOnce, SharedString, Styled, Window,
-    prelude::FluentBuilder as _, px,
+    AnyElement, App, ClickEvent, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement,
+    ParentElement, RenderOnce, SharedString, Styled, Window, prelude::FluentBuilder as _, px,
 };
 
 use super::theme::{ThemeMode, UiTheme, neutral};
@@ -201,37 +200,31 @@ pub(super) fn style_button(
     theme: &UiTheme,
 ) -> Div {
     let colors = theme.colors;
-    let metrics = size.metrics(f32::from(theme.radius.base));
+    let metrics = size.metrics(f32::from(theme.radius.lg));
     let focus_border = match variant {
-        ButtonVariant::Destructive => colors.destructive.alpha(0.40),
+        ButtonVariant::Destructive => colors.destructive.opacity(0.40),
         _ => colors.ring,
     };
-    let focus_alpha = match (variant, theme.mode) {
-        (ButtonVariant::Destructive, ThemeMode::Dark) => 0.40,
-        (ButtonVariant::Destructive, ThemeMode::Light) => 0.20,
-        _ => 0.50,
-    };
     let focus_ring = match variant {
-        ButtonVariant::Destructive => colors.destructive.alpha(focus_alpha),
-        _ => colors.ring.alpha(focus_alpha),
+        ButtonVariant::Destructive => theme.destructive_focus_ring(),
+        _ => theme.focus_ring(),
     };
-    let focus_background =
-        match variant {
-            ButtonVariant::Default => colors.primary,
-            ButtonVariant::Outline => match theme.mode {
-                ThemeMode::Light => colors.background,
-                ThemeMode::Dark => colors.background.blend(colors.input.alpha(0.30)),
+    let focus_background = match variant {
+        ButtonVariant::Default => colors.primary,
+        ButtonVariant::Outline => match theme.mode {
+            ThemeMode::Light => colors.background,
+            ThemeMode::Dark => colors.background.blend(colors.input.opacity(0.30)),
+        },
+        ButtonVariant::Secondary => colors.secondary,
+        ButtonVariant::Ghost | ButtonVariant::Link => colors.background,
+        ButtonVariant::Destructive => colors.background.blend(colors.destructive.opacity(
+            if theme.mode == ThemeMode::Light {
+                0.10
+            } else {
+                0.20
             },
-            ButtonVariant::Secondary => colors.secondary,
-            ButtonVariant::Ghost | ButtonVariant::Link => colors.background,
-            ButtonVariant::Destructive => colors.background.blend(colors.destructive.alpha(
-                if theme.mode == ThemeMode::Light {
-                    0.10
-                } else {
-                    0.20
-                },
-            )),
-        };
+        )),
+    };
 
     let base = base
         .flex()
@@ -243,7 +236,7 @@ pub(super) fn style_button(
         .gap(px(metrics.gap))
         .rounded(px(metrics.radius))
         .border_1()
-        .border_color(colors.background.alpha(0.0))
+        .border_color(colors.background.opacity(0.0))
         .font_family(theme.fonts.body.clone())
         .font_weight(FontWeight::MEDIUM)
         .text_size(px(metrics.text_size))
@@ -251,9 +244,7 @@ pub(super) fn style_button(
             style
                 .bg(focus_background)
                 .border_color(focus_border)
-                .shadow(vec![
-                    BoxShadow::new(px(0.0), px(0.0), focus_ring.into()).spread_radius(px(3.0)),
-                ])
+                .shadow(focus_ring.clone())
         })
         .when(metrics.icon_only, |base| base.w(px(metrics.height)).p_0())
         .when(!metrics.icon_only, |base| {
@@ -265,12 +256,12 @@ pub(super) fn style_button(
             .bg(colors.primary)
             .text_color(colors.primary_foreground)
             .when(!disabled, |base| {
-                base.hover(move |style| style.bg(colors.primary.alpha(0.80)))
+                base.hover(move |style| style.bg(colors.primary.opacity(0.80)))
             }),
         ButtonVariant::Outline => {
             let background = match theme.mode {
                 ThemeMode::Light => colors.background,
-                ThemeMode::Dark => colors.input.alpha(0.30),
+                ThemeMode::Dark => colors.input.opacity(0.30),
             };
             let border = match theme.mode {
                 ThemeMode::Light => colors.border,
@@ -278,7 +269,7 @@ pub(super) fn style_button(
             };
             let hover = match theme.mode {
                 ThemeMode::Light => colors.muted,
-                ThemeMode::Dark => colors.input.alpha(0.50),
+                ThemeMode::Dark => colors.input.opacity(0.50),
             };
             base.bg(background)
                 .text_color(colors.foreground)
@@ -299,9 +290,9 @@ pub(super) fn style_button(
         ButtonVariant::Ghost => {
             let hover = match theme.mode {
                 ThemeMode::Light => colors.muted,
-                ThemeMode::Dark => colors.muted.alpha(0.50),
+                ThemeMode::Dark => colors.muted.opacity(0.50),
             };
-            base.bg(colors.background.alpha(0.0))
+            base.bg(colors.background.opacity(0.0))
                 .text_color(colors.foreground)
                 .when(!disabled, |base| {
                     base.hover(move |style| style.bg(hover).text_color(colors.foreground))
@@ -316,14 +307,14 @@ pub(super) fn style_button(
                 ThemeMode::Light => 0.20,
                 ThemeMode::Dark => 0.30,
             };
-            base.bg(colors.destructive.alpha(background_alpha))
+            base.bg(colors.destructive.opacity(background_alpha))
                 .text_color(colors.destructive)
                 .when(!disabled, |base| {
-                    base.hover(move |style| style.bg(colors.destructive.alpha(hover_alpha)))
+                    base.hover(move |style| style.bg(colors.destructive.opacity(hover_alpha)))
                 })
         }
         ButtonVariant::Link => base
-            .bg(colors.background.alpha(0.0))
+            .bg(colors.background.opacity(0.0))
             .text_color(colors.primary)
             .when(!disabled, |base| base.hover(|style| style.underline())),
     };

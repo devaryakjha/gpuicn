@@ -7,8 +7,8 @@ use base_gpui::radio_group::{
     RadioGroupIndicator, RadioGroupRadio, RadioGroupRoot, RadioGroupValueChangeDetails,
 };
 use gpui::{
-    App, BoxShadow, ElementId, InteractiveElement as _, IntoElement, ParentElement as _,
-    RenderOnce, SharedString, Styled, Window, prelude::FluentBuilder as _, px,
+    App, ElementId, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce,
+    SharedString, Styled, Window, prelude::FluentBuilder as _, px,
 };
 
 use super::theme::{ThemeMode, UiTheme};
@@ -44,17 +44,19 @@ impl RadioItem {
     fn render(self, theme: &UiTheme) -> RadioGroupRadio<SharedString> {
         let colors = theme.colors;
         let mode = theme.mode;
+        let focus_ring = theme.focus_ring();
         let mut radio = RadioGroupRadio::new()
             .id(self.id)
             .value(self.value)
             .disabled(self.disabled)
             .style_with_state(move |state, base| {
+                let focus_ring = focus_ring.clone();
                 let background = if state.checked {
                     colors.primary
                 } else if mode == ThemeMode::Dark {
-                    colors.input.alpha(0.30)
+                    colors.input.opacity(0.30)
                 } else {
-                    colors.background.alpha(0.)
+                    colors.background.opacity(0.)
                 };
                 base.relative()
                     .flex_shrink_0()
@@ -68,10 +70,7 @@ impl RadioItem {
                     })
                     .bg(background)
                     .focus_visible(move |style| {
-                        style.border_color(colors.ring).shadow(vec![
-                            BoxShadow::new(px(0.), px(0.), colors.ring.alpha(0.50).into())
-                                .spread_radius(px(3.)),
-                        ])
+                        style.border_color(colors.ring).shadow(focus_ring.clone())
                     })
                     .when(state.disabled, |base| {
                         base.opacity(0.50).cursor_not_allowed()

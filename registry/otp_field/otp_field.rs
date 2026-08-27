@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use base_gpui::otp_field::{OTPFieldChangeDetails, OTPFieldInput, OTPFieldRoot};
 use gpui::{
-    App, BoxShadow, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window,
+    App, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window,
     prelude::FluentBuilder as _, px,
 };
 
@@ -86,6 +86,8 @@ impl RenderOnce for OtpField {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
         let mode = theme.mode;
+        let focus_ring = theme.focus_ring();
+        let radius = theme.radius.lg;
         let mut root = OTPFieldRoot::new()
             .id(self.id)
             .length(self.length)
@@ -112,9 +114,11 @@ impl RenderOnce for OtpField {
             });
         }
         root.children((0..self.length).map(move |index| {
+            let focus_ring = focus_ring.clone();
             OTPFieldInput::new()
                 .with_slot_index(index)
                 .style_with_state(move |state, base| {
+                    let focus_ring = focus_ring.clone();
                     base.flex()
                         .items_center()
                         .justify_center()
@@ -131,22 +135,17 @@ impl RenderOnce for OtpField {
                             colors.input
                         })
                         .bg(if mode == ThemeMode::Dark {
-                            colors.background.blend(colors.input.alpha(0.30))
+                            colors.background.blend(colors.input.opacity(0.30))
                         } else {
                             colors.background
                         })
                         .text_color(colors.foreground)
                         .text_size(px(14.))
-                        .when(index == 0, |base| base.rounded_l(px(10.)))
+                        .when(index == 0, |base| base.rounded_l(radius))
                         .when(index + 1 == state.root.length, |base| {
-                            base.rounded_r(px(10.))
+                            base.rounded_r(radius)
                         })
-                        .when(state.active, move |base| {
-                            base.shadow(vec![
-                                BoxShadow::new(px(0.), px(0.), colors.ring.alpha(0.50).into())
-                                    .spread_radius(px(3.)),
-                            ])
-                        })
+                        .when(state.active, move |base| base.shadow(focus_ring.clone()))
                         .when(state.root.disabled, |base| base.opacity(0.50))
                 })
         }))

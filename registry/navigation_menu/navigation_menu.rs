@@ -12,7 +12,7 @@ pub use base_gpui::navigation_menu::{
     NavigationMenuViewport,
 };
 use gpui::{
-    App, BoxShadow, FontWeight, InteractiveElement as _, ParentElement as _, Styled,
+    App, FontWeight, InteractiveElement as _, ParentElement as _, Styled,
     prelude::FluentBuilder as _, px,
 };
 use gpui_icons::{LucideIcon, lucide};
@@ -44,23 +44,25 @@ pub fn navigation_menu_item<T: Clone + Eq + 'static>() -> NavigationMenuItem<T> 
 pub fn navigation_menu_trigger<T: Clone + Eq + 'static>(cx: &App) -> NavigationMenuTrigger<T> {
     let theme = UiTheme::read(cx).clone();
     let icon_color = theme.colors.muted_foreground;
+    let focus_ring = theme.focus_ring();
     NavigationMenuTrigger::new()
         .style_with_state(move |state, base| {
             let colors = theme.colors;
+            let focus_ring = focus_ring.clone();
             base.flex()
                 .items_center()
                 .justify_center()
                 .h(px(32.0))
-                .rounded(theme.radius.base)
+                .rounded(theme.radius.lg)
                 .border_1()
-                .border_color(colors.background.alpha(0.0))
+                .border_color(colors.background.opacity(0.0))
                 .px(px(10.0))
                 .py(px(6.0))
                 .font_family(theme.fonts.body.clone())
                 .font_weight(FontWeight::MEDIUM)
                 .text_size(px(14.0))
                 .text_color(colors.foreground)
-                .when(state.open, |base| base.bg(colors.muted.alpha(0.50)))
+                .when(state.open, |base| base.bg(colors.muted.opacity(0.50)))
                 .when(!state.disabled, |base| {
                     base.cursor_pointer()
                         .hover(move |style| style.bg(colors.muted))
@@ -72,10 +74,7 @@ pub fn navigation_menu_trigger<T: Clone + Eq + 'static>(cx: &App) -> NavigationM
                     style
                         .bg(colors.muted)
                         .border_color(colors.ring)
-                        .shadow(vec![
-                            BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                                .spread_radius(px(3.0)),
-                        ])
+                        .shadow(focus_ring.clone())
                 })
         })
         .child(
@@ -111,13 +110,12 @@ pub fn navigation_menu_positioner<T: Clone + Eq + 'static>() -> NavigationMenuPo
 pub fn navigation_menu_popup<T: Clone + Eq + 'static>(cx: &App) -> NavigationMenuPopup<T> {
     let theme = UiTheme::read(cx).clone();
     NavigationMenuPopup::new().style_with_state(move |_state, base| {
-        base.rounded(theme.radius.base)
+        base.rounded(theme.radius.lg)
             .bg(theme.colors.popover)
             .text_color(theme.colors.popover_foreground)
-            .shadow(vec![
-                BoxShadow::new(px(0.0), px(0.0), theme.colors.foreground.alpha(0.10).into())
-                    .spread_radius(px(1.0)),
-            ])
+            .border_1()
+            .border_color(theme.colors.foreground.opacity(0.10))
+            .shadow(theme.shadows.sm.clone())
     })
 }
 
@@ -126,7 +124,7 @@ pub fn navigation_menu_viewport<T: Clone + Eq + 'static>(cx: &App) -> Navigation
     let theme = UiTheme::read(cx).clone();
     NavigationMenuViewport::new().style_with_state(move |_state, base| {
         base.overflow_hidden()
-            .rounded(theme.radius.base)
+            .rounded(theme.radius.lg)
             .bg(theme.colors.popover)
             .text_color(theme.colors.popover_foreground)
     })
@@ -135,26 +133,23 @@ pub fn navigation_menu_viewport<T: Clone + Eq + 'static>(cx: &App) -> Navigation
 /// Creates a Nova navigation link.
 pub fn navigation_menu_link<T: Clone + Eq + 'static>(cx: &App) -> NavigationMenuLink<T> {
     let theme = UiTheme::read(cx).clone();
+    let focus_ring = theme.focus_ring();
     NavigationMenuLink::new().style_with_state(move |state, base| {
         let colors = theme.colors;
+        let focus_ring = focus_ring.clone();
         base.flex()
             .items_center()
             .gap(px(8.0))
-            .rounded(theme.radius.base)
+            .rounded(theme.radius.lg)
             .border_1()
-            .border_color(colors.popover.alpha(0.0))
+            .border_color(colors.popover.opacity(0.0))
             .p(px(8.0))
             .font_family(theme.fonts.body.clone())
             .text_size(px(14.0))
             .text_color(colors.popover_foreground)
-            .when(state.active, |base| base.bg(colors.muted.alpha(0.50)))
+            .when(state.active, |base| base.bg(colors.muted.opacity(0.50)))
             .hover(move |style| style.bg(colors.muted))
-            .focus_visible(move |style| {
-                style.border_color(colors.ring).shadow(vec![
-                    BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                        .spread_radius(px(3.0)),
-                ])
-            })
+            .focus_visible(move |style| style.border_color(colors.ring).shadow(focus_ring.clone()))
     })
 }
 

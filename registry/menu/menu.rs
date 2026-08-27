@@ -11,8 +11,7 @@ pub use base_gpui::menu::{
     MenuSide, MenuSubmenuRoot, MenuSubmenuTrigger, MenuTrigger,
 };
 use gpui::{
-    App, BoxShadow, Div, ElementId, FontWeight, ParentElement as _, Styled,
-    prelude::FluentBuilder as _, px,
+    App, Div, ElementId, FontWeight, ParentElement as _, Styled, prelude::FluentBuilder as _, px,
 };
 use gpui_icons::{LucideIcon, lucide};
 
@@ -91,7 +90,10 @@ pub fn menu_checkbox_item_indicator<P: Clone + 'static>(cx: &App) -> MenuCheckbo
     let theme = UiTheme::read(cx).clone();
     let foreground = theme.colors.foreground;
     MenuCheckboxItemIndicator::new()
-        .style_with_state(move |_state, base| indicator_style(base, &theme))
+        .keep_mounted(true)
+        .style_with_state(move |state, base| {
+            indicator_style(base, &theme).opacity(if state.checked { 1.0 } else { 0.0 })
+        })
         .child(
             lucide(LucideIcon::Check)
                 .size(px(16.))
@@ -125,7 +127,10 @@ pub fn menu_radio_item_indicator<P: Clone + 'static, V: Clone + Eq + 'static>(
     let theme = UiTheme::read(cx).clone();
     let foreground = theme.colors.foreground;
     MenuRadioItemIndicator::new()
-        .style_with_state(move |_state, base| indicator_style(base, &theme))
+        .keep_mounted(true)
+        .style_with_state(move |state, base| {
+            indicator_style(base, &theme).opacity(if state.checked { 1.0 } else { 0.0 })
+        })
         .child(
             lucide(LucideIcon::Check)
                 .size(px(16.))
@@ -196,18 +201,15 @@ pub(crate) fn popup_style(base: Div, theme: &UiTheme, min_width: gpui::Pixels) -
     base.min_w(min_width)
         .max_h(px(288.))
         .overflow_hidden()
-        .rounded(theme.radius.base)
+        .rounded(theme.radius.lg)
         .p(px(4.))
         .bg(theme.colors.popover)
         .text_color(theme.colors.popover_foreground)
         .font_family(theme.fonts.body.clone())
         .text_size(px(14.))
         .border_1()
-        .border_color(theme.colors.foreground.alpha(0.10))
-        .shadow(vec![
-            BoxShadow::new(px(0.), px(4.), theme.colors.foreground.alpha(0.12).into())
-                .blur_radius(px(12.)),
-        ])
+        .border_color(theme.colors.foreground.opacity(0.10))
+        .shadow(theme.shadows.md.clone())
 }
 
 pub(crate) fn item_style(
@@ -221,7 +223,7 @@ pub(crate) fn item_style(
         .flex()
         .items_center()
         .gap(px(6.))
-        .rounded(px(6.))
+        .rounded(theme.radius.sm)
         .py(px(4.))
         .pr(px(if has_indicator { 32. } else { 6. }))
         .pl(px(6.))

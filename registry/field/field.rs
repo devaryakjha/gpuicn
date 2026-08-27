@@ -6,7 +6,7 @@
 use base_gpui::field::{
     FieldControl, FieldDescription, FieldError, FieldItem, FieldLabel, FieldRoot, FieldValidity,
 };
-use gpui::{App, BoxShadow, Div, ElementId, FontWeight, Styled, prelude::FluentBuilder as _, px};
+use gpui::{App, Div, ElementId, FontWeight, Styled, prelude::FluentBuilder as _, px};
 
 use super::theme::{ThemeMode, UiTheme};
 
@@ -157,6 +157,8 @@ fn style_field_control(
     theme: &UiTheme,
 ) -> Div {
     let colors = theme.colors;
+    let focus_ring = theme.focus_ring();
+    let destructive_focus_ring = theme.destructive_focus_ring();
     let border = if state.invalid {
         colors.destructive
     } else if state.focused {
@@ -166,30 +168,22 @@ fn style_field_control(
     };
     let background = match theme.mode {
         ThemeMode::Light => colors.background,
-        ThemeMode::Dark => colors.input.alpha(0.30),
+        ThemeMode::Dark => colors.input.opacity(0.30),
     };
 
     base.w_full()
         .h(px(32.0))
         .px(px(10.0))
-        .rounded(theme.radius.base)
+        .rounded(theme.radius.lg)
         .border_1()
         .border_color(border)
         .bg(background)
         .font_family(theme.fonts.body.clone())
         .text_size(px(14.0))
         .text_color(colors.foreground)
-        .when(state.focused, |base| {
-            base.shadow(vec![
-                BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                    .spread_radius(px(3.0)),
-            ])
-        })
+        .when(state.focused, |base| base.shadow(focus_ring.clone()))
         .when(state.invalid, |base| {
-            base.shadow(vec![
-                BoxShadow::new(px(0.0), px(0.0), colors.destructive.alpha(0.20).into())
-                    .spread_radius(px(3.0)),
-            ])
+            base.shadow(destructive_focus_ring.clone())
         })
         .when(state.disabled, |base| {
             base.opacity(0.50).cursor_not_allowed()

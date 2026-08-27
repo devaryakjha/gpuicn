@@ -8,7 +8,7 @@ use base_gpui::slider::{
     SliderValues,
 };
 use gpui::{
-    App, BoxShadow, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window,
+    App, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window,
     prelude::FluentBuilder as _, px,
 };
 
@@ -80,6 +80,7 @@ impl RenderOnce for Slider {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
+        let focus_ring = theme.focus_ring();
         let mut root = SliderRoot::new()
             .id(self.id)
             .default_value(SliderValues::Single(self.default_value))
@@ -135,10 +136,7 @@ impl RenderOnce for Slider {
                         .bg(colors.background)
                         .style_with_state(move |state, style| {
                             if state.focused || state.active {
-                                style.shadow(vec![
-                                    BoxShadow::new(px(0.), px(0.), colors.ring.alpha(0.50).into())
-                                        .spread_radius(px(3.)),
-                                ])
+                                style.shadow(focus_ring.clone())
                             } else {
                                 style
                             }

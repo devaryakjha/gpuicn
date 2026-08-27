@@ -6,7 +6,7 @@ pub use base_gpui::alert_dialog::{
     AlertDialogBackdrop, AlertDialogClose, AlertDialogDescription, AlertDialogPopup,
     AlertDialogPortal, AlertDialogRoot, AlertDialogTitle, AlertDialogTrigger, AlertDialogViewport,
 };
-use gpui::{App, BoxShadow, Div, ElementId, FontWeight, SharedString, Styled, black, div, px};
+use gpui::{App, Div, ElementId, FontWeight, SharedString, Styled, black, div, px};
 
 use super::{
     button::{ButtonSize, ButtonVariant, style_button},
@@ -72,10 +72,10 @@ pub fn alert_dialog_footer(cx: &App) -> Div {
         .flex()
         .justify_end()
         .gap(px(8.0))
-        .rounded_b(theme.radius.base * 1.2)
+        .rounded_b(theme.radius.xl)
         .border_t_1()
         .border_color(theme.colors.border)
-        .bg(theme.colors.muted.alpha(0.50))
+        .bg(theme.colors.muted.opacity(0.50))
         .p(px(16.0))
 }
 
@@ -92,19 +92,19 @@ pub fn alert_dialog_popup(
         .style_with_state(move |_state, base| {
             base.w_full()
                 .max_w(px(384.0))
+                .max_h(px(400.0))
+                .overflow_hidden()
                 .flex()
                 .flex_col()
                 .gap(px(16.0))
-                .rounded(px(f32::from(theme.radius.base) * 1.2))
+                .rounded(theme.radius.xl)
+                .border_1()
+                .border_color(theme.colors.foreground.opacity(0.10))
                 .p(px(16.0))
                 .bg(theme.colors.popover)
                 .text_color(theme.colors.popover_foreground)
                 .font_family(theme.fonts.body.clone())
                 .text_size(px(14.0))
-                .shadow(vec![
-                    BoxShadow::new(px(0.0), px(0.0), theme.colors.foreground.alpha(0.10).into())
-                        .spread_radius(px(1.0)),
-                ])
         })
 }
 

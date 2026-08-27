@@ -6,7 +6,7 @@ pub use base_gpui::tooltip::{
     TooltipAlign, TooltipPopup, TooltipPortal, TooltipPositioner, TooltipProvider, TooltipRoot,
     TooltipSide, TooltipTrigger, TooltipViewport,
 };
-use gpui::{App, BoxShadow, ElementId, Styled, px};
+use gpui::{App, ElementId, Styled, px};
 
 use super::theme::UiTheme;
 
@@ -44,16 +44,12 @@ pub fn tooltip_popup(id: impl Into<ElementId>, cx: &App) -> TooltipPopup<()> {
             base.flex()
                 .items_center()
                 .gap(px(6.0))
-                .rounded(px(6.0))
+                .rounded(theme.radius.sm)
                 .px(px(12.0))
                 .py(px(6.0))
                 .bg(theme.colors.foreground)
                 .text_color(theme.colors.background)
                 .font_family(theme.fonts.body.clone())
                 .text_size(px(12.0))
-                .shadow(vec![
-                    BoxShadow::new(px(0.0), px(4.0), theme.colors.foreground.alpha(0.16).into())
-                        .blur_radius(px(8.0)),
-                ])
         })
 }

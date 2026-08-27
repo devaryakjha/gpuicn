@@ -7,7 +7,7 @@ pub use base_gpui::popover::{
     PopoverPortal, PopoverPositioner, PopoverRoot, PopoverSide, PopoverTitle, PopoverTrigger,
     PopoverViewport,
 };
-use gpui::{App, BoxShadow, ElementId, FontWeight, SharedString, Styled, black, px};
+use gpui::{App, ElementId, FontWeight, SharedString, Styled, black, px};
 
 use super::{
     button::{ButtonSize, ButtonVariant, style_button},
@@ -60,20 +60,15 @@ pub fn popover_popup(
                 .flex()
                 .flex_col()
                 .gap(px(10.0))
-                .rounded(theme.radius.base)
+                .rounded(theme.radius.lg)
                 .border_1()
-                .border_color(theme.colors.foreground.alpha(0.10))
+                .border_color(theme.colors.foreground.opacity(0.10))
                 .p(px(10.0))
                 .bg(theme.colors.popover)
                 .text_color(theme.colors.popover_foreground)
                 .font_family(theme.fonts.body.clone())
                 .text_size(px(14.0))
-                .shadow(vec![
-                    BoxShadow::new(px(0.0), px(0.0), theme.colors.foreground.alpha(0.10).into())
-                        .spread_radius(px(1.0)),
-                    BoxShadow::new(px(0.0), px(4.0), theme.colors.foreground.alpha(0.12).into())
-                        .blur_radius(px(8.0)),
-                ])
+                .shadow(theme.shadows.md.clone())
         })
 }
 

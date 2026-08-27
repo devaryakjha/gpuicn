@@ -5,8 +5,8 @@ use std::rc::Rc;
 
 use base_gpui::toggle::{Toggle as BaseToggle, TogglePressedChangeDetails};
 use gpui::{
-    AnyElement, App, BoxShadow, ElementId, InteractiveElement as _, IntoElement, ParentElement,
-    RenderOnce, SharedString, Styled, Window, prelude::FluentBuilder as _, px,
+    AnyElement, App, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    SharedString, Styled, Window, prelude::FluentBuilder as _, px,
 };
 
 use super::theme::UiTheme;
@@ -98,11 +98,12 @@ impl RenderOnce for Toggle {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
+        let focus_ring = theme.focus_ring();
         let variant = self.variant;
         let (height, radius, text_size) = match self.size {
-            ToggleSize::Sm => (28., 8., 12.8),
-            ToggleSize::Default => (32., 10., 14.),
-            ToggleSize::Lg => (36., 10., 14.),
+            ToggleSize::Sm => (28., theme.radius.md, 12.8),
+            ToggleSize::Default => (32., theme.radius.lg, 14.),
+            ToggleSize::Lg => (36., theme.radius.lg, 14.),
         };
         let mut toggle: BaseToggle<SharedString> = BaseToggle::new()
             .id(self.id)
@@ -110,6 +111,7 @@ impl RenderOnce for Toggle {
             .disabled(self.disabled)
             .style_with_state(move |state, base| {
                 let pressed = state.pressed;
+                let focus_ring = focus_ring.clone();
                 let base = base
                     .flex()
                     .items_center()
@@ -118,15 +120,15 @@ impl RenderOnce for Toggle {
                     .min_w(px(height))
                     .h(px(height))
                     .px(px(10.))
-                    .rounded(px(radius))
+                    .rounded(radius)
                     .border_1()
-                    .border_color(colors.background.alpha(0.0))
+                    .border_color(colors.background.opacity(0.0))
                     .text_size(px(text_size))
                     .text_color(colors.foreground)
                     .bg(if state.pressed {
                         colors.muted
                     } else {
-                        colors.background.alpha(0.)
+                        colors.background.opacity(0.)
                     })
                     .focus_visible(move |style| {
                         style
@@ -136,10 +138,7 @@ impl RenderOnce for Toggle {
                                 colors.background
                             })
                             .border_color(colors.ring)
-                            .shadow(vec![
-                                BoxShadow::new(px(0.), px(0.), colors.ring.alpha(0.50).into())
-                                    .spread_radius(px(3.)),
-                            ])
+                            .shadow(focus_ring.clone())
                     })
                     .when(state.disabled, |base| {
                         base.opacity(0.50).cursor_not_allowed()

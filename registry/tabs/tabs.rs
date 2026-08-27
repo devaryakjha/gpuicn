@@ -5,9 +5,7 @@
 //! navigation come from the pinned Base GPUI Tabs primitives.
 
 pub use base_gpui::tabs::{TabsList, TabsPanel, TabsRoot, TabsTab};
-use gpui::{
-    App, BoxShadow, FontWeight, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px,
-};
+use gpui::{App, FontWeight, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px};
 
 use super::theme::UiTheme;
 
@@ -48,7 +46,7 @@ pub fn tabs_list_with_variant<T: Clone + Eq + 'static>(
             .items_center()
             .justify_center()
             .h(px(32.0))
-            .rounded(theme.radius.base)
+            .rounded(theme.radius.lg)
             .p(px(3.0))
             .bg(theme.colors.muted)
             .text_color(theme.colors.muted_foreground),
@@ -65,19 +63,22 @@ pub fn tabs_list_with_variant<T: Clone + Eq + 'static>(
 /// Creates a Nova tab trigger. `variant` must match its containing list.
 pub fn tabs_trigger<T: Clone + Eq + 'static>(variant: TabsVariant, cx: &App) -> TabsTab<T> {
     let theme = UiTheme::read(cx).clone();
+    let focus_ring = theme.focus_ring();
+    let active_shadow = theme.shadows.sm.clone();
     TabsTab::new().style_with_state(move |state, base| {
         let colors = theme.colors;
+        let focus_ring = focus_ring.clone();
+        let active_shadow = active_shadow.clone();
         let selected = state.active;
         let base = base
-            .flex_1()
             .flex()
             .items_center()
             .justify_center()
             .h(px(26.0))
             .gap(px(6.0))
-            .rounded(px(6.0))
+            .rounded(theme.radius.sm)
             .border_1()
-            .border_color(colors.background.alpha(0.0))
+            .border_color(colors.background.opacity(0.0))
             .px(px(6.0))
             .py(px(2.0))
             .font_family(theme.fonts.body.clone())
@@ -103,19 +104,12 @@ pub fn tabs_trigger<T: Clone + Eq + 'static>(variant: TabsVariant, cx: &App) -> 
                         (TabsVariant::Line, _) => colors.background,
                     })
                     .border_color(colors.ring)
-                    .shadow(vec![
-                        BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                            .spread_radius(px(3.0)),
-                    ])
+                    .shadow(focus_ring.clone())
             });
 
         match variant {
             TabsVariant::Default => base.when(selected, move |base| {
-                base.bg(colors.background).shadow(vec![BoxShadow::new(
-                    px(0.0),
-                    px(1.0),
-                    colors.foreground.alpha(0.08).into(),
-                )])
+                base.bg(colors.background).shadow(active_shadow.clone())
             }),
             TabsVariant::Line => base
                 .rounded(px(0.0))
@@ -123,7 +117,7 @@ pub fn tabs_trigger<T: Clone + Eq + 'static>(variant: TabsVariant, cx: &App) -> 
                 .border_color(if selected {
                     colors.foreground
                 } else {
-                    colors.background.alpha(0.0)
+                    colors.background.opacity(0.0)
                 })
                 .mb(px(-1.0)),
         }

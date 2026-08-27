@@ -10,9 +10,7 @@ pub use base_gpui::select::{
     SelectPortal, SelectPositioner, SelectRoot, SelectScrollDownArrow, SelectScrollUpArrow,
     SelectSelectionMode, SelectSeparator, SelectSide, SelectTrigger, SelectValue,
 };
-use gpui::{
-    App, BoxShadow, Div, ElementId, ParentElement as _, Styled, prelude::FluentBuilder as _, px,
-};
+use gpui::{App, Div, ElementId, ParentElement as _, Styled, prelude::FluentBuilder as _, px};
 use gpui_icons::{LucideIcon, lucide};
 
 use super::theme::UiTheme;
@@ -28,16 +26,16 @@ pub fn select_trigger<T: Clone + Eq + 'static>(
     cx: &App,
 ) -> SelectTrigger<T> {
     let theme = UiTheme::read(cx).clone();
+    let focus_ring = theme.focus_ring();
     SelectTrigger::new()
         .id(id)
         .style_with_state(move |state, base| {
-            let ring = theme.colors.ring.alpha(0.50);
             base.flex()
                 .items_center()
                 .justify_between()
                 .h(px(32.))
                 .gap(px(6.))
-                .rounded(theme.radius.base)
+                .rounded(theme.radius.lg)
                 .border_1()
                 .border_color(theme.colors.input)
                 .px(px(10.))
@@ -51,9 +49,8 @@ pub fn select_trigger<T: Clone + Eq + 'static>(
                     theme.colors.foreground
                 })
                 .when(state.root.focused, |base| {
-                    base.border_color(theme.colors.ring).shadow(vec![
-                        BoxShadow::new(px(0.), px(0.), ring.into()).spread_radius(px(3.)),
-                    ])
+                    base.border_color(theme.colors.ring)
+                        .shadow(focus_ring.clone())
                 })
                 .when(state.root.disabled, |base| base.opacity(0.5))
         })
@@ -150,13 +147,15 @@ pub fn select_item_text<T: Clone + Eq + 'static>() -> SelectItemText<T> {
 pub fn select_item_indicator<T: Clone + Eq + 'static>(cx: &App) -> SelectItemIndicator<T> {
     let theme = UiTheme::read(cx).clone();
     SelectItemIndicator::new()
-        .style_with_state(move |_state, base| {
+        .keep_mounted(true)
+        .style_with_state(move |state, base| {
             base.absolute()
                 .right(px(8.))
                 .flex()
                 .size(px(16.))
                 .items_center()
                 .justify_center()
+                .opacity(if state.selected { 1.0 } else { 0.0 })
         })
         .child(
             lucide(LucideIcon::Check)
@@ -204,19 +203,16 @@ pub fn select_scroll_down_arrow<T: Clone + Eq + 'static>(cx: &App) -> SelectScro
 
 fn popup_style(base: Div, theme: &UiTheme) -> Div {
     base.min_w(px(144.))
-        .max_h(px(288.))
+        .max_h(px(252.))
         .overflow_hidden()
-        .rounded(theme.radius.base)
+        .rounded(theme.radius.lg)
         .bg(theme.colors.popover)
         .text_color(theme.colors.popover_foreground)
         .font_family(theme.fonts.body.clone())
         .text_size(px(14.))
         .border_1()
-        .border_color(theme.colors.foreground.alpha(0.10))
-        .shadow(vec![
-            BoxShadow::new(px(0.), px(4.), theme.colors.foreground.alpha(0.12).into())
-                .blur_radius(px(12.)),
-        ])
+        .border_color(theme.colors.foreground.opacity(0.10))
+        .shadow(theme.shadows.md.clone())
 }
 
 fn item_style(base: Div, highlighted: bool, disabled: bool, theme: &UiTheme) -> Div {
@@ -224,7 +220,7 @@ fn item_style(base: Div, highlighted: bool, disabled: bool, theme: &UiTheme) -> 
         .flex()
         .items_center()
         .gap(px(6.))
-        .rounded(px(6.))
+        .rounded(theme.radius.sm)
         .py(px(4.))
         .pr(px(32.))
         .pl(px(6.))

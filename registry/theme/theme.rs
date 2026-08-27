@@ -3,7 +3,7 @@
 //! Source: shadcn/ui 4.19.0 at
 //! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, Nova style.
 
-use gpui::{App, Global, Pixels, Rgba, SharedString, px};
+use gpui::{App, BoxShadow, Global, Pixels, Rgba, SharedString, black, px};
 
 /// The active color mode.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -92,11 +92,36 @@ pub struct UiFonts {
     pub mono: SharedString,
 }
 
-/// Base corner radius from the pinned shadcn theme.
+/// Corner radii derived from shadcn's 10px base radius.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct UiRadius {
-    /// Ten pixels (`0.625rem` at the shadcn 16px root size).
+    /// Backward-compatible alias for [`Self::lg`].
     pub base: Pixels,
+    /// Six pixels (`radius * 0.6`).
+    pub sm: Pixels,
+    /// Eight pixels (`radius * 0.8`).
+    pub md: Pixels,
+    /// Ten pixels (the configured base radius).
+    pub lg: Pixels,
+    /// Fourteen pixels (`radius * 1.4`).
+    pub xl: Pixels,
+    /// Eighteen pixels (`radius * 1.8`).
+    pub two_xl: Pixels,
+    /// Twenty-two pixels (`radius * 2.2`).
+    pub three_xl: Pixels,
+    /// Twenty-six pixels (`radius * 2.6`).
+    pub four_xl: Pixels,
+}
+
+/// Shared shadcn elevation tokens.
+#[derive(Clone, Debug, PartialEq)]
+pub struct UiShadows {
+    /// Tailwind `shadow-sm`.
+    pub sm: Vec<BoxShadow>,
+    /// Tailwind `shadow-md`.
+    pub md: Vec<BoxShadow>,
+    /// Tailwind `shadow-lg`.
+    pub lg: Vec<BoxShadow>,
 }
 
 /// Base spacing unit from the pinned Nova style.
@@ -119,6 +144,8 @@ pub struct UiTheme {
     pub radius: UiRadius,
     /// Base spacing unit.
     pub spacing: UiSpacing,
+    /// Shared elevation and focus-ring tokens.
+    pub shadows: UiShadows,
 }
 
 impl Global for UiTheme {}
@@ -163,6 +190,30 @@ impl UiTheme {
         );
     }
 
+    /// Builds shadcn's three-pixel focus ring from the active semantic ring color.
+    pub fn focus_ring(&self) -> Vec<BoxShadow> {
+        vec![
+            BoxShadow::new(px(0.), px(0.), self.colors.ring.opacity(0.50).into())
+                .spread_radius(px(3.)),
+        ]
+    }
+
+    /// Builds shadcn's invalid focus ring from the active destructive color.
+    pub fn destructive_focus_ring(&self) -> Vec<BoxShadow> {
+        let alpha = match self.mode {
+            ThemeMode::Light => 0.20,
+            ThemeMode::Dark => 0.40,
+        };
+        vec![
+            BoxShadow::new(
+                px(0.),
+                px(0.),
+                self.colors.destructive.opacity(alpha).into(),
+            )
+            .spread_radius(px(3.)),
+        ]
+    }
+
     fn new(mode: ThemeMode, colors: UiColors) -> Self {
         Self {
             mode,
@@ -172,8 +223,41 @@ impl UiTheme {
                 heading: "Geist".into(),
                 mono: "Geist Mono".into(),
             },
-            radius: UiRadius { base: px(10.) },
+            radius: UiRadius {
+                base: px(10.),
+                sm: px(6.),
+                md: px(8.),
+                lg: px(10.),
+                xl: px(14.),
+                two_xl: px(18.),
+                three_xl: px(22.),
+                four_xl: px(26.),
+            },
             spacing: UiSpacing { unit: px(4.) },
+            shadows: UiShadows {
+                sm: vec![
+                    BoxShadow::new(px(0.), px(1.), black().alpha(0.10).into()).blur_radius(px(3.)),
+                    BoxShadow::new(px(0.), px(1.), black().alpha(0.10).into())
+                        .blur_radius(px(2.))
+                        .spread_radius(px(-1.)),
+                ],
+                md: vec![
+                    BoxShadow::new(px(0.), px(4.), black().alpha(0.10).into())
+                        .blur_radius(px(6.))
+                        .spread_radius(px(-1.)),
+                    BoxShadow::new(px(0.), px(2.), black().alpha(0.10).into())
+                        .blur_radius(px(4.))
+                        .spread_radius(px(-2.)),
+                ],
+                lg: vec![
+                    BoxShadow::new(px(0.), px(10.), black().alpha(0.10).into())
+                        .blur_radius(px(15.))
+                        .spread_radius(px(-3.)),
+                    BoxShadow::new(px(0.), px(4.), black().alpha(0.10).into())
+                        .blur_radius(px(6.))
+                        .spread_radius(px(-4.)),
+                ],
+            },
         }
     }
 }
@@ -321,5 +405,19 @@ mod tests {
         assert_eq!(dark.border.a, 0.10);
         assert_eq!(dark.input.a, 0.15);
         assert_eq!(dark.sidebar_border.a, 0.10);
+        assert!((dark.input.opacity(0.30).a - 0.045).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn derives_the_shadcn_radius_and_shadow_scales() {
+        let theme = UiTheme::neutral_light();
+        assert_eq!(theme.radius.sm, px(6.));
+        assert_eq!(theme.radius.md, px(8.));
+        assert_eq!(theme.radius.lg, px(10.));
+        assert_eq!(theme.radius.xl, px(14.));
+        assert_eq!(theme.shadows.sm.len(), 2);
+        assert_eq!(theme.shadows.md.len(), 2);
+        assert_eq!(theme.shadows.lg.len(), 2);
+        assert_eq!(theme.focus_ring()[0].spread_radius, px(3.));
     }
 }

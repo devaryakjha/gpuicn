@@ -9,7 +9,7 @@ pub use base_gpui::accordion::{
     AccordionTrigger,
 };
 use gpui::{
-    App, BoxShadow, FontWeight, InteractiveElement as _, ParentElement as _, Styled,
+    App, FontWeight, InteractiveElement as _, ParentElement as _, Styled,
     prelude::FluentBuilder as _, px,
 };
 use gpui_icons::{LucideIcon, lucide};
@@ -42,16 +42,19 @@ pub fn accordion_header<T: Clone + Eq + 'static>() -> AccordionHeader<T> {
 pub fn accordion_trigger<T: Clone + Eq + 'static>(cx: &App) -> AccordionTrigger<T> {
     let theme = UiTheme::read(cx).clone();
     let icon_color = theme.colors.muted_foreground;
+    let focus_ring = theme.focus_ring();
     AccordionTrigger::new()
         .style_with_state(move |state, base| {
             let colors = theme.colors;
+            let focus_ring = focus_ring.clone();
             base.w_full()
                 .flex()
+                .flex_row_reverse()
                 .items_start()
                 .justify_between()
-                .rounded(theme.radius.base)
+                .rounded(theme.radius.lg)
                 .border_1()
-                .border_color(colors.background.alpha(0.0))
+                .border_color(colors.background.opacity(0.0))
                 .py(px(10.0))
                 .text_left()
                 .font_family(theme.fonts.body.clone())
@@ -68,10 +71,7 @@ pub fn accordion_trigger<T: Clone + Eq + 'static>(cx: &App) -> AccordionTrigger<
                     style
                         .bg(colors.background)
                         .border_color(colors.ring)
-                        .shadow(vec![
-                            BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                                .spread_radius(px(3.0)),
-                        ])
+                        .shadow(focus_ring.clone())
                 })
         })
         .child(

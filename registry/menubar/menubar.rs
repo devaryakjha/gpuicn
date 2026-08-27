@@ -29,7 +29,7 @@ pub fn menubar(id: impl Into<ElementId>, cx: &App) -> Menubar {
             .items_center()
             .h(px(32.))
             .gap(px(2.))
-            .rounded(theme.radius.base)
+            .rounded(theme.radius.lg)
             .border_1()
             .border_color(theme.colors.border)
             .p(px(3.))
@@ -54,7 +54,7 @@ pub fn menubar_trigger<P: Clone + 'static>(
         .style_with_state(move |state, base| {
             base.flex()
                 .items_center()
-                .rounded(px(4.))
+                .rounded(theme.radius.sm)
                 .px(px(6.))
                 .py(px(2.))
                 .font_family(theme.fonts.body.clone())
@@ -116,13 +116,15 @@ pub fn menubar_checkbox_item_indicator<P: Clone + 'static>(
 ) -> MenubarCheckboxItemIndicator<P> {
     let theme = UiTheme::read(cx).clone();
     MenubarCheckboxItemIndicator::new()
-        .style_with_state(move |_state, base| {
+        .keep_mounted(true)
+        .style_with_state(move |state, base| {
             base.absolute()
                 .left(px(6.))
                 .flex()
                 .size(px(16.))
                 .items_center()
                 .justify_center()
+                .opacity(if state.checked { 1.0 } else { 0.0 })
         })
         .child(
             lucide(LucideIcon::Check)
@@ -159,13 +161,15 @@ pub fn menubar_radio_item_indicator<P: Clone + 'static, V: Clone + Eq + 'static>
 ) -> MenubarRadioItemIndicator<P, V> {
     let theme = UiTheme::read(cx).clone();
     MenubarRadioItemIndicator::new()
-        .style_with_state(move |_state, base| {
+        .keep_mounted(true)
+        .style_with_state(move |state, base| {
             base.absolute()
                 .left(px(6.))
                 .flex()
                 .size(px(16.))
                 .items_center()
                 .justify_center()
+                .opacity(if state.checked { 1.0 } else { 0.0 })
         })
         .child(
             lucide(LucideIcon::Check)

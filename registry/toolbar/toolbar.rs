@@ -6,9 +6,7 @@
 pub use base_gpui::toolbar::{
     ToolbarButton, ToolbarGroup, ToolbarInput, ToolbarLink, ToolbarRoot, ToolbarSeparator,
 };
-use gpui::{
-    App, BoxShadow, FontWeight, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px,
-};
+use gpui::{App, FontWeight, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px};
 
 use super::theme::UiTheme;
 
@@ -19,7 +17,7 @@ pub fn toolbar(cx: &App) -> ToolbarRoot {
         .flex()
         .items_center()
         .gap(px(4.0))
-        .rounded(theme.radius.base)
+        .rounded(theme.radius.lg)
         .border_1()
         .border_color(theme.colors.border)
         .p(px(4.0))
@@ -40,15 +38,17 @@ pub fn toolbar_group(cx: &App) -> ToolbarGroup {
 /// Creates a Nova icon or text toolbar button. Add its content as children.
 pub fn toolbar_button(cx: &App) -> ToolbarButton {
     let theme = UiTheme::read(cx).clone();
+    let focus_ring = theme.focus_ring();
     ToolbarButton::new().style_with_state(move |state, base| {
         let colors = theme.colors;
+        let focus_ring = focus_ring.clone();
         base.flex()
             .items_center()
             .justify_center()
             .h(px(28.0))
-            .rounded(px(6.0))
+            .rounded(theme.radius.sm)
             .border_1()
-            .border_color(colors.background.alpha(0.0))
+            .border_color(colors.background.opacity(0.0))
             .px(px(8.0))
             .font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
@@ -65,10 +65,7 @@ pub fn toolbar_button(cx: &App) -> ToolbarButton {
                 style
                     .bg(colors.background)
                     .border_color(colors.ring)
-                    .shadow(vec![
-                        BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                            .spread_radius(px(3.0)),
-                    ])
+                    .shadow(focus_ring.clone())
             })
     })
 }
@@ -76,15 +73,17 @@ pub fn toolbar_button(cx: &App) -> ToolbarButton {
 /// Creates a Nova toolbar link.
 pub fn toolbar_link(cx: &App) -> ToolbarLink {
     let theme = UiTheme::read(cx).clone();
+    let focus_ring = theme.focus_ring();
     ToolbarLink::new().style_with_state(move |_state, base| {
         let colors = theme.colors;
+        let focus_ring = focus_ring.clone();
         base.flex()
             .items_center()
             .justify_center()
             .h(px(28.0))
-            .rounded(px(6.0))
+            .rounded(theme.radius.sm)
             .border_1()
-            .border_color(colors.background.alpha(0.0))
+            .border_color(colors.background.opacity(0.0))
             .px(px(8.0))
             .font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
@@ -96,10 +95,7 @@ pub fn toolbar_link(cx: &App) -> ToolbarLink {
                 style
                     .bg(colors.background)
                     .border_color(colors.ring)
-                    .shadow(vec![
-                        BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                            .spread_radius(px(3.0)),
-                    ])
+                    .shadow(focus_ring.clone())
             })
     })
 }
@@ -109,7 +105,7 @@ pub fn toolbar_input(cx: &App) -> ToolbarInput {
     let theme = UiTheme::read(cx).clone();
     ToolbarInput::new().style_with_state(move |_state, base| {
         base.h(px(28.0))
-            .rounded(px(6.0))
+            .rounded(theme.radius.sm)
             .border_1()
             .border_color(theme.colors.input)
             .bg(theme.colors.background)

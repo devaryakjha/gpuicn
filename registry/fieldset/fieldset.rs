@@ -40,8 +40,7 @@ pub fn fieldset_legend(variant: FieldsetLegendVariant, cx: &App) -> FieldsetLege
             FieldsetLegendVariant::Label => 14.0,
         };
 
-        base.mb(px(12.0))
-            .font_family(theme.fonts.body.clone())
+        base.font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
             .text_size(px(text_size))
             .line_height(px(20.0))

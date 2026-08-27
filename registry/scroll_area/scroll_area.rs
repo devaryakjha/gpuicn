@@ -9,7 +9,7 @@ pub use base_gpui::scroll_area::{
     ScrollAreaContent, ScrollAreaCorner, ScrollAreaOrientation, ScrollAreaRoot,
     ScrollAreaScrollbar, ScrollAreaThumb, ScrollAreaViewport,
 };
-use gpui::{App, BoxShadow, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px};
+use gpui::{App, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px};
 
 use super::theme::UiTheme;
 
@@ -24,17 +24,14 @@ pub fn scroll_area(cx: &App) -> ScrollAreaRoot {
 /// Creates the focusable scroll viewport. Add `scroll_area_content()` as its child.
 pub fn scroll_area_viewport(cx: &App) -> ScrollAreaViewport {
     let theme = UiTheme::read(cx).clone();
+    let focus_ring = theme.focus_ring();
     ScrollAreaViewport::new().style_with_state(move |_state, base| {
         let colors = theme.colors;
+        let focus_ring = focus_ring.clone();
         base.size_full()
-            .rounded(theme.radius.base)
+            .rounded(theme.radius.lg)
             .bg(colors.background)
-            .focus_visible(move |style| {
-                style.border_color(colors.ring).shadow(vec![
-                    BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                        .spread_radius(px(3.0)),
-                ])
-            })
+            .focus_visible(move |style| style.border_color(colors.ring).shadow(focus_ring.clone()))
     })
 }
 
@@ -63,9 +60,9 @@ pub fn scroll_area_scrollbar(orientation: ScrollAreaOrientation, cx: &App) -> Sc
 pub fn scroll_area_thumb(cx: &App) -> ScrollAreaThumb {
     let theme = UiTheme::read(cx).clone();
     ScrollAreaThumb::new().style_with_state(move |state, mut style: ScrollbarStyle| {
-        style.track_color = theme.colors.background.alpha(0.0).into();
+        style.track_color = theme.colors.background.opacity(0.0).into();
         style.thumb_color = if state.scrolling {
-            theme.colors.muted_foreground.alpha(0.72).into()
+            theme.colors.muted_foreground.opacity(0.72).into()
         } else {
             theme.colors.border.into()
         };

@@ -6,7 +6,7 @@ pub use base_gpui::drawer::{
     DrawerBackdrop, DrawerClose, DrawerContent, DrawerDescription, DrawerPopup, DrawerPortal,
     DrawerRoot, DrawerSwipeDirection, DrawerTitle, DrawerTrigger, DrawerViewport,
 };
-use gpui::{App, BoxShadow, Div, ElementId, FontWeight, SharedString, Styled, black, div, px};
+use gpui::{App, Div, ElementId, FontWeight, SharedString, Styled, black, div, px};
 
 use super::{
     button::{ButtonSize, ButtonVariant, style_button},
@@ -72,23 +72,32 @@ pub fn drawer_popup(
         .aria_label(aria_label)
         .style_with_state(move |state, base| {
             let surface = base
+                .overflow_hidden()
                 .bg(theme.colors.popover)
                 .text_color(theme.colors.popover_foreground)
                 .font_family(theme.fonts.body.clone())
-                .text_size(px(14.0))
-                .shadow(vec![
-                    BoxShadow::new(
-                        px(0.0),
-                        px(-8.0),
-                        theme.colors.foreground.alpha(0.12).into(),
-                    )
-                    .blur_radius(px(16.0)),
-                ]);
+                .text_size(px(14.0));
             match state.swipe_direction {
-                DrawerSwipeDirection::Down => surface.w_full().rounded_t(px(12.0)).border_t_1(),
-                DrawerSwipeDirection::Up => surface.w_full().rounded_b(px(12.0)).border_b_1(),
-                DrawerSwipeDirection::Left => surface.h_full().rounded_r(px(12.0)).border_r_1(),
-                DrawerSwipeDirection::Right => surface.h_full().rounded_l(px(12.0)).border_l_1(),
+                DrawerSwipeDirection::Down => surface
+                    .w_full()
+                    .max_h(px(400.0))
+                    .rounded_t(theme.radius.xl)
+                    .border_t_1(),
+                DrawerSwipeDirection::Up => surface
+                    .w_full()
+                    .max_h(px(400.0))
+                    .rounded_b(theme.radius.xl)
+                    .border_b_1(),
+                DrawerSwipeDirection::Left => surface
+                    .h_full()
+                    .w(px(320.0))
+                    .rounded_r(theme.radius.xl)
+                    .border_r_1(),
+                DrawerSwipeDirection::Right => surface
+                    .h_full()
+                    .w(px(320.0))
+                    .rounded_l(theme.radius.xl)
+                    .border_l_1(),
             }
             .border_color(theme.colors.border)
         })
@@ -100,6 +109,7 @@ pub fn drawer_content(cx: &App) -> DrawerContent<()> {
     DrawerContent::new().style_with_state(move |_state, base| {
         base.flex()
             .flex_col()
+            .overflow_hidden()
             .bg(theme.colors.popover)
             .text_color(theme.colors.popover_foreground)
     })

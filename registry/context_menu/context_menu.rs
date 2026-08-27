@@ -84,7 +84,10 @@ pub fn context_menu_checkbox_item_indicator<P: Clone + 'static>(
     let theme = UiTheme::read(cx).clone();
     let foreground = theme.colors.foreground;
     ContextMenuCheckboxItemIndicator::new()
-        .style_with_state(move |_state, base| menu::indicator_style(base, &theme))
+        .keep_mounted(true)
+        .style_with_state(move |state, base| {
+            menu::indicator_style(base, &theme).opacity(if state.checked { 1.0 } else { 0.0 })
+        })
         .child(
             lucide(LucideIcon::Check)
                 .size(px(16.))
@@ -119,7 +122,10 @@ pub fn context_menu_radio_item_indicator<P: Clone + 'static, V: Clone + Eq + 'st
     let theme = UiTheme::read(cx).clone();
     let foreground = theme.colors.foreground;
     ContextMenuRadioItemIndicator::new()
-        .style_with_state(move |_state, base| menu::indicator_style(base, &theme))
+        .keep_mounted(true)
+        .style_with_state(move |state, base| {
+            menu::indicator_style(base, &theme).opacity(if state.checked { 1.0 } else { 0.0 })
+        })
         .child(
             lucide(LucideIcon::Check)
                 .size(px(16.))

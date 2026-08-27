@@ -11,8 +11,8 @@ use base_gpui::checkbox::{
 };
 use gpui::ParentElement as _;
 use gpui::{
-    App, BoxShadow, ElementId, InteractiveElement as _, IntoElement, RenderOnce, SharedString,
-    Styled, Window, prelude::FluentBuilder as _, px,
+    App, ElementId, InteractiveElement as _, IntoElement, RenderOnce, SharedString, Styled, Window,
+    prelude::FluentBuilder as _, px,
 };
 use gpui_icons::{LucideIcon, lucide};
 
@@ -160,13 +160,14 @@ impl RenderOnce for Checkbox {
 
 fn style_checkbox(base: gpui::Div, state: CheckboxRootStyleState, theme: &UiTheme) -> gpui::Div {
     let colors = theme.colors;
+    let focus_ring = theme.focus_ring();
     let selected = state.checked || state.indeterminate;
     let background = if selected {
         colors.primary
     } else {
         match theme.mode {
-            ThemeMode::Light => colors.background.alpha(0.0),
-            ThemeMode::Dark => colors.input.alpha(0.30),
+            ThemeMode::Light => colors.background.opacity(0.0),
+            ThemeMode::Dark => colors.input.opacity(0.30),
         }
     };
     let border = if selected {
@@ -190,12 +191,7 @@ fn style_checkbox(base: gpui::Div, state: CheckboxRootStyleState, theme: &UiThem
         } else {
             colors.foreground
         })
-        .focus_visible(move |style| {
-            style.border_color(colors.ring).shadow(vec![
-                BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                    .spread_radius(px(3.0)),
-            ])
-        })
+        .focus_visible(move |style| style.border_color(colors.ring).shadow(focus_ring.clone()))
         .when(state.disabled, |base| {
             base.opacity(0.50).cursor_not_allowed()
         })

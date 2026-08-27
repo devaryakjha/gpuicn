@@ -5,8 +5,8 @@ use std::rc::Rc;
 
 use base_gpui::input::Input as BaseInput;
 use gpui::{
-    App, BoxShadow, ElementId, InteractiveElement as _, IntoElement, RenderOnce, SharedString,
-    Styled, Window, prelude::FluentBuilder as _, px,
+    App, ElementId, InteractiveElement as _, IntoElement, RenderOnce, SharedString, Styled, Window,
+    prelude::FluentBuilder as _, px,
 };
 
 use super::theme::{ThemeMode, UiTheme};
@@ -80,7 +80,7 @@ impl RenderOnce for Input {
         let colors = theme.colors;
         let background = match theme.mode {
             ThemeMode::Light => colors.background,
-            ThemeMode::Dark => colors.background.blend(colors.input.alpha(0.30)),
+            ThemeMode::Dark => colors.background.blend(colors.input.opacity(0.30)),
         };
         let mut input = BaseInput::new()
             .id(self.id)
@@ -89,16 +89,13 @@ impl RenderOnce for Input {
             .required(self.required)
             .font_family(theme.fonts.body.clone())
             .style_with_state(move |state, base| {
-                let ring = if state.invalid {
-                    colors.destructive.alpha(match theme.mode {
-                        ThemeMode::Light => 0.20,
-                        ThemeMode::Dark => 0.40,
-                    })
+                let focus_ring = if state.invalid {
+                    theme.destructive_focus_ring()
                 } else {
-                    colors.ring.alpha(0.50)
+                    theme.focus_ring()
                 };
                 let border = if state.invalid {
-                    colors.destructive.alpha(match theme.mode {
+                    colors.destructive.opacity(match theme.mode {
                         ThemeMode::Light => 1.0,
                         ThemeMode::Dark => 0.50,
                     })
@@ -110,11 +107,11 @@ impl RenderOnce for Input {
                     .h(px(32.))
                     .px(px(10.))
                     .py(px(4.))
-                    .rounded(px(10.))
+                    .rounded(theme.radius.lg)
                     .border_1()
                     .border_color(border)
                     .bg(if state.disabled {
-                        colors.input.alpha(match theme.mode {
+                        colors.input.opacity(match theme.mode {
                             ThemeMode::Light => 0.50,
                             ThemeMode::Dark => 0.80,
                         })
@@ -124,9 +121,7 @@ impl RenderOnce for Input {
                     .text_color(colors.foreground)
                     .text_size(px(14.))
                     .focus_visible(move |style| {
-                        style.border_color(border).shadow(vec![
-                            BoxShadow::new(px(0.), px(0.), ring.into()).spread_radius(px(3.)),
-                        ])
+                        style.border_color(border).shadow(focus_ring.clone())
                     })
                     .when(state.disabled, |base| base.cursor_not_allowed())
             });

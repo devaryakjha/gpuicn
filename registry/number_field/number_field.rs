@@ -1,16 +1,22 @@
 #![allow(missing_docs)]
 //! Nova-styled Number Field backed by Base GPUI parsing, steppers, and keyboard behavior.
 
+use std::rc::Rc;
+
 use base_gpui::number_field::{
-    NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput, NumberFieldRoot,
+    NumberFieldChangeDetails, NumberFieldCommitDetails, NumberFieldDecrement, NumberFieldGroup,
+    NumberFieldIncrement, NumberFieldInput, NumberFieldRoot,
 };
 use gpui::{
-    App, BoxShadow, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window,
+    App, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window,
     prelude::FluentBuilder as _, px,
 };
 use gpui_icons::{LucideIcon, lucide};
 
 use super::theme::{ThemeMode, UiTheme};
+
+type ChangeHandler = Rc<dyn Fn(Option<f64>, NumberFieldChangeDetails, &mut Window, &mut App)>;
+type CommitHandler = Rc<dyn Fn(Option<f64>, NumberFieldCommitDetails, &mut Window, &mut App)>;
 
 #[derive(IntoElement)]
 pub struct NumberField {
@@ -23,6 +29,8 @@ pub struct NumberField {
     placeholder: Option<SharedString>,
     disabled: bool,
     read_only: bool,
+    on_value_change: Option<ChangeHandler>,
+    on_value_committed: Option<CommitHandler>,
 }
 impl NumberField {
     pub fn new(id: impl Into<ElementId>) -> Self {
@@ -36,6 +44,8 @@ impl NumberField {
             placeholder: None,
             disabled: false,
             read_only: false,
+            on_value_change: None,
+            on_value_committed: None,
         }
     }
     pub fn default_value(mut self, value: f64) -> Self {
@@ -67,13 +77,27 @@ impl NumberField {
         self.read_only = value;
         self
     }
+    pub fn on_value_change(
+        mut self,
+        handler: impl Fn(Option<f64>, NumberFieldChangeDetails, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_value_change = Some(Rc::new(handler));
+        self
+    }
+    pub fn on_value_committed(
+        mut self,
+        handler: impl Fn(Option<f64>, NumberFieldCommitDetails, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_value_committed = Some(Rc::new(handler));
+        self
+    }
 }
 impl RenderOnce for NumberField {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
         let background = if theme.mode == ThemeMode::Dark {
-            colors.background.blend(colors.input.alpha(0.30))
+            colors.background.blend(colors.input.opacity(0.30))
         } else {
             colors.background
         };
@@ -99,10 +123,14 @@ impl RenderOnce for NumberField {
             .disabled(self.disabled)
             .read_only(self.read_only)
             .style_with_state(move |state, base| {
-                let ring = colors.ring.alpha(0.50);
+                let focus_ring = if state.invalid {
+                    theme.destructive_focus_ring()
+                } else {
+                    theme.focus_ring()
+                };
                 base.w_full()
                     .h(px(32.))
-                    .rounded(px(10.))
+                    .rounded(theme.radius.lg)
                     .border_1()
                     .border_color(if state.invalid {
                         colors.destructive
@@ -111,9 +139,12 @@ impl RenderOnce for NumberField {
                     })
                     .bg(background)
                     .when(state.focused, |base| {
-                        base.border_color(colors.ring).shadow(vec![
-                            BoxShadow::new(px(0.), px(0.), ring.into()).spread_radius(px(3.)),
-                        ])
+                        base.border_color(if state.invalid {
+                            colors.destructive
+                        } else {
+                            colors.ring
+                        })
+                        .shadow(focus_ring.clone())
                     })
                     .when(state.disabled, |base| base.cursor_not_allowed())
             })
@@ -163,6 +194,16 @@ impl RenderOnce for NumberField {
         }
         if let Some(max) = self.max {
             root = root.max(max);
+        }
+        if let Some(handler) = self.on_value_change {
+            root = root.on_value_change(move |value, details, window, cx| {
+                handler(value, details, window, cx)
+            });
+        }
+        if let Some(handler) = self.on_value_committed {
+            root = root.on_value_committed(move |value, details, window, cx| {
+                handler(value, details, window, cx)
+            });
         }
         root
     }

@@ -6,8 +6,8 @@ use std::rc::Rc;
 use base_gpui::toggle::Toggle as BaseToggle;
 use base_gpui::toggle_group::{ToggleGroup as BaseToggleGroup, ToggleGroupValueChangeDetails};
 use gpui::{
-    AnyElement, App, BoxShadow, ElementId, InteractiveElement as _, IntoElement, ParentElement,
-    RenderOnce, SharedString, Styled, Window, prelude::FluentBuilder as _, px,
+    AnyElement, App, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    SharedString, Styled, Window, prelude::FluentBuilder as _, px,
 };
 
 use super::theme::UiTheme;
@@ -49,12 +49,15 @@ impl ToggleGroupItem {
         last: bool,
     ) -> BaseToggle<SharedString> {
         let colors = theme.colors;
+        let focus_ring = theme.focus_ring();
+        let radius = theme.radius.lg;
         let mut toggle = BaseToggle::new()
             .id(self.id)
             .value(self.value)
             .disabled(self.disabled)
             .style_with_state(move |state, base| {
                 let pressed = state.pressed;
+                let focus_ring = focus_ring.clone();
                 base.flex()
                     .items_center()
                     .justify_center()
@@ -62,17 +65,17 @@ impl ToggleGroupItem {
                     .h(px(32.))
                     .min_w(px(32.))
                     .px(px(10.))
-                    .rounded(px(if joined { 0. } else { 10. }))
-                    .when(joined && first, |base| base.rounded_l(px(10.)))
-                    .when(joined && last, |base| base.rounded_r(px(10.)))
+                    .rounded(if joined { px(0.) } else { radius })
+                    .when(joined && first, |base| base.rounded_l(radius))
+                    .when(joined && last, |base| base.rounded_r(radius))
                     .border_1()
-                    .border_color(colors.background.alpha(0.0))
+                    .border_color(colors.background.opacity(0.0))
                     .text_size(px(14.))
                     .text_color(colors.foreground)
                     .bg(if state.pressed {
                         colors.muted
                     } else {
-                        colors.background.alpha(0.)
+                        colors.background.opacity(0.)
                     })
                     .focus_visible(move |style| {
                         style
@@ -82,10 +85,7 @@ impl ToggleGroupItem {
                                 colors.background
                             })
                             .border_color(colors.ring)
-                            .shadow(vec![
-                                BoxShadow::new(px(0.), px(0.), colors.ring.alpha(0.50).into())
-                                    .spread_radius(px(3.)),
-                            ])
+                            .shadow(focus_ring.clone())
                     })
                     .when(state.disabled, |base| {
                         base.opacity(0.50).cursor_not_allowed()

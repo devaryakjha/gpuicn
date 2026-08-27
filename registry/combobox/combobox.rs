@@ -13,8 +13,8 @@ pub use base_gpui::combobox::{
     ComboboxStatus, ComboboxTrigger, ComboboxValue,
 };
 use gpui::{
-    App, BoxShadow, Div, ElementId, FontWeight, InteractiveElement as _, ParentElement as _,
-    Styled, prelude::FluentBuilder as _, px,
+    App, Div, ElementId, FontWeight, InteractiveElement as _, ParentElement as _, Styled,
+    prelude::FluentBuilder as _, px,
 };
 use gpui_icons::{LucideIcon, lucide};
 
@@ -31,19 +31,18 @@ pub fn combobox_input<T: Clone + Eq + 'static>(
     cx: &App,
 ) -> ComboboxInput<T> {
     let theme = UiTheme::read(cx).clone();
+    let focus_ring = theme.focus_ring();
     ComboboxInput::new()
         .id(id)
         .style_with_state(move |state, base| {
-            let ring = theme.colors.ring.alpha(0.50);
             base.h(px(32.))
-                .rounded(theme.radius.base)
+                .rounded(theme.radius.lg)
                 .border_1()
                 .border_color(theme.colors.input)
                 .bg(theme.colors.background)
                 .when(state.root.focused, |base| {
-                    base.border_color(theme.colors.ring).shadow(vec![
-                        BoxShadow::new(px(0.), px(0.), ring.into()).spread_radius(px(3.)),
-                    ])
+                    base.border_color(theme.colors.ring)
+                        .shadow(focus_ring.clone())
                 })
                 .when(state.root.disabled, |base| base.opacity(0.5))
         })
@@ -51,6 +50,7 @@ pub fn combobox_input<T: Clone + Eq + 'static>(
             base.w_full()
                 .h_full()
                 .px(px(10.))
+                .py(px(4.))
                 .font_family(theme.fonts.body.clone())
                 .text_size(px(14.))
                 .text_color(theme.colors.foreground)
@@ -69,6 +69,7 @@ pub fn combobox_group_input<T: Clone + Eq + 'static>(
         .input_style_with_state(move |_state, base| {
             base.w_full()
                 .h_full()
+                .py(px(4.))
                 .font_family(theme.fonts.body.clone())
                 .text_size(px(14.))
                 .text_color(theme.colors.foreground)
@@ -78,26 +79,24 @@ pub fn combobox_group_input<T: Clone + Eq + 'static>(
 /// Creates the styled input group used by chips and custom combobox layouts.
 pub fn combobox_input_group<T: Clone + Eq + 'static>(cx: &App) -> ComboboxInputGroup<T> {
     let theme = UiTheme::read(cx).clone();
+    let focus_ring = theme.focus_ring();
     ComboboxInputGroup::new().style_with_state(move |state, base| {
         base.flex()
             .items_center()
             .min_h(px(32.))
             .gap(px(4.))
-            .rounded(theme.radius.base)
+            .rounded(theme.radius.lg)
             .border_1()
             .border_color(theme.colors.input)
             .px(px(10.))
-            .py(px(4.))
             .bg(if theme.mode == super::theme::ThemeMode::Dark {
-                theme.colors.input.alpha(0.30)
+                theme.colors.input.opacity(0.30)
             } else {
                 theme.colors.background
             })
             .when(state.root.focused, |base| {
-                base.border_color(theme.colors.ring).shadow(vec![
-                    BoxShadow::new(px(0.), px(0.), theme.colors.ring.alpha(0.50).into())
-                        .spread_radius(px(3.)),
-                ])
+                base.border_color(theme.colors.ring)
+                    .shadow(focus_ring.clone())
             })
             .when(state.root.disabled, |base| base.opacity(0.5))
     })
@@ -117,7 +116,7 @@ pub fn combobox_trigger<T: Clone + Eq + 'static>(
                 .size(px(24.))
                 .items_center()
                 .justify_center()
-                .rounded(px(6.))
+                .rounded(theme.radius.sm)
                 .text_color(theme.colors.muted_foreground)
                 .when(state.root.open, |base| base.bg(theme.colors.muted))
                 .when(!state.root.disabled, |base| {
@@ -144,7 +143,7 @@ pub fn combobox_clear<T: Clone + Eq + 'static>(
                 .size(px(24.))
                 .items_center()
                 .justify_center()
-                .rounded(px(6.))
+                .rounded(theme.radius.sm)
                 .text_color(theme.colors.muted_foreground)
                 .when(!state.disabled, |base| {
                     base.hover(move |style| style.bg(theme.colors.muted))
@@ -193,7 +192,7 @@ pub fn combobox_item<T: Clone + Eq + 'static>(
                 .flex()
                 .items_center()
                 .gap(px(8.))
-                .rounded(px(6.))
+                .rounded(theme.radius.sm)
                 .py(px(4.))
                 .pr(px(32.))
                 .pl(px(6.))
@@ -213,13 +212,15 @@ pub fn combobox_item<T: Clone + Eq + 'static>(
 pub fn combobox_item_indicator<T: Clone + Eq + 'static>(cx: &App) -> ComboboxItemIndicator<T> {
     let theme = UiTheme::read(cx).clone();
     ComboboxItemIndicator::new()
-        .style_with_state(move |_state, base| {
+        .keep_mounted(true)
+        .style_with_state(move |state, base| {
             base.absolute()
                 .right(px(8.))
                 .flex()
                 .size(px(16.))
                 .items_center()
                 .justify_center()
+                .opacity(if state.selected { 1.0 } else { 0.0 })
         })
         .child(
             lucide(LucideIcon::Check)
@@ -331,17 +332,14 @@ pub fn combobox_value<T: Clone + Eq + 'static>() -> ComboboxValue<T> {
 
 fn popup_style(base: Div, theme: &UiTheme) -> Div {
     base.min_w(px(144.))
-        .max_h(px(288.))
+        .max_h(px(252.))
         .overflow_hidden()
-        .rounded(theme.radius.base)
+        .rounded(theme.radius.lg)
         .bg(theme.colors.popover)
         .text_color(theme.colors.popover_foreground)
         .font_family(theme.fonts.body.clone())
         .text_size(px(14.))
         .border_1()
-        .border_color(theme.colors.foreground.alpha(0.10))
-        .shadow(vec![
-            BoxShadow::new(px(0.), px(4.), theme.colors.foreground.alpha(0.12).into())
-                .blur_radius(px(12.)),
-        ])
+        .border_color(theme.colors.foreground.opacity(0.10))
+        .shadow(theme.shadows.md.clone())
 }

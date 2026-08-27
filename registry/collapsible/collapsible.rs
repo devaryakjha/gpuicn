@@ -5,9 +5,7 @@
 //! state come from the pinned Base GPUI Collapsible primitives.
 
 pub use base_gpui::collapsible::{CollapsiblePanel, CollapsibleRoot, CollapsibleTrigger};
-use gpui::{
-    App, BoxShadow, FontWeight, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px,
-};
+use gpui::{App, FontWeight, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px};
 
 use super::theme::UiTheme;
 
@@ -23,14 +21,16 @@ pub fn collapsible(cx: &App) -> CollapsibleRoot {
 /// Creates a Nova Collapsible trigger. Add its visible content as children.
 pub fn collapsible_trigger(cx: &App) -> CollapsibleTrigger {
     let theme = UiTheme::read(cx).clone();
+    let focus_ring = theme.focus_ring();
     CollapsibleTrigger::new().style_with_state(move |state, base| {
         let colors = theme.colors;
+        let focus_ring = focus_ring.clone();
         base.flex()
             .items_center()
             .justify_center()
-            .rounded(theme.radius.base)
+            .rounded(theme.radius.lg)
             .border_1()
-            .border_color(colors.background.alpha(0.0))
+            .border_color(colors.background.opacity(0.0))
             .px(px(10.0))
             .py(px(6.0))
             .font_family(theme.fonts.body.clone())
@@ -48,10 +48,7 @@ pub fn collapsible_trigger(cx: &App) -> CollapsibleTrigger {
                 style
                     .bg(colors.background)
                     .border_color(colors.ring)
-                    .shadow(vec![
-                        BoxShadow::new(px(0.0), px(0.0), colors.ring.alpha(0.50).into())
-                            .spread_radius(px(3.0)),
-                    ])
+                    .shadow(focus_ring.clone())
             })
     })
 }
