@@ -1,25 +1,17 @@
-name: Deploy catalog
+name: Deploy ui.imajha.com
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 env:
   CARGO_BUILD_JOBS: "2"
   CARGO_INCREMENTAL: "0"
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,26 +26,20 @@ jobs:
       - uses: jetli/trunk-action@v0.5.0
         with:
           version: "v0.21.14"
+      - uses: oven-sh/setup-bun@v2
       - name: Build GPUI/WASM previews
         working-directory: site
         env:
           CARGO_UNSTABLE_BUILD_STD: std,panic_abort
-        run: trunk build --release --public-url /gpuicn/demo/
-      - name: Add catalog pages
+        run: trunk build --release --public-url /demo/ --dist ../web/public/demo
+      - name: Build TanStack catalog
+        working-directory: web
         run: |
-          cp -R site/pages/. site/dist/
-          cp -R site/assets site/dist/assets
-          cp site/coi-serviceworker.js site/dist/
-      - uses: actions/upload-pages-artifact@v3
+          bun install --frozen-lockfile
+          bun run build
+      - name: Deploy static assets
+        uses: cloudflare/wrangler-action@v3
         with:
-          path: site/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy

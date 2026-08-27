@@ -27,10 +27,10 @@ Declare `mod ui;` from your crate root. At app startup, register the Base GPUI a
 ## Install
 
 Use the stock shadcn CLI. Replace `dialog` with any component slug listed in
-the [catalog](https://devaryakjha.github.io/gpuicn/).
+the [catalog](https://ui.imajha.com/).
 
 ```sh
-npx -y shadcn@4.19.0 add https://devaryakjha.github.io/gpuicn/r/dialog.json --overwrite
+npx -y shadcn@4.19.0 add https://ui.imajha.com/r/dialog.json --overwrite
 ```
 
 Each item installs its required shared source. Re-running the command with

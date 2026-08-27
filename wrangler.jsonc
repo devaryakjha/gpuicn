@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gpuicn-site",
+  "compatibility_date": "2026-08-27",
+  "workers_dev": false,
+  "routes": [{ "pattern": "ui.imajha.com", "custom_domain": true }],
+  "assets": {
+    "directory": "./web/dist",
+    "html_handling": "force-trailing-slash",
+    "not_found_handling": "single-page-application"
+  },
+  "observability": { "enabled": true }
+}
