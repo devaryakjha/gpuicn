@@ -57,8 +57,15 @@ jobs:
       - uses: jetli/trunk-action@v0.5.0
         with:
           version: "v0.21.14"
+      - uses: oven-sh/setup-bun@v2
       - name: Build shared GPUI/WASM preview
         working-directory: site
         env:
           CARGO_UNSTABLE_BUILD_STD: std,panic_abort
-        run: trunk build --release --public-url /gpuicn/demo/
+        run: trunk build --release --public-url /demo/ --dist ../web/public/demo
+      - name: Check TanStack catalog
+        working-directory: web
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+          bun run lint
