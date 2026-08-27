@@ -1,8 +1,9 @@
 use std::borrow::Cow;
 
 use gpui::{
-    App, AppContext as _, Application, Bounds, Context, IntoElement, ParentElement as _, Render,
-    Styled as _, Window, WindowBounds, WindowOptions, div, px, size,
+    App, AppContext as _, Application, Bounds, Context, InteractiveElement as _, IntoElement,
+    ParentElement as _, Render, StatefulInteractiveElement as _, Styled as _, Window, WindowBounds,
+    WindowOptions, div, prelude::FluentBuilder as _, px, size,
 };
 use gpui_icons::{LucideAssetSource, LucideIcon, lucide};
 use gpuicn::{
@@ -11,9 +12,9 @@ use gpuicn::{
         accordion, accordion_content, accordion_header, accordion_item, accordion_trigger,
     },
     alert_dialog::{
-        alert_dialog_action, alert_dialog_backdrop, alert_dialog_cancel, alert_dialog_description,
-        alert_dialog_footer, alert_dialog_header, alert_dialog_popup, alert_dialog_portal,
-        alert_dialog_root, alert_dialog_title, alert_dialog_trigger, alert_dialog_viewport,
+        alert_dialog_backdrop, alert_dialog_description, alert_dialog_footer, alert_dialog_popup,
+        alert_dialog_portal, alert_dialog_root, alert_dialog_title, alert_dialog_trigger,
+        alert_dialog_viewport,
     },
     autocomplete::{
         autocomplete_empty, autocomplete_input, autocomplete_item, autocomplete_list,
@@ -32,13 +33,12 @@ use gpuicn::{
         context_menu_root, context_menu_separator, context_menu_trigger,
     },
     dialog::{
-        dialog_backdrop, dialog_close, dialog_description, dialog_footer, dialog_header,
-        dialog_popup, dialog_portal, dialog_root, dialog_title, dialog_trigger, dialog_viewport,
+        dialog_backdrop, dialog_close, dialog_description, dialog_footer, dialog_popup,
+        dialog_portal, dialog_root, dialog_title, dialog_trigger, dialog_viewport,
     },
     drawer::{
-        drawer_backdrop, drawer_close, drawer_content, drawer_description, drawer_popup,
-        drawer_portal, drawer_root, drawer_swipe_handle, drawer_title, drawer_trigger,
-        drawer_viewport,
+        DrawerSwipeDirection, drawer_backdrop, drawer_content, drawer_description, drawer_popup,
+        drawer_portal, drawer_root, drawer_swipe_handle, drawer_title, drawer_viewport,
     },
     field::{FieldOrientation, field_control, field_description, field_label, field_root},
     fieldset::{FieldsetLegendVariant, fieldset_legend, fieldset_root},
@@ -146,7 +146,14 @@ fn launch(cx: &mut App) {
     };
     UiTheme::switch(cx, mode);
 
-    let bounds = Bounds::centered(None, size(px(640.0), px(288.0)), cx);
+    let bounds = Bounds::centered(
+        None,
+        size(
+            px(requested_dimension("width", 640.0, 320.0, 1440.0)),
+            px(requested_dimension("height", 288.0, 240.0, 720.0)),
+        ),
+        cx,
+    );
     cx.open_window(
         WindowOptions {
             window_bounds: Some(WindowBounds::Windowed(bounds)),
@@ -158,6 +165,14 @@ fn launch(cx: &mut App) {
                 count: 0,
                 checked: false,
                 pressed: false,
+                italic: false,
+                underline: false,
+                collapsible_open: true,
+                alert_dialog_open: false,
+                dialog_open: false,
+                drawer_open: false,
+                drawer_direction: DrawerSwipeDirection::Down,
+                goal: 350,
             })
         },
     )
@@ -264,6 +279,14 @@ struct Showcase {
     count: usize,
     checked: bool,
     pressed: bool,
+    italic: bool,
+    underline: bool,
+    collapsible_open: bool,
+    alert_dialog_open: bool,
+    dialog_open: bool,
+    drawer_open: bool,
+    drawer_direction: DrawerSwipeDirection,
+    goal: i32,
 }
 
 impl Render for Showcase {
@@ -271,9 +294,11 @@ impl Render for Showcase {
         let theme = UiTheme::read(cx).clone();
         div()
             .size_full()
+            .overflow_hidden()
             .flex()
             .items_center()
             .justify_center()
+            .p(px(16.0))
             .bg(theme.colors.background)
             .text_color(theme.colors.foreground)
             .font_family(theme.fonts.body)
@@ -401,7 +426,8 @@ impl Showcase {
             ),
         ];
         accordion(cx)
-            .w(px(480.0))
+            .w_full()
+            .max_w(px(480.0))
             .children(items.into_iter().map(|(value, trigger, content)| {
                 accordion_item(value, cx)
                     .child(accordion_header().child(accordion_trigger(cx).child(trigger)))
@@ -450,34 +476,58 @@ impl Showcase {
     }
 
     fn alert_dialog_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let root_view = cx.entity().downgrade();
+        let cancel_view = cx.entity().downgrade();
+        let action_view = cx.entity().downgrade();
         alert_dialog_root("preview.alert-dialog")
+            .open(self.alert_dialog_open)
+            .on_open_change(move |open, _, _, cx| {
+                root_view
+                    .update(cx, |this, cx| {
+                        this.alert_dialog_open = open;
+                        cx.notify();
+                    })
+                    .ok();
+            })
             .child(alert_dialog_trigger("preview.alert-dialog.trigger", cx).child("Delete account"))
             .child(
                 alert_dialog_portal().child(alert_dialog_backdrop()).child(
                     alert_dialog_viewport().child(
                         alert_dialog_popup("preview.alert-dialog.popup", "Confirm deletion", cx)
-                            .child_any(
-                                alert_dialog_header()
-                                    .child(
-                                        alert_dialog_title("preview.alert-dialog.title", cx)
-                                            .child("Are you sure?"),
-                                    )
-                                    .child(
-                                        alert_dialog_description(
-                                            "preview.alert-dialog.description",
-                                            cx,
-                                        )
-                                        .child("This action cannot be undone."),
-                                    ),
+                            .child(
+                                alert_dialog_title("preview.alert-dialog.title", cx)
+                                    .mb(px(-10.0))
+                                    .child("Are you sure?"),
+                            )
+                            .child(
+                                alert_dialog_description("preview.alert-dialog.description", cx)
+                                    .child("This action cannot be undone."),
                             )
                             .child_any(
                                 alert_dialog_footer(cx)
                                     .child(
-                                        alert_dialog_cancel("preview.alert-dialog.cancel", cx)
+                                        Button::new("preview.alert-dialog.cancel")
+                                            .variant(ButtonVariant::Outline)
+                                            .on_click(move |_, _, cx| {
+                                                cancel_view
+                                                    .update(cx, |this, cx| {
+                                                        this.alert_dialog_open = false;
+                                                        cx.notify();
+                                                    })
+                                                    .ok();
+                                            })
                                             .child("Cancel"),
                                     )
                                     .child(
-                                        alert_dialog_action("preview.alert-dialog.action", cx)
+                                        Button::new("preview.alert-dialog.action")
+                                            .on_click(move |_, _, cx| {
+                                                action_view
+                                                    .update(cx, |this, cx| {
+                                                        this.alert_dialog_open = false;
+                                                        cx.notify();
+                                                    })
+                                                    .ok();
+                                            })
                                             .child("Continue"),
                                     ),
                             ),
@@ -506,54 +556,121 @@ impl Showcase {
 
     fn collapsible_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
-        collapsible(cx)
-            .w(px(350.0))
-            .gap(px(8.0))
+        let collapsible_view = cx.entity().downgrade();
+        div()
+            .w_full()
+            .max_w(px(280.0))
+            .overflow_hidden()
+            .rounded(px(12.0))
+            .border_1()
+            .border_color(theme.colors.border)
+            .bg(theme.colors.popover)
             .child(
-                collapsible_trigger(cx)
-                    .w_full()
-                    .justify_between()
-                    .child("@gpuicn starred 3 repositories")
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(16.0))
+                    .h(px(40.0))
+                    .px(px(12.0))
+                    .border_b_1()
+                    .border_color(theme.colors.border)
+                    .child("Explorer")
                     .child(
-                        lucide(LucideIcon::ChevronDown)
-                            .size(px(16.0))
-                            .text_color(theme.colors.muted_foreground),
+                        div()
+                            .text_color(theme.colors.muted_foreground)
+                            .child("Outline"),
                     ),
             )
             .child(
-                collapsible_content(cx)
-                    .flex()
-                    .flex_col()
-                    .gap(px(8.0))
-                    .child(repo_row("devaryakjha/gpuicn", &theme))
-                    .child(repo_row("zed-industries/zed", &theme))
-                    .child(repo_row("shadcn-ui/ui", &theme)),
+                div()
+                    .p(px(8.0))
+                    .child(
+                        collapsible(cx)
+                            .id("preview.collapsible.files")
+                            .open(Some(self.collapsible_open))
+                            .on_open_change(move |open, _, _, cx| {
+                                collapsible_view
+                                    .update(cx, |this, cx| {
+                                        this.collapsible_open = open;
+                                        cx.notify();
+                                    })
+                                    .ok();
+                            })
+                            .child(
+                                collapsible_trigger(cx)
+                                    .w_full()
+                                    .justify_start()
+                                    .gap(px(8.0))
+                                    .child(
+                                        lucide(if self.collapsible_open {
+                                            LucideIcon::ChevronDown
+                                        } else {
+                                            LucideIcon::ChevronRight
+                                        })
+                                        .size(px(16.0))
+                                        .text_color(theme.colors.muted_foreground),
+                                    )
+                                    .child(tree_folder_mark(&theme))
+                                    .child("components"),
+                            )
+                            .child(
+                                collapsible_content(cx)
+                                    .pt(px(2.0))
+                                    .pl(px(32.0))
+                                    .child(tree_row("button.rs", &theme))
+                                    .child(tree_row("dialog.rs", &theme))
+                                    .child(tree_row("input.rs", &theme)),
+                            ),
+                    )
+                    .child(tree_row("lib", &theme))
+                    .child(tree_row("README.md", &theme)),
             )
     }
 
     fn checkbox_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let view = cx.entity().downgrade();
+        let checkbox_view = cx.entity().downgrade();
+        let label_view = cx.entity().downgrade();
         div()
             .flex()
             .flex_col()
             .gap(px(16.0))
-            .child(checkbox_row(
-                Checkbox::new("preview.checkbox.interactive")
-                    .checked(self.checked)
-                    .aria_label("Accept terms")
-                    .on_checked_change(move |checked, _, _, cx| {
-                        view.update(cx, |this, cx| {
-                            this.checked = checked;
-                            cx.notify();
-                        })
-                        .ok();
-                    }),
-                if self.checked {
-                    "Accepted"
-                } else {
-                    "Accept terms"
-                },
-            ))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(8.0))
+                    .child(
+                        Checkbox::new("preview.checkbox.interactive")
+                            .checked(self.checked)
+                            .aria_label("Accept terms")
+                            .on_checked_change(move |checked, _, _, cx| {
+                                checkbox_view
+                                    .update(cx, |this, cx| {
+                                        this.checked = checked;
+                                        cx.notify();
+                                    })
+                                    .ok();
+                            }),
+                    )
+                    .child(
+                        div()
+                            .id("preview.checkbox.interactive-label")
+                            .cursor_pointer()
+                            .on_click(move |_, _, cx| {
+                                label_view
+                                    .update(cx, |this, cx| {
+                                        this.checked = !this.checked;
+                                        cx.notify();
+                                    })
+                                    .ok();
+                            })
+                            .child(if self.checked {
+                                "Accepted"
+                            } else {
+                                "Accept terms"
+                            }),
+                    ),
+            )
             .child(checkbox_row(
                 Checkbox::new("preview.checkbox.indeterminate")
                     .indeterminate(true)
@@ -649,8 +766,9 @@ impl Showcase {
         context_menu_root::<()>("preview.context-menu")
             .child(
                 context_menu_trigger("preview.context-menu.trigger")
-                    .w(px(280.0))
-                    .h(px(150.0))
+                    .w_full()
+                    .max_w(px(240.0))
+                    .h(px(112.0))
                     .flex()
                     .items_center()
                     .justify_center()
@@ -712,24 +830,31 @@ impl Showcase {
     }
 
     fn dialog_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let root_view = cx.entity().downgrade();
+        let save_view = cx.entity().downgrade();
         dialog_root("preview.dialog")
+            .open(self.dialog_open)
+            .on_open_change(move |open, _, _, cx| {
+                root_view
+                    .update(cx, |this, cx| {
+                        this.dialog_open = open;
+                        cx.notify();
+                    })
+                    .ok();
+            })
             .child(dialog_trigger("preview.dialog.trigger", cx).child("Open dialog"))
             .child(
                 dialog_portal().child(dialog_backdrop()).child(
                     dialog_viewport().child(
                         dialog_popup("preview.dialog.popup", "Edit profile", cx)
-                            .child_any(
-                                dialog_header()
-                                    .child(
-                                        dialog_title("preview.dialog.title", cx)
-                                            .child("Edit profile"),
-                                    )
-                                    .child(
-                                        dialog_description("preview.dialog.description", cx).child(
-                                            "Make changes to your profile here. Click save when you're done.",
-                                        ),
-                                    ),
+                            .child(
+                                dialog_title("preview.dialog.title", cx)
+                                    .mb(px(-8.0))
+                                    .child("Edit profile"),
                             )
+                            .child(dialog_description("preview.dialog.description", cx).child(
+                                "Make changes to your profile here. Click save when you're done.",
+                            ))
                             .child_any(
                                 div()
                                     .flex()
@@ -752,7 +877,16 @@ impl Showcase {
                             )
                             .child_any(
                                 dialog_footer(cx).child(
-                                    Button::new("preview.dialog.save").child("Save changes"),
+                                    Button::new("preview.dialog.save")
+                                        .on_click(move |_, _, cx| {
+                                            save_view
+                                                .update(cx, |this, cx| {
+                                                    this.dialog_open = false;
+                                                    cx.notify();
+                                                })
+                                                .ok();
+                                        })
+                                        .child("Save changes"),
                                 ),
                             )
                             .child(dialog_close("preview.dialog.close", cx)),
@@ -762,36 +896,199 @@ impl Showcase {
     }
 
     fn drawer_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        drawer_root("preview.drawer")
-            .child(drawer_trigger("preview.drawer.trigger", cx).child("Open drawer"))
+        let root_view = cx.entity().downgrade();
+        let close_view = cx.entity().downgrade();
+        let submit_view = cx.entity().downgrade();
+        let minus_view = cx.entity().downgrade();
+        let plus_view = cx.entity().downgrade();
+        let top_view = cx.entity().downgrade();
+        let right_view = cx.entity().downgrade();
+        let bottom_view = cx.entity().downgrade();
+        let left_view = cx.entity().downgrade();
+        let direction = self.drawer_direction;
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(12.0))
             .child(
-                drawer_portal().child(drawer_backdrop()).child(
-                    drawer_viewport().child(
-                        drawer_popup("preview.drawer.popup", "Drawer", cx).child(
-                            drawer_content(cx).child(drawer_swipe_handle(cx)).child(
-                                div()
-                                    .p(px(20.0))
-                                    .flex()
-                                    .flex_col()
-                                    .gap(px(12.0))
-                                    .child(
-                                        drawer_title("preview.drawer.title", cx).child("Move goal"),
-                                    )
-                                    .child(
-                                        drawer_description("preview.drawer.description", cx)
-                                            .child("Choose a new project for this task."),
-                                    )
-                                    .child(drawer_close("preview.drawer.close", cx).child("Close")),
+                div()
+                    .text_size(px(14.0))
+                    .text_color(UiTheme::read(cx).colors.muted_foreground)
+                    .child("Open from an edge"),
+            )
+            .child(
+                div()
+                    .flex()
+                    .flex_wrap()
+                    .justify_center()
+                    .gap(px(8.0))
+                    .child(drawer_direction_button(
+                        "preview.drawer.top",
+                        "Top",
+                        DrawerSwipeDirection::Up,
+                        top_view,
+                    ))
+                    .child(drawer_direction_button(
+                        "preview.drawer.right",
+                        "Right",
+                        DrawerSwipeDirection::Right,
+                        right_view,
+                    ))
+                    .child(drawer_direction_button(
+                        "preview.drawer.bottom",
+                        "Bottom",
+                        DrawerSwipeDirection::Down,
+                        bottom_view,
+                    ))
+                    .child(drawer_direction_button(
+                        "preview.drawer.left",
+                        "Left",
+                        DrawerSwipeDirection::Left,
+                        left_view,
+                    )),
+            )
+            .child(
+                drawer_root("preview.drawer")
+                    .open(self.drawer_open)
+                    .swipe_direction(direction)
+                    .on_open_change(move |open, _, _, cx| {
+                        root_view
+                            .update(cx, |this, cx| {
+                                this.drawer_open = open;
+                                cx.notify();
+                            })
+                            .ok();
+                    })
+                    .child(
+                        drawer_portal().child(drawer_backdrop()).child(
+                            drawer_viewport().child(
+                                drawer_popup("preview.drawer.popup", "Activity goal", cx).child(
+                                    drawer_content(cx)
+                                        .when(direction == DrawerSwipeDirection::Down, |content| {
+                                            content.child(drawer_swipe_handle(cx))
+                                        })
+                                        .child(
+                                            div()
+                                                .p(px(20.0))
+                                                .flex()
+                                                .flex_col()
+                                                .gap(px(16.0))
+                                                .child(
+                                                    drawer_title("preview.drawer.title", cx)
+                                                        .child("Move goal"),
+                                                )
+                                                .child(
+                                                    drawer_description(
+                                                        "preview.drawer.description",
+                                                        cx,
+                                                    )
+                                                    .child("Set your daily activity goal."),
+                                                )
+                                                .child(
+                                                    div()
+                                                        .flex()
+                                                        .items_center()
+                                                        .justify_center()
+                                                        .gap(px(16.0))
+                                                        .child(
+                                                            Button::new("preview.drawer.minus")
+                                                                .variant(ButtonVariant::Outline)
+                                                                .size(ButtonSize::Icon)
+                                                                .on_click(move |_, _, cx| {
+                                                                    minus_view
+                                                                        .update(cx, |this, cx| {
+                                                                            this.goal = (this.goal
+                                                                                - 10)
+                                                                                .max(0);
+                                                                            cx.notify();
+                                                                        })
+                                                                        .ok();
+                                                                })
+                                                                .child(
+                                                                    lucide(LucideIcon::Minus)
+                                                                        .size(px(16.0))
+                                                                        .text_color(
+                                                                            UiTheme::read(cx)
+                                                                                .colors
+                                                                                .foreground,
+                                                                        ),
+                                                                ),
+                                                        )
+                                                        .child(
+                                                            div()
+                                                                .w(px(72.0))
+                                                                .text_center()
+                                                                .text_size(px(24.0))
+                                                                .child(self.goal.to_string()),
+                                                        )
+                                                        .child(
+                                                            Button::new("preview.drawer.plus")
+                                                                .variant(ButtonVariant::Outline)
+                                                                .size(ButtonSize::Icon)
+                                                                .on_click(move |_, _, cx| {
+                                                                    plus_view
+                                                                        .update(cx, |this, cx| {
+                                                                            this.goal += 10;
+                                                                            cx.notify();
+                                                                        })
+                                                                        .ok();
+                                                                })
+                                                                .child(
+                                                                    lucide(LucideIcon::Plus)
+                                                                        .size(px(16.0))
+                                                                        .text_color(
+                                                                            UiTheme::read(cx)
+                                                                                .colors
+                                                                                .foreground,
+                                                                        ),
+                                                                ),
+                                                        ),
+                                                )
+                                                .child(
+                                                    div()
+                                                        .flex()
+                                                        .gap(px(8.0))
+                                                        .child(
+                                                            Button::new("preview.drawer.submit")
+                                                                .on_click(move |_, _, cx| {
+                                                                    submit_view
+                                                                        .update(cx, |this, cx| {
+                                                                            this.drawer_open =
+                                                                                false;
+                                                                            cx.notify();
+                                                                        })
+                                                                        .ok();
+                                                                })
+                                                                .child("Submit"),
+                                                        )
+                                                        .child(
+                                                            Button::new("preview.drawer.close")
+                                                                .variant(ButtonVariant::Outline)
+                                                                .on_click(move |_, _, cx| {
+                                                                    close_view
+                                                                        .update(cx, |this, cx| {
+                                                                            this.drawer_open =
+                                                                                false;
+                                                                            cx.notify();
+                                                                        })
+                                                                        .ok();
+                                                                })
+                                                                .child("Cancel"),
+                                                        ),
+                                                ),
+                                        ),
+                                ),
                             ),
                         ),
                     ),
-                ),
             )
     }
 
     fn field_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         field_root("preview.field", FieldOrientation::Vertical, cx)
-            .w(px(280.0))
+            .w_full()
+            .max_w(px(280.0))
             .name("username")
             .child(field_label(cx).text("Username"))
             .child(field_control("preview.field.control", cx).placeholder("e.g. ada"))
@@ -800,7 +1097,8 @@ impl Showcase {
 
     fn fieldset_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         fieldset_root("preview.fieldset", cx)
-            .w(px(300.0))
+            .w_full()
+            .max_w(px(300.0))
             .aria_label("Shipping address")
             .child(fieldset_legend(FieldsetLegendVariant::Legend, cx).child("Shipping address"))
             .child_any(
@@ -823,9 +1121,18 @@ impl Showcase {
     }
 
     fn form_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let view = cx.entity().downgrade();
         form("preview.form", cx)
-            .w(px(280.0))
+            .w_full()
+            .max_w(px(280.0))
             .aria_label("Subscribe")
+            .on_form_submit(move |_, _, _, cx| {
+                view.update(cx, |this, cx| {
+                    this.count += 1;
+                    cx.notify();
+                })
+                .ok();
+            })
             .child(
                 field_root("preview.form.email", FieldOrientation::Vertical, cx)
                     .name("email")
@@ -843,11 +1150,13 @@ impl Showcase {
                     })
                     .child("Subscribe"),
             )
+            .when(self.count > 0, |form| form.child("Form submitted."))
     }
 
     fn input_preview(&self) -> impl IntoElement {
         div()
-            .w(px(320.0))
+            .w_full()
+            .max_w(px(320.0))
             .flex()
             .flex_col()
             .gap(px(12.0))
@@ -1003,7 +1312,8 @@ impl Showcase {
 
     fn meter_preview(&self) -> impl IntoElement {
         div()
-            .w(px(320.0))
+            .w_full()
+            .max_w(px(320.0))
             .flex()
             .flex_col()
             .gap(px(8.0))
@@ -1171,7 +1481,8 @@ impl Showcase {
 
     fn progress_preview(&self) -> impl IntoElement {
         div()
-            .w(px(320.0))
+            .w_full()
+            .max_w(px(320.0))
             .flex()
             .flex_col()
             .gap(px(8.0))
@@ -1224,7 +1535,8 @@ impl Showcase {
         let theme = UiTheme::read(cx).clone();
         scroll_area(cx)
             .id("preview.scroll-area")
-            .w(px(300.0))
+            .w_full()
+            .max_w(px(300.0))
             .h(px(180.0))
             .rounded(px(8.0))
             .border_1()
@@ -1294,7 +1606,8 @@ impl Showcase {
 
     fn separator_preview(&self) -> impl IntoElement {
         div()
-            .w(px(320.0))
+            .w_full()
+            .max_w(px(320.0))
             .flex()
             .flex_col()
             .gap(px(12.0))
@@ -1305,7 +1618,8 @@ impl Showcase {
 
     fn slider_preview(&self) -> impl IntoElement {
         div()
-            .w(px(320.0))
+            .w_full()
+            .max_w(px(320.0))
             .flex()
             .flex_col()
             .gap(px(20.0))
@@ -1323,28 +1637,42 @@ impl Showcase {
     }
 
     fn switch_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let view = cx.entity().downgrade();
+        let switch_view = cx.entity().downgrade();
+        let row_view = cx.entity().downgrade();
         div()
             .flex()
             .flex_col()
             .gap(px(14.0))
-            .child(switch_row(
-                Switch::new("preview.switch")
-                    .checked(self.checked)
-                    .aria_label("Airplane mode")
-                    .on_checked_change(move |checked, _, _, cx| {
-                        view.update(cx, |this, cx| {
-                            this.checked = checked;
+            .child(
+                switch_row(
+                    Switch::new("preview.switch")
+                        .checked(self.checked)
+                        .aria_label("Airplane mode")
+                        .on_checked_change(move |checked, _, _, cx| {
+                            switch_view
+                                .update(cx, |this, cx| {
+                                    this.checked = checked;
+                                    cx.notify();
+                                })
+                                .ok();
+                        }),
+                    if self.checked {
+                        "Airplane mode on"
+                    } else {
+                        "Airplane mode"
+                    },
+                )
+                .id("preview.switch.interactive-row")
+                .cursor_pointer()
+                .on_click(move |_, _, cx| {
+                    row_view
+                        .update(cx, |this, cx| {
+                            this.checked = !this.checked;
                             cx.notify();
                         })
                         .ok();
-                    }),
-                if self.checked {
-                    "Airplane mode on"
-                } else {
-                    "Airplane mode"
-                },
-            ))
+                }),
+            )
             .child(switch_row(
                 Switch::new("preview.switch.checked")
                     .default_checked(true)
@@ -1369,7 +1697,8 @@ impl Showcase {
 
     fn tabs_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         tabs(cx)
-            .w(px(420.0))
+            .w_full()
+            .max_w(px(420.0))
             .default_value(Some("account"))
             .child(
                 tabs_list(cx)
@@ -1513,7 +1842,12 @@ impl Showcase {
     }
 
     fn toolbar_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let icon_color = UiTheme::read(cx).colors.foreground;
+        let theme = UiTheme::read(cx).clone();
+        let icon_color = theme.colors.foreground;
+        let bold_view = cx.entity().downgrade();
+        let italic_view = cx.entity().downgrade();
+        let underline_view = cx.entity().downgrade();
+        let copy_view = cx.entity().downgrade();
         toolbar(cx)
             .id("preview.toolbar")
             .aria_label("Formatting")
@@ -1525,6 +1859,15 @@ impl Showcase {
                         toolbar_button(cx)
                             .id("preview.toolbar.bold")
                             .aria_label("Bold")
+                            .when(self.pressed, |button| button.bg(theme.colors.muted))
+                            .on_click(move |_, _, cx| {
+                                bold_view
+                                    .update(cx, |this, cx| {
+                                        this.pressed = !this.pressed;
+                                        cx.notify();
+                                    })
+                                    .ok();
+                            })
                             .child(
                                 lucide(LucideIcon::Bold)
                                     .size(px(16.0))
@@ -1535,6 +1878,15 @@ impl Showcase {
                         toolbar_button(cx)
                             .id("preview.toolbar.italic")
                             .aria_label("Italic")
+                            .when(self.italic, |button| button.bg(theme.colors.muted))
+                            .on_click(move |_, _, cx| {
+                                italic_view
+                                    .update(cx, |this, cx| {
+                                        this.italic = !this.italic;
+                                        cx.notify();
+                                    })
+                                    .ok();
+                            })
                             .child(
                                 lucide(LucideIcon::Italic)
                                     .size(px(16.0))
@@ -1545,6 +1897,15 @@ impl Showcase {
                         toolbar_button(cx)
                             .id("preview.toolbar.underline")
                             .aria_label("Underline")
+                            .when(self.underline, |button| button.bg(theme.colors.muted))
+                            .on_click(move |_, _, cx| {
+                                underline_view
+                                    .update(cx, |this, cx| {
+                                        this.underline = !this.underline;
+                                        cx.notify();
+                                    })
+                                    .ok();
+                            })
                             .child(
                                 lucide(LucideIcon::Underline)
                                     .size(px(16.0))
@@ -1557,7 +1918,15 @@ impl Showcase {
                 toolbar_button(cx)
                     .id("preview.toolbar.copy")
                     .aria_label("Copy")
-                    .child("Copy"),
+                    .on_click(move |_, _, cx| {
+                        copy_view
+                            .update(cx, |this, cx| {
+                                this.count += 1;
+                                cx.notify();
+                            })
+                            .ok();
+                    })
+                    .child(if self.count > 0 { "Copied" } else { "Copy" }),
             )
     }
 
@@ -1632,15 +2001,51 @@ fn toast_close_from_theme(theme: &UiTheme) -> ToastClose<()> {
         )
 }
 
-fn repo_row(name: &'static str, theme: &UiTheme) -> gpui::Div {
+fn tree_row(name: &'static str, theme: &UiTheme) -> gpui::Div {
     div()
-        .rounded(theme.radius.base)
-        .border_1()
-        .border_color(theme.colors.border)
-        .px(px(12.0))
-        .py(px(8.0))
+        .flex()
+        .items_center()
+        .gap(px(8.0))
+        .h(px(30.0))
+        .px(px(10.0))
         .text_size(px(14.0))
+        .child(
+            div()
+                .size(px(8.0))
+                .rounded(px(2.0))
+                .border_1()
+                .border_color(theme.colors.muted_foreground),
+        )
         .child(name)
+}
+
+fn tree_folder_mark(theme: &UiTheme) -> gpui::Div {
+    div()
+        .w(px(14.0))
+        .h(px(11.0))
+        .rounded(px(2.0))
+        .border_1()
+        .border_color(theme.colors.muted_foreground)
+        .bg(theme.colors.muted)
+}
+
+fn drawer_direction_button(
+    id: &'static str,
+    label: &'static str,
+    direction: DrawerSwipeDirection,
+    view: gpui::WeakEntity<Showcase>,
+) -> Button {
+    Button::new(id)
+        .variant(ButtonVariant::Outline)
+        .on_click(move |_, _, cx| {
+            view.update(cx, |this, cx| {
+                this.drawer_direction = direction;
+                this.drawer_open = true;
+                cx.notify();
+            })
+            .ok();
+        })
+        .child(label)
 }
 
 fn shortcut(value: &'static str, cx: &App) -> gpui::Div {
@@ -1692,7 +2097,7 @@ fn switch_row(switch: Switch, label: &'static str) -> gpui::Div {
         .child(label)
 }
 
-fn checkbox_row(checkbox: Checkbox, label: &'static str) -> impl IntoElement {
+fn checkbox_row(checkbox: Checkbox, label: &'static str) -> gpui::Div {
     div()
         .flex()
         .items_center()
@@ -1717,5 +2122,29 @@ fn requested_value(key: &str) -> Option<String> {
         "demo" => std::env::args().nth(1),
         "theme" => std::env::args().nth(2),
         _ => None,
+    }
+}
+
+fn requested_dimension(key: &str, default: f32, min: f32, max: f32) -> f32 {
+    parse_dimension(requested_value(key).as_deref(), default, min, max)
+}
+
+fn parse_dimension(value: Option<&str>, default: f32, min: f32, max: f32) -> f32 {
+    value
+        .and_then(|value| value.parse::<f32>().ok())
+        .filter(|value| value.is_finite())
+        .map(|value| value.clamp(min, max))
+        .unwrap_or(default)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_dimension;
+
+    #[test]
+    fn preview_dimensions_stay_inside_safe_bounds() {
+        assert_eq!(parse_dimension(Some("42"), 640.0, 320.0, 1440.0), 320.0);
+        assert_eq!(parse_dimension(Some("1920"), 640.0, 320.0, 1440.0), 1440.0);
+        assert_eq!(parse_dimension(Some("nope"), 640.0, 320.0, 1440.0), 640.0);
     }
 }
