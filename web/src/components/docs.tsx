@@ -256,14 +256,16 @@ function ComponentExample({
   source: string
 }) {
   return (
-    <Tabs defaultValue="preview" className="mt-8">
+    <Tabs defaultValue="preview" className="relative mt-8">
       <TabsList variant="line">
         <TabsTrigger value="preview">Preview</TabsTrigger>
         <TabsTrigger value="code">Demo code</TabsTrigger>
       </TabsList>
       <TabsContent
         value="preview"
-        className="mt-2 overflow-hidden rounded-xl border border-[color-mix(in_oklab,var(--foreground)_10%,var(--background))] bg-background"
+        keepMounted
+        render={(props) => <div {...props} hidden={false} />}
+        className="mt-2 overflow-hidden rounded-xl border border-[color-mix(in_oklab,var(--foreground)_10%,var(--background))] bg-background data-[hidden]:invisible data-[hidden]:absolute data-[hidden]:w-full"
       >
         <GpuPreview component={component} />
       </TabsContent>
@@ -335,14 +337,31 @@ export function GpuPreview({
   return (
     <div ref={hostRef} className="relative w-full" style={{ height }}>
       {width !== null ? (
-        <PreviewFrame key={src} src={src} name={component.name} />
+        <PreviewFrame
+          key={component.slug}
+          src={src}
+          name={component.name}
+          theme={theme}
+          icon={icon}
+        />
       ) : null}
     </div>
   )
 }
 
-function PreviewFrame({ src, name }: { src: string; name: string }) {
+function PreviewFrame({
+  src,
+  name,
+  theme,
+  icon,
+}: {
+  src: string
+  name: string
+  theme: "light" | "dark"
+  icon?: string
+}) {
   const frameRef = React.useRef<HTMLIFrameElement>(null)
+  const [initialSrc] = React.useState(src)
   const [attempt, setAttempt] = React.useState(0)
   const [status, setStatus] = React.useState<
     "loading" | "ready" | "failed" | "unsupported"
@@ -372,13 +391,22 @@ function PreviewFrame({ src, name }: { src: string; name: string }) {
     }
   }, [attempt])
 
+  React.useEffect(() => {
+    if (status === "ready") {
+      frameRef.current?.contentWindow?.postMessage(
+        { gpuicn: "preview-update", theme, icon: icon ?? "" },
+        window.location.origin
+      )
+    }
+  }, [status, theme, icon])
+
   return (
     <>
       {status !== "unsupported" ? (
         <iframe
           key={attempt}
           ref={frameRef}
-          src={src}
+          src={initialSrc}
           title={`Interactive ${name} GPUI preview`}
           onError={() => setStatus("failed")}
           className={cn(

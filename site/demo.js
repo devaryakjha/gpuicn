@@ -1,4 +1,15 @@
 (function () {
+  window.gpuicnPreviewUpdates = function (update) {
+    window.addEventListener("message", function (event) {
+      var data = event.data;
+      if (event.source !== window.parent || event.origin !== window.location.origin ||
+          data?.gpuicn !== "preview-update" ||
+          (data.theme !== "light" && data.theme !== "dark") ||
+          typeof data.icon !== "string") return;
+      update(data.theme, data.icon);
+    });
+  };
+
   var NativeWorker = window.Worker;
   var workers = [];
   window.Worker = function (url, options) {

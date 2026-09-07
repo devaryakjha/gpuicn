@@ -72,3 +72,4 @@ jobs:
           bun run build
           bun run lint
           bun scripts/check-highlighting.ts
+          node ../scripts/check-preview-updates.mjs

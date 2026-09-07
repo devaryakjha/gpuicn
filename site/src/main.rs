@@ -98,11 +98,13 @@ use gpuicn::{
 
 #[cfg(target_family = "wasm")]
 #[wasm_bindgen::prelude::wasm_bindgen(
-    inline_js = "export function previewReady(){let sent=false;const send=()=>{if(sent)return;sent=true;document.documentElement.dataset.gpuicnReady='true';window.parent.postMessage({gpuicn:'preview-ready'},'*')};requestAnimationFrame(()=>requestAnimationFrame(send));setTimeout(send,1000)}"
+    inline_js = "export function previewReady(){let sent=false;const send=()=>{if(sent)return;sent=true;document.documentElement.dataset.gpuicnReady='true';window.parent.postMessage({gpuicn:'preview-ready'},'*')};requestAnimationFrame(()=>requestAnimationFrame(send));setTimeout(send,1000)} export function installPreviewUpdates(update){window.gpuicnPreviewUpdates(update)}"
 )]
 extern "C" {
     #[wasm_bindgen::prelude::wasm_bindgen(js_name = previewReady)]
     fn preview_ready();
+    #[wasm_bindgen::prelude::wasm_bindgen(js_name = installPreviewUpdates)]
+    fn install_preview_updates(update: wasm_bindgen::JsValue);
 }
 
 fn main() {
@@ -171,35 +173,58 @@ fn launch(cx: &mut App) {
         ),
         cx,
     );
-    cx.open_window(
-        WindowOptions {
-            window_bounds: Some(WindowBounds::Windowed(bounds)),
-            ..Default::default()
-        },
-        move |_window, cx| {
-            cx.new(move |_| Showcase {
-                demo,
-                count: 0,
-                checked: false,
-                pressed: false,
-                italic: false,
-                underline: false,
-                collapsible_open: true,
-                alert_dialog_open: false,
-                dialog_open: false,
-                drawer_open: false,
-                drawer_direction: DrawerSwipeDirection::Down,
-                goal: 350,
-                icon: requested_value("icon")
-                    .as_deref()
-                    .and_then(LucideIcon::from_name)
-                    .unwrap_or(LucideIcon::House),
-            })
-        },
-    )
-    .expect("failed to open showcase window");
+    let _window = cx
+        .open_window(
+            WindowOptions {
+                window_bounds: Some(WindowBounds::Windowed(bounds)),
+                ..Default::default()
+            },
+            move |_window, cx| {
+                cx.new(move |_| Showcase {
+                    demo,
+                    count: 0,
+                    checked: false,
+                    pressed: false,
+                    italic: false,
+                    underline: false,
+                    collapsible_open: true,
+                    alert_dialog_open: false,
+                    dialog_open: false,
+                    drawer_open: false,
+                    drawer_direction: DrawerSwipeDirection::Down,
+                    goal: 350,
+                    icon: requested_value("icon")
+                        .as_deref()
+                        .and_then(LucideIcon::from_name)
+                        .unwrap_or(LucideIcon::House),
+                })
+            },
+        )
+        .expect("failed to open showcase window");
     #[cfg(target_family = "wasm")]
-    preview_ready();
+    {
+        let mut async_cx = cx.to_async();
+        let update = wasm_bindgen::closure::Closure::<dyn FnMut(String, String)>::new(
+            move |theme: String, icon: String| {
+                let mode = match theme.as_str() {
+                    "light" => ThemeMode::Light,
+                    "dark" => ThemeMode::Dark,
+                    _ => return,
+                };
+                _window
+                    .update(&mut async_cx, |view, _, cx| {
+                        UiTheme::switch(cx, mode);
+                        if let Some(icon) = LucideIcon::from_name(&icon) {
+                            view.icon = icon;
+                        }
+                        cx.notify();
+                    })
+                    .ok();
+            },
+        );
+        install_preview_updates(update.into_js_value());
+        preview_ready();
+    }
     #[cfg(target_family = "wasm")]
     cx.activate(true);
     #[cfg(not(target_family = "wasm"))]
