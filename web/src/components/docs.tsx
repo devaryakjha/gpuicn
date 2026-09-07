@@ -23,6 +23,27 @@ import { highlight, type CodeLanguage } from "@/lib/highlight"
 
 const registryOrigin = "https://ui.imajha.com"
 
+export function BetaNotice() {
+  return (
+    <aside
+      id="beta"
+      aria-label="Beta status"
+      className="mt-6 scroll-mt-20 rounded-lg border border-dashed px-4 py-3 text-sm leading-6 text-muted-foreground"
+    >
+      <strong className="font-medium text-foreground">In beta.</strong> APIs and
+      styling may change as the library develops. Pin dependency revisions and
+      review updates before replacing your installed source.{" "}
+      <a
+        href="https://github.com/devaryakjha/gpuicn/releases"
+        className="underline underline-offset-4"
+      >
+        Follow releases
+      </a>
+      .
+    </aside>
+  )
+}
+
 export function PageHeader({
   eyebrow,
   title,

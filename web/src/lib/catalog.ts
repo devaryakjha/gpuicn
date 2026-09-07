@@ -194,7 +194,7 @@ export const components: CatalogComponent[] = [
 ]
 
 export const sections = [
-  { to: "/", label: "Introduction" },
+  { to: "/introduction", label: "Introduction" },
   { to: "/installation", label: "Installation" },
   { to: "/theming", label: "Theming" },
   { to: "/icons", label: "Icons" },

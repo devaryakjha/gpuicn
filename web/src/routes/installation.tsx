@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router"
 
-import { CodeBlock, DocsLayout, PageHeader } from "@/components/docs"
+import {
+  BetaNotice,
+  CodeBlock,
+  DocsLayout,
+  PageHeader,
+} from "@/components/docs"
 import setup from "@/generated/setup.json"
 
 export const Route = createFileRoute("/installation")({
@@ -15,6 +20,7 @@ function InstallationPage() {
         title="Installation"
         description="Add editable Rust components to a GPUI app. Start with one button, then install only what you need."
       />
+      <BetaNotice />
       <div className="mt-8 space-y-10">
         <section>
           <h2 className="text-xl font-semibold tracking-tight">

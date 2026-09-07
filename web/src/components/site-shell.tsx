@@ -38,11 +38,14 @@ import { cn } from "@/lib/utils"
 
 export function SiteShell() {
   const [searchOpen, setSearchOpen] = React.useState(false)
+  const isHome = useRouterState({
+    select: (state) => state.location.pathname === "/",
+  })
 
   return (
     <SidebarProvider>
       <SiteHeader onSearch={() => setSearchOpen(true)} />
-      <CatalogSidebar />
+      {!isHome && <CatalogSidebar />}
       <SidebarInset id="main-content" className="min-w-0 pt-14">
         <Outlet />
       </SidebarInset>
@@ -71,7 +74,7 @@ function SiteHeader({ onSearch }: { onSearch: () => void }) {
         Skip to content
       </a>
       <div className="flex h-full items-center gap-2 px-3 sm:px-4">
-        <SidebarTrigger className="md:hidden" />
+        {pathname !== "/" && <SidebarTrigger className="md:hidden" />}
         <Link
           to="/"
           className="mr-2 flex items-center gap-2 text-sm font-semibold tracking-tight"
@@ -85,21 +88,29 @@ function SiteHeader({ onSearch }: { onSearch: () => void }) {
           />
           gpuicn
         </Link>
+        <Link
+          to="/installation"
+          hash="beta"
+          aria-label="Beta: what to expect"
+          className="shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+        >
+          Beta
+        </Link>
         <nav
           className="hidden items-center gap-1 md:flex"
           aria-label="Main navigation"
         >
           <Link
-            to="/"
+            to="/introduction"
             className={cn(
               buttonVariants({ variant: "ghost", size: "sm" }),
-              pathname !== "/" && "text-muted-foreground"
+              pathname !== "/introduction" && "text-muted-foreground"
             )}
           >
             Docs
           </Link>
           <Link
-            to="/"
+            to="/introduction"
             hash="components"
             className={cn(
               buttonVariants({ variant: "ghost", size: "sm" }),
