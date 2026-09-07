@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as IconsRouteImport } from './routes/icons'
 import { Route as InstallationRouteImport } from './routes/installation'
 import { Route as RegistryRouteImport } from './routes/registry'
 import { Route as ThemingRouteImport } from './routes/theming'
@@ -18,6 +19,11 @@ import { Route as ComponentsSlugRouteImport } from './routes/components.$slug'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IconsRoute = IconsRouteImport.update({
+  id: '/icons',
+  path: '/icons',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InstallationRoute = InstallationRouteImport.update({
@@ -43,6 +49,7 @@ const ComponentsSlugRoute = ComponentsSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/icons': typeof IconsRoute
   '/installation': typeof InstallationRoute
   '/registry': typeof RegistryRoute
   '/theming': typeof ThemingRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/icons': typeof IconsRoute
   '/installation': typeof InstallationRoute
   '/registry': typeof RegistryRoute
   '/theming': typeof ThemingRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/icons': typeof IconsRoute
   '/installation': typeof InstallationRoute
   '/registry': typeof RegistryRoute
   '/theming': typeof ThemingRoute
@@ -66,12 +75,24 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/installation' | '/registry' | '/theming' | '/components/$slug'
+    | '/'
+    | '/icons'
+    | '/installation'
+    | '/registry'
+    | '/theming'
+    | '/components/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/installation' | '/registry' | '/theming' | '/components/$slug'
+  to:
+    | '/'
+    | '/icons'
+    | '/installation'
+    | '/registry'
+    | '/theming'
+    | '/components/$slug'
   id:
     | '__root__'
     | '/'
+    | '/icons'
     | '/installation'
     | '/registry'
     | '/theming'
@@ -80,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  IconsRoute: typeof IconsRoute
   InstallationRoute: typeof InstallationRoute
   RegistryRoute: typeof RegistryRoute
   ThemingRoute: typeof ThemingRoute
@@ -93,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/icons': {
+      id: '/icons'
+      path: '/icons'
+      fullPath: '/icons'
+      preLoaderRoute: typeof IconsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/installation': {
@@ -128,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  IconsRoute: IconsRoute,
   InstallationRoute: InstallationRoute,
   RegistryRoute: RegistryRoute,
   ThemingRoute: ThemingRoute,

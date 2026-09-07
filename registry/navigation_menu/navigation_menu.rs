@@ -6,10 +6,10 @@
 //! positioning come from the pinned Base GPUI Navigation Menu primitives.
 
 pub use base_gpui::navigation_menu::{
-    NavigationMenuArrow, NavigationMenuBackdrop, NavigationMenuContent, NavigationMenuIcon,
-    NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuPopup,
-    NavigationMenuPortal, NavigationMenuPositioner, NavigationMenuRoot, NavigationMenuTrigger,
-    NavigationMenuViewport,
+    NavigationMenuAlign, NavigationMenuArrow, NavigationMenuBackdrop, NavigationMenuContent,
+    NavigationMenuIcon, NavigationMenuItem, NavigationMenuLink, NavigationMenuList,
+    NavigationMenuPopup, NavigationMenuPortal, NavigationMenuPositioner, NavigationMenuRoot,
+    NavigationMenuTrigger, NavigationMenuViewport,
 };
 use gpui::{
     App, FontWeight, InteractiveElement as _, ParentElement as _, Styled,
@@ -40,50 +40,54 @@ pub fn navigation_menu_item<T: Clone + Eq + 'static>() -> NavigationMenuItem<T> 
     NavigationMenuItem::new().relative()
 }
 
-/// Creates a Nova trigger with its rotating-chevron slot.
+/// Creates a Nova trigger with a chevron that reflects its open state.
 pub fn navigation_menu_trigger<T: Clone + Eq + 'static>(cx: &App) -> NavigationMenuTrigger<T> {
     let theme = UiTheme::read(cx).clone();
     let icon_color = theme.colors.muted_foreground;
     let focus_ring = theme.focus_ring();
-    NavigationMenuTrigger::new()
-        .style_with_state(move |state, base| {
-            let colors = theme.colors;
-            let focus_ring = focus_ring.clone();
-            base.flex()
-                .items_center()
-                .justify_center()
-                .h(px(32.0))
-                .rounded(theme.radius.lg)
-                .border_1()
-                .border_color(colors.background.opacity(0.0))
-                .px(px(10.0))
-                .py(px(6.0))
-                .font_family(theme.fonts.body.clone())
-                .font_weight(FontWeight::MEDIUM)
-                .text_size(px(14.0))
-                .text_color(colors.foreground)
-                .when(state.open, |base| base.bg(colors.muted.opacity(0.50)))
-                .when(!state.disabled, |base| {
-                    base.cursor_pointer()
-                        .hover(move |style| style.bg(colors.muted))
+    NavigationMenuTrigger::new().style_with_state(move |state, base| {
+        let colors = theme.colors;
+        let focus_ring = focus_ring.clone();
+        base.flex()
+            .flex_row_reverse()
+            .gap(px(4.))
+            .items_center()
+            .justify_center()
+            .h(px(32.0))
+            .rounded(theme.radius.lg)
+            .border_1()
+            .border_color(colors.background.opacity(0.0))
+            .px(px(10.0))
+            .py(px(6.0))
+            .font_family(theme.fonts.body.clone())
+            .font_weight(FontWeight::MEDIUM)
+            .text_size(px(14.0))
+            .line_height(px(20.0))
+            .text_color(colors.foreground)
+            .when(state.open, |base| base.bg(colors.muted.opacity(0.50)))
+            .when(!state.disabled, |base| {
+                base.cursor_pointer()
+                    .hover(move |style| style.bg(colors.muted))
+            })
+            .when(state.disabled, |base| {
+                base.opacity(0.50).cursor_not_allowed()
+            })
+            .focus_visible(move |style| {
+                style
+                    .bg(colors.muted)
+                    .border_color(colors.ring)
+                    .shadow(focus_ring.clone())
+            })
+            .child(
+                lucide(if state.open {
+                    LucideIcon::ChevronUp
+                } else {
+                    LucideIcon::ChevronDown
                 })
-                .when(state.disabled, |base| {
-                    base.opacity(0.50).cursor_not_allowed()
-                })
-                .focus_visible(move |style| {
-                    style
-                        .bg(colors.muted)
-                        .border_color(colors.ring)
-                        .shadow(focus_ring.clone())
-                })
-        })
-        .child(
-            navigation_menu_icon(cx).child(
-                lucide(LucideIcon::ChevronDown)
-                    .size(px(12.0))
-                    .text_color(icon_color),
-            ),
-        )
+                .size(px(12.))
+                .text_color(icon_color),
+            )
+    })
 }
 
 /// Creates the popup content container.
@@ -92,6 +96,8 @@ pub fn navigation_menu_content<T: Clone + Eq + 'static>(cx: &App) -> NavigationM
     NavigationMenuContent::new().style_with_state(move |_state, base| {
         base.p(px(4.0))
             .font_family(theme.fonts.body.clone())
+            .text_size(px(14.0))
+            .line_height(px(20.0))
             .text_color(theme.colors.popover_foreground)
     })
 }
@@ -104,6 +110,8 @@ pub fn navigation_menu_portal<T: Clone + Eq + 'static>() -> NavigationMenuPortal
 /// Creates a positioned popup surface.
 pub fn navigation_menu_positioner<T: Clone + Eq + 'static>() -> NavigationMenuPositioner<T> {
     NavigationMenuPositioner::new()
+        .align(NavigationMenuAlign::Start)
+        .side_offset(px(4.0))
 }
 
 /// Creates the Nova popup card.
@@ -146,6 +154,7 @@ pub fn navigation_menu_link<T: Clone + Eq + 'static>(cx: &App) -> NavigationMenu
             .p(px(8.0))
             .font_family(theme.fonts.body.clone())
             .text_size(px(14.0))
+            .line_height(px(20.0))
             .text_color(colors.popover_foreground)
             .when(state.active, |base| base.bg(colors.muted.opacity(0.50)))
             .hover(move |style| style.bg(colors.muted))
@@ -153,7 +162,7 @@ pub fn navigation_menu_link<T: Clone + Eq + 'static>(cx: &App) -> NavigationMenu
     })
 }
 
-/// Creates a small chevron/icon slot that rotates with its trigger state.
+/// Creates a small icon slot. Callers own its contents.
 pub fn navigation_menu_icon<T: Clone + Eq + 'static>(cx: &App) -> NavigationMenuIcon<T> {
     let theme = UiTheme::read(cx).clone();
     NavigationMenuIcon::new().style_with_state(move |_state, base| {

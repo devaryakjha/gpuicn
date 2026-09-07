@@ -27,6 +27,7 @@ pub fn accordion<T: Clone + Eq + 'static>(cx: &App) -> AccordionRoot<T> {
 }
 
 /// Creates an Accordion item with the pinned Neutral divider.
+/// Set a unique `.id(...)` on each item.
 pub fn accordion_item<T: Clone + Eq + 'static>(value: T, cx: &App) -> AccordionItem<T> {
     let theme = UiTheme::read(cx).clone();
     AccordionItem::new(value)
@@ -39,46 +40,50 @@ pub fn accordion_header<T: Clone + Eq + 'static>() -> AccordionHeader<T> {
 }
 
 /// Creates a Nova Accordion trigger with its chevron. Add the caller's label as a child.
+/// Set a unique `.id(...)` on each trigger to keep keyboard focus independent.
 pub fn accordion_trigger<T: Clone + Eq + 'static>(cx: &App) -> AccordionTrigger<T> {
     let theme = UiTheme::read(cx).clone();
     let icon_color = theme.colors.muted_foreground;
     let focus_ring = theme.focus_ring();
-    AccordionTrigger::new()
-        .style_with_state(move |state, base| {
-            let colors = theme.colors;
-            let focus_ring = focus_ring.clone();
-            base.w_full()
-                .flex()
-                .flex_row_reverse()
-                .items_start()
-                .justify_between()
-                .rounded(theme.radius.lg)
-                .border_1()
-                .border_color(colors.background.opacity(0.0))
-                .py(px(10.0))
-                .text_left()
-                .font_family(theme.fonts.body.clone())
-                .font_weight(FontWeight::MEDIUM)
-                .text_size(px(14.0))
-                .text_color(colors.foreground)
-                .when(!state.item.disabled, |base| {
-                    base.cursor_pointer().hover(|style| style.underline())
+    AccordionTrigger::new().style_with_state(move |state, base| {
+        let colors = theme.colors;
+        let focus_ring = focus_ring.clone();
+        base.w_full()
+            .flex()
+            .flex_row_reverse()
+            .items_start()
+            .justify_between()
+            .rounded(theme.radius.lg)
+            .border_1()
+            .border_color(colors.background.opacity(0.0))
+            .py(px(10.0))
+            .text_left()
+            .font_family(theme.fonts.body.clone())
+            .font_weight(FontWeight::MEDIUM)
+            .text_size(px(14.0))
+            .text_color(colors.foreground)
+            .when(!state.item.disabled, |base| {
+                base.cursor_pointer().hover(|style| style.underline())
+            })
+            .when(state.item.disabled, |base| {
+                base.opacity(0.50).cursor_not_allowed()
+            })
+            .focus_visible(move |style| {
+                style
+                    .bg(colors.background)
+                    .border_color(colors.ring)
+                    .shadow(focus_ring.clone())
+            })
+            .child(
+                lucide(if state.panel_open {
+                    LucideIcon::ChevronUp
+                } else {
+                    LucideIcon::ChevronDown
                 })
-                .when(state.item.disabled, |base| {
-                    base.opacity(0.50).cursor_not_allowed()
-                })
-                .focus_visible(move |style| {
-                    style
-                        .bg(colors.background)
-                        .border_color(colors.ring)
-                        .shadow(focus_ring.clone())
-                })
-        })
-        .child(
-            lucide(LucideIcon::ChevronDown)
                 .size(px(16.0))
                 .text_color(icon_color),
-        )
+            )
+    })
 }
 
 /// Creates an Accordion panel with the pinned content inset.

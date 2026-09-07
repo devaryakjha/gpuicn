@@ -12,7 +12,7 @@ use gpui::{
     prelude::FluentBuilder as _, px,
 };
 
-use super::theme::UiTheme;
+use super::theme::{UiTheme, focus_outline};
 
 type ChangeHandler =
     Rc<dyn Fn(SliderValues, &mut SliderValueChangeDetails, &mut Window, &mut App) + 'static>;
@@ -111,11 +111,10 @@ impl RenderOnce for Slider {
                 .relative()
                 .w_full()
                 .h_full()
-                .flex()
-                .items_center()
                 .child(
                     SliderTrack::new()
-                        .relative()
+                        .absolute()
+                        .top(px(8.))
                         .w_full()
                         .h(px(4.))
                         .rounded_full()
@@ -129,6 +128,7 @@ impl RenderOnce for Slider {
                 )
                 .child(
                     SliderThumb::new()
+                        .top(px(4.))
                         .size(px(12.))
                         .rounded_full()
                         .border_1()
@@ -136,7 +136,11 @@ impl RenderOnce for Slider {
                         .bg(colors.background)
                         .style_with_state(move |state, style| {
                             if state.focused || state.active {
-                                style.shadow(focus_ring.clone())
+                                focus_outline(
+                                    style,
+                                    focus_ring[0].color.into(),
+                                    gpui::Corners::all(px(6.)),
+                                )
                             } else {
                                 style
                             }

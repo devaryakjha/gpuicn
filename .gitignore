@@ -3,3 +3,9 @@
 /fixtures/registry-install/target/
 /fixtures/registry-install/src/ui/*.rs
 !/fixtures/registry-install/src/ui/mod.rs
+/web/src/generated/
+/web/public/examples/
+/web/public/fonts/
+/fixtures/registry-install/assets/
+/.cargo/config.toml
+/web/public/icons/

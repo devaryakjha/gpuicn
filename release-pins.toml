@@ -18,8 +18,8 @@ version = "0.2.2"
 commit = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d"
 
 [gpui_icons]
-version = "0.1.0"
-commit = "53a54cfe5efc8eacb546de0c9742339b667381b2"
+version = "0.3.0"
+commit = "6222fd3f31cdd8e6690df0e54d481a4db21e5b0e"
 lucide_version = "1.33.0"
 lucide_commit = "59978cecf84986af59f1f9f503bcebdc89c6d166"
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry.json",
   "name": "gpuicn",
-  "homepage": "https://devaryakjha.github.io/gpuicn/",
+  "homepage": "https://ui.imajha.com/",
   "items": [
     {
       "name": "theme",
@@ -51,9 +51,19 @@
           "target": "~/src/ui/button.rs"
         },
         {
+          "path": "registry/dialog/dialog.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/dialog.rs"
+        },
+        {
           "path": "registry/alert_dialog/alert_dialog.rs",
           "type": "registry:file",
           "target": "~/src/ui/alert_dialog.rs"
+        },
+        {
+          "path": "registry/dialog/modal_focus.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/modal_focus.rs"
         }
       ]
     },
@@ -231,6 +241,11 @@
           "path": "registry/dialog/dialog.rs",
           "type": "registry:file",
           "target": "~/src/ui/dialog.rs"
+        },
+        {
+          "path": "registry/dialog/modal_focus.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/modal_focus.rs"
         }
       ]
     },
@@ -251,9 +266,19 @@
           "target": "~/src/ui/button.rs"
         },
         {
+          "path": "registry/dialog/dialog.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/dialog.rs"
+        },
+        {
           "path": "registry/drawer/drawer.rs",
           "type": "registry:file",
           "target": "~/src/ui/drawer.rs"
+        },
+        {
+          "path": "registry/dialog/modal_focus.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/modal_focus.rs"
         }
       ]
     },

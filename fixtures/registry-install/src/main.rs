@@ -2,18 +2,59 @@
 
 mod ui;
 
-use gpui_icons::LucideAssetSource;
-use ui::{
-    button::Button,
-    checkbox::Checkbox,
-    dialog::dialog_root,
-    theme::UiTheme,
+use std::borrow::Cow;
+
+use gpui::{
+    App, AppContext as _, Context, IntoElement, ParentElement as _, Render, Styled,
+    Window, WindowOptions, div, px,
 };
+use gpui_icons::LucideAssetSource;
+use ui::{button::Button, theme::UiTheme};
 
 fn main() {
-    let _assets = LucideAssetSource;
-    let _theme = UiTheme::neutral_light();
-    let _button = Button::new("fixture.button");
-    let _checkbox = Checkbox::new("fixture.checkbox");
-    let _dialog = dialog_root("fixture.dialog");
+    gpui_platform::application()
+        .with_assets(LucideAssetSource)
+        .run(|cx: &mut App| {
+            base_gpui::init(cx);
+            cx.text_system()
+                .add_fonts(vec![
+                    Cow::Borrowed(include_bytes!("../assets/fonts/Geist-Regular.ttf")),
+                    Cow::Borrowed(include_bytes!("../assets/fonts/Geist-Medium.ttf")),
+                    Cow::Borrowed(include_bytes!("../assets/fonts/GeistMono-Regular.ttf")),
+                ])
+                .expect("load bundled Geist fonts");
+            UiTheme::set(cx, UiTheme::neutral_light());
+            cx.open_window(WindowOptions::default(), |_, cx| {
+                cx.new(|_| Hello { count: 0 })
+            })
+            .expect("open application window");
+            cx.activate(true);
+        });
+}
+
+struct Hello {
+    count: usize,
+}
+
+impl Render for Hello {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = UiTheme::read(cx);
+        div()
+            .size_full()
+            .flex()
+            .items_center()
+            .justify_center()
+            .p(px(24.))
+            .bg(theme.colors.background)
+            .text_color(theme.colors.foreground)
+            .font_family(theme.fonts.body.clone())
+            .child(
+                Button::new("hello.increment")
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.count += 1;
+                        cx.notify();
+                    }))
+                    .child(format!("Clicked {} times", self.count)),
+            )
+    }
 }

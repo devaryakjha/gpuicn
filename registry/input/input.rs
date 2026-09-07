@@ -9,7 +9,7 @@ use gpui::{
     prelude::FluentBuilder as _, px,
 };
 
-use super::theme::{ThemeMode, UiTheme};
+use super::theme::{ThemeMode, UiTheme, input_text_layout};
 
 type ValueChange = Rc<dyn Fn(SharedString) + 'static>;
 
@@ -102,11 +102,11 @@ impl RenderOnce for Input {
                 } else {
                     colors.input
                 };
-                base.w_full()
+                input_text_layout(base)
+                    .w_full()
                     .min_w_0()
                     .h(px(32.))
                     .px(px(10.))
-                    .py(px(4.))
                     .rounded(theme.radius.lg)
                     .border_1()
                     .border_color(border)

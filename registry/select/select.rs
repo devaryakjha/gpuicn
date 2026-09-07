@@ -31,6 +31,7 @@ pub fn select_trigger<T: Clone + Eq + 'static>(
         .id(id)
         .style_with_state(move |state, base| {
             base.flex()
+                .flex_row_reverse()
                 .items_center()
                 .justify_between()
                 .h(px(32.))

@@ -43,7 +43,7 @@ export function SiteShell() {
     <SidebarProvider>
       <SiteHeader onSearch={() => setSearchOpen(true)} />
       <CatalogSidebar />
-      <SidebarInset className="min-w-0 pt-14">
+      <SidebarInset id="main-content" className="min-w-0 pt-14">
         <Outlet />
       </SidebarInset>
       <CatalogSearch open={searchOpen} onOpenChange={setSearchOpen} />
@@ -64,9 +64,25 @@ function SiteHeader({ onSearch }: { onSearch: () => void }) {
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 h-14 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-3 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:outline-2"
+      >
+        Skip to content
+      </a>
       <div className="flex h-full items-center gap-2 px-3 sm:px-4">
         <SidebarTrigger className="md:hidden" />
-        <Link to="/" className="mr-2 text-sm font-semibold tracking-tight">
+        <Link
+          to="/"
+          className="mr-2 flex items-center gap-2 text-sm font-semibold tracking-tight"
+        >
+          <img
+            src="/brand/gpuicn-panels.png"
+            alt=""
+            width={28}
+            height={28}
+            className="size-7 shrink-0 mix-blend-multiply contrast-125 hue-rotate-180 invert dark:mix-blend-screen dark:hue-rotate-0 dark:invert-0"
+          />
           gpuicn
         </Link>
         <nav
@@ -100,6 +116,15 @@ function SiteHeader({ onSearch }: { onSearch: () => void }) {
             )}
           >
             Registry
+          </Link>
+          <Link
+            to="/icons"
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              pathname !== "/icons" && "text-muted-foreground"
+            )}
+          >
+            Icons
           </Link>
         </nav>
         <div className="ml-auto flex min-w-0 items-center gap-1.5">
@@ -179,7 +204,7 @@ function CatalogSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarGroup id="components">
+        <SidebarGroup>
           <SidebarGroupLabel>Components</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -260,9 +285,23 @@ function CatalogSearch({
       title="Search gpuicn"
     >
       <Command>
-        <CommandInput placeholder="Search components..." autoFocus />
+        <CommandInput placeholder="Search documentation..." autoFocus />
         <CommandList>
-          <CommandEmpty>No components found.</CommandEmpty>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Documentation">
+            {sections.map((section) => (
+              <CommandItem
+                key={section.to}
+                value={section.label}
+                onSelect={() => {
+                  onOpenChange(false)
+                  void navigate({ to: section.to })
+                }}
+              >
+                {section.label}
+              </CommandItem>
+            ))}
+          </CommandGroup>
           <CommandGroup heading="Components">
             {components.map((component) => (
               <CommandItem

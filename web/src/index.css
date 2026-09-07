@@ -5,6 +5,29 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.syntax-code {
+    --syntax-keyword: #a626a4;
+    --syntax-string: #32743b;
+    --syntax-number: #986801;
+    --syntax-title: #1659a5;
+    --syntax-type: #96501b;
+    --syntax-comment: #626973;
+}
+.dark .syntax-code {
+    --syntax-keyword: #c792ea;
+    --syntax-string: #c3e88d;
+    --syntax-number: #f78c6c;
+    --syntax-title: #82aaff;
+    --syntax-type: #ffcb6b;
+    --syntax-comment: #9aa5b5;
+}
+.syntax-code .hljs-keyword, .syntax-code .hljs-literal { color: var(--syntax-keyword); }
+.syntax-code .hljs-string, .syntax-code .hljs-regexp { color: var(--syntax-string); }
+.syntax-code .hljs-number { color: var(--syntax-number); }
+.syntax-code .hljs-title, .syntax-code .hljs-section { color: var(--syntax-title); }
+.syntax-code .hljs-type, .syntax-code .hljs-built_in, .syntax-code .hljs-attr { color: var(--syntax-type); }
+.syntax-code .hljs-comment, .syntax-code .hljs-meta { color: var(--syntax-comment); }
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;

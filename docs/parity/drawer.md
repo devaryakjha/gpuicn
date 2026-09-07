@@ -4,6 +4,6 @@
 - gpuicn: `registry/drawer/drawer.rs`.
 - Difference types: platform, interaction, accessibility, and visual.
 
-The wrapper keeps Base GPUI's drawer gesture, snap-point, nested-drawer, Escape, outside-press, focus-return, and modal handling. Its public root remains configurable for modal mode, focus trapping, snap callbacks, and nesting.
+The wrapper keeps Base GPUI's drawer gesture, snap-point, nested-drawer, Escape, outside-press, focus-return, and modal handling. Modal Tab traversal includes app-owned focusable children. Its public root remains configurable for modal mode, focus trapping, snap callbacks, and nesting.
 
 Nova's CSS transform physics, responsive width rules, bleed pseudo-element, and transition curves have no direct GPUI equivalent. The wrapper keeps Base GPUI's native gesture state and surfaces the correct edge radius and border for each direction.

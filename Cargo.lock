@@ -2115,8 +2115,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-icons"
-version = "0.2.0"
-source = "git+https://github.com/devaryakjha/gpui-icons?rev=ae5db0868cb972e958473f93a80158c6c20a65a3#ae5db0868cb972e958473f93a80158c6c20a65a3"
+version = "0.3.0"
+source = "git+https://github.com/devaryakjha/gpui-icons?rev=6222fd3f31cdd8e6690df0e54d481a4db21e5b0e#6222fd3f31cdd8e6690df0e54d481a4db21e5b0e"
 dependencies = [
  "gpui",
 ]
@@ -2341,6 +2341,7 @@ dependencies = [
 name = "gpuicn-showcase"
 version = "0.3.0"
 dependencies = [
+ "base-gpui",
  "gpui",
  "gpui-icons",
  "gpui_platform",

@@ -20,8 +20,9 @@ function RegistryPage() {
         description="The public registry powers installation tools. This page remains the human-readable catalog."
       />
       <CodeBlock
+        language="bash"
         className="mt-8"
-        value="npx shadcn@latest add https://ui.imajha.com/r/button.json"
+        value="npx shadcn@4.19.0 add https://ui.imajha.com/r/button.json"
       />
       <section className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {components.map((component) => (

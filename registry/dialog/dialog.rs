@@ -4,6 +4,9 @@
 //! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`. Interaction, dismissal, and the
 //! Popup/Close focus cycle come from the pinned Base GPUI Dialog primitives.
 
+#[path = "modal_focus.rs"]
+pub(crate) mod modal_focus;
+
 pub use base_gpui::dialog::{
     DialogBackdrop, DialogClose, DialogDescription, DialogPopup, DialogPortal, DialogRoot,
     DialogTitle, DialogTrigger, DialogViewport,
@@ -58,7 +61,8 @@ pub fn dialog_viewport() -> DialogViewport<()> {
         .absolute()
         .inset_0()
         .flex()
-        .items_center()
+        .flex_col()
+        .items_stretch()
         .justify_center()
         .p(px(16.0))
 }
@@ -91,11 +95,21 @@ pub fn dialog_popup(
     cx: &App,
 ) -> DialogPopup<()> {
     let theme = UiTheme::read(cx).clone();
+    let id = id.into();
+    let focus = modal_focus::ModalFocus::new(id.clone());
     DialogPopup::new()
         .id(id)
         .aria_label(aria_label)
-        .style_with_state(move |_state, base| {
+        .child_any(focus.boundary(false))
+        .child_any(focus.boundary(true))
+        .style_with_state(move |state, base| {
+            let base = focus.trap(
+                base,
+                state.modal_mode.traps_focus() && !state.nested_dialog_open,
+            );
             base.w_full()
+                .min_w(px(0.))
+                .mx_auto()
                 .max_w(px(384.0))
                 .max_h(px(400.0))
                 .overflow_hidden()

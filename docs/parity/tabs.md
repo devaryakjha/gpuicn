@@ -4,4 +4,4 @@
 - gpuicn: `registry/tabs/tabs.rs`.
 - Difference type: platform layout and animation.
 
-Base GPUI owns selection, roving focus, and arrow-key navigation. The port exposes the pinned `Default` and `Line` list treatments through `TabsVariant`; callers pass the same variant to their triggers. The selected line uses a bottom border rather than CSS pseudo-elements, and cross-panel motion is omitted pending GPUI transition support.
+Base GPUI owns selection and keyboard navigation. In the default manual mode, arrow keys move the highlighted tab and Enter activates it. The pinned implementation leaves physical focus on the original tab during arrow navigation; the styled highlight shows which tab Enter will activate. The port exposes the pinned `Default` and `Line` list treatments through `TabsVariant`; callers pass the same variant to their triggers. The selected line uses a bottom border rather than CSS pseudo-elements, and cross-panel motion is omitted pending GPUI transition support.

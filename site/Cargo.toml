@@ -11,6 +11,7 @@ name = "showcase"
 path = "src/main.rs"
 
 [dependencies]
+base-gpui.workspace = true
 gpui.workspace = true
 gpui-icons.workspace = true
 gpui_platform.workspace = true

@@ -3,7 +3,10 @@
 //! Source: shadcn/ui 4.19.0 at
 //! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, Nova style.
 
-use gpui::{App, BoxShadow, Global, Pixels, Rgba, SharedString, black, px};
+use gpui::{
+    App, BoxShadow, Corners, Div, Global, ParentElement as _, Pixels, Rgba, SharedString, Styled,
+    black, px,
+};
 
 /// The active color mode.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -236,24 +239,24 @@ impl UiTheme {
             spacing: UiSpacing { unit: px(4.) },
             shadows: UiShadows {
                 sm: vec![
-                    BoxShadow::new(px(0.), px(1.), black().alpha(0.10).into()).blur_radius(px(3.)),
-                    BoxShadow::new(px(0.), px(1.), black().alpha(0.10).into())
+                    BoxShadow::new(px(0.), px(1.), black().alpha(0.10)).blur_radius(px(3.)),
+                    BoxShadow::new(px(0.), px(1.), black().alpha(0.10))
                         .blur_radius(px(2.))
                         .spread_radius(px(-1.)),
                 ],
                 md: vec![
-                    BoxShadow::new(px(0.), px(4.), black().alpha(0.10).into())
+                    BoxShadow::new(px(0.), px(4.), black().alpha(0.10))
                         .blur_radius(px(6.))
                         .spread_radius(px(-1.)),
-                    BoxShadow::new(px(0.), px(2.), black().alpha(0.10).into())
+                    BoxShadow::new(px(0.), px(2.), black().alpha(0.10))
                         .blur_radius(px(4.))
                         .spread_radius(px(-2.)),
                 ],
                 lg: vec![
-                    BoxShadow::new(px(0.), px(10.), black().alpha(0.10).into())
+                    BoxShadow::new(px(0.), px(10.), black().alpha(0.10))
                         .blur_radius(px(15.))
                         .spread_radius(px(-3.)),
-                    BoxShadow::new(px(0.), px(4.), black().alpha(0.10).into())
+                    BoxShadow::new(px(0.), px(4.), black().alpha(0.10))
                         .blur_radius(px(6.))
                         .spread_radius(px(-4.)),
                 ],
@@ -419,5 +422,79 @@ mod tests {
         assert_eq!(theme.shadows.md.len(), 2);
         assert_eq!(theme.shadows.lg.len(), 2);
         assert_eq!(theme.focus_ring()[0].spread_radius, px(3.));
+    }
+}
+
+/// Centers the Base GPUI single-line editor independently of inherited typography.
+/// The editor sizes its text and caret from the line height, so padding alone
+/// cannot keep both centered across bordered and borderless controls.
+pub(crate) fn input_text_layout(base: Div) -> Div {
+    base.flex().items_center().line_height(px(20.))
+}
+
+/// Draws concentric focus corners; GPUI spread shadows retain the inner radius.
+pub(crate) fn focus_outline(mut base: Div, color: Rgba, radii: Corners<Pixels>) -> Div {
+    let borders = base.style().border_widths.clone();
+    base.child(gpui::deferred(
+        gpui::canvas(
+            |_, _, _| (),
+            move |bounds, _, window, _| {
+                let rem = window.rem_size();
+                let borders = gpui::Edges {
+                    left: borders.left.unwrap_or_default().to_pixels(rem),
+                    top: borders.top.unwrap_or_default().to_pixels(rem),
+                    right: borders.right.unwrap_or_default().to_pixels(rem),
+                    bottom: borders.bottom.unwrap_or_default().to_pixels(rem),
+                };
+                window.paint_quad(focus_outline_quad(bounds, color, radii, borders));
+            },
+        )
+        .absolute()
+        .inset_0(),
+    ))
+}
+
+fn focus_outline_quad(
+    mut bounds: gpui::Bounds<Pixels>,
+    color: Rgba,
+    radii: Corners<Pixels>,
+    borders: gpui::Edges<Pixels>,
+) -> gpui::PaintQuad {
+    bounds.origin.x -= borders.left + px(3.);
+    bounds.origin.y -= borders.top + px(3.);
+    bounds.size.width += borders.left + borders.right + px(6.);
+    bounds.size.height += borders.top + borders.bottom + px(6.);
+    gpui::outline(bounds, color, Default::default())
+        .corner_radii(radii.map(|r| if *r > px(0.) { *r + px(3.) } else { *r }))
+        .border_widths(px(3.))
+}
+
+#[cfg(test)]
+mod focus_outline_tests {
+    use super::*;
+    #[test]
+    fn focus_outlines_follow_circle_and_segment_borders() {
+        let bounds = gpui::Bounds::new(gpui::point(px(1.), px(1.)), gpui::size(px(10.), px(10.)));
+        let quad = focus_outline_quad(
+            bounds,
+            black().into(),
+            Corners::all(px(6.)),
+            gpui::Edges::all(px(1.)),
+        );
+        assert_eq!(quad.bounds.origin, gpui::point(px(-3.), px(-3.)));
+        assert_eq!(quad.bounds.size, gpui::size(px(18.), px(18.)));
+        assert_eq!(quad.corner_radii, Corners::all(px(9.)));
+        let quad = focus_outline_quad(
+            bounds,
+            black().into(),
+            Corners::all(px(0.)),
+            gpui::Edges {
+                left: px(0.),
+                ..gpui::Edges::all(px(1.))
+            },
+        );
+        assert_eq!(quad.bounds.origin.x, px(-2.));
+        assert_eq!(quad.bounds.size.width, px(17.));
+        assert_eq!(quad.corner_radii, Corners::all(px(0.)));
     }
 }

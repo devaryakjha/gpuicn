@@ -13,7 +13,7 @@ use gpui::{
 };
 use gpui_icons::{LucideIcon, lucide};
 
-use super::theme::{ThemeMode, UiTheme};
+use super::theme::{ThemeMode, UiTheme, focus_outline, input_text_layout};
 
 type ChangeHandler = Rc<dyn Fn(Option<f64>, NumberFieldChangeDetails, &mut Window, &mut App)>;
 type CommitHandler = Rc<dyn Fn(Option<f64>, NumberFieldCommitDetails, &mut Window, &mut App)>;
@@ -102,11 +102,11 @@ impl RenderOnce for NumberField {
             colors.background
         };
         let input = NumberFieldInput::new().style_with_state(move |state, base| {
-            base.flex_1()
+            input_text_layout(base)
+                .flex_1()
                 .min_w_0()
                 .h(px(30.))
                 .px(px(10.))
-                .bg(background)
                 .text_color(colors.foreground)
                 .text_size(px(14.))
                 .when(state.root.disabled, |base| base.opacity(0.50))
@@ -123,10 +123,10 @@ impl RenderOnce for NumberField {
             .disabled(self.disabled)
             .read_only(self.read_only)
             .style_with_state(move |state, base| {
-                let focus_ring = if state.invalid {
-                    theme.destructive_focus_ring()
+                let ring = if state.invalid {
+                    theme.destructive_focus_ring()[0].color
                 } else {
-                    theme.focus_ring()
+                    theme.focus_ring()[0].color
                 };
                 base.w_full()
                     .h(px(32.))
@@ -139,12 +139,15 @@ impl RenderOnce for NumberField {
                     })
                     .bg(background)
                     .when(state.focused, |base| {
-                        base.border_color(if state.invalid {
-                            colors.destructive
-                        } else {
-                            colors.ring
-                        })
-                        .shadow(focus_ring.clone())
+                        focus_outline(
+                            base.border_color(if state.invalid {
+                                colors.destructive
+                            } else {
+                                colors.ring
+                            }),
+                            ring.into(),
+                            gpui::Corners::all(theme.radius.lg),
+                        )
                     })
                     .when(state.disabled, |base| base.cursor_not_allowed())
             })

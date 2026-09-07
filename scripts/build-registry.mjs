@@ -11,6 +11,8 @@ const buttonDependents = new Set([
   "toast",
 ]);
 const bundledFiles = {
+  alert_dialog: ["dialog"],
+  drawer: ["dialog"],
   autocomplete: ["combobox"],
   context_menu: ["menu"],
   menubar: ["menu"],
@@ -55,6 +57,9 @@ const items = names.map((name) => {
           ...(bundledFiles[name] ?? []),
         ];
   item.files = [...new Set([...dependencies, name])].map(file);
+  if (name === "dialog" || dependencies.includes("dialog")) {
+    item.files.push({ path: "registry/dialog/modal_focus.rs", type: "registry:file", target: "~/src/ui/modal_focus.rs" });
+  }
   return item;
 });
 
@@ -64,7 +69,7 @@ writeFileSync(
     {
       $schema: "https://ui.shadcn.com/schema/registry.json",
       name: "gpuicn",
-      homepage: "https://devaryakjha.github.io/gpuicn/",
+      homepage: "https://ui.imajha.com/",
       items,
     },
     null,

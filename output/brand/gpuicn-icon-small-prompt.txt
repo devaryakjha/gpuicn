@@ -1,0 +1,2 @@
+Built-in image generation edit of gpuicn-icon-v2.png.
+Create a small-size optical variant for 28px display. Preserve the four modules, graphite tile, ivory and orange palette. Substantially shrink individual foreground pieces to open dark channels roughly 12-14% of the tile width. Keep outer inset around 18%, simplify notch curves, retain substantial silhouettes. No extra pieces or text. Follow-up background removal preserved the wide spacing and produced actual transparent alpha outside the tile.

@@ -8,7 +8,7 @@ use base_gpui::field::{
 };
 use gpui::{App, Div, ElementId, FontWeight, Styled, prelude::FluentBuilder as _, px};
 
-use super::theme::{ThemeMode, UiTheme};
+use super::theme::{ThemeMode, UiTheme, input_text_layout};
 
 pub use base_gpui::field::{
     FieldErrorMatch, FieldValidationMode, FieldValidationResult, FieldValidityData,
@@ -171,7 +171,8 @@ fn style_field_control(
         ThemeMode::Dark => colors.input.opacity(0.30),
     };
 
-    base.w_full()
+    input_text_layout(base)
+        .w_full()
         .h(px(32.0))
         .px(px(10.0))
         .rounded(theme.radius.lg)
@@ -188,4 +189,74 @@ fn style_field_control(
         .when(state.disabled, |base| {
             base.opacity(0.50).cursor_not_allowed()
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui::{
+        AppContext as _, Bounds, Context, IntoElement, ParentElement as _, Pixels, Render,
+        TestAppContext, Window,
+    };
+    use std::{cell::RefCell, rc::Rc};
+
+    struct View {
+        bounds: Rc<RefCell<Vec<Bounds<Pixels>>>>,
+        value: &'static str,
+        inherited_line_height: f32,
+    }
+    impl Render for View {
+        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            let bounds = self.bounds.clone();
+            let theme = UiTheme::read(cx).clone();
+            gpui::div()
+                .w(px(240.))
+                .h(px(32.))
+                .line_height(px(self.inherited_line_height))
+                .child(
+                    field_control("alignment", cx)
+                        .value(self.value)
+                        .placeholder("Ada Lovelace")
+                        .style_with_state(move |state, base| {
+                            let bounds = bounds.clone();
+                            style_field_control(base, state, &theme).on_children_prepainted(
+                                move |children, _, _| *bounds.borrow_mut() = children.to_vec(),
+                            )
+                        }),
+                )
+        }
+    }
+    #[test]
+    fn field_text_is_vertically_centered() {
+        for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark()] {
+            for value in ["", "Ada Lovelace"] {
+                for inherited_line_height in [12., 40.] {
+                    let mut cx = TestAppContext::single();
+                    cx.update(|cx| UiTheme::set(cx, theme.clone()));
+                    let bounds = Rc::new(RefCell::new(Vec::new()));
+                    let captured = bounds.clone();
+                    let window = cx.add_window(move |_, _| View {
+                        bounds: captured,
+                        value,
+                        inherited_line_height,
+                    });
+                    cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx))
+                        .unwrap();
+                    let bounds = bounds.borrow();
+                    assert_eq!(bounds.len(), 1);
+                    assert_eq!(
+                        bounds[0].center().y,
+                        px(16.),
+                        "value={value:?}, inherited line height={inherited_line_height}: {:?}",
+                        bounds[0]
+                    );
+                    assert_eq!(
+                        bounds[0].size.height,
+                        px(20.),
+                        "text and caret must ignore inherited line height"
+                    );
+                }
+            }
+        }
+    }
 }

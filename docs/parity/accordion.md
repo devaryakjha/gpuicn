@@ -4,4 +4,4 @@
 - gpuicn: `registry/accordion/accordion.rs`.
 - Difference type: platform animation and icon composition.
 
-Base GPUI supplies disclosure state, roving focus, pointer activation, and keyboard activation. The port keeps Nova spacing, dividers, typography, hover, disabled, and focus-visible styling. Callers provide the visible chevron as a child because GPUI cannot restyle or replace opaque child elements. CSS height animations are not reproduced; the pinned GPUI Accordion mounts or unmounts its panel from typed presence state.
+Base GPUI supplies disclosure state, roving focus, pointer activation, and keyboard activation. The port keeps Nova spacing, dividers, typography, hover, disabled, and focus-visible styling. The styled trigger includes the state-dependent chevron. CSS height animations are not reproduced; the pinned GPUI Accordion mounts or unmounts its panel from typed presence state.

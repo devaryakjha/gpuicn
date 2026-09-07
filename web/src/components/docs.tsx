@@ -17,7 +17,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { CatalogComponent } from "@/lib/catalog"
 import { components, previewHeight, rustModule } from "@/lib/catalog"
+import type { ComponentDocs } from "@/lib/component-docs"
 import { cn } from "@/lib/utils"
+import { highlight, type CodeLanguage } from "@/lib/highlight"
 
 const registryOrigin = "https://ui.imajha.com"
 
@@ -57,7 +59,12 @@ export function DocsLayout({
   toc?: React.ReactNode
 }) {
   return (
-    <div className="mx-auto grid w-full max-w-6xl grid-cols-1 xl:grid-cols-[minmax(0,1fr)_13rem]">
+    <div
+      className={cn(
+        "mx-auto grid w-full max-w-6xl grid-cols-1",
+        toc && "xl:grid-cols-[minmax(0,1fr)_13rem]"
+      )}
+    >
       <article className="min-w-0 px-5 py-10 sm:px-8 lg:px-12 lg:py-14">
         {children}
       </article>
@@ -86,6 +93,9 @@ export function TableOfContents() {
       <a className="hover:text-foreground" href="#api-reference">
         API Reference
       </a>
+      <a className="hover:text-foreground" href="#platform-notes">
+        Platform notes
+      </a>
     </nav>
   )
 }
@@ -101,7 +111,7 @@ export function ComponentGrid() {
           key={component.slug}
           to="/components/$slug"
           params={{ slug: component.slug }}
-          className="group outline-none"
+          className="group rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <Card
             className="h-full transition-colors group-hover:bg-muted/50 group-focus-visible:ring-ring"
@@ -118,11 +128,17 @@ export function ComponentGrid() {
   )
 }
 
-export function ComponentPage({ component }: { component: CatalogComponent }) {
+export function ComponentPage({
+  component,
+  docs,
+}: {
+  component: CatalogComponent
+  docs: ComponentDocs
+}) {
   const index = components.findIndex((item) => item.slug === component.slug)
   const previous = components[index - 1]
   const next = components[index + 1]
-  const source = `use gpuicn::${rustModule(component.slug)};\n\ngpuicn::init(cx);\n// The installed ${component.name} source is yours to edit.`
+  const source = docs.preview
 
   return (
     <DocsLayout toc={<TableOfContents />}>
@@ -160,17 +176,22 @@ export function ComponentPage({ component }: { component: CatalogComponent }) {
       </div>
 
       <ComponentExample component={component} source={source} />
-      <InstallationTabs slug={component.slug} />
+      <InstallationTabs slug={component.slug} modules={docs.modules} />
 
       <section id="usage" className="scroll-mt-20 pt-10">
         <h2 className="font-heading text-2xl font-semibold tracking-tight">
           Usage
         </h2>
         <p className="mt-3 leading-7 text-muted-foreground">
-          Install the source, register gpuicn during app startup, and keep each
-          component ID stable across renders.
+          Copy this into your view module and return{" "}
+          <code>{docs.usageCall}</code> from its <code>render</code> method.
+          Complete the{" "}
+          <Link to="/installation" className="underline underline-offset-4">
+            app setup
+          </Link>{" "}
+          once, and keep IDs unique among siblings.
         </p>
-        <CodeBlock className="mt-4" value={source} />
+        <CodeBlock className="mt-4" value={docs.usage} />
       </section>
 
       <section id="api-reference" className="scroll-mt-20 pt-10">
@@ -178,9 +199,50 @@ export function ComponentPage({ component }: { component: CatalogComponent }) {
           API Reference
         </h2>
         <p className="mt-3 leading-7 text-muted-foreground">
-          The visual port keeps Base GPUI behavior and exposes an idiomatic Rust
-          API. The installed source remains editable.
+          Public constructors and methods from the source you install. Functions
+          that return Base GPUI parts also support those parts’ builder methods.
         </p>
+        <div className="mt-4 divide-y rounded-xl border px-4">
+          {docs.api.map((entry, index) => (
+            <div key={index} className="py-4">
+              <pre className="overflow-x-auto font-mono text-xs leading-6">
+                <code>{entry.signature}</code>
+              </pre>
+              {entry.description ? (
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {entry.description}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+        <details className="mt-5">
+          <summary className="cursor-pointer text-sm font-medium">
+            View editable Rust source
+          </summary>
+          <CodeBlock className="mt-3" value={docs.source} />
+        </details>
+      </section>
+
+      <section id="platform-notes" className="scroll-mt-20 pt-10">
+        <h2 className="font-heading text-2xl font-semibold tracking-tight">
+          Platform notes
+        </h2>
+        <p className="mt-3 leading-7 text-muted-foreground">
+          GPUI handles rendering and input. These notes record the current
+          platform differences, including accessibility and interaction limits.
+        </p>
+        <div className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
+          {docs.parity
+            .split(/\n\n+/)
+            .slice(1)
+            .filter((paragraph) => !paragraph.startsWith("- Upstream:"))
+            .map((paragraph, index) => (
+              <p className="whitespace-pre-line" key={index}>
+                {paragraph.replaceAll("`", "")}
+              </p>
+            ))}
+        </div>
       </section>
     </DocsLayout>
   )
@@ -197,50 +259,62 @@ function ComponentExample({
     <Tabs defaultValue="preview" className="mt-8">
       <TabsList variant="line">
         <TabsTrigger value="preview">Preview</TabsTrigger>
-        <TabsTrigger value="code">Code</TabsTrigger>
+        <TabsTrigger value="code">Demo code</TabsTrigger>
       </TabsList>
       <TabsContent
         value="preview"
-        className="mt-2 overflow-hidden rounded-xl border bg-background"
+        className="mt-2 overflow-hidden rounded-xl border border-[color-mix(in_oklab,var(--foreground)_10%,var(--background))] bg-background"
       >
         <GpuPreview component={component} />
       </TabsContent>
       <TabsContent value="code" className="mt-2">
+        <p className="mb-3 text-sm leading-6 text-muted-foreground">
+          Full preview, including its layout and demo state. For a small
+          example, see{" "}
+          <a href="#usage" className="underline underline-offset-4">
+            Usage
+          </a>{" "}
+          below.{" "}
+          <a
+            href="/examples/showcase.rs"
+            download
+            className="underline underline-offset-4"
+          >
+            Download the complete showcase
+          </a>{" "}
+          for its imports and helpers.
+        </p>
         <CodeBlock value={source} />
       </TabsContent>
     </Tabs>
   )
 }
 
-function GpuPreview({ component }: { component: CatalogComponent }) {
+export function GpuPreview({
+  component,
+  icon,
+}: {
+  component: CatalogComponent
+  icon?: string
+}) {
   const hostRef = React.useRef<HTMLDivElement>(null)
-  const frameRef = React.useRef<HTMLIFrameElement>(null)
-  const [width, setWidth] = React.useState(720)
+  const [width, setWidth] = React.useState<number | null>(null)
   const [theme, setTheme] = React.useState<"light" | "dark">(() =>
     document.documentElement.classList.contains("dark") ? "dark" : "light"
   )
-  const [status, setStatus] = React.useState<
-    "loading" | "ready" | "failed" | "unsupported"
-  >(() => ("gpu" in navigator ? "loading" : "unsupported"))
   const height = previewHeight(component.slug)
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     const host = hostRef.current
-    if (!host) return
-    const observer = new ResizeObserver(([entry]) => {
-      const next = Math.max(1, Math.round(entry.contentRect.width))
-      setWidth((current) => (Math.abs(current - next) >= 16 ? next : current))
-    })
-    observer.observe(host)
-    return () => observer.disconnect()
+    if (host)
+      setWidth(Math.max(1, Math.round(host.getBoundingClientRect().width)))
   }, [])
 
   React.useEffect(() => {
     const observer = new MutationObserver(() => {
-      const next = document.documentElement.classList.contains("dark")
-        ? "dark"
-        : "light"
-      setTheme(next)
+      setTheme(
+        document.documentElement.classList.contains("dark") ? "dark" : "light"
+      )
     })
     observer.observe(document.documentElement, {
       attributes: true,
@@ -249,61 +323,129 @@ function GpuPreview({ component }: { component: CatalogComponent }) {
     return () => observer.disconnect()
   }, [])
 
-  React.useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      if (event.source !== frameRef.current?.contentWindow) return
-      if (event.data?.gpuicn === "preview-ready") setStatus("ready")
-      if (event.data?.gpuicn === "preview-error") setStatus("failed")
-    }
-    window.addEventListener("message", onMessage)
-    return () => window.removeEventListener("message", onMessage)
-  }, [])
-
-  const src = `/demo/index.html?demo=${component.slug}&theme=${theme}&width=${width}&height=${height}`
-  const message = {
-    loading: "Loading interactive GPUI preview...",
-    ready: "",
-    failed: "The GPUI preview did not start.",
-    unsupported: "This browser does not expose WebGPU.",
-  }[status]
+  const query = new URLSearchParams({
+    demo: component.slug,
+    theme,
+    width: String(width),
+    height: String(height),
+  })
+  if (icon) query.set("icon", icon)
+  const src = `/demo/index.html?${query}`
 
   return (
-    <div
-      ref={hostRef}
-      className="relative flex w-full items-center justify-center"
-      style={{ height }}
-    >
-      <iframe
-        ref={frameRef}
-        src={src}
-        title={`Interactive ${component.name} GPUI preview`}
-        className={cn("size-full border-0", status !== "ready" && "invisible")}
-      />
-      {status !== "ready" ? (
-        <div className="absolute inset-0 grid place-items-center p-6 text-center text-sm text-muted-foreground">
-          {message}
-        </div>
+    <div ref={hostRef} className="relative w-full" style={{ height }}>
+      {width !== null ? (
+        <PreviewFrame key={src} src={src} name={component.name} />
       ) : null}
     </div>
   )
 }
 
-export function InstallationTabs({ slug }: { slug: string }) {
-  const command = `npx shadcn@latest add ${registryOrigin}/r/${slug}.json`
-  const manual = `1. Download ${registryOrigin}/r/${slug}.json\n2. Copy its Rust source into src/ui/\n3. Add the module and initialize gpuicn::init(cx)`
+function PreviewFrame({ src, name }: { src: string; name: string }) {
+  const frameRef = React.useRef<HTMLIFrameElement>(null)
+  const [attempt, setAttempt] = React.useState(0)
+  const [status, setStatus] = React.useState<
+    "loading" | "ready" | "failed" | "unsupported"
+  >(() => ("gpu" in navigator ? "loading" : "unsupported"))
+
+  React.useEffect(() => {
+    if (!("gpu" in navigator)) return
+    const timeout = window.setTimeout(() => setStatus("failed"), 45000)
+    const onMessage = (event: MessageEvent) => {
+      if (
+        event.origin !== window.location.origin ||
+        event.source !== frameRef.current?.contentWindow
+      )
+        return
+      if (
+        event.data?.gpuicn === "preview-ready" ||
+        event.data?.gpuicn === "preview-error"
+      ) {
+        window.clearTimeout(timeout)
+        setStatus(event.data.gpuicn === "preview-ready" ? "ready" : "failed")
+      }
+    }
+    window.addEventListener("message", onMessage)
+    return () => {
+      window.clearTimeout(timeout)
+      window.removeEventListener("message", onMessage)
+    }
+  }, [attempt])
+
+  return (
+    <>
+      {status !== "unsupported" ? (
+        <iframe
+          key={attempt}
+          ref={frameRef}
+          src={src}
+          title={`Interactive ${name} GPUI preview`}
+          onError={() => setStatus("failed")}
+          className={cn(
+            "size-full border-0",
+            status !== "ready" && "invisible"
+          )}
+        />
+      ) : null}
+      {status !== "ready" ? (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted-foreground"
+          role="status"
+        >
+          <p>
+            {status === "loading"
+              ? "Loading interactive GPUI preview…"
+              : status === "unsupported"
+                ? "Interactive previews need a browser with WebGPU. You can still read and copy the Rust code."
+                : "The preview could not start. Try loading it again."}
+          </p>
+          {status === "failed" ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setStatus("loading")
+                setAttempt((value) => value + 1)
+              }}
+            >
+              Retry preview
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </>
+  )
+}
+
+export function InstallationTabs({
+  slug,
+  modules = ["theme", rustModule(slug)],
+}: {
+  slug: string
+  modules?: string[]
+}) {
+  const command = `npx shadcn@4.19.0 add ${registryOrigin}/r/${slug}.json`
+  const manual = `// src/ui/mod.rs\n${modules.map((module) => `pub mod ${module};`).join("\n")}\n\n// src/main.rs\nmod ui;`
 
   return (
     <section id="installation" className="scroll-mt-20 pt-10">
       <h2 className="font-heading text-2xl font-semibold tracking-tight">
         Installation
       </h2>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+        Complete the{" "}
+        <Link className="underline underline-offset-4" to="/installation">
+          one-time Rust setup
+        </Link>
+        , then add the source. Declare the installed modules as shown below.
+      </p>
       <Tabs defaultValue="command" className="mt-4">
         <TabsList>
           <TabsTrigger value="command">Command</TabsTrigger>
-          <TabsTrigger value="manual">Manual</TabsTrigger>
+          <TabsTrigger value="manual">Modules</TabsTrigger>
         </TabsList>
         <TabsContent value="command">
-          <CodeBlock className="mt-2" value={command} />
+          <CodeBlock className="mt-2" value={command} language="bash" />
         </TabsContent>
         <TabsContent value="manual">
           <CodeBlock className="mt-2" value={manual} />
@@ -316,34 +458,64 @@ export function InstallationTabs({ slug }: { slug: string }) {
 export function CodeBlock({
   value,
   className,
+  language = "rust",
 }: {
   value: string
   className?: string
+  language?: CodeLanguage
 }) {
+  const html = React.useMemo(
+    () => highlight(value, language),
+    [value, language]
+  )
   const [copied, setCopied] = React.useState(false)
+  const [copyFailed, setCopyFailed] = React.useState(false)
 
   const copy = async () => {
-    await navigator.clipboard.writeText(value)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1200)
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopyFailed(false)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1200)
+    } catch {
+      setCopyFailed(true)
+    }
   }
 
   return (
     <div
       className={cn("relative overflow-hidden rounded-xl bg-muted", className)}
     >
-      <pre className="overflow-x-auto p-4 pr-12 font-mono text-xs leading-6">
-        <code>{value}</code>
+      <pre
+        tabIndex={0}
+        className="max-h-[32rem] overflow-auto p-4 pr-12 font-mono text-xs leading-6 focus-visible:outline-2 focus-visible:outline-ring"
+      >
+        <code
+          className={`syntax-code language-${language}`}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
       </pre>
       <Button
         variant="ghost"
         size="icon-sm"
         className="absolute top-2 right-2"
         onClick={copy}
-        aria-label="Copy code"
+        aria-label={copied ? "Copied" : "Copy code"}
       >
         {copied ? <CheckIcon /> : <ClipboardIcon />}
       </Button>
+      <span
+        role="status"
+        className={
+          copyFailed ? "block px-4 pb-3 text-xs text-destructive" : "sr-only"
+        }
+      >
+        {copyFailed
+          ? "Copy failed. Select the code and copy it manually."
+          : copied
+            ? "Copied to clipboard."
+            : ""}
+      </span>
     </div>
   )
 }

@@ -197,6 +197,7 @@ export const sections = [
   { to: "/", label: "Introduction" },
   { to: "/installation", label: "Installation" },
   { to: "/theming", label: "Theming" },
+  { to: "/icons", label: "Icons" },
   { to: "/registry", label: "Registry" },
 ] as const
 

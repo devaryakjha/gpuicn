@@ -1,3 +1,4 @@
+use base_gpui::{alert_dialog::AlertDialogHandle, dialog::DialogHandle, drawer::DrawerHandle};
 use std::borrow::Cow;
 
 use gpui::{
@@ -40,7 +41,9 @@ use gpuicn::{
         DrawerSwipeDirection, drawer_backdrop, drawer_content, drawer_description, drawer_popup,
         drawer_portal, drawer_root, drawer_swipe_handle, drawer_title, drawer_viewport,
     },
-    field::{FieldOrientation, field_control, field_description, field_label, field_root},
+    field::{
+        FieldOrientation, field_control, field_description, field_error, field_label, field_root,
+    },
     fieldset::{FieldsetLegendVariant, fieldset_legend, fieldset_root},
     form::{FormSubmitAction, form},
     input::Input,
@@ -83,10 +86,7 @@ use gpuicn::{
     slider::Slider,
     switch::Switch,
     tabs::{TabsVariant, tabs, tabs_content, tabs_list, tabs_trigger},
-    toast::{
-        ToastClose, ToastContent, ToastDescription, ToastOptions, ToastRoot, ToastTitle,
-        create_toast_manager, toast_portal, toast_provider, toast_viewport,
-    },
+    toast::{ToastOptions, create_toast_manager, toast_portal, toast_provider, toast_viewport},
     toggle::{Toggle, ToggleVariant},
     toggle_group::{ToggleGroup, ToggleGroupItem},
     toolbar::{toolbar, toolbar_button, toolbar_group, toolbar_separator},
@@ -136,6 +136,23 @@ fn launch(cx: &mut App) {
         ])
         .expect("failed to load pinned Geist fonts");
     gpuicn::init(cx);
+    #[cfg(target_family = "wasm")]
+    {
+        // WASM has no macOS target_os, so Base GPUI only registers Control
+        // shortcuts. Accept Command as well for previews on macOS browsers.
+        use base_gpui::primitives::input::{
+            INPUT_KEY_CONTEXT, InputCopy, InputCut, InputEnd, InputHome, InputPaste, InputSelectAll,
+        };
+        use gpui::KeyBinding;
+        cx.bind_keys([
+            KeyBinding::new("cmd-a", InputSelectAll, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-c", InputCopy, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-v", InputPaste, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-x", InputCut, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-left", InputHome, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-right", InputEnd, Some(INPUT_KEY_CONTEXT)),
+        ]);
+    }
 
     let demo = requested_value("demo")
         .and_then(|value| Demo::parse(&value))
@@ -173,6 +190,10 @@ fn launch(cx: &mut App) {
                 drawer_open: false,
                 drawer_direction: DrawerSwipeDirection::Down,
                 goal: 350,
+                icon: requested_value("icon")
+                    .as_deref()
+                    .and_then(LucideIcon::from_name)
+                    .unwrap_or(LucideIcon::House),
             })
         },
     )
@@ -189,6 +210,7 @@ fn launch(cx: &mut App) {
 
 #[derive(Clone, Copy, Default)]
 enum Demo {
+    Icons,
     Accordion,
     AlertDialog,
     Autocomplete,
@@ -232,6 +254,7 @@ enum Demo {
 impl Demo {
     fn parse(value: &str) -> Option<Self> {
         match value {
+            "icons" => Some(Self::Icons),
             "accordion" => Some(Self::Accordion),
             "alert-dialog" => Some(Self::AlertDialog),
             "autocomplete" => Some(Self::Autocomplete),
@@ -287,6 +310,7 @@ struct Showcase {
     drawer_open: bool,
     drawer_direction: DrawerSwipeDirection,
     goal: i32,
+    icon: LucideIcon,
 }
 
 impl Render for Showcase {
@@ -309,6 +333,7 @@ impl Render for Showcase {
 impl Showcase {
     fn preview(&self, cx: &mut Context<Self>) -> gpui::AnyElement {
         match self.demo {
+            Demo::Icons => self.icons_preview(cx).into_any_element(),
             Demo::Accordion => self.accordion_preview(cx).into_any_element(),
             Demo::AlertDialog => self.alert_dialog_preview(cx).into_any_element(),
             Demo::Autocomplete => self.autocomplete_preview(cx).into_any_element(),
@@ -407,12 +432,33 @@ impl Showcase {
             )
     }
 
+    fn icons_preview(&self, cx: &App) -> impl IntoElement {
+        div()
+            .flex()
+            .items_end()
+            .justify_center()
+            .gap(px(20.))
+            .children([16., 24., 32., 48.].into_iter().map(|size| {
+                div()
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .gap(px(16.))
+                    .child(
+                        lucide(self.icon)
+                            .size(px(size))
+                            .text_color(UiTheme::read(cx).colors.foreground),
+                    )
+                    .child(div().text_size(px(11.)).child(format!("{size:.0}")))
+            }))
+    }
+
     fn accordion_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let items = [
             (
                 "accessible",
                 "Is it accessible?",
-                "Yes. It follows the WAI-ARIA accordion pattern.",
+                "Use Tab, arrow keys, and Enter to navigate. See platform notes for accessibility limits.",
             ),
             (
                 "styled",
@@ -426,11 +472,19 @@ impl Showcase {
             ),
         ];
         accordion(cx)
+            .id("preview.accordion")
             .w_full()
             .max_w(px(480.0))
             .children(items.into_iter().map(|(value, trigger, content)| {
                 accordion_item(value, cx)
-                    .child(accordion_header().child(accordion_trigger(cx).child(trigger)))
+                    .id(value)
+                    .child(
+                        accordion_header().child(
+                            accordion_trigger(cx)
+                                .id(format!("preview.accordion.{value}.trigger"))
+                                .child(trigger),
+                        ),
+                    )
                     .child(accordion_content(cx).child(content))
             }))
     }
@@ -477,9 +531,11 @@ impl Showcase {
 
     fn alert_dialog_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let root_view = cx.entity().downgrade();
-        let cancel_view = cx.entity().downgrade();
-        let action_view = cx.entity().downgrade();
+        let handle = AlertDialogHandle::new();
+        let cancel = handle.clone();
+        let confirm = handle.clone();
         alert_dialog_root("preview.alert-dialog")
+            .handle(handle)
             .open(self.alert_dialog_open)
             .on_open_change(move |open, _, _, cx| {
                 root_view
@@ -508,25 +564,15 @@ impl Showcase {
                                     .child(
                                         Button::new("preview.alert-dialog.cancel")
                                             .variant(ButtonVariant::Outline)
-                                            .on_click(move |_, _, cx| {
-                                                cancel_view
-                                                    .update(cx, |this, cx| {
-                                                        this.alert_dialog_open = false;
-                                                        cx.notify();
-                                                    })
-                                                    .ok();
+                                            .on_click(move |_, window, cx| {
+                                                cancel.close(window, cx);
                                             })
                                             .child("Cancel"),
                                     )
                                     .child(
                                         Button::new("preview.alert-dialog.action")
-                                            .on_click(move |_, _, cx| {
-                                                action_view
-                                                    .update(cx, |this, cx| {
-                                                        this.alert_dialog_open = false;
-                                                        cx.notify();
-                                                    })
-                                                    .ok();
+                                            .on_click(move |_, window, cx| {
+                                                confirm.close(window, cx);
                                             })
                                             .child("Continue"),
                                     ),
@@ -574,12 +620,7 @@ impl Showcase {
                     .px(px(12.0))
                     .border_b_1()
                     .border_color(theme.colors.border)
-                    .child("Explorer")
-                    .child(
-                        div()
-                            .text_color(theme.colors.muted_foreground)
-                            .child("Outline"),
-                    ),
+                    .child("Project files"),
             )
             .child(
                 div()
@@ -616,14 +657,14 @@ impl Showcase {
                             .child(
                                 collapsible_content(cx)
                                     .pt(px(2.0))
-                                    .pl(px(32.0))
+                                    .pl(px(48.0))
                                     .child(tree_row("button.rs", &theme))
                                     .child(tree_row("dialog.rs", &theme))
                                     .child(tree_row("input.rs", &theme)),
                             ),
                     )
-                    .child(tree_row("lib", &theme))
-                    .child(tree_row("README.md", &theme)),
+                    .child(tree_row("lib.rs", &theme).ml(px(24.0)))
+                    .child(tree_row("README.md", &theme).ml(px(24.0))),
             )
     }
 
@@ -764,11 +805,13 @@ impl Showcase {
     fn context_menu_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let border = UiTheme::read(cx).colors.border;
         context_menu_root::<()>("preview.context-menu")
+            .w_full()
+            .max_w(px(280.0))
             .child(
                 context_menu_trigger("preview.context-menu.trigger")
                     .w_full()
-                    .max_w(px(240.0))
-                    .h(px(112.0))
+                    .h(px(144.0))
+                    .px(px(24.0))
                     .flex()
                     .items_center()
                     .justify_center()
@@ -785,20 +828,20 @@ impl Showcase {
                                 context_menu_item("preview.context-menu.back", cx)
                                     .label("Back")
                                     .child("Back")
-                                    .child(shortcut("⌘[", cx)),
+                                    .child(shortcut("Cmd [", cx)),
                             )
                             .child(
                                 context_menu_item("preview.context-menu.forward", cx)
                                     .label("Forward")
                                     .disabled(true)
                                     .child("Forward")
-                                    .child(shortcut("⌘]", cx)),
+                                    .child(shortcut("Cmd ]", cx)),
                             )
                             .child(
                                 context_menu_item("preview.context-menu.reload", cx)
                                     .label("Reload")
                                     .child("Reload")
-                                    .child(shortcut("⌘R", cx)),
+                                    .child(shortcut("Cmd R", cx)),
                             )
                             .child(context_menu_separator(cx))
                             .child(
@@ -831,8 +874,9 @@ impl Showcase {
 
     fn dialog_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let root_view = cx.entity().downgrade();
-        let save_view = cx.entity().downgrade();
+        let handle = DialogHandle::new();
         dialog_root("preview.dialog")
+            .handle(handle.clone())
             .open(self.dialog_open)
             .on_open_change(move |open, _, _, cx| {
                 root_view
@@ -878,13 +922,8 @@ impl Showcase {
                             .child_any(
                                 dialog_footer(cx).child(
                                     Button::new("preview.dialog.save")
-                                        .on_click(move |_, _, cx| {
-                                            save_view
-                                                .update(cx, |this, cx| {
-                                                    this.dialog_open = false;
-                                                    cx.notify();
-                                                })
-                                                .ok();
+                                        .on_click(move |_, window, cx| {
+                                            handle.close(window, cx);
                                         })
                                         .child("Save changes"),
                                 ),
@@ -897,8 +936,9 @@ impl Showcase {
 
     fn drawer_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let root_view = cx.entity().downgrade();
-        let close_view = cx.entity().downgrade();
-        let submit_view = cx.entity().downgrade();
+        let handle = DrawerHandle::new();
+        let close = handle.clone();
+        let submit = handle.clone();
         let minus_view = cx.entity().downgrade();
         let plus_view = cx.entity().downgrade();
         let top_view = cx.entity().downgrade();
@@ -928,28 +968,33 @@ impl Showcase {
                         "Top",
                         DrawerSwipeDirection::Up,
                         top_view,
+                        handle.clone(),
                     ))
                     .child(drawer_direction_button(
                         "preview.drawer.right",
                         "Right",
                         DrawerSwipeDirection::Right,
                         right_view,
+                        handle.clone(),
                     ))
                     .child(drawer_direction_button(
                         "preview.drawer.bottom",
                         "Bottom",
                         DrawerSwipeDirection::Down,
                         bottom_view,
+                        handle.clone(),
                     ))
                     .child(drawer_direction_button(
                         "preview.drawer.left",
                         "Left",
                         DrawerSwipeDirection::Left,
                         left_view,
+                        handle.clone(),
                     )),
             )
             .child(
                 drawer_root("preview.drawer")
+                    .handle(handle)
                     .open(self.drawer_open)
                     .swipe_direction(direction)
                     .on_open_change(move |open, _, _, cx| {
@@ -970,6 +1015,9 @@ impl Showcase {
                                         })
                                         .child(
                                             div()
+                                                .w_full()
+                                                .max_w(px(360.))
+                                                .mx_auto()
                                                 .p(px(20.0))
                                                 .flex()
                                                 .flex_col()
@@ -993,6 +1041,7 @@ impl Showcase {
                                                         .gap(px(16.0))
                                                         .child(
                                                             Button::new("preview.drawer.minus")
+                                                                .aria_label("Decrease daily goal")
                                                                 .variant(ButtonVariant::Outline)
                                                                 .size(ButtonSize::Icon)
                                                                 .on_click(move |_, _, cx| {
@@ -1024,6 +1073,7 @@ impl Showcase {
                                                         )
                                                         .child(
                                                             Button::new("preview.drawer.plus")
+                                                                .aria_label("Increase daily goal")
                                                                 .variant(ButtonVariant::Outline)
                                                                 .size(ButtonSize::Icon)
                                                                 .on_click(move |_, _, cx| {
@@ -1051,28 +1101,16 @@ impl Showcase {
                                                         .gap(px(8.0))
                                                         .child(
                                                             Button::new("preview.drawer.submit")
-                                                                .on_click(move |_, _, cx| {
-                                                                    submit_view
-                                                                        .update(cx, |this, cx| {
-                                                                            this.drawer_open =
-                                                                                false;
-                                                                            cx.notify();
-                                                                        })
-                                                                        .ok();
+                                                                .on_click(move |_, window, cx| {
+                                                                    submit.close(window, cx);
                                                                 })
                                                                 .child("Submit"),
                                                         )
                                                         .child(
                                                             Button::new("preview.drawer.close")
                                                                 .variant(ButtonVariant::Outline)
-                                                                .on_click(move |_, _, cx| {
-                                                                    close_view
-                                                                        .update(cx, |this, cx| {
-                                                                            this.drawer_open =
-                                                                                false;
-                                                                            cx.notify();
-                                                                        })
-                                                                        .ok();
+                                                                .on_click(move |_, window, cx| {
+                                                                    close.close(window, cx);
                                                                 })
                                                                 .child("Cancel"),
                                                         ),
@@ -1141,7 +1179,8 @@ impl Showcase {
                         field_control("preview.form.email.control", cx)
                             .required(true)
                             .placeholder("you@example.com"),
-                    ),
+                    )
+                    .child(field_error(cx).child("Enter your email address.")),
             )
             .child(
                 Button::new("preview.form.submit")
@@ -1197,20 +1236,20 @@ impl Showcase {
                                         menu_item("preview.menu.profile", cx)
                                             .label("Profile")
                                             .child("Profile")
-                                            .child(shortcut("⇧⌘P", cx)),
+                                            .child(shortcut("Shift Cmd P", cx)),
                                     )
                                     .child(
                                         menu_item("preview.menu.billing", cx)
                                             .label("Billing")
                                             .child("Billing")
-                                            .child(shortcut("⌘B", cx)),
+                                            .child(shortcut("Cmd B", cx)),
                                     )
                                     .child(
                                         menu_item("preview.menu.settings", cx)
                                             .label("Settings")
                                             .disabled(true)
                                             .child("Settings")
-                                            .child(shortcut("⌘,", cx)),
+                                            .child(shortcut("Cmd ,", cx)),
                                     ),
                             )
                             .child(menu_separator(cx))
@@ -1261,20 +1300,20 @@ impl Showcase {
                                         menubar_item("preview.menubar.new", cx)
                                             .label("New File")
                                             .child("New File")
-                                            .child(shortcut("⌘N", cx)),
+                                            .child(shortcut("Cmd N", cx)),
                                     )
                                     .child(
                                         menubar_item("preview.menubar.open", cx)
                                             .label("Open")
                                             .child("Open…")
-                                            .child(shortcut("⌘O", cx)),
+                                            .child(shortcut("Cmd O", cx)),
                                     )
                                     .child(
                                         menubar_item("preview.menubar.save", cx)
                                             .label("Save")
                                             .disabled(true)
                                             .child("Save")
-                                            .child(shortcut("⌘S", cx)),
+                                            .child(shortcut("Cmd S", cx)),
                                     )
                                     .child(menubar_separator(cx))
                                     .child(
@@ -1363,9 +1402,20 @@ impl Showcase {
                                     .w(px(200.0))
                                     .flex()
                                     .flex_col()
-                                    .child("Getting started")
-                                    .child("Components")
-                                    .child("Theming"),
+                                    .child(
+                                        div().id("preview.navigation-menu.getting-started").child(
+                                            navigation_menu_link::<&str>(cx)
+                                                .child("Getting started"),
+                                        ),
+                                    )
+                                    .child(div().id("preview.navigation-menu.components").child(
+                                        navigation_menu_link::<&str>(cx).child("Components"),
+                                    ))
+                                    .child(
+                                        div().id("preview.navigation-menu.theming").child(
+                                            navigation_menu_link::<&str>(cx).child("Theming"),
+                                        ),
+                                    ),
                             ),
                     )
                     .child(navigation_menu_link(cx).child("Blog"))
@@ -1449,12 +1499,15 @@ impl Showcase {
                         preview_card_popup("preview.preview-card.popup", cx).child_any(
                             div()
                                 .flex()
+                                .w_full()
                                 .gap(px(12.0))
                                 .child(Avatar::new("preview.preview-card.avatar").child("CN"))
                                 .child(
                                     div()
                                         .flex()
                                         .flex_col()
+                                        .flex_1()
+                                        .min_w_0()
                                         .gap(px(4.0))
                                         .child(
                                             div()
@@ -1499,35 +1552,24 @@ impl Showcase {
     }
 
     fn radio_group_preview(&self) -> impl IntoElement {
-        div()
-            .flex()
-            .gap(px(10.0))
-            .child(
-                RadioGroup::new("preview.radio-group")
-                    .aria_label("Interface density")
-                    .default_value("comfortable")
-                    .item(
-                        RadioItem::new("preview.radio-group.compact", "compact")
-                            .aria_label("Compact"),
-                    )
-                    .item(
-                        RadioItem::new("preview.radio-group.comfortable", "comfortable")
-                            .aria_label("Comfortable"),
-                    )
-                    .item(
-                        RadioItem::new("preview.radio-group.spacious", "spacious")
-                            .aria_label("Spacious")
-                            .disabled(true),
-                    ),
+        RadioGroup::new("preview.radio-group")
+            .aria_label("Interface density")
+            .default_value("comfortable")
+            .item(
+                RadioItem::new("preview.radio-group.compact", "compact")
+                    .aria_label("Compact")
+                    .label("Compact"),
             )
-            .child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap(px(8.0))
-                    .child("Compact")
-                    .child("Comfortable")
-                    .child(div().opacity(0.50).child("Spacious")),
+            .item(
+                RadioItem::new("preview.radio-group.comfortable", "comfortable")
+                    .aria_label("Comfortable")
+                    .label("Comfortable"),
+            )
+            .item(
+                RadioItem::new("preview.radio-group.spacious", "spacious")
+                    .aria_label("Spacious")
+                    .label("Spacious")
+                    .disabled(true),
             )
     }
 
@@ -1697,6 +1739,7 @@ impl Showcase {
 
     fn tabs_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         tabs(cx)
+            .id("preview.tabs")
             .w_full()
             .max_w(px(420.0))
             .default_value(Some("account"))
@@ -1704,11 +1747,13 @@ impl Showcase {
                 tabs_list(cx)
                     .child(
                         tabs_trigger(TabsVariant::Default, cx)
+                            .id("preview.tabs.account")
                             .value("account")
                             .child("Account"),
                     )
                     .child(
                         tabs_trigger(TabsVariant::Default, cx)
+                            .id("preview.tabs.password")
                             .value("password")
                             .child("Password"),
                     ),
@@ -1730,7 +1775,6 @@ impl Showcase {
     fn toast_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let manager = create_toast_manager::<()>();
         let add_toast = manager.clone();
-        let theme = UiTheme::read(cx).clone();
         toast_provider("preview.toast")
             .manager(manager)
             .child_any(
@@ -1745,18 +1789,7 @@ impl Showcase {
                     })
                     .child("Show toast"),
             )
-            .child(
-                toast_portal().child(toast_viewport("preview.toast.viewport").content_builder(
-                    move |_facts| {
-                        toast_root_from_theme(&theme).child(
-                            toast_content_from_theme(&theme)
-                                .child(toast_title_from_theme(&theme))
-                                .child(toast_description_from_theme(&theme))
-                                .child(toast_close_from_theme(&theme)),
-                        )
-                    },
-                )),
-            )
+            .child(toast_portal().child(toast_viewport("preview.toast.viewport", cx)))
     }
 
     fn toggle_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -1947,60 +1980,6 @@ impl Showcase {
     }
 }
 
-fn toast_root_from_theme(theme: &UiTheme) -> ToastRoot<()> {
-    ToastRoot::new()
-        .w(px(320.0))
-        .rounded(px(16.0))
-        .border_1()
-        .border_color(theme.colors.border)
-        .bg(theme.colors.popover)
-        .text_color(theme.colors.popover_foreground)
-}
-
-fn toast_content_from_theme(theme: &UiTheme) -> ToastContent<()> {
-    ToastContent::new()
-        .relative()
-        .flex()
-        .flex_col()
-        .items_start()
-        .gap(px(4.0))
-        .p(px(16.0))
-        .pr(px(48.0))
-        .font_family(theme.fonts.body.clone())
-}
-
-fn toast_title_from_theme(theme: &UiTheme) -> ToastTitle<()> {
-    ToastTitle::new()
-        .font_weight(gpui::FontWeight::MEDIUM)
-        .text_size(px(14.0))
-        .text_color(theme.colors.popover_foreground)
-}
-
-fn toast_description_from_theme(theme: &UiTheme) -> ToastDescription<()> {
-    ToastDescription::new()
-        .text_size(px(14.0))
-        .text_color(theme.colors.muted_foreground)
-}
-
-fn toast_close_from_theme(theme: &UiTheme) -> ToastClose<()> {
-    ToastClose::new()
-        .aria_label("Close toast")
-        .absolute()
-        .top(px(8.0))
-        .right(px(8.0))
-        .flex()
-        .size(px(28.0))
-        .items_center()
-        .justify_center()
-        .rounded(px(8.0))
-        .text_color(theme.colors.muted_foreground)
-        .child_any(
-            lucide(LucideIcon::X)
-                .size(px(16.0))
-                .text_color(theme.colors.muted_foreground),
-        )
-}
-
 fn tree_row(name: &'static str, theme: &UiTheme) -> gpui::Div {
     div()
         .flex()
@@ -2010,23 +1989,17 @@ fn tree_row(name: &'static str, theme: &UiTheme) -> gpui::Div {
         .px(px(10.0))
         .text_size(px(14.0))
         .child(
-            div()
-                .size(px(8.0))
-                .rounded(px(2.0))
-                .border_1()
-                .border_color(theme.colors.muted_foreground),
+            lucide(LucideIcon::File)
+                .size(px(14.))
+                .text_color(theme.colors.muted_foreground),
         )
         .child(name)
 }
 
-fn tree_folder_mark(theme: &UiTheme) -> gpui::Div {
-    div()
-        .w(px(14.0))
-        .h(px(11.0))
-        .rounded(px(2.0))
-        .border_1()
-        .border_color(theme.colors.muted_foreground)
-        .bg(theme.colors.muted)
+fn tree_folder_mark(theme: &UiTheme) -> gpui::Svg {
+    lucide(LucideIcon::Folder)
+        .size(px(14.))
+        .text_color(theme.colors.muted_foreground)
 }
 
 fn drawer_direction_button(
@@ -2034,16 +2007,17 @@ fn drawer_direction_button(
     label: &'static str,
     direction: DrawerSwipeDirection,
     view: gpui::WeakEntity<Showcase>,
+    handle: DrawerHandle<()>,
 ) -> Button {
     Button::new(id)
         .variant(ButtonVariant::Outline)
-        .on_click(move |_, _, cx| {
+        .on_click(move |_, window, cx| {
             view.update(cx, |this, cx| {
                 this.drawer_direction = direction;
-                this.drawer_open = true;
                 cx.notify();
             })
             .ok();
+            handle.open_with_payload((), window, cx);
         })
         .child(label)
 }
@@ -2070,7 +2044,7 @@ fn dialog_field(label: &'static str, input: Input, cx: &App) -> gpui::Div {
                 .text_color(UiTheme::read(cx).colors.foreground)
                 .child(label),
         )
-        .child(div().flex_1().child(input))
+        .child(div().flex_1().min_w(px(0.)).child(input))
 }
 
 fn popover_field(label: &'static str, input: Input, cx: &App) -> gpui::Div {

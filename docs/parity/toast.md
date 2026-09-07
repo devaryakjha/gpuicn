@@ -4,6 +4,8 @@
 - gpuicn: `registry/toast/toast.rs`.
 - Difference types: platform, interaction, accessibility, and visual.
 
-Base GPUI owns the typed manager, queue, upsert, timeout, pause/resume, stack limit, Escape, close action, and swipe-to-dismiss behavior. The wrapper applies Nova's bottom-right viewport, rounded toast surface, and compact controls while leaving provider timeout and limit configuration intact.
+Base GPUI owns the typed manager, queue, upsert, timeout, pause/resume, stack limit, Escape, close action, and swipe-to-dismiss behavior. The wrapper supplies a bottom-aligned viewport, rounded toast surface, and compact controls while leaving provider timeout and limit configuration intact.
+
+`toast_viewport(id, cx)` builds the standard title, description, and close control. Applications can override its `content_builder` for custom toast content.
 
 Nova's CSS stack transforms, transition timing, and icon-by-type helper are not reproduced. The pinned GPUI revision has no live-region API, so new toasts are not announced automatically to screen readers.

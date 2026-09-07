@@ -24,8 +24,10 @@ pub fn toast_portal() -> ToastPortal<()> {
     ToastPortal::new()
 }
 
-/// Creates Nova's bottom-right Toast viewport.
-pub fn toast_viewport(id: impl Into<ElementId>) -> ToastViewport<()> {
+/// Creates a Toast viewport with the standard title, description, and close button.
+/// Mount it once inside a provider. Override `content_builder` for custom content.
+pub fn toast_viewport(id: impl Into<ElementId>, cx: &App) -> ToastViewport<()> {
+    let theme = UiTheme::read(cx).clone();
     ToastViewport::new()
         .id(id)
         .absolute()
@@ -36,11 +38,23 @@ pub fn toast_viewport(id: impl Into<ElementId>) -> ToastViewport<()> {
         .flex()
         .flex_col()
         .gap(px(12.0))
+        .content_builder(move |_| {
+            root_from_theme(&theme).child(
+                content_from_theme(&theme)
+                    .child(title_from_theme(&theme))
+                    .child(description_from_theme(&theme))
+                    .child(close_from_theme(&theme)),
+            )
+        })
 }
 
 /// Creates the stacked Nova Toast surface.
 pub fn toast_root(cx: &App) -> ToastRoot<()> {
-    let theme = UiTheme::read(cx).clone();
+    root_from_theme(UiTheme::read(cx))
+}
+
+fn root_from_theme(theme: &UiTheme) -> ToastRoot<()> {
+    let theme = theme.clone();
     ToastRoot::new().style_with_state(move |_state, base| {
         base.w_full()
             .rounded(theme.radius.two_xl)
@@ -54,7 +68,11 @@ pub fn toast_root(cx: &App) -> ToastRoot<()> {
 
 /// Creates the padded Toast content row.
 pub fn toast_content(cx: &App) -> ToastContent<()> {
-    let theme = UiTheme::read(cx).clone();
+    content_from_theme(UiTheme::read(cx))
+}
+
+fn content_from_theme(theme: &UiTheme) -> ToastContent<()> {
+    let theme = theme.clone();
     ToastContent::new().style_with_state(move |_state, base| {
         base.flex()
             .relative()
@@ -70,7 +88,11 @@ pub fn toast_content(cx: &App) -> ToastContent<()> {
 
 /// Creates a medium-weight Toast title.
 pub fn toast_title(cx: &App) -> ToastTitle<()> {
-    let theme = UiTheme::read(cx).clone();
+    title_from_theme(UiTheme::read(cx))
+}
+
+fn title_from_theme(theme: &UiTheme) -> ToastTitle<()> {
+    let theme = theme.clone();
     ToastTitle::new().style_with_state(move |_state, base| {
         base.font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
@@ -81,7 +103,11 @@ pub fn toast_title(cx: &App) -> ToastTitle<()> {
 
 /// Creates a muted Toast description.
 pub fn toast_description(cx: &App) -> ToastDescription<()> {
-    let theme = UiTheme::read(cx).clone();
+    description_from_theme(UiTheme::read(cx))
+}
+
+fn description_from_theme(theme: &UiTheme) -> ToastDescription<()> {
+    let theme = theme.clone();
     ToastDescription::new().style_with_state(move |_state, base| {
         base.font_family(theme.fonts.body.clone())
             .text_size(px(14.0))
@@ -99,7 +125,11 @@ pub fn toast_action(cx: &App) -> ToastAction<()> {
 
 /// Creates the compact icon-only Toast close button.
 pub fn toast_close(cx: &App) -> ToastClose<()> {
-    let theme = UiTheme::read(cx).clone();
+    close_from_theme(UiTheme::read(cx))
+}
+
+fn close_from_theme(theme: &UiTheme) -> ToastClose<()> {
+    let theme = theme.clone();
     let icon_color = theme.colors.muted_foreground;
     ToastClose::new()
         .aria_label("Close toast")

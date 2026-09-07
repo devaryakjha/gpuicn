@@ -22,45 +22,47 @@ pub fn collapsible(cx: &App) -> CollapsibleRoot {
 pub fn collapsible_trigger(cx: &App) -> CollapsibleTrigger {
     let theme = UiTheme::read(cx).clone();
     let focus_ring = theme.focus_ring();
-    CollapsibleTrigger::new().style_with_state(move |state, base| {
-        let colors = theme.colors;
-        let focus_ring = focus_ring.clone();
-        base.flex()
-            .items_center()
-            .justify_center()
-            .rounded(theme.radius.lg)
-            .border_1()
-            .border_color(colors.background.opacity(0.0))
-            .px(px(10.0))
-            .py(px(6.0))
-            .font_family(theme.fonts.body.clone())
-            .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0))
-            .text_color(colors.foreground)
-            .when(!state.disabled, |base| {
-                base.cursor_pointer()
-                    .hover(move |style| style.bg(colors.muted))
-            })
-            .when(state.disabled, |base| {
-                base.opacity(0.50).cursor_not_allowed()
-            })
-            .focus_visible(move |style| {
-                style
-                    .bg(colors.background)
-                    .border_color(colors.ring)
-                    .shadow(focus_ring.clone())
-            })
-    })
+    CollapsibleTrigger::new()
+        .flex()
+        .items_center()
+        .justify_center()
+        .px(px(10.0))
+        .py(px(6.0))
+        .style_with_state(move |state, base| {
+            let colors = theme.colors;
+            let focus_ring = focus_ring.clone();
+            base.rounded(theme.radius.lg)
+                .border_1()
+                .border_color(colors.background.opacity(0.0))
+                .font_family(theme.fonts.body.clone())
+                .font_weight(FontWeight::MEDIUM)
+                .text_size(px(14.0))
+                .text_color(colors.foreground)
+                .when(!state.disabled, |base| {
+                    base.cursor_pointer()
+                        .hover(move |style| style.bg(colors.muted))
+                })
+                .when(state.disabled, |base| {
+                    base.opacity(0.50).cursor_not_allowed()
+                })
+                .focus_visible(move |style| {
+                    style
+                        .bg(colors.background)
+                        .border_color(colors.ring)
+                        .shadow(focus_ring.clone())
+                })
+        })
 }
 
 /// Creates a Collapsible content panel with the standard Nova text treatment.
 pub fn collapsible_content(cx: &App) -> CollapsiblePanel {
     let theme = UiTheme::read(cx).clone();
-    CollapsiblePanel::new().style_with_state(move |_state, base| {
-        base.overflow_hidden()
-            .pt(px(8.0))
-            .font_family(theme.fonts.body.clone())
-            .text_size(px(14.0))
-            .text_color(theme.colors.foreground)
-    })
+    CollapsiblePanel::new()
+        .pt(px(8.0))
+        .style_with_state(move |_state, base| {
+            base.overflow_hidden()
+                .font_family(theme.fonts.body.clone())
+                .text_size(px(14.0))
+                .text_color(theme.colors.foreground)
+        })
 }

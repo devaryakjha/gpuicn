@@ -10,6 +10,7 @@ use gpui::{App, Div, ElementId, FontWeight, SharedString, Styled, black, div, px
 
 use super::{
     button::{ButtonSize, ButtonVariant, style_button},
+    dialog::modal_focus::ModalFocus,
     theme::UiTheme,
 };
 
@@ -67,10 +68,18 @@ pub fn drawer_popup(
     cx: &App,
 ) -> DrawerPopup<()> {
     let theme = UiTheme::read(cx).clone();
+    let id = id.into();
+    let focus = ModalFocus::new(id.clone());
     DrawerPopup::new()
         .id(id)
         .aria_label(aria_label)
+        .child_any(focus.boundary(false))
+        .child_any(focus.boundary(true))
         .style_with_state(move |state, base| {
+            let base = focus.trap(
+                base,
+                state.modal_mode.traps_focus() && !state.nested_drawer_open,
+            );
             let surface = base
                 .overflow_hidden()
                 .bg(theme.colors.popover)

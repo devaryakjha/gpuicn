@@ -18,7 +18,7 @@ use gpui::{
 };
 use gpui_icons::{LucideIcon, lucide};
 
-use super::theme::UiTheme;
+use super::theme::{UiTheme, input_text_layout};
 
 /// Creates a combobox root with a caller-owned stable ID.
 pub fn combobox_root<T: Clone + Eq + 'static>(id: impl Into<ElementId>) -> ComboboxRoot<T> {
@@ -35,7 +35,9 @@ pub fn combobox_input<T: Clone + Eq + 'static>(
     ComboboxInput::new()
         .id(id)
         .style_with_state(move |state, base| {
-            base.h(px(32.))
+            base.flex()
+                .items_center()
+                .h(px(32.))
                 .rounded(theme.radius.lg)
                 .border_1()
                 .border_color(theme.colors.input)
@@ -47,10 +49,10 @@ pub fn combobox_input<T: Clone + Eq + 'static>(
                 .when(state.root.disabled, |base| base.opacity(0.5))
         })
         .input_style_with_state(move |_state, base| {
-            base.w_full()
+            input_text_layout(base)
+                .w_full()
                 .h_full()
                 .px(px(10.))
-                .py(px(4.))
                 .font_family(theme.fonts.body.clone())
                 .text_size(px(14.))
                 .text_color(theme.colors.foreground)
@@ -65,11 +67,11 @@ pub fn combobox_group_input<T: Clone + Eq + 'static>(
     let theme = UiTheme::read(cx).clone();
     ComboboxInput::new()
         .id(id)
-        .style_with_state(move |_state, base| base.h(px(30.)).flex_1())
+        .style_with_state(move |_state, base| base.flex().items_center().h(px(30.)).flex_1())
         .input_style_with_state(move |_state, base| {
-            base.w_full()
+            input_text_layout(base)
+                .w_full()
                 .h_full()
-                .py(px(4.))
                 .font_family(theme.fonts.body.clone())
                 .text_size(px(14.))
                 .text_color(theme.colors.foreground)
@@ -342,4 +344,66 @@ fn popup_style(base: Div, theme: &UiTheme) -> Div {
         .border_1()
         .border_color(theme.colors.foreground.opacity(0.10))
         .shadow(theme.shadows.md.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui::{
+        AppContext as _, Bounds, Context, IntoElement, Pixels, Render, TestAppContext, Window,
+    };
+    use std::{cell::RefCell, rc::Rc};
+    struct View {
+        grouped: bool,
+        bounds: Rc<RefCell<Vec<Bounds<Pixels>>>>,
+    }
+    impl Render for View {
+        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            let bounds = self.bounds.clone();
+            let input = if self.grouped {
+                combobox_group_input::<String>("editor", cx)
+            } else {
+                combobox_input::<String>("editor", cx)
+            };
+            gpui::div().w(px(240.)).child(
+                combobox_root::<String>("alignment").child(
+                    input
+                        .placeholder("Search fruits…")
+                        .input_style_with_state(move |_, base| {
+                            let bounds = bounds.clone();
+                            input_text_layout(base)
+                                .w_full()
+                                .h_full()
+                                .text_size(px(14.))
+                                .on_children_prepainted(move |children, _, _| {
+                                    *bounds.borrow_mut() = children.to_vec()
+                                })
+                        }),
+                ),
+            )
+        }
+    }
+    #[test]
+    fn combobox_wrapper_centers_the_editor() {
+        for grouped in [false, true] {
+            let mut cx = TestAppContext::single();
+            cx.update(|cx| UiTheme::set(cx, UiTheme::neutral_light()));
+            let bounds = Rc::new(RefCell::new(Vec::new()));
+            let captured = bounds.clone();
+            let window = cx.add_window(move |_, _| View {
+                grouped,
+                bounds: captured,
+            });
+            cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx))
+                .unwrap();
+            let bounds = bounds.borrow();
+            assert_eq!(bounds.len(), 1);
+            assert_eq!(
+                bounds[0].center().y,
+                px(if grouped { 15. } else { 16. }),
+                "grouped={grouped}: {:?}",
+                bounds[0]
+            );
+        }
+    }
 }

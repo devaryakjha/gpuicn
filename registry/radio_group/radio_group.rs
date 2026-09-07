@@ -3,12 +3,10 @@
 
 use std::rc::Rc;
 
-use base_gpui::radio_group::{
-    RadioGroupIndicator, RadioGroupRadio, RadioGroupRoot, RadioGroupValueChangeDetails,
-};
+use base_gpui::radio_group::{RadioGroupRadio, RadioGroupRoot, RadioGroupValueChangeDetails};
 use gpui::{
-    App, ElementId, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce,
-    SharedString, Styled, Window, prelude::FluentBuilder as _, px,
+    App, ElementId, IntoElement, ParentElement as _, RenderOnce, SharedString, Styled, Window,
+    prelude::FluentBuilder as _, px,
 };
 
 use super::theme::{ThemeMode, UiTheme};
@@ -23,6 +21,7 @@ pub struct RadioItem {
     value: SharedString,
     disabled: bool,
     aria_label: Option<SharedString>,
+    label: Option<SharedString>,
 }
 impl RadioItem {
     pub fn new(id: impl Into<ElementId>, value: impl Into<SharedString>) -> Self {
@@ -31,6 +30,7 @@ impl RadioItem {
             value: value.into(),
             disabled: false,
             aria_label: None,
+            label: None,
         }
     }
     pub fn disabled(mut self, value: bool) -> Self {
@@ -41,24 +41,24 @@ impl RadioItem {
         self.aria_label = Some(value.into());
         self
     }
+    pub fn label(mut self, label: impl Into<SharedString>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
     fn render(self, theme: &UiTheme) -> RadioGroupRadio<SharedString> {
         let colors = theme.colors;
         let mode = theme.mode;
-        let focus_ring = theme.focus_ring();
+        let label = self.label.clone();
+        let font = theme.fonts.body.clone();
         let mut radio = RadioGroupRadio::new()
             .id(self.id)
             .value(self.value)
             .disabled(self.disabled)
             .style_with_state(move |state, base| {
-                let focus_ring = focus_ring.clone();
-                let background = if state.checked {
-                    colors.primary
-                } else if mode == ThemeMode::Dark {
-                    colors.input.opacity(0.30)
-                } else {
-                    colors.background.opacity(0.)
-                };
-                base.relative()
+                let circle = gpui::div()
+                    .flex()
+                    .items_center()
+                    .justify_center()
                     .flex_shrink_0()
                     .size(px(16.))
                     .rounded_full()
@@ -68,29 +68,44 @@ impl RadioItem {
                     } else {
                         colors.input
                     })
-                    .bg(background)
-                    .focus_visible(move |style| {
-                        style.border_color(colors.ring).shadow(focus_ring.clone())
+                    .bg(if state.checked {
+                        colors.primary
+                    } else if mode == ThemeMode::Dark {
+                        colors.input.opacity(0.30)
+                    } else {
+                        colors.background.opacity(0.)
                     })
+                    .when(state.focused && !state.disabled, |base| {
+                        super::theme::focus_outline(
+                            base,
+                            colors.ring.opacity(0.50),
+                            gpui::Corners::all(px(8.)),
+                        )
+                    })
+                    .when(state.checked, |base| {
+                        base.child(
+                            gpui::div()
+                                .size(px(8.))
+                                .rounded_full()
+                                .bg(colors.primary_foreground),
+                        )
+                    });
+                base.flex()
+                    .items_center()
+                    .gap(px(8.))
+                    .font_family(font.clone())
+                    .text_size(px(14.))
+                    .line_height(px(20.))
+                    .text_color(colors.foreground)
                     .when(state.disabled, |base| {
                         base.opacity(0.50).cursor_not_allowed()
                     })
-            })
-            .child(
-                RadioGroupIndicator::new()
-                    .absolute()
-                    .inset_0()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .child(
-                        gpui::div()
-                            .size(px(8.))
-                            .rounded_full()
-                            .bg(colors.primary_foreground),
-                    ),
-            );
-        if let Some(label) = self.aria_label {
+                    .child(circle)
+                    .when_some(label.clone(), |base, label| {
+                        base.child(gpui::Text::new_inaccessible(label))
+                    })
+            });
+        if let Some(label) = self.aria_label.or(self.label) {
             radio = radio.aria_label(label);
         }
         radio

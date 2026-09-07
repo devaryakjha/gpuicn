@@ -103,8 +103,8 @@ impl RenderOnce for Switch {
             })
             .child(SwitchThumb::new().style_with_state(move |state, base| {
                 base.absolute()
-                    .top(px(1.2))
-                    .left(px(if state.root.checked { 16.8 } else { 1.2 }))
+                    .top(px(0.2))
+                    .left(px(if state.root.checked { 13.8 } else { 0.2 }))
                     .size(px(16.))
                     .rounded_full()
                     .bg(match (theme.mode, state.root.checked) {

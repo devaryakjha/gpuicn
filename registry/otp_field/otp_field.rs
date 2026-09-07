@@ -9,7 +9,7 @@ use gpui::{
     prelude::FluentBuilder as _, px,
 };
 
-use super::theme::{ThemeMode, UiTheme};
+use super::theme::{ThemeMode, UiTheme, focus_outline};
 
 type ChangeHandler =
     Rc<dyn Fn(SharedString, OTPFieldChangeDetails, &mut Window, &mut App) + 'static>;
@@ -129,7 +129,7 @@ impl RenderOnce for OtpField {
                         .when(index == 0, |base| base.border_l_1())
                         .border_color(if state.root.invalid {
                             colors.destructive
-                        } else if state.active {
+                        } else if state.active && state.root.focused {
                             colors.ring
                         } else {
                             colors.input
@@ -145,7 +145,29 @@ impl RenderOnce for OtpField {
                         .when(index + 1 == state.root.length, |base| {
                             base.rounded_r(radius)
                         })
-                        .when(state.active, move |base| base.shadow(focus_ring.clone()))
+                        .when(
+                            state.active && state.root.focused && !state.root.disabled,
+                            move |base| {
+                                focus_outline(
+                                    base,
+                                    focus_ring[0].color.into(),
+                                    gpui::Corners {
+                                        top_left: if index == 0 { radius } else { px(0.) },
+                                        bottom_left: if index == 0 { radius } else { px(0.) },
+                                        top_right: if index + 1 == state.root.length {
+                                            radius
+                                        } else {
+                                            px(0.)
+                                        },
+                                        bottom_right: if index + 1 == state.root.length {
+                                            radius
+                                        } else {
+                                            px(0.)
+                                        },
+                                    },
+                                )
+                            },
+                        )
                         .when(state.root.disabled, |base| base.opacity(0.50))
                 })
         }))
