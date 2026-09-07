@@ -3,8 +3,8 @@
 
 use base_gpui::avatar::{AvatarFallback, AvatarImage, AvatarRoot};
 use gpui::{
-    AnyElement, App, ElementId, ImageSource, IntoElement, ParentElement, RenderOnce, SharedString,
-    Styled, Window, px,
+    AnyElement, App, ElementId, ImageSource, IntoElement, ObjectFit, ParentElement, RenderOnce,
+    SharedString, Styled, StyledImage, Window, img, px,
 };
 
 use super::theme::UiTheme;
@@ -77,7 +77,20 @@ impl RenderOnce for Avatar {
             root = root.aria_label(label);
         }
         if let Some(image) = self.image {
-            root = root.child(AvatarImage::new(image).size_full().rounded_full());
+            // Base GPUI styles the image wrapper, but GPUI needs the radius on Img itself.
+            // Keep its image node for loading/fallback state; paint the same cached image below.
+            root = root
+                .child(AvatarImage::new(image.clone()).size_full().invisible())
+                .child(
+                    img(image)
+                        .absolute()
+                        .top(px(0.))
+                        .left(px(0.))
+                        .size_full()
+                        .rounded_full()
+                        .object_fit(ObjectFit::Cover)
+                        .into_any_element(),
+                );
         }
         root.child(
             AvatarFallback::new()

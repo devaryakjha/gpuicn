@@ -156,6 +156,7 @@ pub fn navigation_menu_link<T: Clone + Eq + 'static>(cx: &App) -> NavigationMenu
             .text_size(px(14.0))
             .line_height(px(20.0))
             .text_color(colors.popover_foreground)
+            .cursor_pointer()
             .when(state.active, |base| base.bg(colors.muted.opacity(0.50)))
             .hover(move |style| style.bg(colors.muted))
             .focus_visible(move |style| style.border_color(colors.ring).shadow(focus_ring.clone()))

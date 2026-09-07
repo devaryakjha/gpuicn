@@ -230,11 +230,12 @@ pub(crate) fn item_style(
         .font_family(theme.fonts.body.clone())
         .text_size(px(14.))
         .text_color(theme.colors.popover_foreground)
-        .when(highlighted, |base| {
+        .when(!disabled, |base| base.cursor_pointer())
+        .when(highlighted && !disabled, |base| {
             base.bg(theme.colors.accent)
                 .text_color(theme.colors.accent_foreground)
         })
-        .when(disabled, |base| base.opacity(0.5))
+        .when(disabled, |base| base.opacity(0.5).cursor_not_allowed())
 }
 
 pub(crate) fn indicator_style(base: Div, theme: &UiTheme) -> Div {

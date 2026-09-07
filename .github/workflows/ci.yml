@@ -21,7 +21,7 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
-      - run: cargo test -p gpuicn --lib --locked
+      - run: cargo test --workspace --locked --features gpui_platform/runtime_shaders
       - run: cargo clippy -p gpuicn --lib --tests --locked -- -D warnings
       - run: cargo check -p gpuicn-showcase --locked
       - run: cargo check -p gpuicn --example usage --locked

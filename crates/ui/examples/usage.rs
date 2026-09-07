@@ -85,7 +85,10 @@ mod avatar {
     use gpui::{IntoElement, ParentElement};
 
     fn example() -> impl IntoElement {
-        Avatar::new("profile.avatar").child("AJ")
+        Avatar::new("profile.avatar")
+            .image("https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png")
+            .aria_label("Arya")
+            .child("AJ")
     }
 }
 

@@ -64,7 +64,10 @@ pub fn menubar_trigger<P: Clone + 'static>(
                 .when(state.open || state.focused, |base| {
                     base.bg(theme.colors.muted)
                 })
-                .when(state.disabled, |base| base.opacity(0.5))
+                .when(!state.disabled, |base| base.cursor_pointer())
+                .when(state.disabled, |base| {
+                    base.opacity(0.5).cursor_not_allowed()
+                })
         })
 }
 

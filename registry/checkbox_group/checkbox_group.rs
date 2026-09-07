@@ -3,13 +3,13 @@
 
 use std::rc::Rc;
 
-use base_gpui::checkbox::{CheckboxIndicator, CheckboxRoot};
+use base_gpui::checkbox::CheckboxRoot;
 use base_gpui::checkbox_group::{
     CheckboxGroup as BaseCheckboxGroup, CheckboxGroupValueChangeDetails,
 };
 use gpui::{
-    AnyElement, App, ElementId, InteractiveElement as _, IntoElement, ParentElement as _,
-    RenderOnce, SharedString, Styled, Window, div, prelude::FluentBuilder as _, px,
+    AnyElement, App, ElementId, IntoElement, ParentElement as _, RenderOnce, SharedString, Styled,
+    Window, div, prelude::FluentBuilder as _, px,
 };
 use gpui_icons::{LucideIcon, lucide};
 
@@ -52,16 +52,19 @@ impl CheckboxGroupItem {
     fn render(self, theme: &UiTheme) -> AnyElement {
         let colors = theme.colors;
         let mode = theme.mode;
-        let focus_ring = theme.focus_ring();
+        let font = theme.fonts.body.clone();
+        let label = self.label.clone();
         let mut checkbox = CheckboxRoot::new()
             .id(self.id)
             .value(self.value)
             .disabled(self.disabled)
-            .relative()
             .style_with_state(move |state, base| {
                 let selected = state.checked || state.indeterminate;
-                let focus_ring = focus_ring.clone();
-                base.flex_shrink_0()
+                let square = div()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .flex_shrink_0()
                     .size(px(16.))
                     .rounded(px(4.))
                     .border_1()
@@ -77,42 +80,46 @@ impl CheckboxGroupItem {
                     } else {
                         colors.background.opacity(0.)
                     })
-                    .focus_visible(move |style| {
-                        style.border_color(colors.ring).shadow(focus_ring.clone())
+                    .when(state.focused && !state.disabled, |base| {
+                        super::theme::focus_outline(
+                            base.border_color(colors.ring),
+                            colors.ring.opacity(0.50),
+                            gpui::Corners::all(px(4.)),
+                        )
+                    })
+                    .when(selected, |base| {
+                        base.child(
+                            lucide(if state.indeterminate {
+                                LucideIcon::Minus
+                            } else {
+                                LucideIcon::Check
+                            })
+                            .size(px(14.))
+                            .text_color(colors.primary_foreground),
+                        )
+                    });
+                base.flex()
+                    .items_center()
+                    .gap(px(8.))
+                    .font_family(font.clone())
+                    .text_size(px(14.))
+                    .line_height(px(20.))
+                    .text_color(colors.foreground)
+                    .when(!state.disabled && !state.read_only, |base| {
+                        base.cursor_pointer()
                     })
                     .when(state.disabled, |base| {
                         base.opacity(0.50).cursor_not_allowed()
                     })
-            })
-            .child(
-                CheckboxIndicator::new()
-                    .absolute()
-                    .inset_0()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .child(
-                        lucide(LucideIcon::Check)
-                            .size(px(14.))
-                            .text_color(colors.primary_foreground),
-                    ),
-            );
-        if let Some(label) = self.aria_label {
+                    .child(square)
+                    .when_some(label.clone(), |base, label| {
+                        base.child(gpui::Text::new_inaccessible(label))
+                    })
+            });
+        if let Some(label) = self.aria_label.or(self.label) {
             checkbox = checkbox.aria_label(label);
         }
-        match self.label {
-            Some(label) => div()
-                .flex()
-                .items_center()
-                .gap(px(8.))
-                .font_family(theme.fonts.body.clone())
-                .text_size(px(14.))
-                .text_color(theme.colors.foreground)
-                .child(checkbox)
-                .child(label)
-                .into_any_element(),
-            None => checkbox.into_any_element(),
-        }
+        checkbox.into_any_element()
     }
 }
 
@@ -199,5 +206,68 @@ impl RenderOnce for CheckboxGroup {
             });
         }
         group.children(self.items.into_iter().map(|item| item.render(&theme)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui::{Context, Modifiers, Render, TestAppContext, VisualTestContext, point};
+    use std::cell::RefCell;
+
+    struct View {
+        group_disabled: bool,
+        item_disabled: bool,
+        changes: Rc<RefCell<Vec<Vec<SharedString>>>>,
+    }
+
+    impl Render for View {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            let changes = self.changes.clone();
+            div().w(px(200.)).child(
+                CheckboxGroup::new("group")
+                    .disabled(self.group_disabled)
+                    .on_value_change(move |values, _, _, _| changes.borrow_mut().push(values))
+                    .item(
+                        CheckboxGroupItem::new("updates", "updates")
+                            .label("Updates")
+                            .disabled(self.item_disabled),
+                    ),
+            )
+        }
+    }
+
+    #[test]
+    fn label_and_square_share_toggle_and_disabled_guards() {
+        for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark()] {
+            for (group_disabled, item_disabled) in [(false, false), (true, false), (false, true)] {
+                let mut cx = TestAppContext::single();
+                cx.update(|cx| {
+                    crate::init(cx);
+                    UiTheme::set(cx, theme.clone());
+                });
+                let changes = Rc::new(RefCell::new(Vec::new()));
+                let captured = changes.clone();
+                let window = cx.add_window(move |_, _| View {
+                    group_disabled,
+                    item_disabled,
+                    changes: captured,
+                });
+                let mut visual = VisualTestContext::from_window(window.into(), &cx);
+                visual.simulate_click(point(px(40.), px(10.)), Modifiers::default());
+                visual.run_until_parked();
+                visual.simulate_click(point(px(8.), px(10.)), Modifiers::default());
+                visual.run_until_parked();
+                let changes = changes.borrow();
+                if group_disabled || item_disabled {
+                    assert!(
+                        changes.is_empty(),
+                        "disabled label or box changed the value"
+                    );
+                } else {
+                    assert_eq!(*changes, vec![vec![SharedString::from("updates")], vec![]]);
+                }
+            }
+        }
     }
 }

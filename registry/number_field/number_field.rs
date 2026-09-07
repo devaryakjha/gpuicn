@@ -8,7 +8,7 @@ use base_gpui::number_field::{
     NumberFieldIncrement, NumberFieldInput, NumberFieldRoot,
 };
 use gpui::{
-    App, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window,
+    App, ElementId, InteractiveElement as _, IntoElement, RenderOnce, SharedString, Styled, Window,
     prelude::FluentBuilder as _, px,
 };
 use gpui_icons::{LucideIcon, lucide};
@@ -160,6 +160,15 @@ impl RenderOnce for NumberField {
                     .child(input)
                     .child(
                         NumberFieldDecrement::new()
+                            .style_with_state(move |state, base| {
+                                base.when(state.can_decrement, |base| {
+                                    base.cursor_pointer()
+                                        .hover(move |style| style.bg(colors.muted))
+                                })
+                                .when(!state.can_decrement, |base| {
+                                    base.opacity(0.50).cursor_not_allowed()
+                                })
+                            })
                             .flex()
                             .size(px(30.))
                             .items_center()
@@ -175,6 +184,15 @@ impl RenderOnce for NumberField {
                     )
                     .child(
                         NumberFieldIncrement::new()
+                            .style_with_state(move |state, base| {
+                                base.when(state.can_increment, |base| {
+                                    base.cursor_pointer()
+                                        .hover(move |style| style.bg(colors.muted))
+                                })
+                                .when(!state.can_increment, |base| {
+                                    base.opacity(0.50).cursor_not_allowed()
+                                })
+                            })
                             .flex()
                             .size(px(30.))
                             .items_center()

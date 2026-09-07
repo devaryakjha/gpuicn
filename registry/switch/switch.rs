@@ -97,6 +97,9 @@ impl RenderOnce for Switch {
                     .focus_visible(move |style| {
                         style.border_color(colors.ring).shadow(focus_ring.clone())
                     })
+                    .when(!state.disabled && !state.read_only, |base| {
+                        base.cursor_pointer()
+                    })
                     .when(state.disabled, |base| {
                         base.opacity(0.50).cursor_not_allowed()
                     })

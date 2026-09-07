@@ -5,3 +5,5 @@
 - Difference type: platform animation and icon composition.
 
 Base GPUI owns hover delays, patient-click behavior, safe-polygon handling, keyboard navigation, portal positioning, and dismissals. The port keeps the Nova trigger, link, popover, viewport, arrow, and focus treatment. Callers provide icon drawing within `navigation_menu_icon()`; CSS chevron rotation and CSS popup motion remain absent until GPUI exposes equivalent transform and transition APIs.
+
+Keyboard limitation in the pinned Base GPUI revision: links placed inside generic `NavigationMenuContent` children do not receive the typed link focus wiring. The link primitive handles pointer and accessibility Click activation, but does not register its own Enter/Space activation handler. Treat complete keyboard activation of these links as unresolved; the visual wrapper does not repair that behavior.

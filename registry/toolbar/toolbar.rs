@@ -8,7 +8,7 @@ pub use base_gpui::toolbar::{
 };
 use gpui::{App, FontWeight, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px};
 
-use super::theme::UiTheme;
+use super::theme::{UiTheme, input_text_layout};
 
 /// Creates a compact toolbar root. Give it an accessible label for icon-only controls.
 pub fn toolbar(cx: &App) -> ToolbarRoot {
@@ -103,15 +103,32 @@ pub fn toolbar_link(cx: &App) -> ToolbarLink {
 /// Creates a toolbar text input backed by Base GPUI's Input component.
 pub fn toolbar_input(cx: &App) -> ToolbarInput {
     let theme = UiTheme::read(cx).clone();
-    ToolbarInput::new().style_with_state(move |_state, base| {
-        base.h(px(28.0))
+    ToolbarInput::new().style_with_state(move |state, base| {
+        let ring = if state.input.invalid {
+            theme.destructive_focus_ring()
+        } else {
+            theme.focus_ring()
+        };
+        input_text_layout(base)
+            .h(px(28.0))
+            .px(px(8.0))
             .rounded(theme.radius.sm)
             .border_1()
-            .border_color(theme.colors.input)
+            .border_color(if state.input.invalid {
+                theme.colors.destructive
+            } else if state.input.focused {
+                theme.colors.ring
+            } else {
+                theme.colors.input
+            })
             .bg(theme.colors.background)
             .font_family(theme.fonts.body.clone())
             .text_size(px(14.0))
             .text_color(theme.colors.foreground)
+            .when(state.input.focused, |base| base.shadow(ring))
+            .when(state.disabled, |base| {
+                base.opacity(0.50).cursor_not_allowed()
+            })
     })
 }
 

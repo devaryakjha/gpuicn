@@ -97,6 +97,7 @@ impl RadioItem {
                     .text_size(px(14.))
                     .line_height(px(20.))
                     .text_color(colors.foreground)
+                    .when(!state.disabled, |base| base.cursor_pointer())
                     .when(state.disabled, |base| {
                         base.opacity(0.50).cursor_not_allowed()
                     })

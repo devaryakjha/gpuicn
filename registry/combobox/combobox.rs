@@ -31,31 +31,47 @@ pub fn combobox_input<T: Clone + Eq + 'static>(
     cx: &App,
 ) -> ComboboxInput<T> {
     let theme = UiTheme::read(cx).clone();
-    let focus_ring = theme.focus_ring();
+    let input_theme = theme.clone();
     ComboboxInput::new()
         .id(id)
         .style_with_state(move |state, base| {
+            let focus_ring = if state.root.invalid {
+                theme.destructive_focus_ring()
+            } else {
+                theme.focus_ring()
+            };
+            let border = if state.root.invalid {
+                theme.colors.destructive
+            } else {
+                theme.colors.input
+            };
             base.flex()
                 .items_center()
                 .h(px(32.))
                 .rounded(theme.radius.lg)
                 .border_1()
-                .border_color(theme.colors.input)
+                .border_color(border)
                 .bg(theme.colors.background)
                 .when(state.root.focused, |base| {
-                    base.border_color(theme.colors.ring)
-                        .shadow(focus_ring.clone())
+                    base.border_color(if state.root.invalid {
+                        border
+                    } else {
+                        theme.colors.ring
+                    })
+                    .shadow(focus_ring.clone())
                 })
-                .when(state.root.disabled, |base| base.opacity(0.5))
+                .when(state.root.disabled, |base| {
+                    base.opacity(0.5).cursor_not_allowed()
+                })
         })
         .input_style_with_state(move |_state, base| {
             input_text_layout(base)
                 .w_full()
                 .h_full()
                 .px(px(10.))
-                .font_family(theme.fonts.body.clone())
+                .font_family(input_theme.fonts.body.clone())
                 .text_size(px(14.))
-                .text_color(theme.colors.foreground)
+                .text_color(input_theme.colors.foreground)
         })
 }
 
@@ -81,15 +97,24 @@ pub fn combobox_group_input<T: Clone + Eq + 'static>(
 /// Creates the styled input group used by chips and custom combobox layouts.
 pub fn combobox_input_group<T: Clone + Eq + 'static>(cx: &App) -> ComboboxInputGroup<T> {
     let theme = UiTheme::read(cx).clone();
-    let focus_ring = theme.focus_ring();
     ComboboxInputGroup::new().style_with_state(move |state, base| {
+        let focus_ring = if state.root.invalid {
+            theme.destructive_focus_ring()
+        } else {
+            theme.focus_ring()
+        };
+        let border = if state.root.invalid {
+            theme.colors.destructive
+        } else {
+            theme.colors.input
+        };
         base.flex()
             .items_center()
             .min_h(px(32.))
             .gap(px(4.))
             .rounded(theme.radius.lg)
             .border_1()
-            .border_color(theme.colors.input)
+            .border_color(border)
             .px(px(10.))
             .bg(if theme.mode == super::theme::ThemeMode::Dark {
                 theme.colors.input.opacity(0.30)
@@ -97,10 +122,16 @@ pub fn combobox_input_group<T: Clone + Eq + 'static>(cx: &App) -> ComboboxInputG
                 theme.colors.background
             })
             .when(state.root.focused, |base| {
-                base.border_color(theme.colors.ring)
-                    .shadow(focus_ring.clone())
+                base.border_color(if state.root.invalid {
+                    border
+                } else {
+                    theme.colors.ring
+                })
+                .shadow(focus_ring.clone())
             })
-            .when(state.root.disabled, |base| base.opacity(0.5))
+            .when(state.root.disabled, |base| {
+                base.opacity(0.5).cursor_not_allowed()
+            })
     })
 }
 
@@ -111,18 +142,48 @@ pub fn combobox_trigger<T: Clone + Eq + 'static>(
 ) -> ComboboxTrigger<T> {
     let theme = UiTheme::read(cx).clone();
     let icon_color = theme.colors.muted_foreground;
+    let id = id.into();
+    let press_id = ElementId::NamedChild(std::sync::Arc::new(id.clone()), "pointer-open".into());
     ComboboxTrigger::new()
         .id(id)
         .style_with_state(move |state, base| {
+            let press_id = press_id.clone();
+            let pressed = std::rc::Rc::new(std::cell::RefCell::new(None::<gpui::Entity<bool>>));
+            let measured = pressed.clone();
+            let released = pressed.clone();
+            let was_open = state.root.open;
             base.flex()
                 .size(px(24.))
                 .items_center()
                 .justify_center()
                 .rounded(theme.radius.sm)
                 .text_color(theme.colors.muted_foreground)
+                // The group opens on down; the popup closes on outside-down. Keep either
+                // path from undoing the trigger's intended toggle on mouse-up.
+                .on_children_prepainted(move |_, window, cx| {
+                    *measured.borrow_mut() =
+                        Some(window.use_keyed_state(press_id.clone(), cx, |_, _| false));
+                })
+                .on_mouse_down(gpui::MouseButton::Left, move |_, _, cx| {
+                    if let Some(pressed) = pressed.borrow().as_ref() {
+                        pressed.update(cx, |open, _| *open = was_open);
+                    }
+                    cx.stop_propagation();
+                })
+                .capture_any_mouse_up(move |event, _, cx| {
+                    if event.button == gpui::MouseButton::Left
+                        && released.borrow().as_ref().is_some_and(|pressed| {
+                            pressed.update(cx, |open, _| std::mem::take(open))
+                        })
+                    {
+                        cx.stop_propagation();
+                    }
+                })
                 .when(state.root.open, |base| base.bg(theme.colors.muted))
-                .when(!state.root.disabled, |base| {
-                    base.hover(move |style| style.bg(theme.colors.muted))
+                .when(state.root.disabled, |base| base.cursor_not_allowed())
+                .when(!state.root.disabled && !state.root.read_only, |base| {
+                    base.cursor_pointer()
+                        .hover(move |style| style.bg(theme.colors.muted))
                 })
         })
         .child(
@@ -147,10 +208,14 @@ pub fn combobox_clear<T: Clone + Eq + 'static>(
                 .justify_center()
                 .rounded(theme.radius.sm)
                 .text_color(theme.colors.muted_foreground)
+                .when(state.disabled, |base| base.cursor_not_allowed())
                 .when(!state.disabled, |base| {
-                    base.hover(move |style| style.bg(theme.colors.muted))
+                    base.cursor_pointer()
+                        .hover(move |style| style.bg(theme.colors.muted))
                 })
-                .when(state.disabled, |base| base.opacity(0.5))
+                .when(state.disabled, |base| {
+                    base.opacity(0.5).cursor_not_allowed()
+                })
         })
         .child(
             lucide(LucideIcon::X)
@@ -166,7 +231,11 @@ pub fn combobox_portal<T: Clone + Eq + 'static>() -> ComboboxPortal<T> {
 
 /// Creates a combobox positioner with the pinned 6px content offset.
 pub fn combobox_positioner<T: Clone + Eq + 'static>() -> ComboboxPositioner<T> {
-    ComboboxPositioner::new().side_offset(px(6.))
+    ComboboxPositioner::new()
+        .side_offset(px(6.))
+        .style_with_state(|state, base| {
+            base.when_some(state.anchor_width, |base, width| base.min_w(width))
+        })
 }
 
 /// Creates the styled combobox popup.
@@ -201,11 +270,14 @@ pub fn combobox_item<T: Clone + Eq + 'static>(
                 .font_family(theme.fonts.body.clone())
                 .text_size(px(14.))
                 .text_color(theme.colors.popover_foreground)
-                .when(state.highlighted, |base| {
+                .when(!state.disabled, |base| base.cursor_pointer())
+                .when(state.highlighted && !state.disabled, |base| {
                     base.bg(theme.colors.accent)
                         .text_color(theme.colors.accent_foreground)
                 })
-                .when(state.disabled, |base| base.opacity(0.5))
+                .when(state.disabled, |base| {
+                    base.opacity(0.5).cursor_not_allowed()
+                })
         })
         .child(combobox_item_indicator(cx))
 }
@@ -255,6 +327,7 @@ pub fn combobox_empty<T: Clone + Eq + 'static>(cx: &App) -> ComboboxEmpty<T> {
         base.flex()
             .w_full()
             .justify_center()
+            .px(px(8.))
             .py(px(8.))
             .font_family(theme.fonts.body.clone())
             .text_size(px(14.))
@@ -301,7 +374,9 @@ pub fn combobox_chip<T: Clone + Eq + 'static>(cx: &App) -> ComboboxChip<T> {
             .text_size(px(12.))
             .text_color(theme.colors.foreground)
             .when(state.highlighted, |base| base.bg(theme.colors.accent))
-            .when(state.disabled, |base| base.opacity(0.5))
+            .when(state.disabled, |base| {
+                base.opacity(0.5).cursor_not_allowed()
+            })
     })
 }
 
@@ -316,8 +391,10 @@ pub fn combobox_chip_remove<T: Clone + Eq + 'static>(cx: &App) -> ComboboxChipRe
                 .justify_center()
                 .rounded(px(3.))
                 .text_color(theme.colors.muted_foreground)
+                .when(state.disabled, |base| base.cursor_not_allowed())
                 .when(!state.disabled, |base| {
-                    base.hover(move |style| style.bg(theme.colors.background))
+                    base.cursor_pointer()
+                        .hover(move |style| style.bg(theme.colors.background))
                 })
         })
         .child(
@@ -353,6 +430,54 @@ mod tests {
         AppContext as _, Bounds, Context, IntoElement, Pixels, Render, TestAppContext, Window,
     };
     use std::{cell::RefCell, rc::Rc};
+
+    struct TriggerView(Rc<RefCell<Vec<bool>>>);
+    impl Render for TriggerView {
+        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            let changes = self.0.clone();
+            gpui::div().w(px(240.)).child(
+                combobox_root::<String>("trigger-test")
+                    .on_open_change(move |open, _, _, _| changes.borrow_mut().push(open))
+                    .child(
+                        combobox_input_group(cx)
+                            .child(combobox_group_input("trigger-test.input", cx))
+                            .child(combobox_trigger("trigger-test.trigger", cx)),
+                    )
+                    .child(
+                        combobox_portal().child(
+                            combobox_positioner().child(
+                                combobox_popup(cx).child(
+                                    combobox_list().child(
+                                        combobox_item("trigger-test.item", cx)
+                                            .value("Apple".into())
+                                            .child_any("Apple"),
+                                    ),
+                                ),
+                            ),
+                        ),
+                    ),
+            )
+        }
+    }
+
+    #[test]
+    fn grouped_trigger_opens_on_one_click() {
+        use gpui::{Modifiers, VisualTestContext, point};
+        let mut cx = TestAppContext::single();
+        cx.update(|cx| {
+            crate::init(cx);
+            UiTheme::set(cx, UiTheme::neutral_light());
+        });
+        let changes = Rc::new(RefCell::new(Vec::new()));
+        let captured = changes.clone();
+        let window = cx.add_window(move |_, _| TriggerView(captured));
+        let mut visual = VisualTestContext::from_window(window.into(), &cx);
+        visual.simulate_click(point(px(219.), px(16.)), Modifiers::default());
+        assert_eq!(*changes.borrow(), vec![true]);
+        visual.simulate_click(point(px(219.), px(16.)), Modifiers::default());
+        assert_eq!(*changes.borrow(), vec![true, false]);
+    }
+
     struct View {
         grouped: bool,
         bounds: Rc<RefCell<Vec<Bounds<Pixels>>>>,

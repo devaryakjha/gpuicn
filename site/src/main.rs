@@ -25,8 +25,9 @@ use gpuicn::{
     checkbox_group::{CheckboxGroup, CheckboxGroupItem},
     collapsible::{collapsible, collapsible_content, collapsible_trigger},
     combobox::{
-        combobox_empty, combobox_group_input, combobox_input_group, combobox_item, combobox_list,
-        combobox_popup, combobox_portal, combobox_positioner, combobox_root, combobox_trigger,
+        combobox_clear, combobox_empty, combobox_group_input, combobox_input_group, combobox_item,
+        combobox_list, combobox_popup, combobox_portal, combobox_positioner, combobox_root,
+        combobox_trigger,
     },
     context_menu::{
         context_menu_checkbox_item, context_menu_item, context_menu_popup, context_menu_portal,
@@ -85,11 +86,11 @@ use gpuicn::{
     separator::Separator,
     slider::Slider,
     switch::Switch,
-    tabs::{TabsVariant, tabs, tabs_content, tabs_list, tabs_trigger},
+    tabs::{TabsVariant, tabs, tabs_content, tabs_list, tabs_list_with_variant, tabs_trigger},
     toast::{ToastOptions, create_toast_manager, toast_portal, toast_provider, toast_viewport},
     toggle::{Toggle, ToggleVariant},
     toggle_group::{ToggleGroup, ToggleGroupItem},
-    toolbar::{toolbar, toolbar_button, toolbar_group, toolbar_separator},
+    toolbar::{toolbar, toolbar_button, toolbar_group, toolbar_input, toolbar_separator},
     tooltip::{
         tooltip_popup, tooltip_portal, tooltip_positioner, tooltip_provider, tooltip_root,
         tooltip_trigger,
@@ -193,6 +194,7 @@ fn launch(cx: &mut App) {
                     drawer_open: false,
                     drawer_direction: DrawerSwipeDirection::Down,
                     goal: 350,
+                    volume: 50.,
                     icon: requested_value("icon")
                         .as_deref()
                         .and_then(LucideIcon::from_name)
@@ -335,6 +337,7 @@ struct Showcase {
     drawer_open: bool,
     drawer_direction: DrawerSwipeDirection,
     goal: i32,
+    volume: f64,
     icon: LucideIcon,
 }
 
@@ -362,7 +365,7 @@ impl Showcase {
             Demo::Accordion => self.accordion_preview(cx).into_any_element(),
             Demo::AlertDialog => self.alert_dialog_preview(cx).into_any_element(),
             Demo::Autocomplete => self.autocomplete_preview(cx).into_any_element(),
-            Demo::Avatar => self.avatar_preview().into_any_element(),
+            Demo::Avatar => self.avatar_preview(cx).into_any_element(),
             Demo::Button => self.button_preview(cx).into_any_element(),
             Demo::Checkbox => self.checkbox_preview(cx).into_any_element(),
             Demo::CheckboxGroup => self.checkbox_group_preview().into_any_element(),
@@ -388,7 +391,7 @@ impl Showcase {
             Demo::ScrollArea => self.scroll_area_preview(cx).into_any_element(),
             Demo::Select => self.select_preview(cx).into_any_element(),
             Demo::Separator => self.separator_preview().into_any_element(),
-            Demo::Slider => self.slider_preview().into_any_element(),
+            Demo::Slider => self.slider_preview(cx).into_any_element(),
             Demo::Switch => self.switch_preview(cx).into_any_element(),
             Demo::Tabs => self.tabs_preview(cx).into_any_element(),
             Demo::Toast => self.toast_preview(cx).into_any_element(),
@@ -448,6 +451,21 @@ impl Showcase {
                         Button::new("preview.button.large")
                             .size(ButtonSize::Lg)
                             .child("Large"),
+                    )
+                    .child(
+                        Button::new("preview.button.icon")
+                            .size(ButtonSize::Icon)
+                            .variant(ButtonVariant::Outline)
+                            .aria_label("Add one click")
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.count += 1;
+                                cx.notify();
+                            }))
+                            .child(
+                                lucide(LucideIcon::Plus)
+                                    .size(px(16.))
+                                    .text_color(UiTheme::read(cx).colors.foreground),
+                            ),
                     )
                     .child(
                         Button::new("preview.button.disabled")
@@ -607,21 +625,91 @@ impl Showcase {
             )
     }
 
-    fn avatar_preview(&self) -> impl IntoElement {
+    fn avatar_preview(&self, cx: &App) -> impl IntoElement {
+        let theme = UiTheme::read(cx);
+        // Pinned to Arya's supplied revision; AJ remains the loading/error fallback.
+        let image = "https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png";
         div()
             .flex()
+            .flex_col()
             .items_center()
-            .gap(px(12.0))
+            .gap(px(28.))
             .child(
-                Avatar::new("preview.avatar.small")
-                    .size(AvatarSize::Sm)
-                    .child("AJ"),
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(28.))
+                    .child(
+                        Avatar::new("preview.avatar.image")
+                            .image(image)
+                            .aria_label("Arya")
+                            .child("AJ"),
+                    )
+                    .child(
+                        Avatar::new("preview.avatar.fallback")
+                            .aria_label("Initials fallback")
+                            .child("AJ"),
+                    )
+                    .child(
+                        div().flex().items_center().children(
+                            [
+                                ("preview.avatar.group.arya", "AJ", true),
+                                ("preview.avatar.group.member", "SK", false),
+                                ("preview.avatar.group.count", "+3", false),
+                            ]
+                            .into_iter()
+                            .enumerate()
+                            .map(
+                                |(index, (id, initials, has_image))| {
+                                    div()
+                                        .rounded_full()
+                                        .border_2()
+                                        .border_color(theme.colors.background)
+                                        .when(index > 0, |item| item.ml(px(-10.)))
+                                        .child(
+                                            Avatar::new(id)
+                                                .when(has_image, |avatar| avatar.image(image))
+                                                .aria_label(if initials == "+3" {
+                                                    "3 more members"
+                                                } else {
+                                                    initials
+                                                })
+                                                .child(initials),
+                                        )
+                                },
+                            ),
+                        ),
+                    ),
             )
-            .child(Avatar::new("preview.avatar.default").child("AJ"))
             .child(
-                Avatar::new("preview.avatar.large")
-                    .size(AvatarSize::Lg)
-                    .child("AJ"),
+                div()
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .gap(px(12.))
+                    .child(
+                        div()
+                            .text_size(px(12.))
+                            .text_color(theme.colors.muted_foreground)
+                            .child("Sizes"),
+                    )
+                    .child(
+                        div().flex().items_center().gap(px(12.)).children(
+                            [
+                                ("preview.avatar.small", AvatarSize::Sm),
+                                ("preview.avatar.default", AvatarSize::Default),
+                                ("preview.avatar.large", AvatarSize::Lg),
+                            ]
+                            .into_iter()
+                            .map(|(id, size)| {
+                                Avatar::new(id)
+                                    .size(size)
+                                    .image(image)
+                                    .aria_label("Arya")
+                                    .child("AJ")
+                            }),
+                        ),
+                    ),
             )
     }
 
@@ -793,6 +881,7 @@ impl Showcase {
                             .placeholder("Search fruits…")
                             .aria_label("Fruits"),
                     )
+                    .child(combobox_clear("preview.combobox.clear", cx))
                     .child(combobox_trigger("preview.combobox.trigger", cx)),
             )
             .child(
@@ -1149,13 +1238,30 @@ impl Showcase {
     }
 
     fn field_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        field_root("preview.field", FieldOrientation::Vertical, cx)
+        div()
             .w_full()
             .max_w(px(280.0))
-            .name("username")
-            .child(field_label(cx).text("Username"))
-            .child(field_control("preview.field.control", cx).placeholder("e.g. ada"))
-            .child(field_description(cx).child("Visible on your public profile."))
+            .flex()
+            .flex_col()
+            .gap(px(20.))
+            .child(
+                field_root("preview.field", FieldOrientation::Vertical, cx)
+                    .name("username")
+                    .child(field_label(cx).text("Username"))
+                    .child(field_control("preview.field.control", cx).placeholder("e.g. ada"))
+                    .child(field_description(cx).child("Visible on your public profile.")),
+            )
+            .child(
+                field_root("preview.field.invalid", FieldOrientation::Vertical, cx)
+                    .name("email")
+                    .invalid(true)
+                    .child(field_label(cx).text("Email"))
+                    .child(
+                        field_control("preview.field.invalid.control", cx)
+                            .placeholder("you@example.com"),
+                    )
+                    .child(field_error(cx).child("Enter a valid email address.")),
+            )
     }
 
     fn fieldset_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -1381,7 +1487,7 @@ impl Showcase {
             .flex()
             .flex_col()
             .gap(px(8.0))
-            .child("Storage used")
+            .child("Storage used · 68%")
             .child(
                 Meter::new("preview.meter")
                     .value(68.0)
@@ -1394,17 +1500,20 @@ impl Showcase {
             .w(px(160.0))
             .flex()
             .flex_col()
-            .gap(px(12.0))
+            .gap(px(8.0))
+            .child("Quantity · 0 to 10")
             .child(
                 NumberField::new("preview.number-field")
                     .default_value(4.0)
                     .range(Some(0.0), Some(10.0)),
             )
+            .child("Read only")
             .child(
                 NumberField::new("preview.number-field.read-only")
                     .default_value(6.0)
                     .read_only(true),
             )
+            .child("Disabled")
             .child(
                 NumberField::new("preview.number-field.disabled")
                     .default_value(8.0)
@@ -1430,21 +1539,50 @@ impl Showcase {
                                     .child(
                                         div().id("preview.navigation-menu.getting-started").child(
                                             navigation_menu_link::<&str>(cx)
+                                                .on_activate(|_, cx| {
+                                                    cx.open_url(
+                                                        "https://ui.imajha.com/installation",
+                                                    )
+                                                })
                                                 .child("Getting started"),
                                         ),
                                     )
-                                    .child(div().id("preview.navigation-menu.components").child(
-                                        navigation_menu_link::<&str>(cx).child("Components"),
-                                    ))
+                                    .child(
+                                        div().id("preview.navigation-menu.components").child(
+                                            navigation_menu_link::<&str>(cx)
+                                                .on_activate(|_, cx| {
+                                                    cx.open_url(
+                                                        "https://ui.imajha.com/components/button",
+                                                    )
+                                                })
+                                                .child("Components"),
+                                        ),
+                                    )
                                     .child(
                                         div().id("preview.navigation-menu.theming").child(
-                                            navigation_menu_link::<&str>(cx).child("Theming"),
+                                            navigation_menu_link::<&str>(cx)
+                                                .on_activate(|_, cx| {
+                                                    cx.open_url("https://ui.imajha.com/theming")
+                                                })
+                                                .child("Theming"),
                                         ),
                                     ),
                             ),
                     )
-                    .child(navigation_menu_link(cx).child("Blog"))
-                    .child(navigation_menu_link(cx).child("About")),
+                    .child(
+                        navigation_menu_link(cx)
+                            .on_activate(|_, cx| {
+                                cx.open_url("https://github.com/devaryakjha/gpuicn/releases")
+                            })
+                            .child("Releases"),
+                    )
+                    .child(
+                        navigation_menu_link(cx)
+                            .on_activate(|_, cx| {
+                                cx.open_url("https://github.com/devaryakjha/gpuicn")
+                            })
+                            .child("GitHub"),
+                    ),
             )
             .child(
                 navigation_menu_portal().child(
@@ -1458,19 +1596,21 @@ impl Showcase {
         div()
             .flex()
             .flex_col()
-            .items_center()
-            .gap(px(16.0))
+            .gap(px(8.0))
+            .child("Verification code")
             .child(
                 OtpField::new("preview.otp-field", 6)
                     .default_value("123")
                     .aria_label("Verification code"),
             )
+            .child("Disabled")
             .child(
                 OtpField::new("preview.otp-field.disabled", 6)
                     .default_value("123456")
                     .disabled(true)
                     .aria_label("Disabled verification code"),
             )
+            .child("Read only")
             .child(
                 OtpField::new("preview.otp-field.read-only", 6)
                     .default_value("654321")
@@ -1517,7 +1657,12 @@ impl Showcase {
 
     fn preview_card_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         preview_card_root("preview.preview-card")
-            .child(preview_card_trigger("preview.preview-card.trigger").child("@gpuicn"))
+            .child(
+                preview_card_trigger("preview.preview-card.trigger")
+                    .cursor_pointer()
+                    .underline()
+                    .child("@gpuicn"),
+            )
             .child(
                 preview_card_portal().child(
                     preview_card_positioner().child(
@@ -1526,7 +1671,11 @@ impl Showcase {
                                 .flex()
                                 .w_full()
                                 .gap(px(12.0))
-                                .child(Avatar::new("preview.preview-card.avatar").child("CN"))
+                                .child(
+                                    Avatar::new("preview.preview-card.avatar")
+                                        .aria_label("gpuicn")
+                                        .child("GP"),
+                                )
                                 .child(
                                     div()
                                         .flex()
@@ -1564,11 +1713,13 @@ impl Showcase {
             .flex()
             .flex_col()
             .gap(px(8.0))
+            .child("Uploading · 64%")
             .child(
                 Progress::new("preview.progress")
                     .value(64.0)
                     .label("Uploading…"),
             )
+            .child("Waiting · indeterminate")
             .child(
                 Progress::new("preview.progress.indeterminate")
                     .indeterminate()
@@ -1681,20 +1832,43 @@ impl Showcase {
             .child("gpuicn")
             .child(Separator::new("preview.separator"))
             .child("Open-code components for GPUI")
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .h(px(20.))
+                    .gap(px(12.))
+                    .child("Docs")
+                    .child(Separator::new("preview.separator.vertical").vertical())
+                    .child("Components"),
+            )
     }
 
-    fn slider_preview(&self) -> impl IntoElement {
+    fn slider_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let view = cx.entity().downgrade();
         div()
             .w_full()
             .max_w(px(320.0))
             .flex()
             .flex_col()
             .gap(px(20.0))
+            .child(format!("Volume · {}%", self.volume))
             .child(
                 Slider::new("preview.slider")
-                    .default_value(48.0)
+                    .value(self.volume)
+                    .step(5.)
+                    .on_value_change(move |values, _, _, cx| {
+                        if let base_gpui::slider::SliderValues::Single(value) = values {
+                            view.update(cx, |this, cx| {
+                                this.volume = value;
+                                cx.notify();
+                            })
+                            .ok();
+                        }
+                    })
                     .aria_label("Volume"),
             )
+            .child("Disabled · 64%")
             .child(
                 Slider::new("preview.slider.disabled")
                     .default_value(64.0)
@@ -1710,36 +1884,36 @@ impl Showcase {
             .flex()
             .flex_col()
             .gap(px(14.0))
-            .child(
-                switch_row(
-                    Switch::new("preview.switch")
-                        .checked(self.checked)
-                        .aria_label("Airplane mode")
-                        .on_checked_change(move |checked, _, _, cx| {
-                            switch_view
-                                .update(cx, |this, cx| {
-                                    this.checked = checked;
-                                    cx.notify();
-                                })
-                                .ok();
-                        }),
-                    if self.checked {
+            .child(switch_row(
+                Switch::new("preview.switch")
+                    .checked(self.checked)
+                    .aria_label("Airplane mode")
+                    .on_checked_change(move |checked, _, _, cx| {
+                        switch_view
+                            .update(cx, |this, cx| {
+                                this.checked = checked;
+                                cx.notify();
+                            })
+                            .ok();
+                    }),
+                div()
+                    .id("preview.switch.interactive-label")
+                    .debug_selector(|| "switch-label".into())
+                    .cursor_pointer()
+                    .on_click(move |_, _, cx| {
+                        row_view
+                            .update(cx, |this, cx| {
+                                this.checked = !this.checked;
+                                cx.notify();
+                            })
+                            .ok();
+                    })
+                    .child(if self.checked {
                         "Airplane mode on"
                     } else {
                         "Airplane mode"
-                    },
-                )
-                .id("preview.switch.interactive-row")
-                .cursor_pointer()
-                .on_click(move |_, _, cx| {
-                    row_view
-                        .update(cx, |this, cx| {
-                            this.checked = !this.checked;
-                            cx.notify();
-                        })
-                        .ok();
-                }),
-            )
+                    }),
+            ))
             .child(switch_row(
                 Switch::new("preview.switch.checked")
                     .default_checked(true)
@@ -1763,7 +1937,7 @@ impl Showcase {
     }
 
     fn tabs_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        tabs(cx)
+        let standard = tabs(cx)
             .id("preview.tabs")
             .w_full()
             .max_w(px(420.0))
@@ -1794,6 +1968,50 @@ impl Showcase {
                     .value("password")
                     .pt(px(12.0))
                     .child("Change your password here."),
+            );
+        div()
+            .w_full()
+            .max_w(px(360.))
+            .flex()
+            .flex_col()
+            .gap(px(24.))
+            .child(standard)
+            .child(
+                tabs::<&str>(cx)
+                    .id("preview.tabs.line")
+                    .default_value(Some("overview"))
+                    .child(
+                        tabs_list_with_variant(TabsVariant::Line, cx)
+                            .child(
+                                tabs_trigger(TabsVariant::Line, cx)
+                                    .id("preview.tabs.overview")
+                                    .value("overview")
+                                    .child("Overview"),
+                            )
+                            .child(
+                                tabs_trigger(TabsVariant::Line, cx)
+                                    .id("preview.tabs.activity")
+                                    .value("activity")
+                                    .child("Activity"),
+                            )
+                            .child(
+                                tabs_trigger(TabsVariant::Line, cx)
+                                    .id("preview.tabs.disabled")
+                                    .value("disabled")
+                                    .disabled(true)
+                                    .child("Disabled"),
+                            ),
+                    )
+                    .child(
+                        tabs_content(cx)
+                            .value("overview")
+                            .child("An underline marks the active tab."),
+                    )
+                    .child(
+                        tabs_content(cx)
+                            .value("activity")
+                            .child("Arrow keys move between available tabs."),
+                    ),
             )
     }
 
@@ -1866,7 +2084,7 @@ impl Showcase {
 
     fn toggle_group_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let icon_color = UiTheme::read(cx).colors.foreground;
-        ToggleGroup::new("preview.toggle-group")
+        let single = ToggleGroup::new("preview.toggle-group")
             .aria_label("Text alignment")
             .default_value(["left"])
             .item(
@@ -1896,7 +2114,20 @@ impl Showcase {
                             .size(px(16.0))
                             .text_color(icon_color),
                     ),
-            )
+            );
+        div().flex().flex_col().gap(px(20.)).child(single).child(
+            ToggleGroup::new("preview.toggle-group.multiple")
+                .aria_label("Text styles")
+                .multiple(true)
+                .joined(false)
+                .default_value(["bold"])
+                .item(ToggleGroupItem::new("preview.toggle-group.bold", "bold").child("Bold"))
+                .item(ToggleGroupItem::new("preview.toggle-group.italic", "italic").child("Italic"))
+                .item(
+                    ToggleGroupItem::new("preview.toggle-group.underline", "underline")
+                        .child("Underline"),
+                ),
+        )
     }
 
     fn toolbar_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -1905,9 +2136,9 @@ impl Showcase {
         let bold_view = cx.entity().downgrade();
         let italic_view = cx.entity().downgrade();
         let underline_view = cx.entity().downgrade();
-        let copy_view = cx.entity().downgrade();
         toolbar(cx)
             .id("preview.toolbar")
+            .flex_wrap()
             .aria_label("Formatting")
             .child(
                 toolbar_group(cx)
@@ -1973,18 +2204,17 @@ impl Showcase {
             )
             .child(toolbar_separator(cx).h(px(16.0)).w(px(1.0)))
             .child(
+                toolbar_input(cx)
+                    .id("preview.toolbar.input")
+                    .placeholder("Find…")
+                    .w(px(120.)),
+            )
+            .child(
                 toolbar_button(cx)
                     .id("preview.toolbar.copy")
                     .aria_label("Copy")
-                    .on_click(move |_, _, cx| {
-                        copy_view
-                            .update(cx, |this, cx| {
-                                this.count += 1;
-                                cx.notify();
-                            })
-                            .ok();
-                    })
-                    .child(if self.count > 0 { "Copied" } else { "Copy" }),
+                    .disabled(true)
+                    .child("Copy"),
             )
     }
 
@@ -2087,7 +2317,7 @@ fn popover_field(label: &'static str, input: Input, cx: &App) -> gpui::Div {
         .child(div().col_span(2).child(input))
 }
 
-fn switch_row(switch: Switch, label: &'static str) -> gpui::Div {
+fn switch_row(switch: Switch, label: impl IntoElement) -> gpui::Div {
     div()
         .flex()
         .items_center()
@@ -2145,5 +2375,119 @@ mod tests {
         assert_eq!(parse_dimension(Some("42"), 640.0, 320.0, 1440.0), 320.0);
         assert_eq!(parse_dimension(Some("1920"), 640.0, 320.0, 1440.0), 1440.0);
         assert_eq!(parse_dimension(Some("nope"), 640.0, 320.0, 1440.0), 640.0);
+    }
+}
+
+#[cfg(test)]
+mod audit_tests {
+    use super::*;
+    use gpui::TestAppContext;
+
+    fn showcase(demo: Demo, active: bool) -> Showcase {
+        Showcase {
+            demo,
+            count: 0,
+            checked: active,
+            pressed: active,
+            italic: active,
+            underline: active,
+            collapsible_open: active,
+            alert_dialog_open: active,
+            dialog_open: active,
+            drawer_open: active,
+            drawer_direction: DrawerSwipeDirection::Down,
+            goal: 350,
+            volume: 50.,
+            icon: LucideIcon::House,
+        }
+    }
+
+    #[test]
+    fn switch_control_and_label_each_toggle_once() {
+        use gpui::{Modifiers, VisualTestContext, point};
+        let mut cx = TestAppContext::single();
+        cx.update(|cx| {
+            gpuicn::init(cx);
+            UiTheme::set(cx, UiTheme::neutral_light());
+        });
+        let window = cx.add_window(|_, _| showcase(Demo::Switch, false));
+        let mut visual = VisualTestContext::from_window(window.into(), &cx);
+        visual.update(|window, cx| window.draw(cx).clear(cx));
+        let label = visual.debug_bounds("switch-label").unwrap();
+        visual.simulate_click(label.center(), Modifiers::default());
+        assert!(
+            cx.read_window(&window, |view, cx| view.read(cx).checked)
+                .unwrap()
+        );
+        let label = visual.debug_bounds("switch-label").unwrap();
+        visual.simulate_click(
+            point(label.left() - px(26.), label.center().y),
+            Modifiers::default(),
+        );
+        assert!(
+            !cx.read_window(&window, |view, cx| view.read(cx).checked)
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn every_preview_renders_in_both_themes_and_controlled_states() {
+        let demos = [
+            "accordion",
+            "alert-dialog",
+            "autocomplete",
+            "avatar",
+            "button",
+            "checkbox",
+            "checkbox-group",
+            "collapsible",
+            "combobox",
+            "context-menu",
+            "dialog",
+            "drawer",
+            "field",
+            "fieldset",
+            "form",
+            "input",
+            "menu",
+            "menubar",
+            "meter",
+            "navigation-menu",
+            "number-field",
+            "otp-field",
+            "popover",
+            "preview-card",
+            "progress",
+            "radio-group",
+            "scroll-area",
+            "select",
+            "separator",
+            "slider",
+            "switch",
+            "tabs",
+            "toast",
+            "toggle",
+            "toggle-group",
+            "toolbar",
+            "tooltip",
+        ];
+        for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark()] {
+            for active in [false, true] {
+                for name in demos {
+                    let mut cx = TestAppContext::single();
+                    cx.update(|cx| {
+                        gpuicn::init(cx);
+                        UiTheme::set(cx, theme.clone());
+                    });
+                    let window =
+                        cx.add_window(move |_, _| showcase(Demo::parse(name).unwrap(), active));
+                    for _ in 0..2 {
+                        cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx))
+                            .unwrap();
+                        cx.run_until_parked();
+                    }
+                }
+            }
+        }
     }
 }

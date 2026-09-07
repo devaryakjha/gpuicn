@@ -319,12 +319,40 @@ pub(super) fn style_button(
             .when(!disabled, |base| base.hover(|style| style.underline())),
     };
 
-    base.when(disabled, |base| base.opacity(0.50))
+    base.when(!disabled, |base| base.cursor_pointer())
+        .when(disabled, |base| base.opacity(0.50).cursor_not_allowed())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn all_variants_expose_clickable_and_disabled_cursors() {
+        for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark()] {
+            for variant in [
+                ButtonVariant::Default,
+                ButtonVariant::Outline,
+                ButtonVariant::Secondary,
+                ButtonVariant::Ghost,
+                ButtonVariant::Destructive,
+                ButtonVariant::Link,
+            ] {
+                for disabled in [false, true] {
+                    let mut button =
+                        style_button(gpui::div(), disabled, variant, ButtonSize::Default, &theme);
+                    assert_eq!(
+                        button.style().mouse_cursor,
+                        Some(if disabled {
+                            gpui::CursorStyle::OperationNotAllowed
+                        } else {
+                            gpui::CursorStyle::PointingHand
+                        })
+                    );
+                }
+            }
+        }
+    }
 
     #[test]
     fn nova_sizes_are_exact() {

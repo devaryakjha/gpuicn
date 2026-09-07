@@ -91,9 +91,10 @@ impl RenderOnce for Slider {
             .w_full()
             .h(px(20.))
             .style_with_state(|state, base| {
-                base.when(state.disabled, |base| {
-                    base.opacity(0.50).cursor_not_allowed()
-                })
+                base.when(!state.disabled, |base| base.cursor_pointer())
+                    .when(state.disabled, |base| {
+                        base.opacity(0.50).cursor_not_allowed()
+                    })
             });
         if let Some(value) = self.value {
             root = root.value(SliderValues::Single(value));

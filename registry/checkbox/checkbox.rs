@@ -192,6 +192,9 @@ fn style_checkbox(base: gpui::Div, state: CheckboxRootStyleState, theme: &UiThem
             colors.foreground
         })
         .focus_visible(move |style| style.border_color(colors.ring).shadow(focus_ring.clone()))
+        .when(!state.disabled && !state.read_only, |base| {
+            base.cursor_pointer()
+        })
         .when(state.disabled, |base| {
             base.opacity(0.50).cursor_not_allowed()
         })
@@ -208,6 +211,20 @@ fn show_minus(state: CheckboxRootStyleState) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cursor_matches_checkbox_interactivity() {
+        for (disabled, read_only, expected) in [
+            (false, false, Some(gpui::CursorStyle::PointingHand)),
+            (true, false, Some(gpui::CursorStyle::OperationNotAllowed)),
+            (false, true, None),
+        ] {
+            let state =
+                CheckboxRootStyleState::new(false, disabled, read_only, false, false, false);
+            let mut checkbox = style_checkbox(gpui::div(), state, &UiTheme::default());
+            assert_eq!(checkbox.style().mouse_cursor, expected);
+        }
+    }
 
     #[test]
     fn indicator_selection_is_unambiguous() {

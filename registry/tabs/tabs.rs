@@ -114,15 +114,16 @@ pub fn tabs_trigger<T: Clone + Eq + 'static>(variant: TabsVariant, cx: &App) -> 
             TabsVariant::Default => base.when(selected, move |base| {
                 base.bg(colors.background).shadow(active_shadow.clone())
             }),
-            TabsVariant::Line => base
-                .rounded(px(0.0))
-                .border_b_1()
-                .border_color(if selected {
-                    colors.foreground
-                } else {
-                    colors.background.opacity(0.0)
-                })
-                .mb(px(-1.0)),
+            TabsVariant::Line => {
+                base.rounded(px(0.0))
+                    .border_0()
+                    .border_b_2()
+                    .border_color(if selected {
+                        colors.foreground
+                    } else {
+                        colors.background.opacity(0.0)
+                    })
+            }
         }
     })
 }

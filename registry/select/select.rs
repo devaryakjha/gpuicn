@@ -26,10 +26,19 @@ pub fn select_trigger<T: Clone + Eq + 'static>(
     cx: &App,
 ) -> SelectTrigger<T> {
     let theme = UiTheme::read(cx).clone();
-    let focus_ring = theme.focus_ring();
     SelectTrigger::new()
         .id(id)
         .style_with_state(move |state, base| {
+            let focus_ring = if state.root.invalid {
+                theme.destructive_focus_ring()
+            } else {
+                theme.focus_ring()
+            };
+            let border = if state.root.invalid {
+                theme.colors.destructive
+            } else {
+                theme.colors.input
+            };
             base.flex()
                 .flex_row_reverse()
                 .items_center()
@@ -38,7 +47,7 @@ pub fn select_trigger<T: Clone + Eq + 'static>(
                 .gap(px(6.))
                 .rounded(theme.radius.lg)
                 .border_1()
-                .border_color(theme.colors.input)
+                .border_color(border)
                 .px(px(10.))
                 .py(px(4.))
                 .bg(theme.colors.background)
@@ -50,10 +59,19 @@ pub fn select_trigger<T: Clone + Eq + 'static>(
                     theme.colors.foreground
                 })
                 .when(state.root.focused, |base| {
-                    base.border_color(theme.colors.ring)
-                        .shadow(focus_ring.clone())
+                    base.border_color(if state.root.invalid {
+                        border
+                    } else {
+                        theme.colors.ring
+                    })
+                    .shadow(focus_ring.clone())
                 })
-                .when(state.root.disabled, |base| base.opacity(0.5))
+                .when(!state.root.disabled && !state.root.read_only, |base| {
+                    base.cursor_pointer()
+                })
+                .when(state.root.disabled, |base| {
+                    base.opacity(0.5).cursor_not_allowed()
+                })
         })
         .child(select_icon(cx))
 }
@@ -92,7 +110,11 @@ pub fn select_portal<T: Clone + Eq + 'static>() -> SelectPortal<T> {
 
 /// Creates a select positioner with the pinned 4px content offset.
 pub fn select_positioner<T: Clone + Eq + 'static>() -> SelectPositioner<T> {
-    SelectPositioner::new().side_offset(px(4.))
+    SelectPositioner::new()
+        .side_offset(px(4.))
+        .style_with_state(|state, base| {
+            base.when_some(state.anchor_width, |base, width| base.min_w(width))
+        })
 }
 
 /// Creates the styled select popup.
@@ -228,11 +250,12 @@ fn item_style(base: Div, highlighted: bool, disabled: bool, theme: &UiTheme) -> 
         .font_family(theme.fonts.body.clone())
         .text_size(px(14.))
         .text_color(theme.colors.popover_foreground)
-        .when(highlighted, |base| {
+        .when(!disabled, |base| base.cursor_pointer())
+        .when(highlighted && !disabled, |base| {
             base.bg(theme.colors.accent)
                 .text_color(theme.colors.accent_foreground)
         })
-        .when(disabled, |base| base.opacity(0.5))
+        .when(disabled, |base| base.opacity(0.5).cursor_not_allowed())
 }
 
 fn scroll_arrow_style(base: Div, theme: &UiTheme) -> Div {

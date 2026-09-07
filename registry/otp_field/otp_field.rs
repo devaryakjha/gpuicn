@@ -87,6 +87,7 @@ impl RenderOnce for OtpField {
         let colors = theme.colors;
         let mode = theme.mode;
         let focus_ring = theme.focus_ring();
+        let invalid_focus_ring = theme.destructive_focus_ring();
         let radius = theme.radius.lg;
         let mut root = OTPFieldRoot::new()
             .id(self.id)
@@ -115,10 +116,15 @@ impl RenderOnce for OtpField {
         }
         root.children((0..self.length).map(move |index| {
             let focus_ring = focus_ring.clone();
+            let invalid_focus_ring = invalid_focus_ring.clone();
             OTPFieldInput::new()
                 .with_slot_index(index)
                 .style_with_state(move |state, base| {
-                    let focus_ring = focus_ring.clone();
+                    let focus_ring = if state.root.invalid {
+                        invalid_focus_ring.clone()
+                    } else {
+                        focus_ring.clone()
+                    };
                     base.flex()
                         .items_center()
                         .justify_center()
@@ -168,7 +174,9 @@ impl RenderOnce for OtpField {
                                 )
                             },
                         )
-                        .when(state.root.disabled, |base| base.opacity(0.50))
+                        .when(state.root.disabled, |base| {
+                            base.opacity(0.50).cursor_not_allowed()
+                        })
                 })
         }))
     }

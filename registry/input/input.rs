@@ -121,7 +121,9 @@ impl RenderOnce for Input {
                     .text_color(colors.foreground)
                     .text_size(px(14.))
                     .focus_visible(move |style| {
-                        style.border_color(border).shadow(focus_ring.clone())
+                        style
+                            .border_color(if state.invalid { border } else { colors.ring })
+                            .shadow(focus_ring.clone())
                     })
                     .when(state.disabled, |base| base.cursor_not_allowed())
             });
