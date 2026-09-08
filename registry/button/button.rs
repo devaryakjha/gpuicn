@@ -12,7 +12,7 @@ use gpui::{
     ParentElement, RenderOnce, SharedString, Styled, Window, prelude::FluentBuilder as _, px,
 };
 
-use super::theme::{ThemeMode, UiTheme, neutral};
+use super::theme::{ThemeMode, UiRadius, UiTheme};
 
 type ButtonClickHandler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
@@ -67,8 +67,9 @@ struct ButtonMetrics {
 }
 
 impl ButtonSize {
-    fn metrics(self, radius: f32) -> ButtonMetrics {
-        let radius_md = radius * 0.8;
+    fn metrics(self, radii: UiRadius) -> ButtonMetrics {
+        let radius = f32::from(radii.lg);
+        let radius_md = f32::from(radii.md);
         match self {
             Self::Xs => ButtonMetrics::new(24.0, 8.0, 4.0, radius_md.min(10.0), 12.0, false),
             Self::Sm => ButtonMetrics::new(28.0, 10.0, 4.0, radius_md.min(12.0), 12.8, false),
@@ -105,6 +106,7 @@ impl ButtonMetrics {
 /// A styled Button that keeps Base GPUI's pointer and keyboard behavior.
 #[derive(IntoElement)]
 pub struct Button {
+    style: gpui::StyleRefinement,
     id: ElementId,
     variant: ButtonVariant,
     size: ButtonSize,
@@ -118,6 +120,7 @@ impl Button {
     /// Creates a Button with a caller-owned stable ID.
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
@@ -177,7 +180,8 @@ impl RenderOnce for Button {
             .id(self.id)
             .disabled(self.disabled)
             .style_with_state(move |state, base| {
-                style_button(base, state.disabled, variant, size, &theme)
+                let base = { style_button(base, state.disabled, variant, size, &theme) };
+                super::theme::apply_style(base, &self.style)
             })
             .children(self.children);
 
@@ -200,7 +204,7 @@ pub(super) fn style_button(
     theme: &UiTheme,
 ) -> Div {
     let colors = theme.colors;
-    let metrics = size.metrics(f32::from(theme.radius.lg));
+    let metrics = size.metrics(theme.radius);
     let focus_border = match variant {
         ButtonVariant::Destructive => colors.destructive.opacity(0.40),
         _ => colors.ring,
@@ -232,23 +236,25 @@ pub(super) fn style_button(
         .items_center()
         .justify_center()
         .whitespace_nowrap()
-        .h(px(metrics.height))
-        .gap(px(metrics.gap))
+        .h(theme.space(metrics.height / 4.))
+        .gap(theme.space(metrics.gap / 4.))
         .rounded(px(metrics.radius))
         .border_1()
         .border_color(colors.background.opacity(0.0))
         .font_family(theme.fonts.body.clone())
         .font_weight(FontWeight::MEDIUM)
-        .text_size(px(metrics.text_size))
+        .text_size(theme.text(metrics.text_size))
         .focus_visible(move |style| {
             style
                 .bg(focus_background)
                 .border_color(focus_border)
                 .shadow(focus_ring.clone())
         })
-        .when(metrics.icon_only, |base| base.w(px(metrics.height)).p_0())
+        .when(metrics.icon_only, |base| {
+            base.w(theme.space(metrics.height / 4.)).p_0()
+        })
         .when(!metrics.icon_only, |base| {
-            base.px(px(metrics.horizontal_padding))
+            base.px(theme.space(metrics.horizontal_padding / 4.))
         });
 
     let base = match variant {
@@ -279,10 +285,9 @@ pub(super) fn style_button(
                 })
         }
         ButtonVariant::Secondary => {
-            let hover = neutral(match theme.mode {
-                ThemeMode::Light => 0.928_75,
-                ThemeMode::Dark => 0.304_8,
-            });
+            let hover = colors
+                .secondary
+                .blend(colors.secondary_foreground.opacity(0.08));
             base.bg(colors.secondary)
                 .text_color(colors.secondary_foreground)
                 .when(!disabled, |base| base.hover(move |style| style.bg(hover)))
@@ -321,6 +326,12 @@ pub(super) fn style_button(
 
     base.when(!disabled, |base| base.cursor_pointer())
         .when(disabled, |base| base.opacity(0.50).cursor_not_allowed())
+}
+
+impl gpui::Styled for Button {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
+    }
 }
 
 #[cfg(test)]
@@ -368,7 +379,7 @@ mod tests {
         ];
 
         for (size, height, padding, gap, radius) in sizes {
-            let metrics = size.metrics(10.0);
+            let metrics = size.metrics(UiRadius::new(px(10.0)));
             assert_eq!(metrics.height, height);
             assert_eq!(metrics.horizontal_padding, padding);
             assert_eq!(metrics.gap, gap);

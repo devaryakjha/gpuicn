@@ -22,10 +22,11 @@ pub enum TabsVariant {
 /// Creates a vertical stack for a horizontal Tabs control.
 pub fn tabs<T: Clone + Eq + 'static>(cx: &App) -> TabsRoot<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     TabsRoot::new()
         .flex()
         .flex_col()
-        .gap(px(8.0))
+        .gap(spacing * 2_f32)
         .font_family(theme.fonts.body)
 }
 
@@ -40,20 +41,21 @@ pub fn tabs_list_with_variant<T: Clone + Eq + 'static>(
     cx: &App,
 ) -> TabsList<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     TabsList::new().style_with_state(move |_state, base| match variant {
         TabsVariant::Default => base
             .flex()
             .items_center()
             .justify_center()
-            .h(px(32.0))
+            .h(spacing * 8_f32)
             .rounded(theme.radius.lg)
-            .p(px(3.0))
+            .p(spacing * 0.75_f32)
             .bg(theme.colors.muted)
             .text_color(theme.colors.muted_foreground),
         TabsVariant::Line => base
             .flex()
             .items_center()
-            .gap(px(4.0))
+            .gap(spacing * 1_f32)
             .border_b_1()
             .border_color(theme.colors.border)
             .text_color(theme.colors.muted_foreground),
@@ -64,6 +66,8 @@ pub fn tabs_list_with_variant<T: Clone + Eq + 'static>(
 /// Set a unique `.id(...)` on each trigger to keep keyboard focus independent.
 pub fn tabs_trigger<T: Clone + Eq + 'static>(variant: TabsVariant, cx: &App) -> TabsTab<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     let focus_ring = theme.focus_ring();
     let active_shadow = theme.shadows.sm.clone();
     TabsTab::new().style_with_state(move |state, base| {
@@ -75,16 +79,16 @@ pub fn tabs_trigger<T: Clone + Eq + 'static>(variant: TabsVariant, cx: &App) -> 
             .flex()
             .items_center()
             .justify_center()
-            .h(px(26.0))
-            .gap(px(6.0))
+            .h(spacing * 6.5_f32)
+            .gap(spacing * 1.5_f32)
             .rounded(theme.radius.sm)
             .border_1()
             .border_color(colors.background.opacity(0.0))
-            .px(px(6.0))
-            .py(px(2.0))
+            .px(spacing * 1.5_f32)
+            .py(spacing * 0.5_f32)
             .font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .text_color(if selected {
                 colors.foreground
             } else {
@@ -131,10 +135,11 @@ pub fn tabs_trigger<T: Clone + Eq + 'static>(variant: TabsVariant, cx: &App) -> 
 /// Creates the standard Nova Tabs content panel.
 pub fn tabs_content<T: Clone + Eq + 'static>(cx: &App) -> TabsPanel<T> {
     let theme = UiTheme::read(cx).clone();
+    let text_scale = theme.text_scale;
     TabsPanel::new().style_with_state(move |_state, base| {
         base.flex_1()
             .font_family(theme.fonts.body.clone())
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .text_color(theme.colors.foreground)
     })
 }

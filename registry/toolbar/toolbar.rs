@@ -13,14 +13,15 @@ use super::theme::{UiTheme, input_text_layout};
 /// Creates a compact toolbar root. Give it an accessible label for icon-only controls.
 pub fn toolbar(cx: &App) -> ToolbarRoot {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ToolbarRoot::new()
         .flex()
         .items_center()
-        .gap(px(4.0))
+        .gap(spacing * 1_f32)
         .rounded(theme.radius.lg)
         .border_1()
         .border_color(theme.colors.border)
-        .p(px(4.0))
+        .p(spacing * 1_f32)
         .bg(theme.colors.background)
         .font_family(theme.fonts.body)
 }
@@ -28,16 +29,19 @@ pub fn toolbar(cx: &App) -> ToolbarRoot {
 /// Creates a grouped toolbar section.
 pub fn toolbar_group(cx: &App) -> ToolbarGroup {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ToolbarGroup::new()
         .flex()
         .items_center()
-        .gap(px(2.0))
+        .gap(spacing * 0.5_f32)
         .font_family(theme.fonts.body)
 }
 
 /// Creates a Nova icon or text toolbar button. Add its content as children.
 pub fn toolbar_button(cx: &App) -> ToolbarButton {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     let focus_ring = theme.focus_ring();
     ToolbarButton::new().style_with_state(move |state, base| {
         let colors = theme.colors;
@@ -45,14 +49,14 @@ pub fn toolbar_button(cx: &App) -> ToolbarButton {
         base.flex()
             .items_center()
             .justify_center()
-            .h(px(28.0))
+            .h(spacing * 7_f32)
             .rounded(theme.radius.sm)
             .border_1()
             .border_color(colors.background.opacity(0.0))
-            .px(px(8.0))
+            .px(spacing * 2_f32)
             .font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .text_color(colors.foreground)
             .when(!state.disabled, |base| {
                 base.cursor_pointer()
@@ -73,6 +77,8 @@ pub fn toolbar_button(cx: &App) -> ToolbarButton {
 /// Creates a Nova toolbar link.
 pub fn toolbar_link(cx: &App) -> ToolbarLink {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     let focus_ring = theme.focus_ring();
     ToolbarLink::new().style_with_state(move |_state, base| {
         let colors = theme.colors;
@@ -80,14 +86,14 @@ pub fn toolbar_link(cx: &App) -> ToolbarLink {
         base.flex()
             .items_center()
             .justify_center()
-            .h(px(28.0))
+            .h(spacing * 7_f32)
             .rounded(theme.radius.sm)
             .border_1()
             .border_color(colors.background.opacity(0.0))
-            .px(px(8.0))
+            .px(spacing * 2_f32)
             .font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .text_color(colors.foreground)
             .cursor_pointer()
             .hover(move |style| style.bg(colors.muted))
@@ -103,15 +109,17 @@ pub fn toolbar_link(cx: &App) -> ToolbarLink {
 /// Creates a toolbar text input backed by Base GPUI's Input component.
 pub fn toolbar_input(cx: &App) -> ToolbarInput {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     ToolbarInput::new().style_with_state(move |state, base| {
         let ring = if state.input.invalid {
             theme.destructive_focus_ring()
         } else {
             theme.focus_ring()
         };
-        input_text_layout(base)
-            .h(px(28.0))
-            .px(px(8.0))
+        input_text_layout(base, text_scale)
+            .h(spacing * 7_f32)
+            .px(spacing * 2_f32)
             .rounded(theme.radius.sm)
             .border_1()
             .border_color(if state.input.invalid {
@@ -123,7 +131,7 @@ pub fn toolbar_input(cx: &App) -> ToolbarInput {
             })
             .bg(theme.colors.background)
             .font_family(theme.fonts.body.clone())
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .text_color(theme.colors.foreground)
             .when(state.input.focused, |base| base.shadow(ring))
             .when(state.disabled, |base| {

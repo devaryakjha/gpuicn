@@ -16,6 +16,7 @@ type ChangeHandler =
 
 #[derive(IntoElement)]
 pub struct OtpField {
+    style: gpui::StyleRefinement,
     id: ElementId,
     length: usize,
     default_value: SharedString,
@@ -30,6 +31,7 @@ pub struct OtpField {
 impl OtpField {
     pub fn new(id: impl Into<ElementId>, length: usize) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             length,
             default_value: SharedString::default(),
@@ -84,12 +86,14 @@ impl OtpField {
 impl RenderOnce for OtpField {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
+        let spacing = theme.spacing.unit;
+        let text_scale = theme.text_scale;
         let colors = theme.colors;
         let mode = theme.mode;
         let focus_ring = theme.focus_ring();
         let invalid_focus_ring = theme.destructive_focus_ring();
         let radius = theme.radius.lg;
-        let mut root = OTPFieldRoot::new()
+        let root = OTPFieldRoot::new()
             .id(self.id)
             .length(self.length)
             .default_value(self.default_value)
@@ -98,6 +102,7 @@ impl RenderOnce for OtpField {
             .read_only(self.read_only)
             .flex()
             .gap(px(0.));
+        let mut root = super::theme::apply_style(root, &self.style);
         if let Some(value) = self.value {
             root = root.value(value);
         }
@@ -128,7 +133,7 @@ impl RenderOnce for OtpField {
                     base.flex()
                         .items_center()
                         .justify_center()
-                        .size(px(32.))
+                        .size(spacing * 8_f32)
                         .border_t_1()
                         .border_b_1()
                         .border_r_1()
@@ -146,7 +151,7 @@ impl RenderOnce for OtpField {
                             colors.background
                         })
                         .text_color(colors.foreground)
-                        .text_size(px(14.))
+                        .text_size(px(14.) * text_scale)
                         .when(index == 0, |base| base.rounded_l(radius))
                         .when(index + 1 == state.root.length, |base| {
                             base.rounded_r(radius)
@@ -179,5 +184,11 @@ impl RenderOnce for OtpField {
                         })
                 })
         }))
+    }
+}
+
+impl gpui::Styled for OtpField {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
     }
 }

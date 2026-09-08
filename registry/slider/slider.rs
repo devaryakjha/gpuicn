@@ -9,7 +9,7 @@ use base_gpui::slider::{
 };
 use gpui::{
     App, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window,
-    prelude::FluentBuilder as _, px,
+    prelude::FluentBuilder as _,
 };
 
 use super::theme::{UiTheme, focus_outline};
@@ -19,6 +19,7 @@ type ChangeHandler =
 
 #[derive(IntoElement)]
 pub struct Slider {
+    style: gpui::StyleRefinement,
     id: ElementId,
     default_value: f64,
     value: Option<f64>,
@@ -32,6 +33,7 @@ pub struct Slider {
 impl Slider {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             default_value: 0.,
             value: None,
@@ -79,6 +81,7 @@ impl Slider {
 impl RenderOnce for Slider {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
+        let spacing = theme.spacing.unit;
         let colors = theme.colors;
         let focus_ring = theme.focus_ring();
         let mut root = SliderRoot::new()
@@ -89,12 +92,15 @@ impl RenderOnce for Slider {
             .step(self.step)
             .disabled(self.disabled)
             .w_full()
-            .h(px(20.))
-            .style_with_state(|state, base| {
-                base.when(!state.disabled, |base| base.cursor_pointer())
-                    .when(state.disabled, |base| {
-                        base.opacity(0.50).cursor_not_allowed()
-                    })
+            .h(spacing * 5_f32)
+            .style_with_state(move |state, base| {
+                let base = {
+                    base.when(!state.disabled, |base| base.cursor_pointer())
+                        .when(state.disabled, |base| {
+                            base.opacity(0.50).cursor_not_allowed()
+                        })
+                };
+                super::theme::apply_style(base, &self.style)
             });
         if let Some(value) = self.value {
             root = root.value(SliderValues::Single(value));
@@ -115,9 +121,9 @@ impl RenderOnce for Slider {
                 .child(
                     SliderTrack::new()
                         .absolute()
-                        .top(px(8.))
+                        .top(spacing * 2_f32)
                         .w_full()
-                        .h(px(4.))
+                        .h(spacing * 1_f32)
                         .rounded_full()
                         .bg(colors.muted)
                         .child(
@@ -129,8 +135,8 @@ impl RenderOnce for Slider {
                 )
                 .child(
                     SliderThumb::new()
-                        .top(px(4.))
-                        .size(px(12.))
+                        .top(spacing * 1_f32)
+                        .size(spacing * 3_f32)
                         .rounded_full()
                         .border_1()
                         .border_color(colors.ring)
@@ -140,7 +146,7 @@ impl RenderOnce for Slider {
                                 focus_outline(
                                     style,
                                     focus_ring[0].color.into(),
-                                    gpui::Corners::all(px(6.)),
+                                    gpui::Corners::all(spacing * 1.5),
                                 )
                             } else {
                                 style
@@ -148,5 +154,11 @@ impl RenderOnce for Slider {
                         }),
                 ),
         )
+    }
+}
+
+impl gpui::Styled for Slider {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
     }
 }

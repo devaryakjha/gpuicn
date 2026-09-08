@@ -169,8 +169,26 @@ fn launch(cx: &mut App) {
     let bounds = Bounds::centered(
         None,
         size(
-            px(requested_dimension("width", 640.0, 320.0, 1440.0)),
-            px(requested_dimension("height", 288.0, 240.0, 720.0)),
+            px(requested_dimension(
+                "width",
+                if matches!(demo, Demo::Sidebar) {
+                    960.
+                } else {
+                    640.
+                },
+                320.0,
+                1440.0,
+            )),
+            px(requested_dimension(
+                "height",
+                if matches!(demo, Demo::Sidebar) {
+                    600.
+                } else {
+                    288.
+                },
+                240.0,
+                720.0,
+            )),
         ),
         cx,
     );
@@ -195,6 +213,21 @@ fn launch(cx: &mut App) {
                     drawer_direction: DrawerSwipeDirection::Down,
                     goal: 350,
                     volume: 50.,
+                    pane_width: px(160.),
+                    sidebar_state: Default::default(),
+                    sidebar_example: requested_value("example")
+                        .unwrap_or_else(|| "workspace".into()),
+                    sidebar_mobile: false,
+                    sidebar_selected: 0,
+                    sidebar_workspace: 0,
+                    sidebar_search: String::new(),
+                    sidebar_nested: true,
+                    sidebar_projects: 2,
+                    sidebar_note: String::new(),
+                    sidebar_loaded: false,
+                    sidebar_message: 0,
+                    sidebar_unread: false,
+                    sidebar_sections: [true, true, false],
                     icon: requested_value("icon")
                         .as_deref()
                         .and_then(LucideIcon::from_name)
@@ -268,6 +301,8 @@ enum Demo {
     ScrollArea,
     Select,
     Separator,
+    Sidebar,
+    Resizable,
     Slider,
     Switch,
     Tabs,
@@ -311,6 +346,8 @@ impl Demo {
             "scroll-area" => Some(Self::ScrollArea),
             "select" => Some(Self::Select),
             "separator" => Some(Self::Separator),
+            "sidebar" => Some(Self::Sidebar),
+            "resizable" => Some(Self::Resizable),
             "slider" => Some(Self::Slider),
             "switch" => Some(Self::Switch),
             "tabs" => Some(Self::Tabs),
@@ -338,19 +375,39 @@ struct Showcase {
     drawer_direction: DrawerSwipeDirection,
     goal: i32,
     volume: f64,
+    pane_width: gpui::Pixels,
+    sidebar_state: gpuicn::sidebar::SidebarState,
+    sidebar_example: String,
+    sidebar_mobile: bool,
+    sidebar_selected: usize,
+    sidebar_workspace: usize,
+    sidebar_search: String,
+    sidebar_nested: bool,
+    sidebar_projects: usize,
+    sidebar_note: String,
+    sidebar_loaded: bool,
+    sidebar_message: usize,
+    sidebar_unread: bool,
+    sidebar_sections: [bool; 3],
     icon: LucideIcon,
 }
 
 impl Render for Showcase {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
+        // These examples live in a documentation pane, so use its 540px breakpoint.
+        self.sidebar_mobile = _window.viewport_size().width < px(540.);
         div()
             .size_full()
             .overflow_hidden()
             .flex()
             .items_center()
             .justify_center()
-            .p(px(16.0))
+            .p(px(if matches!(self.demo, Demo::Sidebar) {
+                0.
+            } else {
+                16.
+            }))
             .bg(theme.colors.background)
             .text_color(theme.colors.foreground)
             .font_family(theme.fonts.body)
@@ -391,6 +448,8 @@ impl Showcase {
             Demo::ScrollArea => self.scroll_area_preview(cx).into_any_element(),
             Demo::Select => self.select_preview(cx).into_any_element(),
             Demo::Separator => self.separator_preview().into_any_element(),
+            Demo::Sidebar => self.sidebar_preview(cx).into_any_element(),
+            Demo::Resizable => self.resizable_preview(cx).into_any_element(),
             Demo::Slider => self.slider_preview(cx).into_any_element(),
             Demo::Switch => self.switch_preview(cx).into_any_element(),
             Demo::Tabs => self.tabs_preview(cx).into_any_element(),
@@ -542,10 +601,10 @@ impl Showcase {
             )
             .child(
                 autocomplete_portal().child(
-                    autocomplete_positioner().child(
+                    autocomplete_positioner(cx).child(
                         autocomplete_popup(cx)
                             .child(
-                                autocomplete_list()
+                                autocomplete_list(cx)
                                     .child(
                                         autocomplete_item("preview.autocomplete.button", cx)
                                             .value("button")
@@ -590,9 +649,15 @@ impl Showcase {
             })
             .child(alert_dialog_trigger("preview.alert-dialog.trigger", cx).child("Delete account"))
             .child(
-                alert_dialog_portal().child(alert_dialog_backdrop()).child(
-                    alert_dialog_viewport().child(
-                        alert_dialog_popup("preview.alert-dialog.popup", "Confirm deletion", cx)
+                alert_dialog_portal()
+                    .child(alert_dialog_backdrop(cx))
+                    .child(
+                        alert_dialog_viewport(cx).child(
+                            alert_dialog_popup(
+                                "preview.alert-dialog.popup",
+                                "Confirm deletion",
+                                cx,
+                            )
                             .child(
                                 alert_dialog_title("preview.alert-dialog.title", cx)
                                     .mb(px(-10.0))
@@ -620,8 +685,8 @@ impl Showcase {
                                             .child("Continue"),
                                     ),
                             ),
+                        ),
                     ),
-                ),
             )
     }
 
@@ -886,10 +951,10 @@ impl Showcase {
             )
             .child(
                 combobox_portal().child(
-                    combobox_positioner().child(
+                    combobox_positioner(cx).child(
                         combobox_popup(cx)
                             .child(
-                                combobox_list()
+                                combobox_list(cx)
                                     .child(
                                         combobox_item("preview.combobox.apple", cx)
                                             .value("apple")
@@ -936,7 +1001,7 @@ impl Showcase {
             )
             .child(
                 context_menu_portal().child(
-                    context_menu_positioner().child(
+                    context_menu_positioner(cx).child(
                         context_menu_popup("preview.context-menu.popup", cx)
                             .child(
                                 context_menu_item("preview.context-menu.back", cx)
@@ -1002,8 +1067,8 @@ impl Showcase {
             })
             .child(dialog_trigger("preview.dialog.trigger", cx).child("Open dialog"))
             .child(
-                dialog_portal().child(dialog_backdrop()).child(
-                    dialog_viewport().child(
+                dialog_portal().child(dialog_backdrop(cx)).child(
+                    dialog_viewport(cx).child(
                         dialog_popup("preview.dialog.popup", "Edit profile", cx)
                             .child(
                                 dialog_title("preview.dialog.title", cx)
@@ -1120,7 +1185,7 @@ impl Showcase {
                             .ok();
                     })
                     .child(
-                        drawer_portal().child(drawer_backdrop()).child(
+                        drawer_portal().child(drawer_backdrop(cx)).child(
                             drawer_viewport().child(
                                 drawer_popup("preview.drawer.popup", "Activity goal", cx).child(
                                     drawer_content(cx)
@@ -1354,7 +1419,7 @@ impl Showcase {
             .child(menu_trigger("preview.menu.trigger", cx).child("Open menu"))
             .child(
                 menu_portal().child(
-                    menu_positioner().child(
+                    menu_positioner(cx).child(
                         menu_popup("preview.menu.popup", cx)
                             .child(
                                 menu_group()
@@ -1425,7 +1490,7 @@ impl Showcase {
                     .child(menubar_trigger("preview.menubar.file.trigger", cx).child("File"))
                     .child(
                         menubar_portal().child(
-                            menu_positioner().child(
+                            menu_positioner(cx).child(
                                 menubar_content("preview.menubar.file.content", cx)
                                     .child(
                                         menubar_item("preview.menubar.new", cx)
@@ -1462,7 +1527,7 @@ impl Showcase {
                     .child(menubar_trigger("preview.menubar.edit.trigger", cx).child("Edit"))
                     .child(
                         menubar_portal().child(
-                            menu_positioner().child(
+                            menu_positioner(cx).child(
                                 menubar_content("preview.menubar.edit.content", cx)
                                     .child(
                                         menubar_item("preview.menubar.undo", cx)
@@ -1586,7 +1651,7 @@ impl Showcase {
             )
             .child(
                 navigation_menu_portal().child(
-                    navigation_menu_positioner()
+                    navigation_menu_positioner(cx)
                         .child(navigation_menu_popup(cx).child(navigation_menu_viewport(cx))),
                 ),
             )
@@ -1624,7 +1689,7 @@ impl Showcase {
             .child(popover_trigger("preview.popover.trigger", cx).child("Open popover"))
             .child(
                 popover_portal().child(
-                    popover_positioner().child(
+                    popover_positioner(cx).child(
                         popover_popup("preview.popover.popup", "Dimensions", cx)
                             .child(popover_title(cx).child("Dimensions"))
                             .child(
@@ -1665,7 +1730,7 @@ impl Showcase {
             )
             .child(
                 preview_card_portal().child(
-                    preview_card_positioner().child(
+                    preview_card_positioner(cx).child(
                         preview_card_popup("preview.preview-card.popup", cx).child_any(
                             div()
                                 .flex()
@@ -1794,9 +1859,9 @@ impl Showcase {
             )
             .child(
                 select_portal().child(
-                    select_positioner().child(
+                    select_positioner(cx).child(
                         select_popup(cx).child(
-                            select_list()
+                            select_list(cx)
                                 .child(
                                     select_item("preview.select.system", cx)
                                         .value("system")
@@ -1820,6 +1885,977 @@ impl Showcase {
                     ),
                 ),
             )
+    }
+
+    fn resizable_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        use gpuicn::resizable::{PaneLimits, Resizable};
+        div().w(px(400.)).h(px(200.)).child(
+            Resizable::new(
+                "preview.split",
+                "Resize panels",
+                self.pane_width,
+                div().p(px(16.)).child("One"),
+                div().p(px(16.)).child("Two"),
+                cx.listener(|this, size: &gpui::Pixels, _, cx| {
+                    this.pane_width = *size;
+                    cx.notify();
+                }),
+            )
+            .first_limits(PaneLimits::new(px(80.), px(300.)))
+            .second_limits(PaneLimits::new(px(80.), px(300.))),
+        )
+    }
+
+    fn sidebar_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        match self.sidebar_example.as_str() {
+            "mail" => self.sidebar_mail_preview(cx).into_any_element(),
+            "docs" => self.sidebar_docs_preview(cx).into_any_element(),
+            _ => self.sidebar_application_preview(cx).into_any_element(),
+        }
+    }
+
+    fn sidebar_application_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        use gpui::FontWeight;
+        use gpuicn::{menu::MenuSide, sidebar::*};
+        let t = UiTheme::read(cx).clone();
+        let s = t.spacing.unit;
+        let example = self.sidebar_example.as_str();
+        let mobile = self.sidebar_mobile || example == "mobile";
+        let mode = if example == "loading" {
+            SidebarCollapsible::None
+        } else {
+            SidebarCollapsible::Icon
+        };
+        let collapsed = self.sidebar_state.icon_collapsed(mobile, mode);
+        let variant = match example {
+            "workspace" => SidebarVariant::Inset,
+            "floating" => SidebarVariant::Floating,
+            _ => SidebarVariant::Sidebar,
+        };
+        let right = example == "floating";
+        let labels: &[(&str, LucideIcon)] = match example {
+            "floating" => &[
+                ("Overview", LucideIcon::LayoutDashboard),
+                ("Activity", LucideIcon::Activity),
+                ("Files", LucideIcon::Folder),
+                ("Settings", LucideIcon::Settings),
+            ],
+            _ => &[
+                ("Overview", LucideIcon::House),
+                ("Projects", LucideIcon::Folder),
+                ("Inbox", LucideIcon::Inbox),
+                ("Team", LucideIcon::Users),
+            ],
+        };
+        let selected = self.sidebar_selected.min(labels.len() - 1);
+        let title = labels[selected].0;
+        let workspace = if self.sidebar_workspace == 0 {
+            "Acme Studio"
+        } else {
+            "Personal workspace"
+        };
+        let toggle = cx.listener(move |this, _, _, cx| {
+            this.sidebar_state.toggle(mobile);
+            cx.notify();
+        });
+        let team_menu = menu_root::<()>("sidebar.team")
+            .child(
+                sidebar_menu_trigger("sidebar.team.trigger", collapsed, cx)
+                    .aria_label("Switch workspace")
+                    .child(
+                        div()
+                            .size(s * 8_f32)
+                            .flex_shrink_0()
+                            .rounded(t.radius.lg)
+                            .bg(t.colors.sidebar_primary)
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(
+                                lucide(LucideIcon::Command)
+                                    .size(s * 4_f32)
+                                    .text_color(t.colors.sidebar_primary_foreground),
+                            ),
+                    )
+                    .when(!collapsed, |el| {
+                        el.child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .flex()
+                                .flex_col()
+                                .child(
+                                    div()
+                                        .truncate()
+                                        .font_weight(FontWeight::MEDIUM)
+                                        .line_height(px(17.5) * t.text_scale)
+                                        .child(workspace),
+                                )
+                                .child(
+                                    div()
+                                        .truncate()
+                                        .text_size(px(12.) * t.text_scale)
+                                        .line_height(px(16.) * t.text_scale)
+                                        .child("Enterprise"),
+                                ),
+                        )
+                        .child(
+                            lucide(LucideIcon::ChevronsUpDown)
+                                .size(s * 4_f32)
+                                .text_color(t.colors.sidebar_foreground),
+                        )
+                    }),
+            )
+            .child(
+                menu_portal().child(
+                    menu_positioner(cx).child(
+                        menu_popup("sidebar.team.popup", cx)
+                            .child(
+                                menu_item("sidebar.team.acme", cx)
+                                    .label("Acme Studio")
+                                    .child("Acme Studio")
+                                    .on_click({
+                                        let view = cx.entity().downgrade();
+                                        move |_, cx| {
+                                            let _ = view.update(cx, |this, cx| {
+                                                this.sidebar_workspace = 0;
+                                                cx.notify();
+                                            });
+                                        }
+                                    }),
+                            )
+                            .child(
+                                menu_item("sidebar.team.personal", cx)
+                                    .label("Personal workspace")
+                                    .child("Personal workspace")
+                                    .on_click({
+                                        let view = cx.entity().downgrade();
+                                        move |_, cx| {
+                                            let _ = view.update(cx, |this, cx| {
+                                                this.sidebar_workspace = 1;
+                                                cx.notify();
+                                            });
+                                        }
+                                    }),
+                            ),
+                    ),
+                ),
+            );
+        let header = div().flex().flex_col().gap(s * 2_f32).child(team_menu);
+        let mut menu = sidebar_menu();
+        let loading = example == "loading" && !self.sidebar_loaded;
+        if loading {
+            for _ in 0..5 {
+                menu = menu.child(sidebar_menu_skeleton(!collapsed, cx));
+            }
+        } else {
+            for (index, (label, icon)) in labels.iter().enumerate() {
+                let expandable = index == 1 && example == "workspace";
+                let item = SidebarItem::new(("sidebar.nav", index), (*label).to_owned())
+                    .icon(
+                        lucide(*icon)
+                            .size(s * 4_f32)
+                            .text_color(t.colors.sidebar_foreground),
+                    )
+                    .collapsed(collapsed)
+                    .selected(selected == index)
+                    .when(expandable, |el| el.expanded(self.sidebar_nested))
+                    .when(index == 1 && example == "workspace" && !collapsed, |el| {
+                        el.trailing(
+                            lucide(if self.sidebar_nested {
+                                LucideIcon::ChevronDown
+                            } else {
+                                LucideIcon::ChevronRight
+                            })
+                            .size(s * 4_f32)
+                            .text_color(t.colors.sidebar_foreground),
+                        )
+                    })
+                    .when(*label == "Inbox" && !collapsed, |el| {
+                        el.trailing(sidebar_badge("12", cx))
+                    })
+                    .on_activate(cx.listener(move |this, _, _, cx| {
+                        this.sidebar_selected = index;
+                        if expandable {
+                            this.sidebar_nested = !this.sidebar_nested;
+                        } else {
+                            this.sidebar_state.mobile_open = false;
+                        }
+                        cx.notify();
+                    }));
+                menu = menu.child(item);
+                if example == "workspace" && index == 1 && !collapsed && self.sidebar_nested {
+                    menu = menu.child(
+                        sidebar_menu_sub(cx)
+                            .child(
+                                SidebarItem::new("sidebar.nested.website", "Website")
+                                    .size(SidebarItemSize::Small)
+                                    .on_activate(cx.listener(|this, _, _, cx| {
+                                        this.sidebar_note = "Website project opened".into();
+                                        cx.notify();
+                                    })),
+                            )
+                            .child(
+                                SidebarItem::new("sidebar.nested.mobile", "Mobile app")
+                                    .size(SidebarItemSize::Small)
+                                    .on_activate(cx.listener(|this, _, _, cx| {
+                                        this.sidebar_note = "Mobile app project opened".into();
+                                        cx.notify();
+                                    })),
+                            ),
+                    );
+                }
+            }
+        }
+        let mut navigation = Sidebar::new("sidebar.navigation", "Main navigation")
+            .header(header)
+            .when(!collapsed, |el| {
+                el.child(sidebar_group_label("Platform", cx))
+            })
+            .child(menu);
+        if !collapsed {
+            navigation = navigation.child(div().h(s * 4_f32).flex_shrink_0()).child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .child(sidebar_group_label("Projects", cx))
+                    .child(
+                        sidebar_menu_action("sidebar.add", "Add project", cx)
+                            .child(
+                                lucide(LucideIcon::Plus)
+                                    .size(s * 4_f32)
+                                    .text_color(t.colors.sidebar_foreground),
+                            )
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.sidebar_projects += 1;
+                                this.sidebar_note =
+                                    format!("Created project {}", this.sidebar_projects);
+                                cx.notify();
+                            })),
+                    ),
+            );
+            for index in 0..self.sidebar_projects {
+                navigation = navigation.child(
+                    SidebarItem::new(("sidebar.project", index), format!("Project {}", index + 1))
+                        .icon(
+                            lucide(LucideIcon::Folder)
+                                .size(s * 4_f32)
+                                .text_color(t.colors.sidebar_foreground),
+                        )
+                        .on_activate(cx.listener(move |this, _, _, cx| {
+                            this.sidebar_note = format!("Project {} opened", index + 1);
+                            cx.notify();
+                        })),
+                );
+            }
+        }
+        let account = menu_root::<()>("sidebar.account")
+            .child(
+                sidebar_menu_trigger("sidebar.account.trigger", collapsed, cx)
+                    .aria_label("Account menu")
+                    .child(
+                        div()
+                            .size(s * 8_f32)
+                            .flex_shrink_0()
+                            .rounded(t.radius.lg)
+                            .bg(t.colors.sidebar_accent)
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .text_size(px(12.) * t.text_scale)
+                            .line_height(px(16.) * t.text_scale)
+                            .font_weight(FontWeight::MEDIUM)
+                            .child("AM"),
+                    )
+                    .when(!collapsed, |el| {
+                        el.child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .flex()
+                                .flex_col()
+                                .child(
+                                    div()
+                                        .truncate()
+                                        .font_weight(FontWeight::MEDIUM)
+                                        .line_height(px(17.5) * t.text_scale)
+                                        .child("Alex Morgan"),
+                                )
+                                .child(
+                                    div()
+                                        .truncate()
+                                        .text_size(px(12.) * t.text_scale)
+                                        .line_height(px(16.) * t.text_scale)
+                                        .child("alex@example.com"),
+                                ),
+                        )
+                        .child(
+                            lucide(LucideIcon::ChevronsUpDown)
+                                .size(s * 4_f32)
+                                .text_color(t.colors.sidebar_foreground),
+                        )
+                    }),
+            )
+            .child(
+                menu_portal().child(
+                    menu_positioner(cx).side(MenuSide::Top).child(
+                        menu_popup("sidebar.account.popup", cx)
+                            .child(
+                                menu_item("sidebar.account.profile", cx)
+                                    .label("View profile")
+                                    .child("View profile")
+                                    .on_click({
+                                        let view = cx.entity().downgrade();
+                                        move |_, cx| {
+                                            let _ = view.update(cx, |this, cx| {
+                                                this.sidebar_note =
+                                                    "Alex Morgan · alex@example.com".into();
+                                                cx.notify();
+                                            });
+                                        }
+                                    }),
+                            )
+                            .child(
+                                menu_checkbox_item("sidebar.account.notifications", cx)
+                                    .label("Notifications")
+                                    .default_checked(true)
+                                    .child_any("Notifications"),
+                            ),
+                    ),
+                ),
+            );
+        navigation = navigation.footer(
+            div()
+                .flex()
+                .flex_col()
+                .gap(s * 2_f32)
+                .when(mobile, |el| {
+                    el.child(
+                        Button::new("sidebar.close")
+                            .variant(ButtonVariant::Ghost)
+                            .child("Close navigation")
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.sidebar_state.mobile_open = false;
+                                cx.notify();
+                            })),
+                    )
+                })
+                .child(account),
+        );
+        let mut body = div().flex_1().min_h_0().min_w_0().p(s * 5_f32).flex().flex_col().gap(s * 4_f32)
+            .child(div().text_size(px(20.) * t.text_scale).line_height(px(28.) * t.text_scale).font_weight(FontWeight::MEDIUM).child(title.to_owned()))
+            .child(div().text_color(t.colors.muted_foreground).child(match example {
+                "floating" => "Project navigation on the right, inside a floating surface.",
+                "mobile" => "Open navigation to try the modal sheet. Escape and outside clicks close it.",
+                "loading" => "Loading placeholders keep navigation stable until data arrives.",
+                _ => "Your workspace at a glance. Switch teams, browse projects, or check your account.",
+            }));
+        body = body.child(div().flex().gap(s * 3_f32).children(
+            [("Projects", "12"), ("Members", "8")].map(|(label, value)| {
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .p(s * 4_f32)
+                    .border_1()
+                    .border_color(t.colors.border)
+                    .rounded(t.radius.lg)
+                    .child(div().text_color(t.colors.muted_foreground).child(label))
+                    .child(
+                        div()
+                            .text_size(px(24.) * t.text_scale)
+                            .line_height(px(32.) * t.text_scale)
+                            .child(value),
+                    )
+            }),
+        ));
+        if example == "loading" {
+            body = body.child(
+                Button::new("sidebar.load")
+                    .variant(ButtonVariant::Outline)
+                    .child(if loading {
+                        "Load navigation"
+                    } else {
+                        "Show loading state"
+                    })
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.sidebar_loaded = !this.sidebar_loaded;
+                        cx.notify();
+                    })),
+            );
+        }
+        body = body.child(
+            div()
+                .text_size(px(12.) * t.text_scale)
+                .line_height(px(16.) * t.text_scale)
+                .text_color(t.colors.muted_foreground)
+                .child(self.sidebar_note.clone()),
+        );
+        let content = div()
+            .size_full()
+            .flex()
+            .flex_col()
+            .child(
+                div()
+                    .h(s * 12_f32)
+                    .flex_shrink_0()
+                    .px(s * 3_f32)
+                    .border_b_1()
+                    .border_color(t.colors.border)
+                    .flex()
+                    .items_center()
+                    .gap(s * 3_f32)
+                    .when(mode != SidebarCollapsible::None, |el| {
+                        el.child(sidebar_trigger("sidebar.toggle", toggle, cx))
+                    })
+                    .child(workspace),
+            )
+            .child(body);
+        SidebarLayout::new(
+            "sidebar.layout",
+            self.sidebar_state,
+            mobile,
+            navigation,
+            content,
+            cx.listener(|this, state: &SidebarState, _, cx| {
+                this.sidebar_state = *state;
+                cx.notify();
+            }),
+        )
+        .variant(variant)
+        .collapsible(mode)
+        .rail(true)
+        .side(if right {
+            SidebarSide::Right
+        } else {
+            SidebarSide::Left
+        })
+    }
+
+    fn sidebar_mail_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        use gpui::FontWeight;
+        use gpuicn::sidebar::*;
+        let t = UiTheme::read(cx).clone();
+        let s = t.spacing.unit;
+        let mobile = self.sidebar_mobile;
+        let collapsed = self
+            .sidebar_state
+            .icon_collapsed(mobile, SidebarCollapsible::Icon);
+        let folders = [
+            ("Inbox", LucideIcon::Inbox),
+            ("Drafts", LucideIcon::File),
+            ("Sent", LucideIcon::Send),
+            ("Archive", LucideIcon::Archive),
+            ("Trash", LucideIcon::Trash),
+        ];
+        let folder = self.sidebar_selected.min(folders.len() - 1);
+        let messages = [
+            (
+                "William Smith",
+                "Meeting tomorrow",
+                "Hi team, just a reminder about our meeting tomorrow at 10 AM. We’ll review the new design and agree on the next steps.",
+                "9:34 AM",
+            ),
+            (
+                "Alice Smith",
+                "Re: Project update",
+                "Thanks for the update. The progress looks great so far. I’ve added a few comments to the proposal.",
+                "Yesterday",
+            ),
+            (
+                "Bob Johnson",
+                "Weekend plans",
+                "Hey everyone! I’m thinking of organizing a team outing this weekend. Let me know if you can make it.",
+                "2 days ago",
+            ),
+            (
+                "Emily Davis",
+                "Question about the budget",
+                "I’ve reviewed the budget numbers you sent over. Can we find a time to go through the details?",
+                "2 days ago",
+            ),
+            (
+                "Michael Wilson",
+                "An update from the team",
+                "Please join us for our next team meeting. We’ll share what we’ve shipped and what comes next.",
+                "1 week ago",
+            ),
+            (
+                "Sarah Brown",
+                "Feedback on the proposal",
+                "I had a chance to review the proposal. I have a few thoughts and would love to discuss them.",
+                "1 week ago",
+            ),
+        ];
+        let selected = self.sidebar_message.min(messages.len() - 1);
+        let (sender, subject, message, time) = messages[selected];
+        let mut rail = Sidebar::new("mail.folders", "Mail folders")
+            .header(
+                div()
+                    .size(s * 8_f32)
+                    .rounded(t.radius.lg)
+                    .bg(t.colors.sidebar_primary)
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .child(
+                        lucide(LucideIcon::Command)
+                            .size(s * 4_f32)
+                            .text_color(t.colors.sidebar_primary_foreground),
+                    ),
+            )
+            .footer(
+                SidebarItem::new("mail.account", "Account")
+                    .collapsed(true)
+                    .icon(
+                        div()
+                            .size(s * 8_f32)
+                            .rounded(t.radius.lg)
+                            .bg(t.colors.sidebar_accent)
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .text_size(px(12.) * t.text_scale)
+                            .line_height(px(16.) * t.text_scale)
+                            .child("AM"),
+                    )
+                    .on_activate(cx.listener(|this, _, _, cx| {
+                        this.sidebar_note = "Alex Morgan · alex@example.com".into();
+                        cx.notify();
+                    })),
+            );
+        for (index, (name, icon)) in folders.iter().enumerate() {
+            rail = rail.child(
+                SidebarItem::new(("mail.folder", index), *name)
+                    .collapsed(true)
+                    .selected(folder == index)
+                    .icon(
+                        lucide(*icon)
+                            .size(s * 4_f32)
+                            .text_color(t.colors.sidebar_foreground),
+                    )
+                    .on_activate(cx.listener(move |this, _, _, cx| {
+                        this.sidebar_selected = index;
+                        this.sidebar_message = 0;
+                        cx.notify();
+                    })),
+            );
+        }
+        let view = cx.entity().downgrade();
+        let async_cx = cx.to_async();
+        let search = sidebar_input("mail.search", cx)
+            .placeholder("Search mail…")
+            .aria_label("Search mail")
+            .default_value(self.sidebar_search.clone())
+            .on_value_change(move |value| {
+                let view = view.clone();
+                // The public Input callback runs while App is borrowed. Queue the view update.
+                async_cx
+                    .spawn(async move |cx| {
+                        let _ = view.update(cx, |this, cx| {
+                            this.sidebar_search = value.to_string();
+                            cx.notify();
+                        });
+                    })
+                    .detach();
+            });
+        let mut list = Sidebar::new("mail.list", "Messages")
+            .content_padding(px(0.))
+            .header(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(s * 3_f32)
+                    .p(s * 2_f32)
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .justify_between()
+                            .gap(s * 2_f32)
+                            .child(
+                                div()
+                                    .font_weight(FontWeight::MEDIUM)
+                                    .child(folders[folder].0),
+                            )
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(s * 2_f32)
+                                    .child("Unread")
+                                    .child(
+                                        Switch::new("mail.unread")
+                                            .aria_label("Show unread messages only")
+                                            .checked(self.sidebar_unread)
+                                            .on_checked_change({
+                                                let view = cx.entity().downgrade();
+                                                move |checked, _, _, cx| {
+                                                    let _ = view.update(cx, |this, cx| {
+                                                        this.sidebar_unread = checked;
+                                                        cx.notify();
+                                                    });
+                                                }
+                                            }),
+                                    ),
+                            ),
+                    )
+                    .child(search),
+            );
+        let query = self.sidebar_search.to_lowercase();
+        let mut count = 0;
+        for (index, (sender, subject, body, time)) in messages.iter().enumerate() {
+            if self.sidebar_unread && index % 2 != 0 {
+                continue;
+            }
+            if !format!("{sender} {subject}")
+                .to_lowercase()
+                .contains(&query)
+            {
+                continue;
+            }
+            count += 1;
+            list = list.child(
+                Button::new(("mail.message", index))
+                    .variant(ButtonVariant::Ghost)
+                    .w_full()
+                    .h(s * 28_f32)
+                    .rounded(px(0.))
+                    .p(s * 4_f32)
+                    .border_0()
+                    .border_b_1()
+                    .border_color(t.colors.sidebar_border)
+                    .when(selected == index, |el| el.bg(t.colors.sidebar_accent))
+                    .child(
+                        div()
+                            .w_full()
+                            .min_w_0()
+                            .flex()
+                            .flex_col()
+                            .gap(s)
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .justify_between()
+                                    .gap(s * 2_f32)
+                                    .child(
+                                        div()
+                                            .truncate()
+                                            .font_weight(FontWeight::NORMAL)
+                                            .line_height(px(17.5) * t.text_scale)
+                                            .child(*sender),
+                                    )
+                                    .child(
+                                        div()
+                                            .flex_shrink_0()
+                                            .text_size(px(12.) * t.text_scale)
+                                            .line_height(px(16.) * t.text_scale)
+                                            .text_color(t.colors.muted_foreground)
+                                            .child(*time),
+                                    ),
+                            )
+                            .child(
+                                div()
+                                    .truncate()
+                                    .font_weight(FontWeight::MEDIUM)
+                                    .line_height(px(17.5) * t.text_scale)
+                                    .child(*subject),
+                            )
+                            .child(
+                                div()
+                                    .truncate()
+                                    .text_size(px(12.) * t.text_scale)
+                                    .line_height(px(16.) * t.text_scale)
+                                    .text_color(t.colors.muted_foreground)
+                                    .child(*body),
+                            ),
+                    )
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.sidebar_message = index;
+                        this.sidebar_state.mobile_open = false;
+                        cx.notify();
+                    })),
+            );
+        }
+        if count == 0 {
+            list = list.child(
+                div()
+                    .p(s * 4_f32)
+                    .text_color(t.colors.muted_foreground)
+                    .child("No matching messages"),
+            );
+        }
+        let navigation = div()
+            .size_full()
+            .flex()
+            .child(div().w(s * 12_f32).h_full().flex_shrink_0().child(rail))
+            .when(!collapsed, |el| {
+                el.child(
+                    div()
+                        .flex_1()
+                        .min_w_0()
+                        .h_full()
+                        .border_l_1()
+                        .border_color(t.colors.sidebar_border)
+                        .child(list),
+                )
+            });
+        let content = div()
+            .size_full()
+            .flex()
+            .flex_col()
+            .child(
+                div()
+                    .h(s * 14_f32)
+                    .px(s * 3_f32)
+                    .flex()
+                    .items_center()
+                    .gap(s * 3_f32)
+                    .border_b_1()
+                    .border_color(t.colors.border)
+                    .child(sidebar_trigger(
+                        "mail.toggle",
+                        cx.listener(move |this, _, _, cx| {
+                            this.sidebar_state.toggle(mobile);
+                            cx.notify();
+                        }),
+                        cx,
+                    ))
+                    .child(
+                        div()
+                            .text_color(t.colors.muted_foreground)
+                            .child("All inboxes"),
+                    )
+                    .child(
+                        lucide(LucideIcon::ChevronRight)
+                            .size(s * 3_f32)
+                            .text_color(t.colors.muted_foreground),
+                    )
+                    .child(folders[folder].0),
+            )
+            .child(
+                div()
+                    .id("mail.reader")
+                    .flex_1()
+                    .min_h_0()
+                    .overflow_y_scroll()
+                    .p(s * 5_f32)
+                    .child(
+                        div()
+                            .text_size(px(18.) * t.text_scale)
+                            .line_height(px(24.) * t.text_scale)
+                            .font_weight(FontWeight::MEDIUM)
+                            .child(subject),
+                    )
+                    .child(
+                        div()
+                            .mt(s * 3_f32)
+                            .text_size(px(12.) * t.text_scale)
+                            .line_height(px(16.) * t.text_scale)
+                            .text_color(t.colors.muted_foreground)
+                            .child(format!("{sender} · {time}")),
+                    )
+                    .child(
+                        div()
+                            .mt(s * 6_f32)
+                            .text_size(px(14.) * t.text_scale)
+                            .child(message),
+                    )
+                    .child(
+                        div()
+                            .mt(s * 5_f32)
+                            .text_color(t.colors.muted_foreground)
+                            .child(self.sidebar_note.clone()),
+                    ),
+            );
+        SidebarLayout::new(
+            "mail.layout",
+            self.sidebar_state,
+            mobile,
+            navigation,
+            content,
+            cx.listener(|this, state: &SidebarState, _, cx| {
+                this.sidebar_state = *state;
+                cx.notify();
+            }),
+        )
+        .width(s * 87_f32)
+        .collapsible(SidebarCollapsible::Icon)
+        .rail(true)
+    }
+
+    fn sidebar_docs_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        use gpui::FontWeight;
+        use gpuicn::sidebar::*;
+        let t = UiTheme::read(cx).clone();
+        let s = t.spacing.unit;
+        let mobile = self.sidebar_mobile;
+        let groups = [
+            (
+                "Getting started",
+                ["Introduction", "Installation", "Project structure", "CLI"],
+            ),
+            (
+                "Build your application",
+                ["Components", "Theme tokens", "Typography", "Accessibility"],
+            ),
+            (
+                "Resources",
+                ["Registry", "Examples", "Changelog", "Contributing"],
+            ),
+        ];
+        let selected = self.sidebar_selected.min(11);
+        let title = groups[selected / 4].1[selected % 4];
+        let view = cx.entity().downgrade();
+        let async_cx = cx.to_async();
+        let header = div()
+            .flex()
+            .flex_col()
+            .gap(s * 2_f32)
+            .child(
+                div()
+                    .h(s * 10_f32)
+                    .px(s * 2_f32)
+                    .flex()
+                    .items_center()
+                    .gap(s * 2_f32)
+                    .child(
+                        lucide(LucideIcon::BookOpen)
+                            .size(s * 5_f32)
+                            .text_color(t.colors.sidebar_foreground),
+                    )
+                    .child(div().font_weight(FontWeight::MEDIUM).child("Documentation")),
+            )
+            .child(
+                sidebar_input("docs.search", cx)
+                    .aria_label("Search documentation pages")
+                    .placeholder("Search documentation…")
+                    .default_value(self.sidebar_search.clone())
+                    .on_value_change(move |value| {
+                        let view = view.clone();
+                        // The public Input callback runs while App is borrowed. Queue the view update.
+                        async_cx
+                            .spawn(async move |cx| {
+                                let _ = view.update(cx, |this, cx| {
+                                    this.sidebar_search = value.to_string();
+                                    cx.notify();
+                                });
+                            })
+                            .detach();
+                    }),
+            );
+        let query = self.sidebar_search.to_lowercase();
+        let mut navigation = Sidebar::new("docs.navigation", "Documentation pages")
+            .header(header)
+            .footer(
+                div()
+                    .px(s * 2_f32)
+                    .py(s * 2_f32)
+                    .text_size(px(12.) * t.text_scale)
+                    .line_height(px(16.) * t.text_scale)
+                    .text_color(t.colors.muted_foreground)
+                    .child("gpuicn · Developer documentation"),
+            );
+        let mut count = 0;
+        for (section, (label, pages)) in groups.iter().enumerate() {
+            let matching: Vec<_> = pages
+                .iter()
+                .enumerate()
+                .filter(|(_, title)| title.to_lowercase().contains(&query))
+                .collect();
+            if matching.is_empty() {
+                continue;
+            }
+            count += matching.len();
+            let open = self.sidebar_sections[section] || !query.is_empty();
+            let mut group = sidebar_group().mb(s * 3_f32).child(
+                SidebarItem::new(("docs.section", section), *label)
+                    .expanded(open)
+                    .trailing(
+                        lucide(if open {
+                            LucideIcon::ChevronDown
+                        } else {
+                            LucideIcon::ChevronRight
+                        })
+                        .size(s * 4_f32)
+                        .text_color(t.colors.sidebar_foreground),
+                    )
+                    .on_activate(cx.listener(move |this, _, _, cx| {
+                        this.sidebar_sections[section] = !this.sidebar_sections[section];
+                        cx.notify();
+                    })),
+            );
+            if open {
+                let mut submenu = sidebar_menu_sub(cx);
+                for (index, title) in matching {
+                    let page = section * 4 + index;
+                    submenu = submenu.child(
+                        SidebarItem::new(("docs.page", page), *title)
+                            .h(s * 7_f32)
+                            .selected(selected == page)
+                            .on_activate(cx.listener(move |this, _, _, cx| {
+                                this.sidebar_selected = page;
+                                this.sidebar_state.mobile_open = false;
+                                cx.notify();
+                            })),
+                    );
+                }
+                group = group.child(submenu);
+            }
+            navigation = navigation.child(group);
+        }
+        if count == 0 {
+            navigation = navigation.child(
+                div()
+                    .p(s * 2_f32)
+                    .text_color(t.colors.muted_foreground)
+                    .child("No matching pages"),
+            );
+        }
+        let description = match selected {
+            1 => {
+                "Install the components you need. Their Rust source stays in your app, ready to edit."
+            }
+            5 => {
+                "One theme controls colors, spacing, type, corners, and motion across your application."
+            }
+            7 => {
+                "Use named controls, visible focus, and the native keyboard behavior supplied by Base GPUI."
+            }
+            _ => "Build native interfaces with components that share a consistent visual language.",
+        };
+        let content = div().size_full().flex().flex_col()
+            .child(div().h(s * 14_f32).px(s * 3_f32).flex_shrink_0().flex().items_center().gap(s * 3_f32)
+                .border_b_1().border_color(t.colors.border)
+                .child(sidebar_trigger("docs.toggle", cx.listener(move |this, _, _, cx| { this.sidebar_state.toggle(mobile); cx.notify(); }), cx))
+                .child(div().text_size(px(12.) * t.text_scale).line_height(px(16.) * t.text_scale).text_color(t.colors.muted_foreground).child(groups[selected / 4].0)))
+            .child(div().id("docs.article").flex_1().min_h_0().min_w_0().overflow_y_scroll().p(s * 6_f32)
+                .child(div().text_size(px(20.) * t.text_scale).line_height(px(28.) * t.text_scale).font_weight(FontWeight::MEDIUM).child(title))
+                .child(div().mt(s * 3_f32).text_size(px(14.) * t.text_scale).text_color(t.colors.muted_foreground).child(description))
+                .child(div().mt(s * 6_f32).p(s * 4_f32).rounded(t.radius.lg).bg(t.colors.muted)
+                    .font_family(t.fonts.mono).text_size(px(12.) * t.text_scale).line_height(px(16.) * t.text_scale).child("gpuicn add sidebar"))
+                .child(div().mt(s * 6_f32).font_weight(FontWeight::MEDIUM).child("In this guide"))
+                .child(div().mt(s * 3_f32).text_size(px(14.) * t.text_scale).text_color(t.colors.muted_foreground)
+                    .child("Browse the sections on the left, search for a page, or hide navigation to give the article more room."))
+                .child(div().mt(s * 6_f32).flex().justify_between().gap(s * 2_f32)
+                    .child(Button::new("docs.previous").variant(ButtonVariant::Outline).disabled(selected == 0).child("Previous")
+                        .on_click(cx.listener(|this, _, _, cx| { this.sidebar_selected = this.sidebar_selected.saturating_sub(1); cx.notify(); })))
+                    .child(Button::new("docs.next").variant(ButtonVariant::Outline).disabled(selected == 11).child("Next")
+                        .on_click(cx.listener(|this, _, _, cx| { this.sidebar_selected = (this.sidebar_selected + 1).min(11); cx.notify(); })))));
+        SidebarLayout::new(
+            "docs.layout",
+            self.sidebar_state,
+            mobile,
+            navigation,
+            content,
+            cx.listener(|this, state: &SidebarState, _, cx| {
+                this.sidebar_state = *state;
+                cx.notify();
+            }),
+        )
+        .collapsible(SidebarCollapsible::Offcanvas)
+        .rail(true)
     }
 
     fn separator_preview(&self) -> impl IntoElement {
@@ -2228,7 +3264,7 @@ impl Showcase {
                             .child("Hover me"),
                     ),
                 )
-                .child(tooltip_portal().child(tooltip_positioner().child(
+                .child(tooltip_portal().child(tooltip_positioner(cx).child(
                     tooltip_popup("preview.tooltip.popup", cx).child_any("Add to library"),
                 ))),
         )
@@ -2350,6 +3386,9 @@ fn requested_value(key: &str) -> Option<String> {
     match key {
         "demo" => std::env::args().nth(1),
         "theme" => std::env::args().nth(2),
+        "example" => std::env::args().nth(3),
+        "width" => std::env::args().nth(4),
+        "height" => std::env::args().nth(5),
         _ => None,
     }
 }
@@ -2398,7 +3437,60 @@ mod audit_tests {
             drawer_direction: DrawerSwipeDirection::Down,
             goal: 350,
             volume: 50.,
+            pane_width: px(160.),
+            sidebar_state: Default::default(),
+            sidebar_example: "workspace".into(),
+            sidebar_mobile: false,
+            sidebar_selected: 0,
+            sidebar_workspace: 0,
+            sidebar_search: String::new(),
+            sidebar_nested: true,
+            sidebar_projects: 2,
+            sidebar_note: String::new(),
+            sidebar_loaded: false,
+            sidebar_message: 0,
+            sidebar_unread: false,
+            sidebar_sections: [true, true, false],
             icon: LucideIcon::House,
+        }
+    }
+
+    #[test]
+    fn sidebar_search_updates_without_reborrowing_the_app() {
+        use gpui::{Modifiers, VisualTestContext, point};
+        for (example, point) in [
+            ("mail", point(px(110.), px(66.))),
+            ("docs", point(px(90.), px(70.))),
+        ] {
+            let mut cx = TestAppContext::single();
+            cx.update(|cx| {
+                gpuicn::init(cx);
+                UiTheme::set(cx, UiTheme::neutral_light());
+            });
+            let window = cx.add_window(|_, _| {
+                let mut view = showcase(Demo::Sidebar, false);
+                view.sidebar_example = example.into();
+                view
+            });
+            let mut visual = VisualTestContext::from_window(window.into(), &cx);
+            visual.simulate_resize(size(px(960.), px(600.)));
+            for _ in 0..2 {
+                cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx))
+                    .unwrap();
+            }
+            visual.simulate_click(point, Modifiers::default());
+            for character in ["m", "a", "i", "l"] {
+                visual.simulate_input(character);
+                cx.run_until_parked();
+                cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx))
+                    .unwrap();
+            }
+            assert_eq!(
+                cx.read_window(&window, |view, cx| view.read(cx).sidebar_search.clone())
+                    .unwrap(),
+                "mail",
+                "{example} search"
+            );
         }
     }
 
@@ -2428,6 +3520,49 @@ mod audit_tests {
             !cx.read_window(&window, |view, cx| view.read(cx).checked)
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn sidebar_examples_render_across_viewports_and_themes() {
+        use gpui::VisualTestContext;
+        let mut custom = UiTheme::neutral_dark();
+        custom.spacing.unit = px(5.);
+        custom.text_scale = 1.1;
+        custom.radius = gpuicn::theme::UiRadius::new(px(4.));
+        for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark(), custom] {
+            for width in [360., 960.] {
+                for example in ["workspace", "docs", "mail", "floating", "mobile", "loading"] {
+                    let mut cx = TestAppContext::single();
+                    cx.update(|cx| {
+                        gpuicn::init(cx);
+                        UiTheme::set(cx, theme.clone());
+                    });
+                    let window = cx.add_window(|_, _| {
+                        let mut view = showcase(Demo::Sidebar, false);
+                        view.sidebar_example = example.into();
+                        view
+                    });
+                    VisualTestContext::from_window(window.into(), &cx)
+                        .simulate_resize(size(px(width), px(600.)));
+                    for open in [false, true] {
+                        window
+                            .update(&mut cx, |view, _, cx| {
+                                view.sidebar_state.open = open;
+                                view.sidebar_state.mobile_open = open;
+                                cx.notify();
+                            })
+                            .unwrap();
+                        for _ in 0..2 {
+                            cx.update_window(window.into(), |_, window, cx| {
+                                window.draw(cx).clear(cx)
+                            })
+                            .unwrap();
+                            cx.run_until_parked();
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]
@@ -2462,6 +3597,8 @@ mod audit_tests {
             "scroll-area",
             "select",
             "separator",
+            "sidebar",
+            "resizable",
             "slider",
             "switch",
             "tabs",
@@ -2471,7 +3608,12 @@ mod audit_tests {
             "toolbar",
             "tooltip",
         ];
-        for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark()] {
+        let mut custom = UiTheme::neutral_light();
+        custom.spacing.unit = px(5.);
+        custom.radius = gpuicn::theme::UiRadius::new(px(4.));
+        custom.text_scale = 1.1;
+        custom.colors.primary = gpui::rgb(0x2563eb);
+        for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark(), custom] {
             for active in [false, true] {
                 for name in demos {
                     let mut cx = TestAppContext::single();

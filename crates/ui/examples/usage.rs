@@ -34,20 +34,25 @@ mod alert_dialog {
         alert_dialog_root("discard")
             .child(alert_dialog_trigger("discard.trigger", cx).child("Discard changes"))
             .child(
-                alert_dialog_portal().child(alert_dialog_backdrop()).child(
-                    alert_dialog_viewport().child(
-                        alert_dialog_popup("discard.popup", "Discard changes?", cx)
-                            .child(
-                                alert_dialog_title("discard.title", cx).child("Discard changes?"),
-                            )
-                            .child(
-                                alert_dialog_description("discard.description", cx)
-                                    .child("Your unsaved edits will be lost."),
-                            )
-                            .child(alert_dialog_cancel("discard.cancel", cx).child("Keep editing"))
-                            .child(alert_dialog_action("discard.confirm", cx).child("Discard")),
+                alert_dialog_portal()
+                    .child(alert_dialog_backdrop(cx))
+                    .child(
+                        alert_dialog_viewport(cx).child(
+                            alert_dialog_popup("discard.popup", "Discard changes?", cx)
+                                .child(
+                                    alert_dialog_title("discard.title", cx)
+                                        .child("Discard changes?"),
+                                )
+                                .child(
+                                    alert_dialog_description("discard.description", cx)
+                                        .child("Your unsaved edits will be lost."),
+                                )
+                                .child(
+                                    alert_dialog_cancel("discard.cancel", cx).child("Keep editing"),
+                                )
+                                .child(alert_dialog_action("discard.confirm", cx).child("Discard")),
+                        ),
                     ),
-                ),
             )
     }
 }
@@ -65,9 +70,9 @@ mod autocomplete {
             )
             .child(
                 autocomplete_portal().child(
-                    autocomplete_positioner().child(
+                    autocomplete_positioner(cx).child(
                         autocomplete_popup(cx).child(
-                            autocomplete_list().child(
+                            autocomplete_list(cx).child(
                                 autocomplete_item("search.button", cx)
                                     .value("button")
                                     .label("Button")
@@ -168,9 +173,9 @@ mod combobox {
             )
             .child(
                 combobox_portal().child(
-                    combobox_positioner().child(
+                    combobox_positioner(cx).child(
                         combobox_popup(cx).child(
-                            combobox_list().child(
+                            combobox_list(cx).child(
                                 combobox_item("fruit.apple", cx)
                                     .value("apple")
                                     .label("Apple")
@@ -196,7 +201,7 @@ mod context_menu {
             )
             .child(
                 context_menu_portal().child(
-                    context_menu_positioner().child(
+                    context_menu_positioner(cx).child(
                         context_menu_popup("file-menu.popup", cx).child(
                             context_menu_item("file-menu.copy", cx)
                                 .label("Copy")
@@ -216,8 +221,8 @@ mod dialog {
         dialog_root("welcome")
             .child(dialog_trigger("welcome.trigger", cx).child("Open dialog"))
             .child(
-                dialog_portal().child(dialog_backdrop()).child(
-                    dialog_viewport().child(
+                dialog_portal().child(dialog_backdrop(cx)).child(
+                    dialog_viewport(cx).child(
                         dialog_popup("welcome.popup", "Welcome", cx)
                             .child(dialog_title("welcome.title", cx).child("Welcome"))
                             .child(
@@ -239,7 +244,7 @@ mod drawer {
         drawer_root("details")
             .child(drawer_trigger("details.trigger", cx).child("Show details"))
             .child(
-                drawer_portal().child(drawer_backdrop()).child(
+                drawer_portal().child(drawer_backdrop(cx)).child(
                     drawer_viewport().child(
                         drawer_popup("details.popup", "Order details", cx)
                             .child(drawer_title("details.title", cx).child("Order details"))
@@ -327,7 +332,7 @@ mod menu {
             .child(menu_trigger("account.trigger", cx).child("Account"))
             .child(
                 menu_portal().child(
-                    menu_positioner().child(
+                    menu_positioner(cx).child(
                         menu_popup("account.popup", cx).child(
                             menu_item("account.profile", cx)
                                 .label("Profile")
@@ -351,7 +356,7 @@ mod menubar {
                     .child(menubar_trigger("file.trigger", cx).child("File"))
                     .child(
                         menubar_portal().child(
-                            menu_positioner().child(
+                            menu_positioner(cx).child(
                                 menubar_content("file.popup", cx).child(
                                     menubar_item("file.new", cx)
                                         .label("New file")
@@ -394,7 +399,7 @@ mod navigation_menu {
             )
             .child(
                 navigation_menu_portal().child(
-                    navigation_menu_positioner()
+                    navigation_menu_positioner(cx)
                         .child(navigation_menu_popup(cx).child(navigation_menu_viewport(cx))),
                 ),
             )
@@ -430,7 +435,7 @@ mod popover {
             .child(popover_trigger("help.trigger", cx).child("Help"))
             .child(
                 popover_portal().child(
-                    popover_positioner().child(
+                    popover_positioner(cx).child(
                         popover_popup("help.popup", "Help", cx)
                             .child(popover_title(cx).child("Need a hand?"))
                             .child(
@@ -450,9 +455,11 @@ mod preview_card {
     fn example(cx: &App) -> impl IntoElement {
         preview_card_root("profile")
             .child(preview_card_trigger("profile.trigger").child("@ada"))
-            .child(preview_card_portal().child(preview_card_positioner().child(
-                preview_card_popup("profile.popup", cx).child_any("Ada — software engineer"),
-            )))
+            .child(
+                preview_card_portal().child(preview_card_positioner(cx).child(
+                    preview_card_popup("profile.popup", cx).child_any("Ada — software engineer"),
+                )),
+            )
     }
 }
 
@@ -517,9 +524,9 @@ mod select {
             )
             .child(
                 select_portal().child(
-                    select_positioner().child(
+                    select_positioner(cx).child(
                         select_popup(cx).child(
-                            select_list()
+                            select_list(cx)
                                 .child(
                                     select_item("theme.system", cx)
                                         .value("system")
@@ -694,10 +701,44 @@ mod tooltip {
                     tooltip_trigger("save-hint.trigger").child(Button::new("save").child("Save")),
                 )
                 .child(
-                    tooltip_portal().child(tooltip_positioner().child(
+                    tooltip_portal().child(tooltip_positioner(cx).child(
                         tooltip_popup("save-hint.popup", cx).child_any("Save your changes"),
                     )),
                 ),
         )
+    }
+}
+
+mod resizable {
+    use crate::ui::resizable::{PaneLimits, Resizable};
+    use gpui::{IntoElement, Pixels, div, px};
+
+    fn example() -> impl IntoElement {
+        // In a Render implementation, pass caller-owned size and a cx.listener
+        // that saves the new size and calls cx.notify(). This sample stays fixed.
+        Resizable::new(
+            "panes",
+            "Resize navigation",
+            px(240.),
+            div(),
+            div(),
+            |_: &Pixels, _, _| {},
+        )
+        .first_limits(PaneLimits::new(px(180.), px(360.)))
+        .second_limits(PaneLimits::new(px(300.), px(2000.)))
+    }
+}
+
+mod sidebar {
+    use crate::ui::sidebar::{Sidebar, SidebarItem, sidebar_group_label};
+    use gpui::{App, IntoElement, ParentElement};
+
+    fn example(cx: &App) -> impl IntoElement {
+        Sidebar::new("navigation", "Workspace navigation")
+            .header("My workspace")
+            .child(sidebar_group_label("Project", cx))
+            .child(SidebarItem::new("changes", "Changes").selected(true))
+            .child(SidebarItem::new("history", "History").on_activate(|_, _, _| {}))
+            .footer(SidebarItem::new("settings", "Settings"))
     }
 }

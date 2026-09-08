@@ -51,17 +51,16 @@ function InstallationPage() {
             2. Configure the source installer
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
-            Save this as <code className="text-sm">components.json</code> in
-            your app root. The stock shadcn CLI copies files into your Rust
-            project; it does not require a React app or change your Cargo
-            dependencies. You need Node.js to run the installer.
+            The native CLI is a local preview, not yet published to crates.io.
+            Install it from a gpuicn checkout with Rust alone. No Node.js is required.
           </p>
-          <CodeBlock language="json" className="mt-4" value={setup.config} />
+          <CodeBlock language="bash" className="mt-4" value="cargo install --path /path/to/gpuicn/crates/cli --locked" />
           <p className="mt-4 text-sm leading-6 text-muted-foreground">
-            Save this as <code>tsconfig.json</code> beside it. The installer
-            uses it to resolve file paths; your app remains Rust.
+            From your app root, create gpuicn.toml. Replace the path with your
+            checkout; you can also use an HTTP(S) registry snapshot.
           </p>
-          <CodeBlock language="json" className="mt-3" value={setup.aliases} />
+          <CodeBlock language="bash" className="mt-3" value="gpuicn --registry /path/to/gpuicn/site/pages/r init" />
+          <CodeBlock language="toml" className="mt-3" value={'version = 1\nregistry = "/path/to/gpuicn/site/pages/r"\noutput = "src/ui"'} />
         </section>
 
         <section>
@@ -70,16 +69,16 @@ function InstallationPage() {
           </h2>
           <CodeBlock
             className="mt-4"
-            value="npx shadcn@4.19.0 add https://ui.imajha.com/r/button.json"
+            value="gpuicn add button"
             language="bash"
           />
           <p className="mt-3 leading-7 text-muted-foreground">
-            This installs Button and its shared theme. Create{" "}
+            This installs Button and its shared theme, and maintains{" "}
             <code className="text-sm">src/ui/mod.rs</code>:
           </p>
           <CodeBlock className="mt-4" value="pub mod button;\npub mod theme;" />
           <p className="mt-3 leading-7 text-muted-foreground">
-            Each component page lists its required modules. Your installed files
+            Add mod ui; to your crate root. Existing edits are kept by default. Your installed files
             belong to your app. Review local edits before using the installer’s
             <code className="text-sm"> --overwrite</code> option.
           </p>

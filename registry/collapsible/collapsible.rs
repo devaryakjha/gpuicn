@@ -21,13 +21,15 @@ pub fn collapsible(cx: &App) -> CollapsibleRoot {
 /// Creates a Nova Collapsible trigger. Add its visible content as children.
 pub fn collapsible_trigger(cx: &App) -> CollapsibleTrigger {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     let focus_ring = theme.focus_ring();
     CollapsibleTrigger::new()
         .flex()
         .items_center()
         .justify_center()
-        .px(px(10.0))
-        .py(px(6.0))
+        .px(spacing * 2.5_f32)
+        .py(spacing * 1.5_f32)
         .style_with_state(move |state, base| {
             let colors = theme.colors;
             let focus_ring = focus_ring.clone();
@@ -36,7 +38,7 @@ pub fn collapsible_trigger(cx: &App) -> CollapsibleTrigger {
                 .border_color(colors.background.opacity(0.0))
                 .font_family(theme.fonts.body.clone())
                 .font_weight(FontWeight::MEDIUM)
-                .text_size(px(14.0))
+                .text_size(px(14.0) * text_scale)
                 .text_color(colors.foreground)
                 .when(!state.disabled, |base| {
                     base.cursor_pointer()
@@ -57,12 +59,14 @@ pub fn collapsible_trigger(cx: &App) -> CollapsibleTrigger {
 /// Creates a Collapsible content panel with the standard Nova text treatment.
 pub fn collapsible_content(cx: &App) -> CollapsiblePanel {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     CollapsiblePanel::new()
-        .pt(px(8.0))
+        .pt(spacing * 2_f32)
         .style_with_state(move |_state, base| {
             base.overflow_hidden()
                 .font_family(theme.fonts.body.clone())
-                .text_size(px(14.0))
+                .text_size(px(14.0) * text_scale)
                 .text_color(theme.colors.foreground)
         })
 }

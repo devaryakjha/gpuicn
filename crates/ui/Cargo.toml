@@ -12,6 +12,7 @@ publish = false
 native-fixture = ["dep:gpui_platform"]
 
 [dependencies]
+web-time = "1.1"
 base-gpui.workspace = true
 gpui.workspace = true
 gpui-icons.workspace = true
@@ -26,3 +27,7 @@ required-features = ["native-fixture"]
 
 [lints.rust]
 missing_docs = "deny"
+
+[[example]]
+name = "desktop"
+required-features = ["native-fixture"]

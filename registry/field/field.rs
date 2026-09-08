@@ -30,15 +30,17 @@ pub enum FieldOrientation {
 /// Creates a styled Field root with Base GPUI validation and form wiring.
 pub fn field_root(id: impl Into<ElementId>, orientation: FieldOrientation, cx: &App) -> FieldRoot {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     FieldRoot::new()
         .id(id)
         .style_with_state(move |state, base| {
             let base = base
                 .flex()
                 .w_full()
-                .gap(px(8.0))
+                .gap(spacing * 2_f32)
                 .font_family(theme.fonts.body.clone())
-                .text_size(px(14.0))
+                .text_size(px(14.0) * text_scale)
                 .text_color(if state.invalid {
                     theme.colors.destructive
                 } else {
@@ -64,13 +66,15 @@ pub fn field_control(id: impl Into<ElementId>, cx: &App) -> FieldControl {
 /// Creates a label that focuses its registered Field control on pointer press.
 pub fn field_label(cx: &App) -> FieldLabel {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     FieldLabel::new().style_with_state(move |state, base| {
         base.flex()
-            .gap(px(8.0))
+            .gap(spacing * 2_f32)
             .font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0))
-            .line_height(px(20.0))
+            .text_size(px(14.0) * text_scale)
+            .line_height(px(20.0) * text_scale)
             .text_color(theme.colors.foreground)
             .when(state.disabled, |base| base.opacity(0.50))
     })
@@ -79,10 +83,11 @@ pub fn field_label(cx: &App) -> FieldLabel {
 /// Creates muted help text for a Field.
 pub fn field_description(cx: &App) -> FieldDescription {
     let theme = UiTheme::read(cx).clone();
+    let text_scale = theme.text_scale;
     FieldDescription::new().style_with_state(move |state, base| {
         base.font_family(theme.fonts.body.clone())
-            .text_size(px(14.0))
-            .line_height(px(20.0))
+            .text_size(px(14.0) * text_scale)
+            .line_height(px(20.0) * text_scale)
             .text_color(theme.colors.muted_foreground)
             .when(state.disabled, |base| base.opacity(0.50))
     })
@@ -91,10 +96,11 @@ pub fn field_description(cx: &App) -> FieldDescription {
 /// Creates a destructive validation message. It only renders when an error exists.
 pub fn field_error(cx: &App) -> FieldError {
     let theme = UiTheme::read(cx).clone();
+    let text_scale = theme.text_scale;
     FieldError::new().style_with_state(move |_state, base| {
         base.font_family(theme.fonts.body.clone())
-            .text_size(px(14.0))
-            .line_height(px(20.0))
+            .text_size(px(14.0) * text_scale)
+            .line_height(px(20.0) * text_scale)
             .text_color(theme.colors.destructive)
     })
 }
@@ -102,48 +108,61 @@ pub fn field_error(cx: &App) -> FieldError {
 /// Creates a field item for grouped controls such as checkboxes and radios.
 pub fn field_item(cx: &App) -> FieldItem {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     FieldItem::new().style_with_state(move |state, base| {
         base.flex()
             .flex_col()
-            .gap(px(6.0))
+            .gap(spacing * 1.5_f32)
             .font_family(theme.fonts.body.clone())
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .when(state.disabled, |base| base.opacity(0.50))
     })
 }
 
 /// Creates a Field group, the shadcn visual counterpart to a plain GPUI Div.
-pub fn field_group() -> Div {
-    gpui::div().flex().flex_col().w_full().gap(px(28.0))
+pub fn field_group(cx: &App) -> Div {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    gpui::div().flex().flex_col().w_full().gap(spacing * 7_f32)
 }
 
 /// Creates the flex column used beside a checkbox, radio, or switch.
-pub fn field_content() -> Div {
-    gpui::div().flex().flex_col().flex_1().gap(px(6.0))
+pub fn field_content(cx: &App) -> Div {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    gpui::div()
+        .flex()
+        .flex_col()
+        .flex_1()
+        .gap(spacing * 1.5_f32)
 }
 
 /// Creates label-styled text for `field_content` when it is not interactive.
 pub fn field_title(cx: &App) -> Div {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     gpui::div()
         .flex()
         .items_center()
-        .gap(px(8.0))
+        .gap(spacing * 2_f32)
         .font_family(theme.fonts.body)
         .font_weight(FontWeight::MEDIUM)
-        .text_size(px(14.0))
-        .line_height(px(20.0))
+        .text_size(px(14.0) * text_scale)
+        .line_height(px(20.0) * text_scale)
         .text_color(theme.colors.foreground)
 }
 
 /// Creates a visual break between Field group sections.
 pub fn field_separator(cx: &App) -> Div {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     gpui::div()
         .w_full()
         .h(px(1.0))
         .bg(theme.colors.border)
-        .my(px(4.0))
+        .my(spacing * 1_f32)
 }
 
 /// Exposes Base GPUI validity state for custom indicators.
@@ -156,6 +175,8 @@ fn style_field_control(
     state: base_gpui::primitives::InputStyleState,
     theme: &UiTheme,
 ) -> Div {
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     let colors = theme.colors;
     let focus_ring = theme.focus_ring();
     let destructive_focus_ring = theme.destructive_focus_ring();
@@ -171,16 +192,16 @@ fn style_field_control(
         ThemeMode::Dark => colors.input.opacity(0.30),
     };
 
-    input_text_layout(base)
+    input_text_layout(base, text_scale)
         .w_full()
-        .h(px(32.0))
-        .px(px(10.0))
+        .h(spacing * 8_f32)
+        .px(spacing * 2.5_f32)
         .rounded(theme.radius.lg)
         .border_1()
         .border_color(border)
         .bg(background)
         .font_family(theme.fonts.body.clone())
-        .text_size(px(14.0))
+        .text_size(px(14.0) * text_scale)
         .text_color(colors.foreground)
         .when(state.focused, |base| base.shadow(focus_ring.clone()))
         .when(state.invalid, |base| {

@@ -1,6 +1,6 @@
 # gpuicn
 
-An open-code component catalog that brings shadcn's visual system to GPUI applications while keeping the installed source owned and editable by each application.
+Open-code UI components for GPUI, with shadcn-inspired styling and native desktop interactions. Applications own and can edit the installed source.
 
 ## Language
 
@@ -9,7 +9,7 @@ A GPUI component that preserves a shadcn component's visual identity, themes, va
 _Avoid_: API port, React port
 
 **Component catalog**:
-The pinned set of standard shadcn UI components that gpuicn intends to make available for GPUI.
+Styled Base GPUI controls and reusable larger desktop components. A larger component may compose existing controls or add a missing reusable interaction; it must keep application data, routing and domain operations caller-owned.
 _Avoid_: Blocks, templates, examples
 
 **Component preview**:
@@ -23,3 +23,9 @@ _Avoid_: Theme
 **Theme**:
 The configurable design tokens, including color, typography, radius, and spacing, used by a style and its components.
 _Avoid_: Style
+
+## Desktop scope
+
+A sidebar is a navigation composition; a splitter is an interactive boundary that resizes adjacent panes. They can be used together or separately. Lists, trees, diff views and graph views may belong in gpuicn; Git execution, parsing, patch generation, graph layout algorithms, provider APIs and persistence do not.
+
+The local expansion plan is in `docs/plans/desktop-components.md`. New components require native interaction and performance evidence, followed by user testing before publication.

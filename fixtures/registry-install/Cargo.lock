@@ -2175,6 +2175,7 @@ dependencies = [
  "smallvec",
  "strum",
  "uuid",
+ "zed-font-kit",
 ]
 
 [[package]]
@@ -4413,6 +4414,7 @@ dependencies = [
  "gpui",
  "gpui-icons",
  "gpui_platform",
+ "web-time",
 ]
 
 [[package]]

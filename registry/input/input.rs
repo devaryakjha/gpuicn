@@ -15,6 +15,7 @@ type ValueChange = Rc<dyn Fn(SharedString) + 'static>;
 
 #[derive(IntoElement)]
 pub struct Input {
+    style: gpui::StyleRefinement,
     id: ElementId,
     value: Option<SharedString>,
     default_value: Option<SharedString>,
@@ -29,6 +30,7 @@ pub struct Input {
 impl Input {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             value: None,
             default_value: None,
@@ -77,6 +79,8 @@ impl Input {
 impl RenderOnce for Input {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
+        let spacing = theme.spacing.unit;
+        let text_scale = theme.text_scale;
         let colors = theme.colors;
         let background = match theme.mode {
             ThemeMode::Light => colors.background,
@@ -89,43 +93,46 @@ impl RenderOnce for Input {
             .required(self.required)
             .font_family(theme.fonts.body.clone())
             .style_with_state(move |state, base| {
-                let focus_ring = if state.invalid {
-                    theme.destructive_focus_ring()
-                } else {
-                    theme.focus_ring()
-                };
-                let border = if state.invalid {
-                    colors.destructive.opacity(match theme.mode {
-                        ThemeMode::Light => 1.0,
-                        ThemeMode::Dark => 0.50,
-                    })
-                } else {
-                    colors.input
-                };
-                input_text_layout(base)
-                    .w_full()
-                    .min_w_0()
-                    .h(px(32.))
-                    .px(px(10.))
-                    .rounded(theme.radius.lg)
-                    .border_1()
-                    .border_color(border)
-                    .bg(if state.disabled {
-                        colors.input.opacity(match theme.mode {
-                            ThemeMode::Light => 0.50,
-                            ThemeMode::Dark => 0.80,
+                let base = {
+                    let focus_ring = if state.invalid {
+                        theme.destructive_focus_ring()
+                    } else {
+                        theme.focus_ring()
+                    };
+                    let border = if state.invalid {
+                        colors.destructive.opacity(match theme.mode {
+                            ThemeMode::Light => 1.0,
+                            ThemeMode::Dark => 0.50,
                         })
                     } else {
-                        background
-                    })
-                    .text_color(colors.foreground)
-                    .text_size(px(14.))
-                    .focus_visible(move |style| {
-                        style
-                            .border_color(if state.invalid { border } else { colors.ring })
-                            .shadow(focus_ring.clone())
-                    })
-                    .when(state.disabled, |base| base.cursor_not_allowed())
+                        colors.input
+                    };
+                    input_text_layout(base, text_scale)
+                        .w_full()
+                        .min_w_0()
+                        .h(spacing * 8_f32)
+                        .px(spacing * 2.5_f32)
+                        .rounded(theme.radius.lg)
+                        .border_1()
+                        .border_color(border)
+                        .bg(if state.disabled {
+                            colors.input.opacity(match theme.mode {
+                                ThemeMode::Light => 0.50,
+                                ThemeMode::Dark => 0.80,
+                            })
+                        } else {
+                            background
+                        })
+                        .text_color(colors.foreground)
+                        .text_size(px(14.) * text_scale)
+                        .focus_visible(move |style| {
+                            style
+                                .border_color(if state.invalid { border } else { colors.ring })
+                                .shadow(focus_ring.clone())
+                        })
+                        .when(state.disabled, |base| base.cursor_not_allowed())
+                };
+                super::theme::apply_style(base, &self.style)
             });
         if let Some(value) = self.value {
             input = input.value(value);
@@ -143,5 +150,11 @@ impl RenderOnce for Input {
             input = input.on_value_change(move |value| handler(value));
         }
         input
+    }
+}
+
+impl gpui::Styled for Input {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
     }
 }

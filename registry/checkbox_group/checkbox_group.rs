@@ -21,6 +21,7 @@ type ChangeHandler = Rc<
 >;
 
 pub struct CheckboxGroupItem {
+    style: gpui::StyleRefinement,
     id: ElementId,
     value: SharedString,
     disabled: bool,
@@ -30,6 +31,7 @@ pub struct CheckboxGroupItem {
 impl CheckboxGroupItem {
     pub fn new(id: impl Into<ElementId>, value: impl Into<SharedString>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             value: value.into(),
             disabled: false,
@@ -50,8 +52,11 @@ impl CheckboxGroupItem {
         self
     }
     fn render(self, theme: &UiTheme) -> AnyElement {
+        let spacing = theme.spacing.unit;
+        let text_scale = theme.text_scale;
         let colors = theme.colors;
         let mode = theme.mode;
+        let radius = theme.radius.sm * (2. / 3.);
         let font = theme.fonts.body.clone();
         let label = self.label.clone();
         let mut checkbox = CheckboxRoot::new()
@@ -59,62 +64,65 @@ impl CheckboxGroupItem {
             .value(self.value)
             .disabled(self.disabled)
             .style_with_state(move |state, base| {
-                let selected = state.checked || state.indeterminate;
-                let square = div()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .flex_shrink_0()
-                    .size(px(16.))
-                    .rounded(px(4.))
-                    .border_1()
-                    .border_color(if selected {
-                        colors.primary
-                    } else {
-                        colors.input
-                    })
-                    .bg(if selected {
-                        colors.primary
-                    } else if mode == ThemeMode::Dark {
-                        colors.input.opacity(0.30)
-                    } else {
-                        colors.background.opacity(0.)
-                    })
-                    .when(state.focused && !state.disabled, |base| {
-                        super::theme::focus_outline(
-                            base.border_color(colors.ring),
-                            colors.ring.opacity(0.50),
-                            gpui::Corners::all(px(4.)),
-                        )
-                    })
-                    .when(selected, |base| {
-                        base.child(
-                            lucide(if state.indeterminate {
-                                LucideIcon::Minus
-                            } else {
-                                LucideIcon::Check
-                            })
-                            .size(px(14.))
-                            .text_color(colors.primary_foreground),
-                        )
-                    });
-                base.flex()
-                    .items_center()
-                    .gap(px(8.))
-                    .font_family(font.clone())
-                    .text_size(px(14.))
-                    .line_height(px(20.))
-                    .text_color(colors.foreground)
-                    .when(!state.disabled && !state.read_only, |base| {
-                        base.cursor_pointer()
-                    })
-                    .when(state.disabled, |base| {
-                        base.opacity(0.50).cursor_not_allowed()
-                    })
-                    .child(square)
-                    .when_some(label.clone(), |base, label| {
-                        base.child(gpui::Text::new_inaccessible(label))
-                    })
+                let base = {
+                    let selected = state.checked || state.indeterminate;
+                    let square = div()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .flex_shrink_0()
+                        .size(spacing * 4_f32)
+                        .rounded(radius)
+                        .border_1()
+                        .border_color(if selected {
+                            colors.primary
+                        } else {
+                            colors.input
+                        })
+                        .bg(if selected {
+                            colors.primary
+                        } else if mode == ThemeMode::Dark {
+                            colors.input.opacity(0.30)
+                        } else {
+                            colors.background.opacity(0.)
+                        })
+                        .when(state.focused && !state.disabled, |base| {
+                            super::theme::focus_outline(
+                                base.border_color(colors.ring),
+                                colors.ring.opacity(0.50),
+                                gpui::Corners::all(radius),
+                            )
+                        })
+                        .when(selected, |base| {
+                            base.child(
+                                lucide(if state.indeterminate {
+                                    LucideIcon::Minus
+                                } else {
+                                    LucideIcon::Check
+                                })
+                                .size(spacing * 3.5_f32)
+                                .text_color(colors.primary_foreground),
+                            )
+                        });
+                    base.flex()
+                        .items_center()
+                        .gap(spacing * 2_f32)
+                        .font_family(font.clone())
+                        .text_size(px(14.) * text_scale)
+                        .line_height(px(20.) * text_scale)
+                        .text_color(colors.foreground)
+                        .when(!state.disabled && !state.read_only, |base| {
+                            base.cursor_pointer()
+                        })
+                        .when(state.disabled, |base| {
+                            base.opacity(0.50).cursor_not_allowed()
+                        })
+                        .child(square)
+                        .when_some(label.clone(), |base, label| {
+                            base.child(gpui::Text::new_inaccessible(label))
+                        })
+                };
+                super::theme::apply_style(base, &self.style)
             });
         if let Some(label) = self.aria_label.or(self.label) {
             checkbox = checkbox.aria_label(label);
@@ -125,6 +133,7 @@ impl CheckboxGroupItem {
 
 #[derive(IntoElement)]
 pub struct CheckboxGroup {
+    style: gpui::StyleRefinement,
     id: ElementId,
     default_value: Vec<SharedString>,
     value: Option<Vec<SharedString>>,
@@ -137,6 +146,7 @@ pub struct CheckboxGroup {
 impl CheckboxGroup {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             default_value: Vec::new(),
             value: None,
@@ -186,6 +196,7 @@ impl CheckboxGroup {
 impl RenderOnce for CheckboxGroup {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
+        let spacing = theme.spacing.unit;
         let mut group = BaseCheckboxGroup::new()
             .id(self.id)
             .default_value(self.default_value)
@@ -193,7 +204,7 @@ impl RenderOnce for CheckboxGroup {
             .disabled(self.disabled)
             .flex()
             .flex_col()
-            .gap(px(12.));
+            .gap(spacing * 3_f32);
         if let Some(value) = self.value {
             group = group.value(value);
         }
@@ -205,7 +216,20 @@ impl RenderOnce for CheckboxGroup {
                 handler(values, details, window, cx)
             });
         }
-        group.children(self.items.into_iter().map(|item| item.render(&theme)))
+        super::theme::apply_style(group, &self.style)
+            .children(self.items.into_iter().map(|item| item.render(&theme)))
+    }
+}
+
+impl gpui::Styled for CheckboxGroupItem {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
+    }
+}
+
+impl gpui::Styled for CheckboxGroup {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
     }
 }
 

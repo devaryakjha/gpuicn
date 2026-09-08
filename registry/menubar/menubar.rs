@@ -24,15 +24,16 @@ use super::{menu, theme::UiTheme};
 /// Creates the styled menubar container with a caller-owned stable ID.
 pub fn menubar(id: impl Into<ElementId>, cx: &App) -> Menubar {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     Menubar::new().id(id).style_with_state(move |_state, base| {
         base.flex()
             .items_center()
-            .h(px(32.))
-            .gap(px(2.))
+            .h(spacing * 8_f32)
+            .gap(spacing * 0.5_f32)
             .rounded(theme.radius.lg)
             .border_1()
             .border_color(theme.colors.border)
-            .p(px(3.))
+            .p(spacing * 0.75_f32)
             .bg(theme.colors.background)
             .font_family(theme.fonts.body.clone())
     })
@@ -49,17 +50,19 @@ pub fn menubar_trigger<P: Clone + 'static>(
     cx: &App,
 ) -> MenubarTrigger<P> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     MenubarTrigger::new()
         .id(id)
         .style_with_state(move |state, base| {
             base.flex()
                 .items_center()
                 .rounded(theme.radius.sm)
-                .px(px(6.))
-                .py(px(2.))
+                .px(spacing * 1.5_f32)
+                .py(spacing * 0.5_f32)
                 .font_family(theme.fonts.body.clone())
                 .font_weight(FontWeight::MEDIUM)
-                .text_size(px(14.))
+                .text_size(px(14.) * text_scale)
                 .text_color(theme.colors.foreground)
                 .when(state.open || state.focused, |base| {
                     base.bg(theme.colors.muted)
@@ -84,7 +87,7 @@ pub fn menubar_content<P: Clone + 'static>(
     let theme = UiTheme::read(cx).clone();
     MenubarContent::new()
         .id(id)
-        .style_with_state(move |_state, base| menu::popup_style(base, &theme, px(144.)))
+        .style_with_state(move |_state, base| menu::popup_style(base, &theme, theme.space(36.)))
 }
 
 /// Creates a styled menubar item.
@@ -103,12 +106,13 @@ pub fn menubar_checkbox_item<P: Clone + 'static>(
     cx: &App,
 ) -> MenubarCheckboxItem<P> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     MenubarCheckboxItem::new()
         .id(id)
         .style_with_state(move |state, base| {
             menu::item_style(base, state.highlighted, state.disabled, &theme, true)
-                .pr(px(6.))
-                .pl(px(28.))
+                .pr(spacing * 1.5_f32)
+                .pl(spacing * 7_f32)
         })
         .child(menubar_checkbox_item_indicator(cx))
 }
@@ -118,20 +122,21 @@ pub fn menubar_checkbox_item_indicator<P: Clone + 'static>(
     cx: &App,
 ) -> MenubarCheckboxItemIndicator<P> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     MenubarCheckboxItemIndicator::new()
         .keep_mounted(true)
         .style_with_state(move |state, base| {
             base.absolute()
-                .left(px(6.))
+                .left(spacing * 1.5_f32)
                 .flex()
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .items_center()
                 .justify_center()
                 .opacity(if state.checked { 1.0 } else { 0.0 })
         })
         .child(
             lucide(LucideIcon::Check)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(theme.colors.foreground),
         )
 }
@@ -148,12 +153,13 @@ pub fn menubar_radio_item<P: Clone + 'static, V: Clone + Eq + 'static>(
     cx: &App,
 ) -> MenubarRadioItem<P, V> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     MenubarRadioItem::new()
         .id(id)
         .style_with_state(move |state, base| {
             menu::item_style(base, state.highlighted, state.disabled, &theme, true)
-                .pr(px(6.))
-                .pl(px(28.))
+                .pr(spacing * 1.5_f32)
+                .pl(spacing * 7_f32)
         })
         .child(menubar_radio_item_indicator(cx))
 }
@@ -163,20 +169,21 @@ pub fn menubar_radio_item_indicator<P: Clone + 'static, V: Clone + Eq + 'static>
     cx: &App,
 ) -> MenubarRadioItemIndicator<P, V> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     MenubarRadioItemIndicator::new()
         .keep_mounted(true)
         .style_with_state(move |state, base| {
             base.absolute()
-                .left(px(6.))
+                .left(spacing * 1.5_f32)
                 .flex()
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .items_center()
                 .justify_center()
                 .opacity(if state.checked { 1.0 } else { 0.0 })
         })
         .child(
             lucide(LucideIcon::Check)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(theme.colors.foreground),
         )
 }
@@ -189,12 +196,14 @@ pub fn menubar_group<P: Clone + 'static>() -> MenubarGroup<P> {
 /// Creates a styled menubar group label.
 pub fn menubar_label<P: Clone + 'static>(cx: &App) -> MenubarLabel<P> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     MenubarLabel::new().style_with_state(move |_state, base| {
-        base.px(px(6.))
-            .py(px(4.))
+        base.px(spacing * 1.5_f32)
+            .py(spacing * 1_f32)
             .font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.))
+            .text_size(px(14.) * text_scale)
             .text_color(theme.colors.popover_foreground)
     })
 }
@@ -202,10 +211,11 @@ pub fn menubar_label<P: Clone + 'static>(cx: &App) -> MenubarLabel<P> {
 /// Creates a styled menubar separator.
 pub fn menubar_separator(cx: &App) -> MenubarSeparator {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     MenubarSeparator::new().style_with_state(move |_state, base| {
         base.h(px(1.))
-            .mx(px(-4.))
-            .my(px(4.))
+            .mx(spacing * -1_f32)
+            .my(spacing * 1_f32)
             .bg(theme.colors.border)
     })
 }
@@ -221,6 +231,7 @@ pub fn menubar_sub_trigger<P: Clone + 'static>(
     cx: &App,
 ) -> MenubarSubTrigger<P> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     let icon_color = theme.colors.muted_foreground;
     MenubarSubTrigger::new()
         .id(id)
@@ -235,7 +246,7 @@ pub fn menubar_sub_trigger<P: Clone + 'static>(
         })
         .child(
             lucide(LucideIcon::ChevronRight)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(icon_color),
         )
 }

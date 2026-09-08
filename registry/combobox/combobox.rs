@@ -31,6 +31,8 @@ pub fn combobox_input<T: Clone + Eq + 'static>(
     cx: &App,
 ) -> ComboboxInput<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     let input_theme = theme.clone();
     ComboboxInput::new()
         .id(id)
@@ -47,7 +49,7 @@ pub fn combobox_input<T: Clone + Eq + 'static>(
             };
             base.flex()
                 .items_center()
-                .h(px(32.))
+                .h(spacing * 8_f32)
                 .rounded(theme.radius.lg)
                 .border_1()
                 .border_color(border)
@@ -65,12 +67,12 @@ pub fn combobox_input<T: Clone + Eq + 'static>(
                 })
         })
         .input_style_with_state(move |_state, base| {
-            input_text_layout(base)
+            input_text_layout(base, text_scale)
                 .w_full()
                 .h_full()
-                .px(px(10.))
+                .px(spacing * 2.5_f32)
                 .font_family(input_theme.fonts.body.clone())
-                .text_size(px(14.))
+                .text_size(px(14.) * text_scale)
                 .text_color(input_theme.colors.foreground)
         })
 }
@@ -81,15 +83,19 @@ pub fn combobox_group_input<T: Clone + Eq + 'static>(
     cx: &App,
 ) -> ComboboxInput<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     ComboboxInput::new()
         .id(id)
-        .style_with_state(move |_state, base| base.flex().items_center().h(px(30.)).flex_1())
+        .style_with_state(move |_state, base| {
+            base.flex().items_center().h(spacing * 8. - px(2.)).flex_1()
+        })
         .input_style_with_state(move |_state, base| {
-            input_text_layout(base)
+            input_text_layout(base, text_scale)
                 .w_full()
                 .h_full()
                 .font_family(theme.fonts.body.clone())
-                .text_size(px(14.))
+                .text_size(px(14.) * text_scale)
                 .text_color(theme.colors.foreground)
         })
 }
@@ -97,6 +103,7 @@ pub fn combobox_group_input<T: Clone + Eq + 'static>(
 /// Creates the styled input group used by chips and custom combobox layouts.
 pub fn combobox_input_group<T: Clone + Eq + 'static>(cx: &App) -> ComboboxInputGroup<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ComboboxInputGroup::new().style_with_state(move |state, base| {
         let focus_ring = if state.root.invalid {
             theme.destructive_focus_ring()
@@ -110,12 +117,12 @@ pub fn combobox_input_group<T: Clone + Eq + 'static>(cx: &App) -> ComboboxInputG
         };
         base.flex()
             .items_center()
-            .min_h(px(32.))
-            .gap(px(4.))
+            .min_h(spacing * 8_f32)
+            .gap(spacing * 1_f32)
             .rounded(theme.radius.lg)
             .border_1()
             .border_color(border)
-            .px(px(10.))
+            .px(spacing * 2.5_f32)
             .bg(if theme.mode == super::theme::ThemeMode::Dark {
                 theme.colors.input.opacity(0.30)
             } else {
@@ -141,6 +148,7 @@ pub fn combobox_trigger<T: Clone + Eq + 'static>(
     cx: &App,
 ) -> ComboboxTrigger<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     let icon_color = theme.colors.muted_foreground;
     let id = id.into();
     let press_id = ElementId::NamedChild(std::sync::Arc::new(id.clone()), "pointer-open".into());
@@ -153,7 +161,7 @@ pub fn combobox_trigger<T: Clone + Eq + 'static>(
             let released = pressed.clone();
             let was_open = state.root.open;
             base.flex()
-                .size(px(24.))
+                .size(spacing * 6_f32)
                 .items_center()
                 .justify_center()
                 .rounded(theme.radius.sm)
@@ -188,7 +196,7 @@ pub fn combobox_trigger<T: Clone + Eq + 'static>(
         })
         .child(
             lucide(LucideIcon::ChevronDown)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(icon_color),
         )
 }
@@ -199,11 +207,12 @@ pub fn combobox_clear<T: Clone + Eq + 'static>(
     cx: &App,
 ) -> ComboboxClear<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ComboboxClear::new()
         .id(id)
         .style_with_state(move |state, base| {
             base.flex()
-                .size(px(24.))
+                .size(spacing * 6_f32)
                 .items_center()
                 .justify_center()
                 .rounded(theme.radius.sm)
@@ -219,7 +228,7 @@ pub fn combobox_clear<T: Clone + Eq + 'static>(
         })
         .child(
             lucide(LucideIcon::X)
-                .size(px(14.))
+                .size(spacing * 3.5_f32)
                 .text_color(theme.colors.muted_foreground),
         )
 }
@@ -230,9 +239,11 @@ pub fn combobox_portal<T: Clone + Eq + 'static>() -> ComboboxPortal<T> {
 }
 
 /// Creates a combobox positioner with the pinned 6px content offset.
-pub fn combobox_positioner<T: Clone + Eq + 'static>() -> ComboboxPositioner<T> {
+pub fn combobox_positioner<T: Clone + Eq + 'static>(cx: &App) -> ComboboxPositioner<T> {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ComboboxPositioner::new()
-        .side_offset(px(6.))
+        .side_offset(spacing * 1.5_f32)
         .style_with_state(|state, base| {
             base.when_some(state.anchor_width, |base, width| base.min_w(width))
         })
@@ -245,9 +256,14 @@ pub fn combobox_popup<T: Clone + Eq + 'static>(cx: &App) -> ComboboxPopup<T> {
 }
 
 /// Creates the styled combobox list.
-pub fn combobox_list<T: Clone + Eq + 'static>() -> ComboboxList<T> {
-    ComboboxList::new()
-        .style_with_state(move |_state, base| base.max_h(px(252.)).overflow_hidden().p(px(4.)))
+pub fn combobox_list<T: Clone + Eq + 'static>(cx: &App) -> ComboboxList<T> {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    ComboboxList::new().style_with_state(move |_state, base| {
+        base.max_h(spacing * 63_f32)
+            .overflow_hidden()
+            .p(spacing * 1_f32)
+    })
 }
 
 /// Creates a styled combobox item.
@@ -256,19 +272,21 @@ pub fn combobox_item<T: Clone + Eq + 'static>(
     cx: &App,
 ) -> ComboboxItem<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     ComboboxItem::new()
         .id(id)
         .style_with_state(move |state, base| {
             base.relative()
                 .flex()
                 .items_center()
-                .gap(px(8.))
+                .gap(spacing * 2_f32)
                 .rounded(theme.radius.sm)
-                .py(px(4.))
-                .pr(px(32.))
-                .pl(px(6.))
+                .py(spacing * 1_f32)
+                .pr(spacing * 8_f32)
+                .pl(spacing * 1.5_f32)
                 .font_family(theme.fonts.body.clone())
-                .text_size(px(14.))
+                .text_size(px(14.) * text_scale)
                 .text_color(theme.colors.popover_foreground)
                 .when(!state.disabled, |base| base.cursor_pointer())
                 .when(state.highlighted && !state.disabled, |base| {
@@ -285,37 +303,42 @@ pub fn combobox_item<T: Clone + Eq + 'static>(
 /// Creates the selected-item check indicator.
 pub fn combobox_item_indicator<T: Clone + Eq + 'static>(cx: &App) -> ComboboxItemIndicator<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ComboboxItemIndicator::new()
         .keep_mounted(true)
         .style_with_state(move |state, base| {
             base.absolute()
-                .right(px(8.))
+                .right(spacing * 2_f32)
                 .flex()
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .items_center()
                 .justify_center()
                 .opacity(if state.selected { 1.0 } else { 0.0 })
         })
         .child(
             lucide(LucideIcon::Check)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(theme.colors.foreground),
         )
 }
 
 /// Creates a styled combobox group.
-pub fn combobox_group<T: Clone + Eq + 'static>() -> ComboboxGroup<T> {
-    ComboboxGroup::new().style_with_state(move |_state, base| base.p(px(4.)))
+pub fn combobox_group<T: Clone + Eq + 'static>(cx: &App) -> ComboboxGroup<T> {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    ComboboxGroup::new().style_with_state(move |_state, base| base.p(spacing * 1_f32))
 }
 
 /// Creates a styled combobox group label.
 pub fn combobox_group_label<T: Clone + Eq + 'static>(cx: &App) -> ComboboxGroupLabel<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     ComboboxGroupLabel::new().style_with_state(move |_state, base| {
-        base.px(px(8.))
-            .py(px(6.))
+        base.px(spacing * 2_f32)
+            .py(spacing * 1.5_f32)
             .font_family(theme.fonts.body.clone())
-            .text_size(px(12.))
+            .text_size(px(12.) * text_scale)
             .text_color(theme.colors.muted_foreground)
     })
 }
@@ -323,14 +346,16 @@ pub fn combobox_group_label<T: Clone + Eq + 'static>(cx: &App) -> ComboboxGroupL
 /// Creates the styled empty state container.
 pub fn combobox_empty<T: Clone + Eq + 'static>(cx: &App) -> ComboboxEmpty<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     ComboboxEmpty::new().style_with_state(move |_state, base| {
         base.flex()
             .w_full()
             .justify_center()
-            .px(px(8.))
-            .py(px(8.))
+            .px(spacing * 2_f32)
+            .py(spacing * 2_f32)
             .font_family(theme.fonts.body.clone())
-            .text_size(px(14.))
+            .text_size(px(14.) * text_scale)
             .text_color(theme.colors.muted_foreground)
     })
 }
@@ -338,10 +363,11 @@ pub fn combobox_empty<T: Clone + Eq + 'static>(cx: &App) -> ComboboxEmpty<T> {
 /// Creates a styled combobox separator.
 pub fn combobox_separator(cx: &App) -> ComboboxSeparator {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ComboboxSeparator::new().style_with_state(move |_state, base| {
         base.h(px(1.))
-            .mx(px(-4.))
-            .my(px(4.))
+            .mx(spacing * -1_f32)
+            .my(spacing * 1_f32)
             .bg(theme.colors.border)
     })
 }
@@ -349,11 +375,12 @@ pub fn combobox_separator(cx: &App) -> ComboboxSeparator {
 /// Creates the styled container for selected chips.
 pub fn combobox_chips<T: Clone + Eq + 'static>(cx: &App) -> ComboboxChips<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ComboboxChips::new().style_with_state(move |_state, base| {
         base.flex()
             .flex_wrap()
             .items_center()
-            .gap(px(4.))
+            .gap(spacing * 1_f32)
             .font_family(theme.fonts.body.clone())
     })
 }
@@ -361,17 +388,19 @@ pub fn combobox_chips<T: Clone + Eq + 'static>(cx: &App) -> ComboboxChips<T> {
 /// Creates one styled selected-value chip.
 pub fn combobox_chip<T: Clone + Eq + 'static>(cx: &App) -> ComboboxChip<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     ComboboxChip::new().style_with_state(move |state, base| {
         base.flex()
             .items_center()
-            .gap(px(4.))
-            .h(px(21.))
-            .rounded(px(4.))
-            .px(px(6.))
+            .gap(spacing * 1_f32)
+            .h(spacing * 5.25_f32)
+            .rounded(theme.radius.sm * (2. / 3.))
+            .px(spacing * 1.5_f32)
             .bg(theme.colors.muted)
             .font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(12.))
+            .text_size(px(12.) * text_scale)
             .text_color(theme.colors.foreground)
             .when(state.highlighted, |base| base.bg(theme.colors.accent))
             .when(state.disabled, |base| {
@@ -383,13 +412,14 @@ pub fn combobox_chip<T: Clone + Eq + 'static>(cx: &App) -> ComboboxChip<T> {
 /// Creates the styled remove control for a selected-value chip.
 pub fn combobox_chip_remove<T: Clone + Eq + 'static>(cx: &App) -> ComboboxChipRemove<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ComboboxChipRemove::new()
         .style_with_state(move |state, base| {
             base.flex()
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .items_center()
                 .justify_center()
-                .rounded(px(3.))
+                .rounded(theme.radius.sm * 0.5)
                 .text_color(theme.colors.muted_foreground)
                 .when(state.disabled, |base| base.cursor_not_allowed())
                 .when(!state.disabled, |base| {
@@ -399,7 +429,7 @@ pub fn combobox_chip_remove<T: Clone + Eq + 'static>(cx: &App) -> ComboboxChipRe
         })
         .child(
             lucide(LucideIcon::X)
-                .size(px(12.))
+                .size(spacing * 3_f32)
                 .text_color(theme.colors.muted_foreground),
         )
 }
@@ -410,14 +440,16 @@ pub fn combobox_value<T: Clone + Eq + 'static>() -> ComboboxValue<T> {
 }
 
 fn popup_style(base: Div, theme: &UiTheme) -> Div {
-    base.min_w(px(144.))
-        .max_h(px(252.))
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
+    base.min_w(spacing * 36_f32)
+        .max_h(spacing * 63_f32)
         .overflow_hidden()
         .rounded(theme.radius.lg)
         .bg(theme.colors.popover)
         .text_color(theme.colors.popover_foreground)
         .font_family(theme.fonts.body.clone())
-        .text_size(px(14.))
+        .text_size(px(14.) * text_scale)
         .border_1()
         .border_color(theme.colors.foreground.opacity(0.10))
         .shadow(theme.shadows.md.clone())
@@ -445,9 +477,9 @@ mod tests {
                     )
                     .child(
                         combobox_portal().child(
-                            combobox_positioner().child(
+                            combobox_positioner(cx).child(
                                 combobox_popup(cx).child(
-                                    combobox_list().child(
+                                    combobox_list(cx).child(
                                         combobox_item("trigger-test.item", cx)
                                             .value("Apple".into())
                                             .child_any("Apple"),
@@ -496,7 +528,7 @@ mod tests {
                         .placeholder("Search fruits…")
                         .input_style_with_state(move |_, base| {
                             let bounds = bounds.clone();
-                            input_text_layout(base)
+                            input_text_layout(base, 1.)
                                 .w_full()
                                 .h_full()
                                 .text_size(px(14.))

@@ -161,6 +161,7 @@ function SiteHeader({ onSearch }: { onSearch: () => void }) {
             variant="ghost"
             size="icon"
             aria-label="Open gpuicn on GitHub"
+            nativeButton={false}
             render={
               <a
                 href="https://github.com/devaryakjha/gpuicn"

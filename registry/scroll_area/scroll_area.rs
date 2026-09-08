@@ -38,9 +38,10 @@ pub fn scroll_area_viewport(cx: &App) -> ScrollAreaViewport {
 /// Creates the intrinsic-size Scroll Area content layer.
 pub fn scroll_area_content(cx: &App) -> ScrollAreaContent {
     let theme = UiTheme::read(cx).clone();
+    let text_scale = theme.text_scale;
     ScrollAreaContent::new().style_with_state(move |_state, base| {
         base.font_family(theme.fonts.body.clone())
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .text_color(theme.colors.foreground)
     })
 }
@@ -66,7 +67,7 @@ pub fn scroll_area_thumb(cx: &App) -> ScrollAreaThumb {
         } else {
             theme.colors.border.into()
         };
-        style.thickness = px(10.0);
+        style.thickness = theme.space(2.5);
         style.inset = px(1.0);
         style.corner_radius = px(99.0);
         style

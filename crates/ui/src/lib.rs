@@ -82,6 +82,11 @@ pub mod toolbar;
 #[path = "../../../registry/tooltip/tooltip.rs"]
 pub mod tooltip;
 
+#[path = "../../../registry/resizable/resizable.rs"]
+pub mod resizable;
+#[path = "../../../registry/sidebar/sidebar.rs"]
+pub mod sidebar;
+
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use checkbox::Checkbox;
 pub use theme::{ThemeMode, UiColors, UiFonts, UiRadius, UiShadows, UiSpacing, UiTheme};

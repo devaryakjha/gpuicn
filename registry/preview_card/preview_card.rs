@@ -27,27 +27,31 @@ pub fn preview_card_portal() -> PreviewCardPortal<()> {
 }
 
 /// Creates an anchored Preview Card positioner with Nova's 4px side offset.
-pub fn preview_card_positioner() -> PreviewCardPositioner<()> {
+pub fn preview_card_positioner(cx: &App) -> PreviewCardPositioner<()> {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     PreviewCardPositioner::new()
-        .side_offset(px(4.0))
-        .align_offset(px(4.0))
+        .side_offset(spacing * 1_f32)
+        .align_offset(spacing * 1_f32)
 }
 
 /// Creates the 256px Nova Hover Card surface.
 pub fn preview_card_popup(id: impl Into<ElementId>, cx: &App) -> PreviewCardPopup<()> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     PreviewCardPopup::new()
         .id(id)
         .style_with_state(move |_state, base| {
-            base.w(px(256.0))
+            base.w(spacing * 64_f32)
                 .rounded(theme.radius.lg)
                 .border_1()
                 .border_color(theme.colors.foreground.opacity(0.10))
-                .p(px(10.0))
+                .p(spacing * 2.5_f32)
                 .bg(theme.colors.popover)
                 .text_color(theme.colors.popover_foreground)
                 .font_family(theme.fonts.body.clone())
-                .text_size(px(14.0))
+                .text_size(px(14.0) * text_scale)
                 .shadow(theme.shadows.md.clone())
         })
 }
@@ -55,7 +59,8 @@ pub fn preview_card_popup(id: impl Into<ElementId>, cx: &App) -> PreviewCardPopu
 /// Creates the Preview Card arrow surface.
 pub fn preview_card_arrow(cx: &App) -> PreviewCardArrow<()> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     PreviewCardArrow::new()
-        .size(px(10.0))
+        .size(spacing * 2.5_f32)
         .bg(theme.colors.popover)
 }

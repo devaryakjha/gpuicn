@@ -31,25 +31,59 @@ pub fn tooltip_portal() -> TooltipPortal<()> {
 }
 
 /// Creates an anchored Tooltip positioner with Nova's 4px side offset.
-pub fn tooltip_positioner() -> TooltipPositioner<()> {
-    TooltipPositioner::new().side_offset(px(4.0))
+pub fn tooltip_positioner(cx: &App) -> TooltipPositioner<()> {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    TooltipPositioner::new().side_offset(spacing * 1_f32)
 }
 
 /// Creates Nova's compact inverse Tooltip surface.
 pub fn tooltip_popup(id: impl Into<ElementId>, cx: &App) -> TooltipPopup<()> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     TooltipPopup::new()
         .id(id)
         .style_with_state(move |_state, base| {
             base.flex()
                 .items_center()
-                .gap(px(6.0))
+                .gap(spacing * 1.5_f32)
                 .rounded(theme.radius.sm)
-                .px(px(12.0))
-                .py(px(6.0))
+                .px(spacing * 3_f32)
+                .py(spacing * 1.5_f32)
                 .bg(theme.colors.foreground)
                 .text_color(theme.colors.background)
                 .font_family(theme.fonts.body.clone())
-                .text_size(px(12.0))
+                .text_size(px(12.0) * text_scale)
         })
+}
+
+/// Creates a tooltip view for GPUI's native `.tooltip(...)` attachment point.
+/// Use this on an existing interactive control to avoid nesting another button
+/// and tab stop. The host control must retain its own full accessible name.
+pub fn text_tooltip(label: gpui::SharedString, cx: &mut App) -> gpui::AnyView {
+    use gpui::AppContext as _;
+    cx.new(|_| TextTooltip(label)).into()
+}
+struct TextTooltip(gpui::SharedString);
+impl gpui::Render for TextTooltip {
+    fn render(
+        &mut self,
+        _: &mut gpui::Window,
+        cx: &mut gpui::Context<Self>,
+    ) -> impl gpui::IntoElement {
+        use gpui::ParentElement as _;
+        let theme = UiTheme::read(cx);
+        let spacing = theme.spacing.unit;
+        let text_scale = theme.text_scale;
+        gpui::div()
+            .rounded(theme.radius.sm)
+            .px(spacing * 3_f32)
+            .py(spacing * 1.5_f32)
+            .bg(theme.colors.foreground)
+            .text_color(theme.colors.background)
+            .font_family(theme.fonts.body.clone())
+            .text_size(px(12.) * text_scale)
+            .child(self.0.clone())
+    }
 }

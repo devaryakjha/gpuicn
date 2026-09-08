@@ -25,11 +25,16 @@ jobs:
       - run: cargo clippy -p gpuicn --lib --tests --locked -- -D warnings
       - run: cargo check -p gpuicn-showcase --locked
       - run: cargo check -p gpuicn --example usage --locked
+      - run: cargo clippy -p gpuicn-cli --locked -- -D warnings
+      - name: Verify native registry install
+        run: |
+          cargo run -p gpuicn-cli --locked -- build
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml add --all
+          cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked
       - name: Verify stock registry install
         run: |
-          node scripts/build-registry.mjs
           node scripts/sync-catalog.mjs
-          npx -y shadcn@4.19.0 build registry.json --output site/pages/r
           git diff --exit-code -- registry.json site/pages/r
           items=()
           for item in "$PWD"/site/pages/r/*.json; do

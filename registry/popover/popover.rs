@@ -7,7 +7,7 @@ pub use base_gpui::popover::{
     PopoverPortal, PopoverPositioner, PopoverRoot, PopoverSide, PopoverTitle, PopoverTrigger,
     PopoverViewport,
 };
-use gpui::{App, ElementId, FontWeight, SharedString, Styled, black, px};
+use gpui::{App, ElementId, FontWeight, SharedString, Styled, px};
 
 use super::{
     button::{ButtonSize, ButtonVariant, style_button},
@@ -41,8 +41,10 @@ pub fn popover_portal() -> PopoverPortal<()> {
 }
 
 /// Creates an anchored Popover positioner with Nova's 4px side offset.
-pub fn popover_positioner() -> PopoverPositioner<()> {
-    PopoverPositioner::new().side_offset(px(4.0))
+pub fn popover_positioner(cx: &App) -> PopoverPositioner<()> {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    PopoverPositioner::new().side_offset(spacing * 1_f32)
 }
 
 /// Creates the Nova Popover surface.
@@ -52,56 +54,63 @@ pub fn popover_popup(
     cx: &App,
 ) -> PopoverPopup<()> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     PopoverPopup::new()
         .id(id)
         .aria_label(aria_label)
         .style_with_state(move |_state, base| {
-            base.w(px(288.0))
+            base.w(spacing * 72_f32)
                 .flex()
                 .flex_col()
-                .gap(px(10.0))
+                .gap(spacing * 2.5_f32)
                 .rounded(theme.radius.lg)
                 .border_1()
                 .border_color(theme.colors.foreground.opacity(0.10))
-                .p(px(10.0))
+                .p(spacing * 2.5_f32)
                 .bg(theme.colors.popover)
                 .text_color(theme.colors.popover_foreground)
                 .font_family(theme.fonts.body.clone())
-                .text_size(px(14.0))
+                .text_size(px(14.0) * text_scale)
                 .shadow(theme.shadows.md.clone())
         })
 }
 
 /// Creates the optional modal Popover backdrop.
-pub fn popover_backdrop() -> PopoverBackdrop<()> {
+pub fn popover_backdrop(cx: &App) -> PopoverBackdrop<()> {
     PopoverBackdrop::new()
         .absolute()
         .inset_0()
-        .bg(black().alpha(0.10))
+        .bg(UiTheme::read(cx).colors.overlay)
 }
 
 /// Creates the Popover arrow surface.
 pub fn popover_arrow(cx: &App) -> PopoverArrow<()> {
     let theme = UiTheme::read(cx).clone();
-    PopoverArrow::new().size(px(10.0)).bg(theme.colors.popover)
+    let spacing = theme.spacing.unit;
+    PopoverArrow::new()
+        .size(spacing * 2.5_f32)
+        .bg(theme.colors.popover)
 }
 
 /// Creates a medium-weight Popover title.
 pub fn popover_title(cx: &App) -> PopoverTitle<()> {
     let theme = UiTheme::read(cx).clone();
+    let text_scale = theme.text_scale;
     PopoverTitle::new()
         .font_family(theme.fonts.body)
         .font_weight(FontWeight::MEDIUM)
-        .text_size(px(14.0))
+        .text_size(px(14.0) * text_scale)
         .text_color(theme.colors.popover_foreground)
 }
 
 /// Creates a muted Popover description.
 pub fn popover_description(cx: &App) -> PopoverDescription<()> {
     let theme = UiTheme::read(cx).clone();
+    let text_scale = theme.text_scale;
     PopoverDescription::new()
         .font_family(theme.fonts.body)
-        .text_size(px(14.0))
+        .text_size(px(14.0) * text_scale)
         .text_color(theme.colors.muted_foreground)
 }
 

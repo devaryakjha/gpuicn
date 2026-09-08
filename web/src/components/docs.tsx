@@ -21,7 +21,6 @@ import type { ComponentDocs } from "@/lib/component-docs"
 import { cn } from "@/lib/utils"
 import { highlight, type CodeLanguage } from "@/lib/highlight"
 
-const registryOrigin = "https://ui.imajha.com"
 
 export function BetaNotice() {
   return (
@@ -196,7 +195,7 @@ export function ComponentPage({
         </nav>
       </div>
 
-      <ComponentExample component={component} source={source} />
+      <ComponentExample component={component} source={source} examples={docs.examples} />
       <InstallationTabs slug={component.slug} modules={docs.modules} />
 
       <section id="usage" className="scroll-mt-20 pt-10">
@@ -272,10 +271,21 @@ export function ComponentPage({
 function ComponentExample({
   component,
   source,
+  examples,
 }: {
   component: CatalogComponent
   source: string
+  examples?: Record<string, string>
 }) {
+  const [sidebarExample, setSidebarExample] = React.useState("workspace")
+  const sidebarExamples = [
+    ["workspace", "Workspace", "Inset layout with a team switcher, nested projects, a toggle rail, and an account menu."],
+    ["docs", "Documentation", "Searchable documentation tree with independent sections and off-canvas navigation."],
+    ["mail", "Mail", "A folder rail beside a searchable message list. Filter unread mail and open a message."],
+    ["floating", "Floating right", "A rounded sidebar on the right, with an icon-only collapsed state."],
+    ["mobile", "Mobile sheet", "Modal navigation with its own open state, focus containment, and Escape dismissal."],
+    ["loading", "Loading", "Fixed navigation with stable placeholders. Load the menu to replace them with working controls."],
+  ]
   return (
     <Tabs defaultValue="preview" className="relative mt-8">
       <TabsList variant="line">
@@ -288,7 +298,19 @@ function ComponentExample({
         render={(props) => <div {...props} hidden={false} />}
         className="mt-2 overflow-hidden rounded-xl border border-[color-mix(in_oklab,var(--foreground)_10%,var(--background))] bg-background data-[hidden]:invisible data-[hidden]:absolute data-[hidden]:w-full"
       >
-        <GpuPreview component={component} />
+        {component.slug === "sidebar" ? (
+          <div className="border-b p-3">
+            <div className="flex flex-wrap gap-1" role="group" aria-label="Sidebar examples">
+              {sidebarExamples.map(([value, label]) => (
+                <Button key={value} size="sm" variant={sidebarExample === value ? "secondary" : "ghost"}
+                  aria-pressed={sidebarExample === value} onClick={() => setSidebarExample(value)}>{label}</Button>
+              ))}
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">{sidebarExamples.find(([value]) => value === sidebarExample)?.[2]}</p>
+          </div>
+        ) : null}
+        <GpuPreview key={component.slug === "sidebar" ? sidebarExample : component.slug}
+          component={component} example={component.slug === "sidebar" ? sidebarExample : undefined} />
       </TabsContent>
       <TabsContent value="code" className="mt-2">
         <p className="mb-3 text-sm leading-6 text-muted-foreground">
@@ -307,7 +329,7 @@ function ComponentExample({
           </a>{" "}
           for its imports and helpers.
         </p>
-        <CodeBlock value={source} />
+        <CodeBlock value={examples?.[sidebarExample] ?? source} />
       </TabsContent>
     </Tabs>
   )
@@ -316,9 +338,11 @@ function ComponentExample({
 export function GpuPreview({
   component,
   icon,
+  example,
 }: {
   component: CatalogComponent
   icon?: string
+  example?: string
 }) {
   const hostRef = React.useRef<HTMLDivElement>(null)
   const [width, setWidth] = React.useState<number | null>(null)
@@ -353,6 +377,7 @@ export function GpuPreview({
     height: String(height),
   })
   if (icon) query.set("icon", icon)
+  if (example) query.set("example", example)
   const src = `/demo/index.html?${query}`
 
   return (
@@ -473,7 +498,7 @@ export function InstallationTabs({
   slug: string
   modules?: string[]
 }) {
-  const command = `npx shadcn@4.19.0 add ${registryOrigin}/r/${slug}.json`
+  const command = `gpuicn add ${slug}`
   const manual = `// src/ui/mod.rs\n${modules.map((module) => `pub mod ${module};`).join("\n")}\n\n// src/main.rs\nmod ui;`
 
   return (
@@ -486,7 +511,7 @@ export function InstallationTabs({
         <Link className="underline underline-offset-4" to="/installation">
           one-time Rust setup
         </Link>
-        , then add the source. Declare the installed modules as shown below.
+        , then add the source. The native CLI maintains the installed module declarations.
       </p>
       <Tabs defaultValue="command" className="mt-4">
         <TabsList>

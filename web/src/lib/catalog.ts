@@ -137,6 +137,11 @@ export const components: CatalogComponent[] = [
     description: "A set of checkable options where one value is selected.",
   },
   {
+    slug: "resizable",
+    name: "Resizable",
+    description: "Controlled panes with pointer and keyboard resizing.",
+  },
+  {
     slug: "scroll-area",
     name: "Scroll Area",
     description: "Adds styled scrolling to overflowing content.",
@@ -150,6 +155,11 @@ export const components: CatalogComponent[] = [
     slug: "separator",
     name: "Separator",
     description: "Visually separates content.",
+  },
+  {
+    slug: "sidebar",
+    name: "Sidebar",
+    description: "Application navigation with responsive layouts, icon rails, nested menus, and mobile sheets.",
   },
   {
     slug: "slider",
@@ -206,6 +216,7 @@ export function findComponent(slug: string) {
 }
 
 export function previewHeight(slug: string) {
+  if (slug === "sidebar") return 520
   if (
     [
       "alert-dialog",

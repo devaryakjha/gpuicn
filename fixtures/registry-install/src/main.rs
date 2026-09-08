@@ -50,6 +50,7 @@ impl Render for Hello {
             .font_family(theme.fonts.body.clone())
             .child(
                 Button::new("hello.increment")
+                    .aria_label(format!("Clicked {} times", self.count))
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.count += 1;
                         cx.notify();

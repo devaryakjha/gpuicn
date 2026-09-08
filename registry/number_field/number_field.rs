@@ -20,6 +20,7 @@ type CommitHandler = Rc<dyn Fn(Option<f64>, NumberFieldCommitDetails, &mut Windo
 
 #[derive(IntoElement)]
 pub struct NumberField {
+    style: gpui::StyleRefinement,
     id: ElementId,
     default_value: Option<f64>,
     value: Option<Option<f64>>,
@@ -35,6 +36,7 @@ pub struct NumberField {
 impl NumberField {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             default_value: None,
             value: None,
@@ -95,6 +97,8 @@ impl NumberField {
 impl RenderOnce for NumberField {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
+        let spacing = theme.spacing.unit;
+        let text_scale = theme.text_scale;
         let colors = theme.colors;
         let background = if theme.mode == ThemeMode::Dark {
             colors.background.blend(colors.input.opacity(0.30))
@@ -102,13 +106,13 @@ impl RenderOnce for NumberField {
             colors.background
         };
         let input = NumberFieldInput::new().style_with_state(move |state, base| {
-            input_text_layout(base)
+            input_text_layout(base, text_scale)
                 .flex_1()
                 .min_w_0()
-                .h(px(30.))
-                .px(px(10.))
+                .h(spacing * 8. - px(2.))
+                .px(spacing * 2.5_f32)
                 .text_color(colors.foreground)
-                .text_size(px(14.))
+                .text_size(px(14.) * text_scale)
                 .when(state.root.disabled, |base| base.opacity(0.50))
         });
         let input = if let Some(placeholder) = self.placeholder {
@@ -123,33 +127,36 @@ impl RenderOnce for NumberField {
             .disabled(self.disabled)
             .read_only(self.read_only)
             .style_with_state(move |state, base| {
-                let ring = if state.invalid {
-                    theme.destructive_focus_ring()[0].color
-                } else {
-                    theme.focus_ring()[0].color
-                };
-                base.w_full()
-                    .h(px(32.))
-                    .rounded(theme.radius.lg)
-                    .border_1()
-                    .border_color(if state.invalid {
-                        colors.destructive
+                let base = {
+                    let ring = if state.invalid {
+                        theme.destructive_focus_ring()[0].color
                     } else {
-                        colors.input
-                    })
-                    .bg(background)
-                    .when(state.focused, |base| {
-                        focus_outline(
-                            base.border_color(if state.invalid {
-                                colors.destructive
-                            } else {
-                                colors.ring
-                            }),
-                            ring.into(),
-                            gpui::Corners::all(theme.radius.lg),
-                        )
-                    })
-                    .when(state.disabled, |base| base.cursor_not_allowed())
+                        theme.focus_ring()[0].color
+                    };
+                    base.w_full()
+                        .h(spacing * 8_f32)
+                        .rounded(theme.radius.lg)
+                        .border_1()
+                        .border_color(if state.invalid {
+                            colors.destructive
+                        } else {
+                            colors.input
+                        })
+                        .bg(background)
+                        .when(state.focused, |base| {
+                            focus_outline(
+                                base.border_color(if state.invalid {
+                                    colors.destructive
+                                } else {
+                                    colors.ring
+                                }),
+                                ring.into(),
+                                gpui::Corners::all(theme.radius.lg),
+                            )
+                        })
+                        .when(state.disabled, |base| base.cursor_not_allowed())
+                };
+                super::theme::apply_style(base, &self.style)
             })
             .child(
                 NumberFieldGroup::new()
@@ -170,7 +177,7 @@ impl RenderOnce for NumberField {
                                 })
                             })
                             .flex()
-                            .size(px(30.))
+                            .size(spacing * 8. - px(2.))
                             .items_center()
                             .justify_center()
                             .border_l_1()
@@ -178,7 +185,7 @@ impl RenderOnce for NumberField {
                             .text_color(colors.muted_foreground)
                             .child(
                                 lucide(LucideIcon::Minus)
-                                    .size(px(14.))
+                                    .size(spacing * 3.5_f32)
                                     .text_color(colors.muted_foreground),
                             ),
                     )
@@ -194,7 +201,7 @@ impl RenderOnce for NumberField {
                                 })
                             })
                             .flex()
-                            .size(px(30.))
+                            .size(spacing * 8. - px(2.))
                             .items_center()
                             .justify_center()
                             .border_l_1()
@@ -202,7 +209,7 @@ impl RenderOnce for NumberField {
                             .text_color(colors.muted_foreground)
                             .child(
                                 lucide(LucideIcon::Plus)
-                                    .size(px(14.))
+                                    .size(spacing * 3.5_f32)
                                     .text_color(colors.muted_foreground),
                             ),
                     ),
@@ -227,5 +234,11 @@ impl RenderOnce for NumberField {
             });
         }
         root
+    }
+}
+
+impl gpui::Styled for NumberField {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
     }
 }

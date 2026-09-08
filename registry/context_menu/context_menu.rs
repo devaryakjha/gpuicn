@@ -33,10 +33,12 @@ pub fn context_menu_portal<P: Clone + 'static>() -> ContextMenuPortal<P> {
 }
 
 /// Creates the cursor-anchored context-menu positioner.
-pub fn context_menu_positioner<P: Clone + 'static>() -> ContextMenuPositioner<P> {
+pub fn context_menu_positioner<P: Clone + 'static>(cx: &App) -> ContextMenuPositioner<P> {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ContextMenuPositioner::new()
         .side(MenuSide::Right)
-        .align_offset(px(4.))
+        .align_offset(spacing * 1_f32)
 }
 
 /// Creates the styled context-menu popup.
@@ -47,7 +49,7 @@ pub fn context_menu_popup<P: Clone + 'static>(
     let theme = UiTheme::read(cx).clone();
     ContextMenuPopup::new()
         .id(id)
-        .style_with_state(move |_state, base| menu::popup_style(base, &theme, px(144.)))
+        .style_with_state(move |_state, base| menu::popup_style(base, &theme, theme.space(36.)))
 }
 
 /// Creates a styled context-menu item.
@@ -82,6 +84,7 @@ pub fn context_menu_checkbox_item_indicator<P: Clone + 'static>(
     cx: &App,
 ) -> ContextMenuCheckboxItemIndicator<P> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     let foreground = theme.colors.foreground;
     ContextMenuCheckboxItemIndicator::new()
         .keep_mounted(true)
@@ -90,7 +93,7 @@ pub fn context_menu_checkbox_item_indicator<P: Clone + 'static>(
         })
         .child(
             lucide(LucideIcon::Check)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(foreground),
         )
 }
@@ -120,6 +123,7 @@ pub fn context_menu_radio_item_indicator<P: Clone + 'static, V: Clone + Eq + 'st
     cx: &App,
 ) -> ContextMenuRadioItemIndicator<P, V> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     let foreground = theme.colors.foreground;
     ContextMenuRadioItemIndicator::new()
         .keep_mounted(true)
@@ -128,7 +132,7 @@ pub fn context_menu_radio_item_indicator<P: Clone + 'static, V: Clone + Eq + 'st
         })
         .child(
             lucide(LucideIcon::Check)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(foreground),
         )
 }
@@ -141,12 +145,14 @@ pub fn context_menu_group<P: Clone + 'static>() -> ContextMenuGroup<P> {
 /// Creates a styled context-menu group label.
 pub fn context_menu_group_label<P: Clone + 'static>(cx: &App) -> ContextMenuGroupLabel<P> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     ContextMenuGroupLabel::new().style_with_state(move |_state, base| {
-        base.px(px(6.))
-            .py(px(4.))
+        base.px(spacing * 1.5_f32)
+            .py(spacing * 1_f32)
             .font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(12.))
+            .text_size(px(12.) * text_scale)
             .text_color(theme.colors.muted_foreground)
     })
 }
@@ -154,10 +160,11 @@ pub fn context_menu_group_label<P: Clone + 'static>(cx: &App) -> ContextMenuGrou
 /// Creates a styled context-menu separator.
 pub fn context_menu_separator(cx: &App) -> ContextMenuSeparator {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ContextMenuSeparator::new().style_with_state(move |_state, base| {
         base.h(px(1.))
-            .mx(px(-4.))
-            .my(px(4.))
+            .mx(spacing * -1_f32)
+            .my(spacing * 1_f32)
             .bg(theme.colors.border)
     })
 }
@@ -175,6 +182,7 @@ pub fn context_menu_submenu_trigger<P: Clone + 'static>(
     cx: &App,
 ) -> ContextMenuSubmenuTrigger<P> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     let icon_color = theme.colors.muted_foreground;
     ContextMenuSubmenuTrigger::new()
         .id(id)
@@ -189,7 +197,7 @@ pub fn context_menu_submenu_trigger<P: Clone + 'static>(
         })
         .child(
             lucide(LucideIcon::ChevronRight)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(icon_color),
         )
 }

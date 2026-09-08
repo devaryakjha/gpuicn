@@ -1,0 +1,82 @@
+[
+  {
+    "seconds": 0.0,
+    "rss_kib": 32
+  },
+  {
+    "seconds": 0.25,
+    "rss_kib": 32
+  },
+  {
+    "seconds": 0.5,
+    "rss_kib": 90320
+  },
+  {
+    "seconds": 0.75,
+    "rss_kib": 102272
+  },
+  {
+    "seconds": 1.0,
+    "rss_kib": 102528
+  },
+  {
+    "seconds": 1.25,
+    "rss_kib": 102576
+  },
+  {
+    "seconds": 1.5,
+    "rss_kib": 102672
+  },
+  {
+    "seconds": 1.75,
+    "rss_kib": 102672
+  },
+  {
+    "seconds": 2.0,
+    "rss_kib": 102720
+  },
+  {
+    "seconds": 2.25,
+    "rss_kib": 102784
+  },
+  {
+    "seconds": 2.5,
+    "rss_kib": 102784
+  },
+  {
+    "seconds": 2.75,
+    "rss_kib": 102784
+  },
+  {
+    "seconds": 3.0,
+    "rss_kib": 102784
+  },
+  {
+    "seconds": 3.25,
+    "rss_kib": 102784
+  },
+  {
+    "seconds": 3.5,
+    "rss_kib": 102816
+  },
+  {
+    "seconds": 3.75,
+    "rss_kib": 102832
+  },
+  {
+    "seconds": 4.0,
+    "rss_kib": 102848
+  },
+  {
+    "seconds": 4.25,
+    "rss_kib": 102672
+  },
+  {
+    "seconds": 4.5,
+    "rss_kib": 102576
+  },
+  {
+    "seconds": 4.75,
+    "rss_kib": 102576
+  }
+]

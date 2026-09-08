@@ -26,6 +26,8 @@ pub fn select_trigger<T: Clone + Eq + 'static>(
     cx: &App,
 ) -> SelectTrigger<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     SelectTrigger::new()
         .id(id)
         .style_with_state(move |state, base| {
@@ -43,16 +45,16 @@ pub fn select_trigger<T: Clone + Eq + 'static>(
                 .flex_row_reverse()
                 .items_center()
                 .justify_between()
-                .h(px(32.))
-                .gap(px(6.))
+                .h(spacing * 8_f32)
+                .gap(spacing * 1.5_f32)
                 .rounded(theme.radius.lg)
                 .border_1()
                 .border_color(border)
-                .px(px(10.))
-                .py(px(4.))
+                .px(spacing * 2.5_f32)
+                .py(spacing * 1_f32)
                 .bg(theme.colors.background)
                 .font_family(theme.fonts.body.clone())
-                .text_size(px(14.))
+                .text_size(px(14.) * text_scale)
                 .text_color(if state.placeholder {
                     theme.colors.muted_foreground
                 } else {
@@ -91,6 +93,7 @@ pub fn select_value<T: Clone + Eq + 'static>(cx: &App) -> SelectValue<T> {
 /// Creates Nova's select chevron icon.
 pub fn select_icon<T: Clone + Eq + 'static>(cx: &App) -> SelectIcon<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     SelectIcon::new()
         .style_with_state(move |_state, base| {
             base.flex_shrink_0()
@@ -98,7 +101,7 @@ pub fn select_icon<T: Clone + Eq + 'static>(cx: &App) -> SelectIcon<T> {
         })
         .child(
             lucide(LucideIcon::ChevronDown)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(theme.colors.muted_foreground),
         )
 }
@@ -109,9 +112,11 @@ pub fn select_portal<T: Clone + Eq + 'static>() -> SelectPortal<T> {
 }
 
 /// Creates a select positioner with the pinned 4px content offset.
-pub fn select_positioner<T: Clone + Eq + 'static>() -> SelectPositioner<T> {
+pub fn select_positioner<T: Clone + Eq + 'static>(cx: &App) -> SelectPositioner<T> {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     SelectPositioner::new()
-        .side_offset(px(4.))
+        .side_offset(spacing * 1_f32)
         .style_with_state(|state, base| {
             base.when_some(state.anchor_width, |base, width| base.min_w(width))
         })
@@ -124,23 +129,29 @@ pub fn select_popup<T: Clone + Eq + 'static>(cx: &App) -> SelectPopup<T> {
 }
 
 /// Creates the styled select list.
-pub fn select_list<T: Clone + Eq + 'static>() -> SelectList<T> {
-    SelectList::new().style_with_state(move |_state, base| base.p(px(4.)))
+pub fn select_list<T: Clone + Eq + 'static>(cx: &App) -> SelectList<T> {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    SelectList::new().style_with_state(move |_state, base| base.p(spacing * 1_f32))
 }
 
 /// Creates a styled select group.
-pub fn select_group<T: Clone + Eq + 'static>() -> SelectGroup<T> {
-    SelectGroup::new().style_with_state(move |_state, base| base.p(px(4.)))
+pub fn select_group<T: Clone + Eq + 'static>(cx: &App) -> SelectGroup<T> {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    SelectGroup::new().style_with_state(move |_state, base| base.p(spacing * 1_f32))
 }
 
 /// Creates a styled select group label.
 pub fn select_group_label<T: Clone + Eq + 'static>(cx: &App) -> SelectGroupLabel<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     SelectGroupLabel::new().style_with_state(move |_state, base| {
-        base.px(px(6.))
-            .py(px(4.))
+        base.px(spacing * 1.5_f32)
+            .py(spacing * 1_f32)
             .font_family(theme.fonts.body.clone())
-            .text_size(px(12.))
+            .text_size(px(12.) * text_scale)
             .text_color(theme.colors.muted_foreground)
     })
 }
@@ -169,20 +180,21 @@ pub fn select_item_text<T: Clone + Eq + 'static>() -> SelectItemText<T> {
 /// Creates the selected-item check indicator.
 pub fn select_item_indicator<T: Clone + Eq + 'static>(cx: &App) -> SelectItemIndicator<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     SelectItemIndicator::new()
         .keep_mounted(true)
         .style_with_state(move |state, base| {
             base.absolute()
-                .right(px(8.))
+                .right(spacing * 2_f32)
                 .flex()
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .items_center()
                 .justify_center()
                 .opacity(if state.selected { 1.0 } else { 0.0 })
         })
         .child(
             lucide(LucideIcon::Check)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(theme.colors.foreground),
         )
 }
@@ -190,10 +202,11 @@ pub fn select_item_indicator<T: Clone + Eq + 'static>(cx: &App) -> SelectItemInd
 /// Creates a styled select separator.
 pub fn select_separator(cx: &App) -> SelectSeparator {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     SelectSeparator::new().style_with_state(move |_state, base| {
         base.h(px(1.))
-            .mx(px(-4.))
-            .my(px(4.))
+            .mx(spacing * -1_f32)
+            .my(spacing * 1_f32)
             .bg(theme.colors.border)
     })
 }
@@ -201,12 +214,13 @@ pub fn select_separator(cx: &App) -> SelectSeparator {
 /// Creates the styled select scroll-up affordance.
 pub fn select_scroll_up_arrow<T: Clone + Eq + 'static>(cx: &App) -> SelectScrollUpArrow<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     let icon_color = theme.colors.muted_foreground;
     SelectScrollUpArrow::new()
         .style_with_state(move |_state, base| scroll_arrow_style(base, &theme))
         .child(
             lucide(LucideIcon::ChevronUp)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(icon_color),
         )
 }
@@ -214,41 +228,46 @@ pub fn select_scroll_up_arrow<T: Clone + Eq + 'static>(cx: &App) -> SelectScroll
 /// Creates the styled select scroll-down affordance.
 pub fn select_scroll_down_arrow<T: Clone + Eq + 'static>(cx: &App) -> SelectScrollDownArrow<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     let icon_color = theme.colors.muted_foreground;
     SelectScrollDownArrow::new()
         .style_with_state(move |_state, base| scroll_arrow_style(base, &theme))
         .child(
             lucide(LucideIcon::ChevronDown)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(icon_color),
         )
 }
 
 fn popup_style(base: Div, theme: &UiTheme) -> Div {
-    base.min_w(px(144.))
-        .max_h(px(252.))
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
+    base.min_w(spacing * 36_f32)
+        .max_h(spacing * 63_f32)
         .overflow_hidden()
         .rounded(theme.radius.lg)
         .bg(theme.colors.popover)
         .text_color(theme.colors.popover_foreground)
         .font_family(theme.fonts.body.clone())
-        .text_size(px(14.))
+        .text_size(px(14.) * text_scale)
         .border_1()
         .border_color(theme.colors.foreground.opacity(0.10))
         .shadow(theme.shadows.md.clone())
 }
 
 fn item_style(base: Div, highlighted: bool, disabled: bool, theme: &UiTheme) -> Div {
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     base.relative()
         .flex()
         .items_center()
-        .gap(px(6.))
+        .gap(spacing * 1.5_f32)
         .rounded(theme.radius.sm)
-        .py(px(4.))
-        .pr(px(32.))
-        .pl(px(6.))
+        .py(spacing * 1_f32)
+        .pr(spacing * 8_f32)
+        .pl(spacing * 1.5_f32)
         .font_family(theme.fonts.body.clone())
-        .text_size(px(14.))
+        .text_size(px(14.) * text_scale)
         .text_color(theme.colors.popover_foreground)
         .when(!disabled, |base| base.cursor_pointer())
         .when(highlighted && !disabled, |base| {
@@ -259,8 +278,9 @@ fn item_style(base: Div, highlighted: bool, disabled: bool, theme: &UiTheme) -> 
 }
 
 fn scroll_arrow_style(base: Div, theme: &UiTheme) -> Div {
+    let spacing = theme.spacing.unit;
     base.flex()
-        .h(px(28.))
+        .h(spacing * 7_f32)
         .items_center()
         .justify_center()
         .bg(theme.colors.popover)

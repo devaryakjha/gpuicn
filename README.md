@@ -58,8 +58,11 @@ Cargo dependencies and [theming](docs/theming.md) for colors, density, type,
 radius, per-instance styles, and motion.
 
 The [running TODO](TODO.md) tracks this local pass and later desktop batches.
-Launch the native review with `cargo run -p gpuicn --release --example desktop
---features native-fixture,gpui_platform/runtime_shaders`.
+Launch the native review:
+
+```sh
+cargo run -p gpuicn --release --example desktop --features native-fixture,gpui_platform/runtime_shaders
+```
 
 ## Catalog development
 

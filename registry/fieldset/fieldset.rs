@@ -18,13 +18,14 @@ pub enum FieldsetLegendVariant {
 /// Creates a styled Fieldset root with Base GPUI disabled-state cascading.
 pub fn fieldset_root(id: impl Into<ElementId>, cx: &App) -> FieldsetRoot {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     FieldsetRoot::new()
         .id(id)
         .style_with_state(move |state, base| {
             base.flex()
                 .flex_col()
                 .w_full()
-                .gap(px(24.0))
+                .gap(spacing * 6_f32)
                 .font_family(theme.fonts.body.clone())
                 .text_color(theme.colors.foreground)
                 .when(state.disabled, |base| base.opacity(0.50))
@@ -34,6 +35,7 @@ pub fn fieldset_root(id: impl Into<ElementId>, cx: &App) -> FieldsetRoot {
 /// Creates a Fieldset legend. Give the root the same literal `aria_label`.
 pub fn fieldset_legend(variant: FieldsetLegendVariant, cx: &App) -> FieldsetLegend {
     let theme = UiTheme::read(cx).clone();
+    let text_scale = theme.text_scale;
     FieldsetLegend::new().style_with_state(move |state, base| {
         let text_size = match variant {
             FieldsetLegendVariant::Legend => 16.0,
@@ -42,8 +44,8 @@ pub fn fieldset_legend(variant: FieldsetLegendVariant, cx: &App) -> FieldsetLege
 
         base.font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(text_size))
-            .line_height(px(20.0))
+            .text_size(px(text_size) * text_scale)
+            .line_height(px(20.0) * text_scale)
             .text_color(theme.colors.foreground)
             .when(state.disabled, |base| base.opacity(0.50))
     })

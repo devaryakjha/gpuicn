@@ -10,68 +10,86 @@ Create a Rust app with `cargo new my-app`, then add these pinned dependencies:
 
 ```toml
 [dependencies]
+web-time = "1.1"
 base-gpui = { git = "https://github.com/LukeTandjung/base-gpui", rev = "64b22337b6a790c636aab248e768e4875bb28ba8" }
 gpui = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d" }
-gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d", features = ["font-kit"] }
 gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "b25a5ebae2e1a5f4ddfca1389ab9d21d481d9ec8" }
 ```
 
-Save `components.json` in your app root:
+## Install the native CLI
 
-```json
-{
-  "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "new-york",
-  "rsc": false,
-  "tsx": false,
-  "tailwind": {
-    "config": "",
-    "css": "",
-    "baseColor": "neutral",
-    "cssVariables": false
-  },
-  "aliases": {
-    "components": "~/src",
-    "utils": "~/src",
-    "ui": "~/src/ui",
-    "lib": "~/src",
-    "hooks": "~/src"
-  }
-}
+The new CLI is a local preview and is not published to crates.io yet. From this
+checkout, build and install it with Rust alone:
+
+```sh
+cargo install --path crates/cli --locked
 ```
 
-Save `tsconfig.json` beside it. The stock installer uses this file to resolve
-aliases; your app remains Rust:
+From your app directory, initialize a config pointing to this checkout's built
+registry (replace `/path/to/gpuicn` with its location):
 
-```json
-{
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "~/*": ["./*"]
-    }
-  }
-}
+```sh
+gpuicn --registry /path/to/gpuicn/site/pages/r init
+gpuicn list
+gpuicn add button
 ```
 
-## Install
+`gpuicn.toml` contains only the registry and destination. Paths resolve beside
+this config; an HTTP(S) URL can replace the local registry directory. Pin a
+registry snapshot if you need reproducible installs.
 
-Run the stock shadcn CLI from your app root. Node.js is required.
+```toml
+version = 1
+registry = "/path/to/gpuicn/site/pages/r"
+output = "src/ui"
+```
+
+The installer copies Button and its shared theme and adds declarations to
+`src/ui/mod.rs`, preserving caller code. Add `mod ui;` to your crate root.
+No Node.js, npm, `components.json`, or `tsconfig.json` is needed. The copied Rust
+files have no CLI runtime dependency; you can edit, move, or copy them yourself.
+
+## Add and update
+
+```sh
+gpuicn add sidebar resizable
+gpuicn add --all --dry-run
+gpuicn add button --dry-run --overwrite
+gpuicn add button --overwrite
+```
+
+Existing edited files are kept by default. Use version control to review a dry
+run and diff before opting into replacement. Downloads and source validation
+finish before writes begin. Each file is replaced atomically, with `mod.rs`
+last; an I/O failure while committing files can still leave a partial batch.
+The CLI does not edit Cargo dependencies, application setup, or fonts.
+
+## Build a registry
+
+From the gpuicn checkout:
+
+```sh
+cargo run -p gpuicn-cli --locked -- build
+```
+
+`registry.toml` describes component metadata and source dependencies. The build
+writes `registry.json` and inline-source items under `site/pages/r`. This JSON
+transport remains compatible with the stock shadcn installer and can be served
+as static files, mirrored, or used from a local directory. The React website's
+Bun/Node dependencies are separate from Rust component installation.
+
+## Optional stock shadcn installer
+
+The existing published registry also supports:
 
 ```sh
 npx -y shadcn@4.19.0 add https://ui.imajha.com/r/button.json
 ```
 
-Create `src/ui/mod.rs` for the installed modules:
-
-```rust
-pub mod theme;
-pub mod button;
-```
-
-Declare `mod ui;` from your crate root. Each component page lists all required
-modules, including shared dependencies. Each item installs the source it needs.
-Review your local changes before re-running an install with `--overwrite`.
+This legacy route needs Node.js and the `components.json` / `tsconfig.json`
+examples in `fixtures/registry-install/`. Declare installed modules yourself
+when using it. The native CLI maintains module declarations for you.
 
 ## Run a window
 
