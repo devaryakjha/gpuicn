@@ -1,24 +1,69 @@
 # gpuicn
 
-Open-code components for [GPUI](https://www.gpui.rs/), built on
-[Base GPUI](https://github.com/LukeTandjung/base-gpui).
+<div align="center">
+  <img src="web/public/brand/gpuicn-panels-transparent.png" alt="gpuicn logo" width="96">
+  <p>Native, editable UI components for <a href="https://www.gpui.rs/">GPUI</a>.</p>
+  <p>
+    <a href="https://ui.imajha.com/">Catalog</a> ·
+    <a href="docs/registry.md">Install</a> ·
+    <a href="docs/theming.md">Theming</a> ·
+    <a href="https://github.com/devaryakjha/gpuicn/issues">Issues</a>
+  </p>
+</div>
 
-The project follows the shadcn/ui model: install component source into your
-app, then own and adapt it. It ports visual identity and themes to idiomatic
-GPUI APIs; it does not copy React APIs.
+gpuicn is an open-source library of Rust components for native GPUI apps.
+Install the source in your app, then keep ownership of its styling and behavior.
+The components use [Base GPUI](https://github.com/LukeTandjung/base-gpui) and
+native desktop input behavior.
 
-The registry covers all 37 component families exposed by the pinned Base GPUI
-release, styled with shadcn's Neutral Nova defaults. The catalog uses real
-GPUI/WASM previews; component source stays editable after installation.
+The project follows the shadcn/ui source distribution model. It brings shadcn's
+visual language and themes to idiomatic GPUI APIs. It does not copy React APIs.
+
+<p align="center">
+  <img src="docs/images/catalog-hero.png" alt="gpuicn catalog landing page" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/images/catalog-components.png" alt="gpuicn component catalog" width="100%">
+</p>
+
+> [!WARNING]
+> gpuicn is in beta. APIs and styling can change. Pin dependency revisions and review updates before replacing installed source.
+
+The registry covers 39 component families, including Sidebar and Resizable,
+with shadcn Neutral Nova defaults. The catalog uses real GPUI/WASM previews.
+Installed source stays editable.
 
 - [Catalog](https://ui.imajha.com/)
 - [Registry setup](docs/registry.md)
 - [Source pins](release-pins.toml)
+- [Desktop expansion plan and local review gates](docs/plans/desktop-components.md)
 - [Full Lucide icon library](https://github.com/devaryakjha/gpui-icons)
+
+## Install editable Rust source
+
+The native CLI is an unpublished local preview. Build it from this checkout:
+
+```sh
+cargo install --path crates/cli --locked
+# From your app directory; replace the path with this checkout:
+gpuicn --registry /path/to/gpuicn/site/pages/r init
+gpuicn add button sidebar
+```
+
+No Node.js is required. `gpuicn.toml` selects the registry and output directory.
+The CLI copies shared modules and maintains `mod.rs`. Existing edits are kept
+unless you pass `--overwrite`. See [setup and updates](docs/registry.md) for
+Cargo dependencies and [theming](docs/theming.md) for colors, density, type,
+radius, per-instance styles, and motion.
+
+The [running TODO](TODO.md) tracks this local pass and later desktop batches.
+Launch the native review with `cargo run -p gpuicn --release --example desktop
+--features native-fixture,gpui_platform/runtime_shaders`.
 
 ## Catalog development
 
-The TanStack/shadcn website lives in `web/`; the Rust crate in `site/` builds
+The TanStack/shadcn website lives in `web/`. The Rust crate in `site/` builds
 the embedded GPUI/WASM previews.
 
 Use Rust 1.95 for native development, the pinned WASM nightly, Trunk 0.21.14,
@@ -49,17 +94,28 @@ bun run build
 bun run lint
 ```
 
-CI also installs every registry item with the stock shadcn CLI, compares the
-installed source byte for byte, tests overwrite behavior, and compiles the app.
+CI builds the registry with Rust and checks native installation. It also installs
+every registry item with the stock shadcn CLI. CI compares the installed source
+byte for byte, tests overwrite behavior, and compiles the app.
 
 ## Platform scope
 
 The components use Base GPUI's native state and input behavior. The browser
 catalog renders the same Rust components through WebGPU and WASM. It needs a
-WebGPU-capable browser; source and installation instructions remain available
+WebGPU-capable browser. Source and installation instructions remain available
 when a preview cannot start.
 
 The WASM canvas does not expose a browser accessibility tree. Relationship
 attributes, nested overlays, motion, and other differences are documented per
 component under `docs/parity/` and in the catalog. These are platform limits,
 not claims of complete browser or shadcn behavioral parity.
+
+## Contributing
+
+Open an [issue](https://github.com/devaryakjha/gpuicn/issues) for a bug, parity
+gap, or component request. Focused pull requests are welcome. Include the
+checks that support the change.
+
+## License
+
+gpuicn is available under the [MIT License](LICENSE).
