@@ -1,7 +1,7 @@
 //! Keyboard checks for Kit-based controls.
 use gpui_kit::{
-    AppContext, Context, Entity, Focusable as _, IntoElement, ParentElement as _, Render, Styled,
-    TestAppContext, Window, div, px,
+    AppContext, Context, Entity, Focusable as _, InteractiveElement as _, IntoElement,
+    ParentElement as _, Render, Styled, TestAppContext, Window, div, px,
 };
 use gpuicn::{
     input::{Input, InputState},
@@ -411,5 +411,224 @@ fn menu_skips_disabled_opens_submenu_and_restores_focus(cx: &mut TestAppContext)
             assert!(!menu.is_open());
             assert!(menu.trigger_focus().is_focused(window));
         });
+    }
+}
+
+struct DrawerView {
+    handle: gpuicn::drawer::DrawerHandle,
+    side: gpuicn::drawer::DrawerSide,
+    outside: Entity<InputState>,
+}
+impl Render for DrawerView {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        use gpuicn::drawer::*;
+        Drawer::new("test.drawer", &self.handle)
+            .direction(self.side)
+            .show_swipe_handle(true)
+            .child(Input::new(&self.outside).aria_label("Outside drawer"))
+            .content(
+                DrawerContent::new("test.drawer.content", "Test drawer")
+                    .child(
+                        drawer_header(self.side, cx)
+                            .child(drawer_title("test.drawer.title", cx).child("Test drawer")),
+                    )
+                    .child(
+                        drawer_body("test.drawer.body", cx)
+                            .child(div().h(px(1200.)).child("Long content")),
+                    )
+                    .child(
+                        drawer_footer(cx)
+                            .debug_selector(|| "drawer-footer".into())
+                            .child(drawer_close("test.drawer.close", &self.handle).label("Close")),
+                    ),
+            )
+    }
+}
+
+#[gpui_kit::test]
+fn drawer_presence_reverses_and_restores_focus_only_after_exit(cx: &mut TestAppContext) {
+    use gpuicn::drawer::{DrawerHandle, DrawerSide};
+    use std::time::Duration;
+    cx.update(gpuicn::init);
+    let (view, cx) = cx.add_window_view(|window, cx| DrawerView {
+        handle: DrawerHandle::new(false),
+        side: DrawerSide::Bottom,
+        outside: cx.new(|cx| InputState::new(window, cx)),
+    });
+    cx.update(|window, cx| {
+        window.activate_window();
+        window.draw(cx).clear(cx);
+    });
+    assert!(
+        cx.debug_bounds("drawer-panel").is_none(),
+        "closed mount must not create an invisible modal"
+    );
+    cx.simulate_keystrokes("tab");
+    cx.update(|window, cx| {
+        assert!(
+            view.read(cx)
+                .outside
+                .read(cx)
+                .focus_handle(cx)
+                .is_focused(window)
+        );
+        view.read(cx).handle.clone().open(window, cx);
+        window.draw(cx).clear(cx);
+    });
+    cx.executor().advance_clock(Duration::from_millis(70));
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    let entering = cx.debug_bounds("drawer-panel").unwrap();
+    cx.update(|window, cx| {
+        view.read(cx).handle.clone().close(window, cx);
+        window.draw(cx).clear(cx);
+    });
+    let reversing = cx.debug_bounds("drawer-panel").unwrap();
+    assert!(
+        (entering.top() - reversing.top()).abs() < px(1.),
+        "close must start at current position"
+    );
+    cx.update(|window, cx| {
+        assert!(
+            !view
+                .read(cx)
+                .outside
+                .read(cx)
+                .focus_handle(cx)
+                .is_focused(window)
+        )
+    });
+    cx.executor().advance_clock(Duration::from_millis(20));
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    let exiting = cx.debug_bounds("drawer-panel").unwrap();
+    assert!(exiting.top() > entering.top());
+    cx.update(|window, cx| {
+        view.read(cx).handle.clone().open(window, cx);
+        window.draw(cx).clear(cx);
+    });
+    assert!((cx.debug_bounds("drawer-panel").unwrap().top() - exiting.top()).abs() < px(1.));
+    cx.executor().advance_clock(Duration::from_millis(300));
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    // Grabbing a panel while it settles back must continue at its painted position.
+    let grip = cx.debug_bounds("drawer-grip").unwrap().center();
+    let moved = gpui_kit::point(grip.x, grip.y + px(28.));
+    cx.simulate_mouse_down(grip, gpui_kit::MouseButton::Left, Default::default());
+    cx.simulate_mouse_move(moved, Some(gpui_kit::MouseButton::Left), Default::default());
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    cx.simulate_mouse_up(moved, gpui_kit::MouseButton::Left, Default::default());
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    cx.executor().advance_clock(Duration::from_millis(25));
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    let settling = cx.debug_bounds("drawer-panel").unwrap();
+    let grip = cx.debug_bounds("drawer-grip").unwrap().center();
+    cx.simulate_mouse_down(grip, gpui_kit::MouseButton::Left, Default::default());
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    assert!((cx.debug_bounds("drawer-panel").unwrap().top() - settling.top()).abs() < px(1.));
+    cx.simulate_mouse_up(grip, gpui_kit::MouseButton::Left, Default::default());
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    cx.executor().advance_clock(Duration::from_millis(300));
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    cx.simulate_keystrokes("tab tab");
+    cx.update(|window, cx| {
+        assert!(
+            !view
+                .read(cx)
+                .outside
+                .read(cx)
+                .focus_handle(cx)
+                .is_focused(window)
+        )
+    });
+    cx.simulate_keystrokes("escape");
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    cx.executor().advance_clock(Duration::from_millis(300));
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(cx.debug_bounds("drawer-panel").is_none());
+    cx.update(|window, cx| {
+        assert!(
+            view.read(cx)
+                .outside
+                .read(cx)
+                .focus_handle(cx)
+                .is_focused(window)
+        )
+    });
+}
+
+#[gpui_kit::test]
+fn drawer_edges_keep_footer_visible_and_swipes_dismiss(cx: &mut TestAppContext) {
+    use gpui_kit::{Modifiers, MouseButton, point};
+    use gpuicn::drawer::{DrawerHandle, DrawerSide};
+    cx.update(gpuicn::init);
+    cx.update(|cx| {
+        let mut theme = gpuicn::theme::UiTheme::read(cx).clone();
+        theme.motion.reduced = true;
+        gpuicn::theme::UiTheme::set(cx, theme);
+    });
+    for side in [
+        DrawerSide::Top,
+        DrawerSide::Right,
+        DrawerSide::Bottom,
+        DrawerSide::Left,
+    ] {
+        let (view, cx) = cx.add_window_view(move |window, cx| DrawerView {
+            handle: DrawerHandle::new(false),
+            side,
+            outside: cx.new(|cx| InputState::new(window, cx)),
+        });
+        let viewport = cx.update(|window, cx| {
+            window.activate_window();
+            window.draw(cx).clear(cx);
+            view.read(cx).handle.clone().open(window, cx);
+            window.draw(cx).clear(cx);
+            window.viewport_size()
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let panel = cx.debug_bounds("drawer-panel").unwrap();
+        let footer = cx.debug_bounds("drawer-footer").unwrap();
+        assert!(
+            footer.top() >= panel.top() && footer.bottom() <= panel.bottom(),
+            "footer must remain visible with tall body content"
+        );
+        match side {
+            DrawerSide::Top | DrawerSide::Bottom => {
+                assert_eq!(panel.size.width, viewport.width);
+                assert!(panel.size.height <= viewport.height - px(96.));
+            }
+            _ => {
+                assert_eq!(panel.size.height, viewport.height);
+                assert_eq!(
+                    panel.size.width,
+                    if viewport.width >= px(640.) {
+                        px(384.)
+                    } else {
+                        viewport.width * 0.75
+                    }
+                );
+            }
+        }
+        let start = cx.debug_bounds("drawer-grip").unwrap().center();
+        let distance = if matches!(side, DrawerSide::Top | DrawerSide::Bottom) {
+            panel.size.height
+        } else {
+            panel.size.width
+        } * 0.4;
+        let end = match side {
+            DrawerSide::Top => point(start.x, start.y - distance),
+            DrawerSide::Bottom => point(start.x, start.y + distance),
+            DrawerSide::Left => point(start.x - distance, start.y),
+            DrawerSide::Right => point(start.x + distance, start.y),
+        };
+        cx.simulate_mouse_down(start, MouseButton::Left, Modifiers::default());
+        cx.simulate_mouse_move(end, Some(MouseButton::Left), Modifiers::default());
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        cx.simulate_mouse_up(end, MouseButton::Left, Modifiers::default());
+        cx.update(|window, cx| {
+            assert!(!view.read(cx).handle.is_open(), "swipe must dismiss");
+            window.draw(cx).clear(cx);
+        });
+        assert!(
+            cx.debug_bounds("drawer-panel").is_none(),
+            "reduced motion closes without retaining a frame"
+        );
     }
 }

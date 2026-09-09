@@ -29,6 +29,11 @@ Independent review found and resolved menu alignment, position-derived menu IDs,
 component-owned URL routing and fixed toolbar dimensions. Menu entries now require
 stable caller IDs, link handlers belong to the app, and toolbar sizing uses theme tokens.
 
+The drawer follow-up adds shadcn-style content parts, responsive edge layouts,
+a scrollable body with fixed header/footer, reversible Kit presence transitions
+and captured grip dragging. Reduced-motion and focus restoration follow the
+visual lifecycle. See [Drawer parity](../parity/drawer.md) for the exact API scope.
+
 ## Behavior checks
 
 The migration exposed and fixed three integration issues: context-menu focus
@@ -45,7 +50,7 @@ embedding this runtime on the web need the same handling until upstream fixes it
 
 | Check | Result |
 | --- | --- |
-| Workspace tests | 37 passed |
+| Workspace tests | 39 passed |
 | Workspace Clippy, all targets, warnings denied | Passed |
 | Independent registry install with its own lockfile | Passed; unused public re-export warnings only |
 | Optimized native showcase | Built and launched with isolated temporary data |
@@ -54,6 +59,7 @@ embedding this runtime on the web need the same handling until upstream fixes it
 | Optimized shared WASM preview | Passed |
 | Actual WASM input | Typing, undo, redo, Tab traversal and read-only guard passed |
 | Actual WASM form | Invalid Enter submission showed an error; valid Enter submission succeeded |
+| Actual WASM drawer | Four layouts, grip snap-back, vertical/horizontal swipe dismissal, Escape and backdrop dismissal passed |
 | Actual WASM dialog | Input editing, Tab to Save, Enter activation, closing and focus return passed |
 | Web build, TypeScript, lint and highlighting | Passed |
 | Preview event boundary check | Passed |
@@ -68,5 +74,6 @@ their original revisions and are not evidence for this migration.
 ## Release status
 
 The icon release is already published. This change updates PR #55; it does not
-publish gpuicn, merge the PR or deploy the website. Remote CI must validate the
-new PR head; the earlier compatibility implementation's green run does not apply.
+publish gpuicn, merge the PR or deploy the website. The PR checks record remote
+validation for its current head; the earlier compatibility implementation's green
+run does not apply.

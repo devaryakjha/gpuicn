@@ -179,20 +179,29 @@ mod dialog {
 }
 
 mod drawer {
-    use crate::ui::dialog::*;
     use crate::ui::drawer::*;
-    use gpui_kit::{App, IntoElement, ParentElement, Window};
+    use gpui_kit::{App, IntoElement, ParentElement};
 
-    fn example(handle: &DialogHandle, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let popup = dialog_popup("profile.popup", "Edit profile", cx)
-            .child(dialog_title("profile.title", cx).child("Edit profile"))
-            .child(dialog_action("profile.save", handle, cx).label("Save"));
-        gpui_kit::div()
-            .child(dialog_trigger("profile.open", handle, cx).label("Edit profile"))
-            .child(
-                Drawer::new("profile", handle, "Edit profile")
-                    .side(DrawerSide::Right)
-                    .child(popup),
+    fn example(handle: &DrawerHandle, cx: &App) -> impl IntoElement {
+        Drawer::new("profile", handle)
+            .direction(DrawerSide::Bottom)
+            .show_swipe_handle(true)
+            .child(drawer_trigger("profile.open", handle).label("Edit profile"))
+            .content(
+                DrawerContent::new("profile.content", "Edit profile")
+                    .child(
+                        drawer_header(DrawerSide::Bottom, cx)
+                            .child(drawer_title("profile.title", cx).child("Edit profile"))
+                            .child(
+                                drawer_description("profile.description", cx)
+                                    .child("Make changes to your profile."),
+                            ),
+                    )
+                    .child(drawer_body("profile.body", cx).child("Your profile fields go here."))
+                    .child(
+                        drawer_footer(cx)
+                            .child(drawer_close("profile.cancel", handle).label("Done")),
+                    ),
             )
     }
 }
