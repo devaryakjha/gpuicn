@@ -3,8 +3,7 @@
 //! Source: shadcn/ui 4.19.0 at
 //! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, Nova style.
 
-use std::{sync::Arc, time::Duration};
-use web_time::Instant;
+use std::time::Duration;
 
 use gpui::{
     App, BoxShadow, Corners, Div, ElementId, Global, ParentElement as _, Pixels, Rgba,
@@ -41,6 +40,7 @@ pub fn init(cx: &mut App) {
     cx.on_action(|_: &FocusNext, cx| advance_focus(false, cx));
     cx.on_action(|_: &FocusPrevious, cx| advance_focus(true, cx));
     // Later scoped bindings take precedence over window-wide defaults.
+    gpui_base::init(cx);
     base_gpui::init(cx);
     #[cfg(target_family = "wasm")]
     {
@@ -248,29 +248,6 @@ impl UiEasing {
     }
 }
 
-struct Transition {
-    from: f32,
-    target: f32,
-    started: Instant,
-}
-impl Transition {
-    fn value(&self, now: Instant, duration: Duration, easing: UiEasing) -> f32 {
-        if duration.is_zero() {
-            return self.target;
-        }
-        let progress =
-            (now.duration_since(self.started).as_secs_f32() / duration.as_secs_f32()).min(1.);
-        self.from + (self.target - self.from) * easing.sample(progress)
-    }
-    fn retarget(&mut self, target: f32, now: Instant, duration: Duration, easing: UiEasing) {
-        if target != self.target {
-            self.from = self.value(now, duration, easing);
-            self.target = target;
-            self.started = now;
-        }
-    }
-}
-
 /// Returns a smoothly retargetable value for one stable, caller-named property.
 /// Starts at the target on mount; rapid reversals continue from the current value.
 /// Honors theme and GPUI reduced-motion settings and schedules no idle frames.
@@ -290,27 +267,14 @@ pub fn transition_value(
     } else {
         duration
     };
-    let now = Instant::now();
-    let key = ElementId::NamedChild(Arc::new(id.into()), "transition".into());
-    let state = window.use_keyed_state(key, cx, |_, _| Transition {
-        from: target,
+    gpui_base::motion::transition(
+        id.into(),
         target,
-        started: now,
-    });
-    let (value, active) = state.update(cx, |state, _| {
-        state.retarget(target, now, duration, motion.easing);
-        if duration.is_zero() {
-            state.from = target;
-        }
-        (
-            state.value(now, duration, motion.easing),
-            state.from != target && now.duration_since(state.started) < duration,
-        )
-    });
-    if active {
-        window.request_animation_frame();
-    }
-    value
+        gpui_base::motion::Transition::new(duration)
+            .ease(move |progress| motion.easing.sample(progress)),
+        window,
+        cx,
+    )
 }
 
 /// Shared shadcn elevation tokens.
@@ -780,30 +744,57 @@ impl gpui::RenderOnce for DisclosureIcon {
 #[cfg(test)]
 mod motion_tests {
     use super::*;
-    #[test]
-    fn transitions_reverse_continuously_and_zero_duration_is_immediate() {
-        let start = Instant::now();
-        let duration = Duration::from_millis(200);
-        let mut transition = Transition {
-            from: 0.,
-            target: 1.,
-            started: start,
-        };
-        let halfway = start + Duration::from_millis(100);
-        let current = transition.value(halfway, duration, UiEasing::EaseInOut);
-        assert_eq!(current, 0.5);
-        transition.retarget(0., halfway, duration, UiEasing::EaseInOut);
+    use gpui::{
+        AppContext as _, Context, IntoElement, Render, TestAppContext, VisualTestContext, div,
+    };
+
+    struct View {
+        target: f32,
+        sampled: f32,
+    }
+    impl Render for View {
+        fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            self.sampled = transition_value(
+                "test-motion",
+                self.target,
+                Duration::from_millis(200),
+                window,
+                cx,
+            );
+            div()
+        }
+    }
+
+    #[gpui::test]
+    fn theme_reduced_motion_snaps_an_active_upstream_transition(cx: &mut TestAppContext) {
+        cx.update(init);
+        let window = cx.add_window(|_, _| View {
+            target: 0.,
+            sampled: 0.,
+        });
+        let mut visual = VisualTestContext::from_window(window.into(), cx);
+        visual.update(|window, cx| window.draw(cx).clear(cx));
+        window
+            .update(cx, |view, _, cx| {
+                view.target = 1.;
+                cx.notify();
+            })
+            .unwrap();
+        visual.update(|window, cx| window.draw(cx).clear(cx));
         assert_eq!(
-            transition.value(halfway, duration, UiEasing::EaseInOut),
-            current
-        );
-        assert_eq!(
-            transition.value(halfway + duration, duration, UiEasing::EaseInOut),
+            cx.read_window(&window, |view, cx| view.read(cx).sampled)
+                .unwrap(),
             0.
         );
-        transition.retarget(1., halfway + duration, Duration::ZERO, UiEasing::Linear);
+        cx.update(|cx| {
+            let mut theme = UiTheme::read(cx).clone();
+            theme.motion.reduced = true;
+            UiTheme::set(cx, theme);
+        });
+        visual.update(|window, cx| window.draw(cx).clear(cx));
         assert_eq!(
-            transition.value(halfway + duration, Duration::ZERO, UiEasing::Linear),
+            cx.read_window(&window, |view, cx| view.read(cx).sampled)
+                .unwrap(),
             1.
         );
     }

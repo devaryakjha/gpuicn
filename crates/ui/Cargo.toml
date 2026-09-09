@@ -16,6 +16,7 @@ unicode-segmentation = "1.13"
 web-time = "1.1"
 base-gpui.workspace = true
 gpui.workspace = true
+gpui-base.workspace = true
 gpui-icons.workspace = true
 gpui_platform = { workspace = true, optional = true }
 

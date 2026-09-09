@@ -51,7 +51,7 @@ function IconsPage() {
         description="The complete Lucide set for GPUI. Original SVGs, consistent strokes, and editable application code."
       />
       <p className="mt-4 text-sm leading-6 text-muted-foreground">
-        {icons.length.toLocaleString()} icons · Lucide 1.33.0 · Native and WASM
+        {icons.length.toLocaleString()} icons · Lucide 1.43.0 · Native and WASM
         ·{" "}
         <a
           className="underline underline-offset-4"

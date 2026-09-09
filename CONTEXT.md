@@ -9,7 +9,7 @@ A GPUI component that preserves a shadcn component's visual identity, themes, va
 _Avoid_: API port, React port
 
 **Component catalog**:
-Styled Base GPUI controls and reusable larger desktop components. A larger component may compose existing controls or add a missing reusable interaction; it must keep application data, routing and domain operations caller-owned.
+Styled headless GPUI controls and reusable larger desktop components. GPUI Kit supplies the shared runtime and foundation; retained Base GPUI controls preserve existing contracts during migration. A larger component may compose existing controls or add a missing reusable interaction; it must keep application data, routing and domain operations caller-owned.
 _Avoid_: Blocks, templates, examples
 
 **Component preview**:

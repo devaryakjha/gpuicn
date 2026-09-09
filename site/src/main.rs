@@ -118,7 +118,7 @@ extern "C" {
 fn main() {
     #[cfg(target_family = "wasm")]
     {
-        gpui_platform::web_init();
+        gpui_kit::platform::web_init();
         let handle = application().run_embedded(launch);
         std::mem::forget(handle);
     }
@@ -129,10 +129,11 @@ fn main() {
 
 fn application() -> Application {
     #[cfg(target_family = "wasm")]
-    let app =
-        gpui_platform::application_with_web_backend(gpui_platform::WebBackendPreference::WebGpu);
+    let app = gpui_kit::platform::application_with_web_backend(
+        gpui_kit::platform::WebBackendPreference::WebGpu,
+    );
     #[cfg(not(target_family = "wasm"))]
-    let app = gpui_platform::application();
+    let app = gpui_kit::application();
 
     app.with_assets(LucideAssetSource)
 }

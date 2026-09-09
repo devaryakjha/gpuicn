@@ -8,7 +8,13 @@ Bonsai is a full native desktop Git client covering basic and advanced Git opera
 
 Reuse or compose gpuicn components. Ordinary GPUI layout is allowed. Missing reusable UI interactions must be implemented, tested and released in gpuicn before Bonsai adopts them; do not create one-off Bonsai substitutes. Git operations, diff parsing, patch generation, graph layout algorithms, provider APIs, domain merge logic and application state stay in Bonsai.
 
-Current baseline: gpuicn v0.4.2, commit d138aad99b723c69b7b8c793f8ca615cebede656. Source-registry consumption; workspace crate is publish=false. Rust 1.95.0 / edition 2024; GPUI and gpui_platform 59b2ebf10351b5c0b5cd4403f01ed0460eeec06d; Base GPUI 64b22337b6a790c636aab248e768e4875bb28ba8; gpui-icons b25a5ebae2e1a5f4ddfca1389ab9d21d481d9ec8; shadcn CLI 4.19.0. Recheck pins before later implementation, without silently upgrading them.
+Migration note (2026-09-09): evaluate GPUI Kit 0.6.1's tree, editor, text/Markdown,
+and docking primitives before implementing these planned capabilities. Reuse them
+where the required selection, keyboard, accessibility, and source-install contracts
+hold. Keep Git operations and domain state in applications. See
+[the migration qualification](../validation/gpui-kit-migration.md).
+
+Original planning baseline: gpuicn v0.4.2, commit d138aad99b723c69b7b8c793f8ca615cebede656. Source-registry consumption; workspace crate is publish=false. Rust 1.95.0 / edition 2024; GPUI and gpui_platform 59b2ebf10351b5c0b5cd4403f01ed0460eeec06d; Base GPUI 64b22337b6a790c636aab248e768e4875bb28ba8; gpui-icons b25a5ebae2e1a5f4ddfca1389ab9d21d481d9ec8; shadcn CLI 4.19.0. Recheck pins before later implementation, without silently upgrading them.
 
 ## Reuse versus confirmed gaps
 

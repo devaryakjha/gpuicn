@@ -6,17 +6,30 @@ includes a complete working starter.
 
 ## One-time setup
 
-Create a Rust app with `cargo new my-app`, then add these pinned dependencies:
+Use Rust 1.97.1 or newer. Keep the dependency pins below together.
+
+Create a Rust app with `cargo new my-app`, then add these dependencies:
 
 ```toml
 [dependencies]
 unicode-segmentation = "1.13"
 web-time = "1.1"
 base-gpui = { git = "https://github.com/LukeTandjung/base-gpui", rev = "64b22337b6a790c636aab248e768e4875bb28ba8" }
-gpui = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d" }
-gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d", features = ["font-kit"] }
-gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "b25a5ebae2e1a5f4ddfca1389ab9d21d481d9ec8" }
+gpui = { package = "gpui-pre", version = "=0.3.4" }
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.4", features = ["font-kit"] }
+gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "01ac07dd83e97f9d6a3526466413732fbdfc2975" }
+
+gpui-base = "=0.6.1"
+gpui-kit = { version = "=0.6.1", default-features = false }
+
+[patch."https://github.com/zed-industries/zed"]
+gpui = { git = "https://github.com/devaryakjha/gpuicn", rev = "64d1bd9678d365c2f1367431c700c36184fb5142" }
 ```
+
+The `gpui` patch is a small re-export crate. It directs retained `base-gpui`
+code to the same `gpui-pre` runtime used by Kit. Cargo patches must appear in
+the consuming application's root manifest; they do not propagate through dependencies.
+Do not omit it or mix the old Zed Git runtime with Kit types.
 
 ## Install the native CLI
 

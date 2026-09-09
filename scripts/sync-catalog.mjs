@@ -79,7 +79,7 @@ copyFileSync(`${root}LICENSES/Geist-OFL-1.1`, `${root}web/public/fonts/OFL.txt`)
 const metadata = JSON.parse(execFileSync("cargo", ["metadata", "--locked", "--format-version", "1"], { cwd: root, maxBuffer: 8 * 1024 * 1024 }));
 const iconRoot = dirname(metadata.packages.find((item) => item.name === "gpui-icons").manifest_path);
 const iconManifest = JSON.parse(readFileSync(`${iconRoot}/RELEASE-MANIFEST.json`, "utf8"));
-assert.equal(iconManifest.icons.length, 1776, "The catalog requires the complete pinned gpui-icons library");
+assert.equal(iconManifest.icons.length, 1818, "The catalog requires the complete pinned gpui-icons library");
 mkdirSync(`${root}web/public/icons/lucide`, { recursive: true });
 for (const icon of iconManifest.icons) {
   copyFileSync(`${iconRoot}/assets/lucide/${icon.canonical_name}.svg`, `${root}web/public/${icon.asset_path}`);

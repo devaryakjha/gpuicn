@@ -27,7 +27,7 @@ function InstallationPage() {
             1. Create a Rust app
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
-            Use Rust 1.95 or newer and the native build tools for your platform.
+            Use Rust 1.97.1 or newer and the native build tools for your platform.
             Keep these dependency revisions together: GPUI types must come from
             the same revision across your app, Base GPUI, and the icon library.
           </p>
@@ -37,6 +37,7 @@ function InstallationPage() {
             value="cargo new my-app\ncd my-app"
           />
           <p className="mt-4 text-sm text-muted-foreground">
+            The GPUI compatibility patch belongs in your app’s root Cargo.toml.
             Add to Cargo.toml:
           </p>
           <CodeBlock

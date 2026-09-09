@@ -12,7 +12,7 @@ use gpui_icons::LucideAssetSource;
 use ui::{button::Button, theme::UiTheme};
 
 fn main() {
-    gpui_platform::application()
+    gpui_kit::application()
         .with_assets(LucideAssetSource)
         .run(|cx: &mut App| {
             ui::theme::init(cx);
