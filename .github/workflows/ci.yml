@@ -26,12 +26,12 @@ jobs:
       - name: Verify native registry install
         run: |
           cargo run -p gpuicn-cli --locked -- build
+          node scripts/sync-catalog.mjs
           cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
           cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml add --all
           cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked --features gpui_platform/runtime_shaders
       - name: Verify stock registry install
         run: |
-          node scripts/sync-catalog.mjs
           git diff --exit-code -- registry.json site/pages/r
           items=()
           for item in "$PWD"/site/pages/r/*.json; do
