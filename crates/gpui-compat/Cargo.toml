@@ -1,0 +1,13 @@
+[package]
+name = "gpui"
+version = "0.2.2"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "Temporary GPUI name compatibility for retained base-gpui APIs."
+
+[features]
+test-support = ["runtime/test-support"]
+
+[dependencies]
+runtime = { package = "gpui-pre", version = "=0.3.4" }
