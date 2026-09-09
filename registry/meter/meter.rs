@@ -2,12 +2,13 @@
 //! Nova-styled Meter backed by Base GPUI's clamped numeric semantics.
 
 use base_gpui::meter::{MeterIndicator, MeterRoot, MeterTrack};
-use gpui::{App, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window, px};
+use gpui::{App, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window};
 
 use super::theme::UiTheme;
 
 #[derive(IntoElement)]
 pub struct Meter {
+    style: gpui::StyleRefinement,
     id: ElementId,
     value: f64,
     min: f64,
@@ -18,6 +19,7 @@ pub struct Meter {
 impl Meter {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             value: 0.,
             min: 0.,
@@ -43,12 +45,14 @@ impl Meter {
 impl RenderOnce for Meter {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
-        let mut root = MeterRoot::new()
+        let spacing = theme.spacing.unit;
+        let root = MeterRoot::new()
             .id(self.id)
             .value(self.value)
             .min(self.min)
             .max(self.max)
             .w_full();
+        let mut root = super::theme::apply_style(root, &self.style);
         if let Some(label) = self.aria_label {
             root = root.aria_label(label);
         }
@@ -56,7 +60,7 @@ impl RenderOnce for Meter {
             MeterTrack::new()
                 .relative()
                 .w_full()
-                .h(px(4.))
+                .h(spacing * 1_f32)
                 .rounded_full()
                 .overflow_hidden()
                 .bg(theme.colors.muted)
@@ -67,5 +71,11 @@ impl RenderOnce for Meter {
                         .bg(theme.colors.primary),
                 ),
         )
+    }
+}
+
+impl gpui::Styled for Meter {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
     }
 }

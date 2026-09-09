@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/ui", "site"]
+members = ["crates/ui", "crates/cli", "site"]
 resolver = "3"
 
 [workspace.package]
@@ -11,7 +11,7 @@ repository = "https://github.com/devaryakjha/gpuicn"
 [workspace.dependencies]
 base-gpui = { git = "https://github.com/LukeTandjung/base-gpui", rev = "64b22337b6a790c636aab248e768e4875bb28ba8", package = "base-gpui" }
 gpui = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d", package = "gpui" }
-gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d", package = "gpui_platform" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d", package = "gpui_platform", features = ["font-kit"] }
 gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "b25a5ebae2e1a5f4ddfca1389ab9d21d481d9ec8", package = "gpui-icons" }
 
 [profile.dev]

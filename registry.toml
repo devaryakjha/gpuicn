@@ -1,0 +1,43 @@
+name = "gpuicn"
+homepage = "https://ui.imajha.com/"
+
+# Every component includes theme. Dependencies are recursive and installed once.
+[components.theme]
+description = "The app-owned shadcn Neutral theme and shared native motion tokens for GPUI."
+[components.field]
+dependencies = ["input"]
+[components.input]
+description = "Nova-styled native text input with accessible labels, IME and standard editing shortcuts."
+[components.otp_field]
+title = "OTP Field"
+[components.alert_dialog]
+dependencies = ["button", "dialog"]
+[components.dialog]
+dependencies = ["button"]
+[components.drawer]
+dependencies = ["button", "dialog"]
+[components.popover]
+dependencies = ["button"]
+[components.toast]
+dependencies = ["button"]
+[components.menu]
+dependencies = ["button"]
+[components.menubar]
+dependencies = ["menu"]
+[components.context_menu]
+dependencies = ["menu"]
+[components.autocomplete]
+dependencies = ["combobox"]
+[components.sidebar]
+description = "Shadcn-styled navigation composed from Base GPUI buttons and scroll areas."
+dependencies = ["scroll_area", "tooltip", "button", "dialog", "input", "menu"]
+[components.resizable]
+description = "Controlled shadcn-styled native GPUI resizable panes."
+[components.virtual_list]
+description = "Virtualized native rows with stable identity, selection, keyboard navigation and fixed row heights."
+dependencies = ["scroll_area", "tooltip"]
+
+[components.toolbar]
+dependencies = ["input"]
+[components.number_field]
+dependencies = ["input"]

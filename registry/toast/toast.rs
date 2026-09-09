@@ -28,16 +28,17 @@ pub fn toast_portal() -> ToastPortal<()> {
 /// Mount it once inside a provider. Override `content_builder` for custom content.
 pub fn toast_viewport(id: impl Into<ElementId>, cx: &App) -> ToastViewport<()> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     ToastViewport::new()
         .id(id)
         .absolute()
-        .left(px(16.0))
-        .right(px(16.0))
-        .bottom(px(16.0))
-        .max_w(px(384.0))
+        .left(spacing * 4_f32)
+        .right(spacing * 4_f32)
+        .bottom(spacing * 4_f32)
+        .max_w(spacing * 96_f32)
         .flex()
         .flex_col()
-        .gap(px(12.0))
+        .gap(spacing * 3_f32)
         .content_builder(move |_| {
             root_from_theme(&theme).child(
                 content_from_theme(&theme)
@@ -73,15 +74,16 @@ pub fn toast_content(cx: &App) -> ToastContent<()> {
 
 fn content_from_theme(theme: &UiTheme) -> ToastContent<()> {
     let theme = theme.clone();
+    let spacing = theme.spacing.unit;
     ToastContent::new().style_with_state(move |_state, base| {
         base.flex()
             .relative()
             .flex_col()
             .items_start()
-            .gap(px(4.0))
+            .gap(spacing * 1_f32)
             .overflow_hidden()
-            .p(px(16.0))
-            .pr(px(48.0))
+            .p(spacing * 4_f32)
+            .pr(spacing * 12_f32)
             .font_family(theme.fonts.body.clone())
     })
 }
@@ -93,10 +95,11 @@ pub fn toast_title(cx: &App) -> ToastTitle<()> {
 
 fn title_from_theme(theme: &UiTheme) -> ToastTitle<()> {
     let theme = theme.clone();
+    let text_scale = theme.text_scale;
     ToastTitle::new().style_with_state(move |_state, base| {
         base.font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .text_color(theme.colors.popover_foreground)
     })
 }
@@ -108,9 +111,10 @@ pub fn toast_description(cx: &App) -> ToastDescription<()> {
 
 fn description_from_theme(theme: &UiTheme) -> ToastDescription<()> {
     let theme = theme.clone();
+    let text_scale = theme.text_scale;
     ToastDescription::new().style_with_state(move |_state, base| {
         base.font_family(theme.fonts.body.clone())
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .text_color(theme.colors.muted_foreground)
     })
 }
@@ -130,12 +134,13 @@ pub fn toast_close(cx: &App) -> ToastClose<()> {
 
 fn close_from_theme(theme: &UiTheme) -> ToastClose<()> {
     let theme = theme.clone();
+    let spacing = theme.spacing.unit;
     let icon_color = theme.colors.muted_foreground;
     ToastClose::new()
         .aria_label("Close toast")
         .absolute()
-        .top(px(8.0))
-        .right(px(8.0))
+        .top(spacing * 2_f32)
+        .right(spacing * 2_f32)
         .style_with_state(move |_state, base| {
             style_button(
                 base,
@@ -145,5 +150,9 @@ fn close_from_theme(theme: &UiTheme) -> ToastClose<()> {
                 &theme,
             )
         })
-        .child_any(lucide(LucideIcon::X).size(px(16.0)).text_color(icon_color))
+        .child_any(
+            lucide(LucideIcon::X)
+                .size(spacing * 4_f32)
+                .text_color(icon_color),
+        )
 }

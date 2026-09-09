@@ -22,7 +22,7 @@ function RegistryPage() {
       <CodeBlock
         language="bash"
         className="mt-8"
-        value="npx shadcn@4.19.0 add https://ui.imajha.com/r/button.json"
+        value="gpuicn add button"
       />
       <section className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {components.map((component) => (

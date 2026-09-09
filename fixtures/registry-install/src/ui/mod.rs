@@ -36,3 +36,6 @@ pub mod toggle;
 pub mod toggle_group;
 pub mod toolbar;
 pub mod tooltip;
+pub mod resizable;
+pub mod sidebar;
+pub mod virtual_list;

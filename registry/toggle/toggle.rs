@@ -6,7 +6,7 @@ use std::rc::Rc;
 use base_gpui::toggle::{Toggle as BaseToggle, TogglePressedChangeDetails};
 use gpui::{
     AnyElement, App, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    SharedString, Styled, Window, prelude::FluentBuilder as _, px,
+    SharedString, Styled, Window, prelude::FluentBuilder as _,
 };
 
 use super::theme::UiTheme;
@@ -30,6 +30,7 @@ pub enum ToggleSize {
 
 #[derive(IntoElement)]
 pub struct Toggle {
+    style: gpui::StyleRefinement,
     id: ElementId,
     default_pressed: bool,
     pressed: Option<bool>,
@@ -44,6 +45,7 @@ pub struct Toggle {
 impl Toggle {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             default_pressed: false,
             pressed: None,
@@ -97,6 +99,7 @@ impl ParentElement for Toggle {
 impl RenderOnce for Toggle {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
+        let spacing = theme.spacing.unit;
         let colors = theme.colors;
         let focus_ring = theme.focus_ring();
         let variant = self.variant;
@@ -110,47 +113,50 @@ impl RenderOnce for Toggle {
             .default_pressed(self.default_pressed)
             .disabled(self.disabled)
             .style_with_state(move |state, base| {
-                let pressed = state.pressed;
-                let focus_ring = focus_ring.clone();
-                let base = base
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .gap(px(4.))
-                    .min_w(px(height))
-                    .h(px(height))
-                    .px(px(10.))
-                    .rounded(radius)
-                    .border_1()
-                    .border_color(colors.background.opacity(0.0))
-                    .text_size(px(text_size))
-                    .text_color(colors.foreground)
-                    .bg(if state.pressed {
-                        colors.muted
-                    } else {
-                        colors.background.opacity(0.)
-                    })
-                    .focus_visible(move |style| {
-                        style
-                            .bg(if pressed {
-                                colors.muted
-                            } else {
-                                colors.background
-                            })
-                            .border_color(colors.ring)
-                            .shadow(focus_ring.clone())
-                    })
-                    .when(state.disabled, |base| {
-                        base.opacity(0.50).cursor_not_allowed()
-                    })
-                    .when(!state.disabled, |base| {
-                        base.cursor_pointer()
-                            .hover(move |style| style.bg(colors.muted))
-                    });
-                match variant {
-                    ToggleVariant::Default => base,
-                    ToggleVariant::Outline => base.border_1().border_color(colors.input),
-                }
+                let base = {
+                    let pressed = state.pressed;
+                    let focus_ring = focus_ring.clone();
+                    let base = base
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .gap(spacing * 1_f32)
+                        .min_w(spacing * (height / 4.))
+                        .h(spacing * (height / 4.))
+                        .px(spacing * 2.5_f32)
+                        .rounded(radius)
+                        .border_1()
+                        .border_color(colors.background.opacity(0.0))
+                        .text_size(theme.text(text_size))
+                        .text_color(colors.foreground)
+                        .bg(if state.pressed {
+                            colors.muted
+                        } else {
+                            colors.background.opacity(0.)
+                        })
+                        .focus_visible(move |style| {
+                            style
+                                .bg(if pressed {
+                                    colors.muted
+                                } else {
+                                    colors.background
+                                })
+                                .border_color(colors.ring)
+                                .shadow(focus_ring.clone())
+                        })
+                        .when(state.disabled, |base| {
+                            base.opacity(0.50).cursor_not_allowed()
+                        })
+                        .when(!state.disabled, |base| {
+                            base.cursor_pointer()
+                                .hover(move |style| style.bg(colors.muted))
+                        });
+                    match variant {
+                        ToggleVariant::Default => base,
+                        ToggleVariant::Outline => base.border_1().border_color(colors.input),
+                    }
+                };
+                super::theme::apply_style(base, &self.style)
             })
             .children(self.children);
         if let Some(pressed) = self.pressed {
@@ -165,5 +171,11 @@ impl RenderOnce for Toggle {
             });
         }
         toggle
+    }
+}
+
+impl gpui::Styled for Toggle {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
     }
 }

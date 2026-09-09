@@ -1,6 +1,6 @@
 [package]
 name = "gpuicn-showcase"
-version = "0.4.2"
+version = "0.5.0-beta.1"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -16,6 +16,11 @@ gpui.workspace = true
 gpui-icons.workspace = true
 gpui_platform.workspace = true
 gpuicn = { path = "../crates/ui" }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+tempfile = "3.27.0"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 wasm-bindgen = "=0.2.120"

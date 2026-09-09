@@ -1,5 +1,6 @@
 export type ComponentDocs = {
   preview: string
+  examples?: Record<string, string>
   usage: string
   usageCall: string
   source: string

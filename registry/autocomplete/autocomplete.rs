@@ -15,7 +15,7 @@ pub use base_gpui::autocomplete::{
 };
 use gpui::{App, ElementId, Styled, px};
 
-use super::combobox;
+use super::{combobox, theme::UiTheme};
 
 /// Creates an autocomplete root with a caller-owned stable ID.
 pub fn autocomplete_root<T: Clone + Eq + 'static>(id: impl Into<ElementId>) -> AutocompleteRoot<T> {
@@ -57,8 +57,8 @@ pub fn autocomplete_portal<T: Clone + Eq + 'static>() -> AutocompletePortal<T> {
 }
 
 /// Creates an autocomplete positioner with the pinned Nova offset.
-pub fn autocomplete_positioner<T: Clone + Eq + 'static>() -> AutocompletePositioner<T> {
-    combobox::combobox_positioner()
+pub fn autocomplete_positioner<T: Clone + Eq + 'static>(cx: &App) -> AutocompletePositioner<T> {
+    combobox::combobox_positioner(cx)
 }
 
 /// Creates the styled autocomplete popup.
@@ -67,8 +67,8 @@ pub fn autocomplete_popup<T: Clone + Eq + 'static>(cx: &App) -> AutocompletePopu
 }
 
 /// Creates the styled autocomplete list.
-pub fn autocomplete_list<T: Clone + Eq + 'static>() -> AutocompleteList<T> {
-    combobox::combobox_list()
+pub fn autocomplete_list<T: Clone + Eq + 'static>(cx: &App) -> AutocompleteList<T> {
+    combobox::combobox_list(cx)
 }
 
 /// Creates a styled autocomplete item.
@@ -87,8 +87,8 @@ pub fn autocomplete_item_indicator<T: Clone + Eq + 'static>(
 }
 
 /// Creates a styled autocomplete group.
-pub fn autocomplete_group<T: Clone + Eq + 'static>() -> AutocompleteGroup<T> {
-    combobox::combobox_group()
+pub fn autocomplete_group<T: Clone + Eq + 'static>(cx: &App) -> AutocompleteGroup<T> {
+    combobox::combobox_group(cx)
 }
 
 /// Creates a styled autocomplete group label.
@@ -107,6 +107,10 @@ pub fn autocomplete_separator(cx: &App) -> AutocompleteSeparator {
 }
 
 /// Creates the visual autocomplete value mirror.
-pub fn autocomplete_value<T: Clone + Eq + 'static>() -> AutocompleteValue<T> {
-    AutocompleteValue::new().flex_1().text_size(px(14.))
+pub fn autocomplete_value<T: Clone + Eq + 'static>(cx: &App) -> AutocompleteValue<T> {
+    let theme = UiTheme::read(cx).clone();
+    let text_scale = theme.text_scale;
+    AutocompleteValue::new()
+        .flex_1()
+        .text_size(px(14.) * text_scale)
 }

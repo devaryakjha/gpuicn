@@ -12,7 +12,7 @@ use base_gpui::checkbox::{
 use gpui::ParentElement as _;
 use gpui::{
     App, ElementId, InteractiveElement as _, IntoElement, RenderOnce, SharedString, Styled, Window,
-    prelude::FluentBuilder as _, px,
+    prelude::FluentBuilder as _,
 };
 use gpui_icons::{LucideIcon, lucide};
 
@@ -24,6 +24,7 @@ type CheckedChangeHandler =
 /// A 16px styled Checkbox backed by Base GPUI state and actions.
 #[derive(IntoElement)]
 pub struct Checkbox {
+    style: gpui::StyleRefinement,
     id: ElementId,
     default_checked: bool,
     checked: Option<bool>,
@@ -38,6 +39,7 @@ impl Checkbox {
     /// Creates an uncontrolled Checkbox with a caller-owned stable ID.
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             default_checked: false,
             checked: None,
@@ -98,6 +100,7 @@ impl Checkbox {
 impl RenderOnce for Checkbox {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
+        let spacing = theme.spacing.unit;
         let indicator_color = theme.colors.primary_foreground;
         let mut root = CheckboxRoot::new()
             .id(self.id)
@@ -106,7 +109,9 @@ impl RenderOnce for Checkbox {
             .disabled(self.disabled)
             .read_only(self.read_only)
             .relative()
-            .style_with_state(move |state, base| style_checkbox(base, state, &theme))
+            .style_with_state(move |state, base| {
+                super::theme::apply_style(style_checkbox(base, state, &theme), &self.style)
+            })
             .child(
                 CheckboxIndicator::new()
                     .keep_mounted(true)
@@ -120,7 +125,7 @@ impl RenderOnce for Checkbox {
                     })
                     .child(
                         lucide(LucideIcon::Check)
-                            .size(px(14.0))
+                            .size(spacing * 3.5_f32)
                             .text_color(indicator_color),
                     ),
             )
@@ -137,7 +142,7 @@ impl RenderOnce for Checkbox {
                     })
                     .child(
                         lucide(LucideIcon::Minus)
-                            .size(px(14.0))
+                            .size(spacing * 3.5_f32)
                             .text_color(indicator_color),
                     ),
             );
@@ -159,6 +164,7 @@ impl RenderOnce for Checkbox {
 }
 
 fn style_checkbox(base: gpui::Div, state: CheckboxRootStyleState, theme: &UiTheme) -> gpui::Div {
+    let spacing = theme.spacing.unit;
     let colors = theme.colors;
     let focus_ring = theme.focus_ring();
     let selected = state.checked || state.indeterminate;
@@ -180,9 +186,9 @@ fn style_checkbox(base: gpui::Div, state: CheckboxRootStyleState, theme: &UiThem
         .flex_shrink_0()
         .items_center()
         .justify_center()
-        .w(px(16.0))
-        .h(px(16.0))
-        .rounded(px(4.0))
+        .w(spacing * 4_f32)
+        .h(spacing * 4_f32)
+        .rounded(theme.radius.sm * (2. / 3.))
         .border_1()
         .border_color(border)
         .bg(background)
@@ -206,6 +212,12 @@ fn show_check(state: CheckboxRootStyleState) -> bool {
 
 fn show_minus(state: CheckboxRootStyleState) -> bool {
     state.indeterminate
+}
+
+impl gpui::Styled for Checkbox {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
+    }
 }
 
 #[cfg(test)]

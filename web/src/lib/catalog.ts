@@ -137,6 +137,11 @@ export const components: CatalogComponent[] = [
     description: "A set of checkable options where one value is selected.",
   },
   {
+    slug: "resizable",
+    name: "Resizable",
+    description: "Controlled panes with pointer and keyboard resizing.",
+  },
+  {
     slug: "scroll-area",
     name: "Scroll Area",
     description: "Adds styled scrolling to overflowing content.",
@@ -150,6 +155,11 @@ export const components: CatalogComponent[] = [
     slug: "separator",
     name: "Separator",
     description: "Visually separates content.",
+  },
+  {
+    slug: "sidebar",
+    name: "Sidebar",
+    description: "Application navigation with responsive layouts, icon rails, nested menus, and mobile sheets.",
   },
   {
     slug: "slider",
@@ -191,11 +201,17 @@ export const components: CatalogComponent[] = [
     name: "Tooltip",
     description: "Shows short information on hover or keyboard focus.",
   },
+  {
+    slug: "virtual-list",
+    name: "Virtual List",
+    description: "Large lists with stable selection, keyboard navigation, and fast fixed-height rows.",
+  },
 ]
 
 export const sections = [
   { to: "/introduction", label: "Introduction" },
   { to: "/installation", label: "Installation" },
+  { to: "/showcase", label: "Example app" },
   { to: "/theming", label: "Theming" },
   { to: "/icons", label: "Icons" },
   { to: "/registry", label: "Registry" },
@@ -206,6 +222,7 @@ export function findComponent(slug: string) {
 }
 
 export function previewHeight(slug: string) {
+  if (slug === "sidebar" || slug === "virtual-list") return 520
   if (
     [
       "alert-dialog",

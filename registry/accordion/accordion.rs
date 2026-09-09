@@ -43,6 +43,8 @@ pub fn accordion_header<T: Clone + Eq + 'static>() -> AccordionHeader<T> {
 /// Set a unique `.id(...)` on each trigger to keep keyboard focus independent.
 pub fn accordion_trigger<T: Clone + Eq + 'static>(cx: &App) -> AccordionTrigger<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     let icon_color = theme.colors.muted_foreground;
     let focus_ring = theme.focus_ring();
     AccordionTrigger::new().style_with_state(move |state, base| {
@@ -56,11 +58,11 @@ pub fn accordion_trigger<T: Clone + Eq + 'static>(cx: &App) -> AccordionTrigger<
             .rounded(theme.radius.lg)
             .border_1()
             .border_color(colors.background.opacity(0.0))
-            .py(px(10.0))
+            .py(spacing * 2.5_f32)
             .text_left()
             .font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .text_color(colors.foreground)
             .when(!state.item.disabled, |base| {
                 base.cursor_pointer().hover(|style| style.underline())
@@ -74,26 +76,25 @@ pub fn accordion_trigger<T: Clone + Eq + 'static>(cx: &App) -> AccordionTrigger<
                     .border_color(colors.ring)
                     .shadow(focus_ring.clone())
             })
-            .child(
-                lucide(if state.panel_open {
-                    LucideIcon::ChevronUp
-                } else {
-                    LucideIcon::ChevronDown
-                })
-                .size(px(16.0))
-                .text_color(icon_color),
-            )
+            .child(super::theme::disclosure_icon(
+                lucide(LucideIcon::ChevronDown)
+                    .size(spacing * 4_f32)
+                    .text_color(icon_color),
+                state.panel_open,
+            ))
     })
 }
 
 /// Creates an Accordion panel with the pinned content inset.
 pub fn accordion_content<T: Clone + Eq + 'static>(cx: &App) -> AccordionPanel<T> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     AccordionPanel::new().style_with_state(move |_state, base| {
         base.overflow_hidden()
-            .pb(px(10.0))
+            .pb(spacing * 2.5_f32)
             .font_family(theme.fonts.body.clone())
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .text_color(theme.colors.foreground)
     })
 }

@@ -41,14 +41,28 @@ for (const item of registry.items.filter((item) => item.name !== "theme")) {
   const parityName = readdirSync(`${root}docs/parity`).find((name) => name.replaceAll("_", "-") === `${item.name}.md`);
   assert(parityName, `Missing platform notes for ${item.name}`);
   const parity = read(`docs/parity/${parityName}`);
+  const sidebarExample = (name) => {
+    const method = showcase.match(new RegExp(`^    fn sidebar_${name}_preview\\([\\s\\S]*?^    \\}`, "m"))?.[0];
+    assert(method, `Missing Sidebar ${name} example`);
+    return method.replace(/^    /gm, "");
+  };
+  const examples = item.name === "sidebar" ? Object.fromEntries(
+    ["workspace", "docs", "mail", "floating", "mobile", "loading"].map((name) =>
+      [name, sidebarExample(name === "docs" || name === "mail" ? name : "application")])
+  ) : undefined;
+
+  const helperModules = new Set(item.files.flatMap((file) =>
+    [...read(file.path).matchAll(/#\[path = "([^"/]+)\.rs"\]/g)].map((match) => match[1])
+  ));
   writeFileSync(`${destination}/${item.name}.json`, `${JSON.stringify({
     preview: preview.replace(/^    /gm, ""),
+    examples,
     usage,
-    usageCall: usage.includes("fn example(cx:") ? "example(cx)" : "example()",
+    usageCall: item.name === "virtual-list" ? "example(&self.list)" : usage.includes("fn example(cx:") ? "example(cx)" : "example()",
     source,
     api,
     parity,
-    modules: item.files.filter((file) => file.path.endsWith(".rs") && !file.path.endsWith("/modal_focus.rs")).map((file) => file.path.split("/").at(-1).replace(".rs", "")),
+    modules: item.files.filter((file) => file.path.endsWith(".rs") && !helperModules.has(file.path.split("/").at(-1).replace(".rs", ""))).map((file) => file.path.split("/").at(-1).replace(".rs", "")),
   }, null, 2)}\n`);
 }
 

@@ -3,10 +3,79 @@
 //! Source: shadcn/ui 4.19.0 at
 //! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, Nova style.
 
+use std::{sync::Arc, time::Duration};
+use web_time::Instant;
+
 use gpui::{
-    App, BoxShadow, Corners, Div, Global, ParentElement as _, Pixels, Rgba, SharedString, Styled,
-    black, px,
+    App, BoxShadow, Corners, Div, ElementId, Global, ParentElement as _, Pixels, Rgba,
+    SharedString, Styled, Window, black, px,
 };
+
+gpui::actions!(
+    gpuicn,
+    [
+        /// Move to the next keyboard tab stop.
+        FocusNext,
+        /// Move to the previous keyboard tab stop.
+        FocusPrevious
+    ]
+);
+
+struct Initialized;
+impl Global for Initialized {}
+
+/// Installs component actions, keyboard traversal and the default theme once.
+/// Call this from application startup for both copied source and crate usage.
+pub fn init(cx: &mut App) {
+    if cx.has_global::<Initialized>() {
+        return;
+    }
+    cx.set_global(Initialized);
+    if !cx.has_global::<UiTheme>() {
+        UiTheme::set(cx, UiTheme::neutral_light());
+    }
+    cx.bind_keys([
+        gpui::KeyBinding::new("tab", FocusNext, None),
+        gpui::KeyBinding::new("shift-tab", FocusPrevious, None),
+    ]);
+    cx.on_action(|_: &FocusNext, cx| advance_focus(false, cx));
+    cx.on_action(|_: &FocusPrevious, cx| advance_focus(true, cx));
+    // Later scoped bindings take precedence over window-wide defaults.
+    base_gpui::init(cx);
+    #[cfg(target_family = "wasm")]
+    {
+        // WASM has no macOS target_os, so Base GPUI only registers Control
+        // shortcuts. Accept Command as well for previews on macOS browsers.
+        use base_gpui::primitives::input::{
+            INPUT_KEY_CONTEXT, InputCopy, InputCut, InputEnd, InputHome, InputPaste, InputSelectAll,
+        };
+        use gpui::KeyBinding;
+        cx.bind_keys([
+            KeyBinding::new("cmd-a", InputSelectAll, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-c", InputCopy, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-v", InputPaste, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-x", InputCut, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-left", InputHome, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-right", InputEnd, Some(INPUT_KEY_CONTEXT)),
+        ]);
+    }
+}
+
+fn advance_focus(reverse: bool, cx: &mut App) {
+    let Some(handle) = cx.active_window() else {
+        return;
+    };
+    // Action dispatch still holds the window borrow until this callback returns.
+    cx.defer(move |cx| {
+        let _ = handle.update(cx, |_, window, cx| {
+            if reverse {
+                window.focus_prev(cx);
+            } else {
+                window.focus_next(cx);
+            }
+        });
+    });
+}
 
 /// The active color mode.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -82,6 +151,8 @@ pub struct UiColors {
     pub sidebar_border: Rgba,
     /// Sidebar focus ring.
     pub sidebar_ring: Rgba,
+    /// Scrim behind modal surfaces.
+    pub overlay: Rgba,
 }
 
 /// Theme font family names. Applications own font loading.
@@ -114,6 +185,132 @@ pub struct UiRadius {
     pub three_xl: Pixels,
     /// Twenty-six pixels (`radius * 2.6`).
     pub four_xl: Pixels,
+}
+
+impl UiRadius {
+    /// Derives the complete Nova radius scale from one nonnegative base radius.
+    pub fn new(base: Pixels) -> Self {
+        assert!(f32::from(base).is_finite() && base >= px(0.));
+        Self {
+            base,
+            sm: base * 0.6,
+            md: base * 0.8,
+            lg: base,
+            xl: base * 1.4,
+            two_xl: base * 1.8,
+            three_xl: base * 2.2,
+            four_xl: base * 2.6,
+        }
+    }
+}
+
+/// Shared UI transition durations. Honor these alongside `App::reduce_motion()`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UiMotion {
+    /// Thumb and small-state transitions (150ms by default).
+    pub fast: Duration,
+    /// Panel/layout transitions (200ms by default).
+    pub normal: Duration,
+    /// Application preference; true removes movement without removing state feedback.
+    pub reduced: bool,
+    /// Shared easing for reversible state transitions.
+    pub easing: UiEasing,
+}
+impl Default for UiMotion {
+    fn default() -> Self {
+        Self {
+            fast: Duration::from_millis(150),
+            normal: Duration::from_millis(200),
+            reduced: false,
+            easing: UiEasing::EaseInOut,
+        }
+    }
+}
+
+/// Curves supported by the shared native transition helper.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum UiEasing {
+    /// Constant-speed motion, as used by shadcn sidebar layout transitions.
+    Linear,
+    /// Fast response followed by a smooth stop.
+    EaseOut,
+    /// Smooth acceleration and deceleration for changes within a layout.
+    #[default]
+    EaseInOut,
+}
+impl UiEasing {
+    fn sample(self, progress: f32) -> f32 {
+        match self {
+            Self::Linear => progress,
+            Self::EaseOut => gpui::ease_out_quint()(progress),
+            Self::EaseInOut => gpui::ease_in_out(progress),
+        }
+    }
+}
+
+struct Transition {
+    from: f32,
+    target: f32,
+    started: Instant,
+}
+impl Transition {
+    fn value(&self, now: Instant, duration: Duration, easing: UiEasing) -> f32 {
+        if duration.is_zero() {
+            return self.target;
+        }
+        let progress =
+            (now.duration_since(self.started).as_secs_f32() / duration.as_secs_f32()).min(1.);
+        self.from + (self.target - self.from) * easing.sample(progress)
+    }
+    fn retarget(&mut self, target: f32, now: Instant, duration: Duration, easing: UiEasing) {
+        if target != self.target {
+            self.from = self.value(now, duration, easing);
+            self.target = target;
+            self.started = now;
+        }
+    }
+}
+
+/// Returns a smoothly retargetable value for one stable, caller-named property.
+/// Starts at the target on mount; rapid reversals continue from the current value.
+/// Honors theme and GPUI reduced-motion settings and schedules no idle frames.
+/// Use for state changes, never for pointer-drag coordinates or keyboard navigation.
+/// Native layout transitions perform layout work; retain expensive child entities.
+pub fn transition_value(
+    id: impl Into<ElementId>,
+    target: f32,
+    duration: Duration,
+    window: &mut Window,
+    cx: &mut App,
+) -> f32 {
+    assert!(target.is_finite(), "transition targets must be finite");
+    let motion = UiTheme::read(cx).motion;
+    let duration = if motion.reduced || cx.reduce_motion() {
+        Duration::ZERO
+    } else {
+        duration
+    };
+    let now = Instant::now();
+    let key = ElementId::NamedChild(Arc::new(id.into()), "transition".into());
+    let state = window.use_keyed_state(key, cx, |_, _| Transition {
+        from: target,
+        target,
+        started: now,
+    });
+    let (value, active) = state.update(cx, |state, _| {
+        state.retarget(target, now, duration, motion.easing);
+        if duration.is_zero() {
+            state.from = target;
+        }
+        (
+            state.value(now, duration, motion.easing),
+            state.from != target && now.duration_since(state.started) < duration,
+        )
+    });
+    if active {
+        window.request_animation_frame();
+    }
+    value
 }
 
 /// Shared shadcn elevation tokens.
@@ -149,6 +346,10 @@ pub struct UiTheme {
     pub spacing: UiSpacing,
     /// Shared elevation and focus-ring tokens.
     pub shadows: UiShadows,
+    /// Shared motion durations and reduced-motion preference.
+    pub motion: UiMotion,
+    /// Typography scale, independent of control density (1 by default).
+    pub text_scale: f32,
 }
 
 impl Global for UiTheme {}
@@ -172,7 +373,10 @@ impl UiTheme {
 
     /// Installs a theme into the application.
     pub fn set(cx: &mut App, theme: Self) {
+        assert!(f32::from(theme.spacing.unit).is_finite() && theme.spacing.unit > px(0.));
+        assert!(theme.text_scale.is_finite() && theme.text_scale > 0.);
         cx.set_global(theme);
+        cx.refresh_windows();
     }
 
     /// Reads the installed theme.
@@ -182,15 +386,28 @@ impl UiTheme {
         cx.global::<Self>()
     }
 
-    /// Replaces the installed theme with the pinned palette for `mode`.
+    /// Selects the pinned palette, preserving non-color tokens or initializing defaults.
     pub fn switch(cx: &mut App, mode: ThemeMode) {
-        Self::set(
-            cx,
-            match mode {
-                ThemeMode::Light => Self::neutral_light(),
-                ThemeMode::Dark => Self::neutral_dark(),
-            },
-        );
+        let mut theme = cx
+            .try_global::<Self>()
+            .cloned()
+            .unwrap_or_else(Self::neutral_light);
+        theme.mode = mode;
+        theme.colors = match mode {
+            ThemeMode::Light => neutral_light_colors(),
+            ThemeMode::Dark => neutral_dark_colors(),
+        };
+        Self::set(cx, theme);
+    }
+
+    /// Returns a multiple of the configured spacing unit (2 means 8px by default).
+    pub fn space(&self, units: f32) -> Pixels {
+        self.spacing.unit * units
+    }
+
+    /// Scales typography independently of spacing; sizes use Nova's default pixels.
+    pub fn text(&self, size: f32) -> Pixels {
+        px(size * self.text_scale)
     }
 
     /// Builds shadcn's three-pixel focus ring from the active semantic ring color.
@@ -226,16 +443,9 @@ impl UiTheme {
                 heading: "Geist".into(),
                 mono: "Geist Mono".into(),
             },
-            radius: UiRadius {
-                base: px(10.),
-                sm: px(6.),
-                md: px(8.),
-                lg: px(10.),
-                xl: px(14.),
-                two_xl: px(18.),
-                three_xl: px(22.),
-                four_xl: px(26.),
-            },
+            radius: UiRadius::new(px(10.)),
+            motion: UiMotion::default(),
+            text_scale: 1.,
             spacing: UiSpacing { unit: px(4.) },
             shadows: UiShadows {
                 sm: vec![
@@ -298,6 +508,7 @@ fn neutral_light_colors() -> UiColors {
         sidebar_accent_foreground: neutral(0.205),
         sidebar_border: neutral(0.922),
         sidebar_ring: neutral(0.708),
+        overlay: black().alpha(0.10).into(),
     }
 }
 
@@ -334,6 +545,7 @@ fn neutral_dark_colors() -> UiColors {
         sidebar_accent_foreground: neutral(0.985),
         sidebar_border: neutral_alpha(1.0, 0.10),
         sidebar_ring: neutral(0.556),
+        overlay: black().alpha(0.10).into(),
     }
 }
 
@@ -372,6 +584,24 @@ fn srgb_channel(channel: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn editor_semantics_survive_upstream_id_assignment() {
+        use gpui::{Element as _, InteractiveElement as _, StatefulInteractiveElement as _};
+        let input = InputSemantics(gpui::div())
+            .role(gpui::Role::SpinButton)
+            .aria_label("Quantity")
+            .aria_value("4")
+            .aria_numeric_value(4.)
+            .0
+            .id("upstream-editor");
+        assert_eq!(input.a11y_role(), Some(gpui::Role::SpinButton));
+        let mut node = gpui::accesskit::Node::new(gpui::Role::SpinButton);
+        input.write_a11y_info(&mut node);
+        assert_eq!(node.label(), Some("Quantity"));
+        assert_eq!(node.value(), Some("4"));
+        assert_eq!(node.numeric_value(), Some(4.));
+    }
 
     #[test]
     fn converts_pinned_neutral_tokens() {
@@ -425,11 +655,27 @@ mod tests {
     }
 }
 
+/// Adds semantics to an upstream editor's existing Div before it receives its ID.
+/// Keeping the same Div preserves the editor's focus handle and event handlers.
+pub(crate) struct InputSemantics(pub Div);
+impl gpui::InteractiveElement for InputSemantics {
+    fn interactivity(&mut self) -> &mut gpui::Interactivity {
+        self.0.interactivity()
+    }
+}
+impl gpui::StatefulInteractiveElement for InputSemantics {}
+impl gpui::IntoElement for InputSemantics {
+    type Element = Div;
+    fn into_element(self) -> Div {
+        self.0
+    }
+}
+
 /// Centers the Base GPUI single-line editor independently of inherited typography.
 /// The editor sizes its text and caret from the line height, so padding alone
 /// cannot keep both centered across bordered and borderless controls.
-pub(crate) fn input_text_layout(base: Div) -> Div {
-    base.flex().items_center().line_height(px(20.))
+pub(crate) fn input_text_layout(base: Div, text_scale: f32) -> Div {
+    base.flex().items_center().line_height(px(20.) * text_scale)
 }
 
 /// Draws concentric focus corners; GPUI spread shadows retain the inner radius.
@@ -496,5 +742,69 @@ mod focus_outline_tests {
         assert_eq!(quad.bounds.origin.x, px(-2.));
         assert_eq!(quad.bounds.size.width, px(17.));
         assert_eq!(quad.corner_radii, Corners::all(px(0.)));
+    }
+}
+
+// Refine the actual control after default styling; no extra layout or focus node.
+pub(crate) fn apply_style<T: Styled>(mut element: T, style: &gpui::StyleRefinement) -> T {
+    use gpui::Refineable as _;
+    element.style().refine(style);
+    element
+}
+
+#[derive(gpui::IntoElement)]
+pub(crate) struct DisclosureIcon {
+    icon: gpui::Svg,
+    open: bool,
+}
+pub(crate) fn disclosure_icon(icon: gpui::Svg, open: bool) -> DisclosureIcon {
+    DisclosureIcon { icon, open }
+}
+impl gpui::RenderOnce for DisclosureIcon {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl gpui::IntoElement {
+        let duration = UiTheme::read(cx).motion.fast;
+        let value = transition_value(
+            "disclosure-rotation",
+            if self.open { 1. } else { 0. },
+            duration,
+            window,
+            cx,
+        );
+        self.icon
+            .with_transformation(gpui::Transformation::rotate(gpui::radians(
+                value * std::f32::consts::PI,
+            )))
+    }
+}
+
+#[cfg(test)]
+mod motion_tests {
+    use super::*;
+    #[test]
+    fn transitions_reverse_continuously_and_zero_duration_is_immediate() {
+        let start = Instant::now();
+        let duration = Duration::from_millis(200);
+        let mut transition = Transition {
+            from: 0.,
+            target: 1.,
+            started: start,
+        };
+        let halfway = start + Duration::from_millis(100);
+        let current = transition.value(halfway, duration, UiEasing::EaseInOut);
+        assert_eq!(current, 0.5);
+        transition.retarget(0., halfway, duration, UiEasing::EaseInOut);
+        assert_eq!(
+            transition.value(halfway, duration, UiEasing::EaseInOut),
+            current
+        );
+        assert_eq!(
+            transition.value(halfway + duration, duration, UiEasing::EaseInOut),
+            0.
+        );
+        transition.retarget(1., halfway + duration, Duration::ZERO, UiEasing::Linear);
+        assert_eq!(
+            transition.value(halfway + duration, Duration::ZERO, UiEasing::Linear),
+            1.
+        );
     }
 }

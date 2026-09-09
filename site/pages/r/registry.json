@@ -7,7 +7,7 @@
       "name": "theme",
       "type": "registry:item",
       "title": "Theme",
-      "description": "The app-owned shadcn Neutral light and dark theme for GPUI.",
+      "description": "The app-owned shadcn Neutral theme and shared native motion tokens for GPUI.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -56,14 +56,14 @@
           "target": "~/src/ui/dialog.rs"
         },
         {
-          "path": "registry/alert_dialog/alert_dialog.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/alert_dialog.rs"
-        },
-        {
           "path": "registry/dialog/modal_focus.rs",
           "type": "registry:file",
           "target": "~/src/ui/modal_focus.rs"
+        },
+        {
+          "path": "registry/alert_dialog/alert_dialog.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/alert_dialog.rs"
         }
       ]
     },
@@ -210,6 +210,11 @@
           "target": "~/src/ui/theme.rs"
         },
         {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
           "path": "registry/menu/menu.rs",
           "type": "registry:file",
           "target": "~/src/ui/menu.rs"
@@ -271,14 +276,14 @@
           "target": "~/src/ui/dialog.rs"
         },
         {
-          "path": "registry/drawer/drawer.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/drawer.rs"
-        },
-        {
           "path": "registry/dialog/modal_focus.rs",
           "type": "registry:file",
           "target": "~/src/ui/modal_focus.rs"
+        },
+        {
+          "path": "registry/drawer/drawer.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/drawer.rs"
         }
       ]
     },
@@ -292,6 +297,21 @@
           "path": "registry/theme/theme.rs",
           "type": "registry:file",
           "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/input/input_editing.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input_editing.rs"
+        },
+        {
+          "path": "registry/input/input_text.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input_text.rs"
         },
         {
           "path": "registry/field/field.rs",
@@ -340,7 +360,7 @@
       "name": "input",
       "type": "registry:item",
       "title": "Input",
-      "description": "The shadcn default Input visual port backed by Base GPUI behavior.",
+      "description": "Nova-styled native text input with accessible labels, IME and standard editing shortcuts.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -351,6 +371,16 @@
           "path": "registry/input/input.rs",
           "type": "registry:file",
           "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/input/input_editing.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input_editing.rs"
+        },
+        {
+          "path": "registry/input/input_text.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input_text.rs"
         }
       ]
     },
@@ -364,6 +394,11 @@
           "path": "registry/theme/theme.rs",
           "type": "registry:file",
           "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
         },
         {
           "path": "registry/menu/menu.rs",
@@ -382,6 +417,11 @@
           "path": "registry/theme/theme.rs",
           "type": "registry:file",
           "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
         },
         {
           "path": "registry/menu/menu.rs",
@@ -441,6 +481,21 @@
           "path": "registry/theme/theme.rs",
           "type": "registry:file",
           "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/input/input_editing.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input_editing.rs"
+        },
+        {
+          "path": "registry/input/input_text.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input_text.rs"
         },
         {
           "path": "registry/number_field/number_field.rs",
@@ -545,6 +600,24 @@
       ]
     },
     {
+      "name": "resizable",
+      "type": "registry:item",
+      "title": "Resizable",
+      "description": "Controlled shadcn-styled native GPUI resizable panes.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/resizable/resizable.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/resizable.rs"
+        }
+      ]
+    },
+    {
       "name": "scroll-area",
       "type": "registry:item",
       "title": "Scroll Area",
@@ -595,6 +668,69 @@
           "path": "registry/separator/separator.rs",
           "type": "registry:file",
           "target": "~/src/ui/separator.rs"
+        }
+      ]
+    },
+    {
+      "name": "sidebar",
+      "type": "registry:item",
+      "title": "Sidebar",
+      "description": "Shadcn-styled navigation composed from Base GPUI buttons and scroll areas.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/scroll_area/scroll_area.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/scroll_area.rs"
+        },
+        {
+          "path": "registry/tooltip/tooltip.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/tooltip.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/dialog/dialog.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/dialog.rs"
+        },
+        {
+          "path": "registry/dialog/modal_focus.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/modal_focus.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/input/input_editing.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input_editing.rs"
+        },
+        {
+          "path": "registry/input/input_text.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input_text.rs"
+        },
+        {
+          "path": "registry/menu/menu.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/menu.rs"
+        },
+        {
+          "path": "registry/sidebar/sidebar.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/sidebar.rs"
         }
       ]
     },
@@ -723,9 +859,54 @@
           "target": "~/src/ui/theme.rs"
         },
         {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/input/input_editing.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input_editing.rs"
+        },
+        {
+          "path": "registry/input/input_text.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input_text.rs"
+        },
+        {
           "path": "registry/toolbar/toolbar.rs",
           "type": "registry:file",
           "target": "~/src/ui/toolbar.rs"
+        },
+        {
+          "path": "registry/toolbar/toolbar_children.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/toolbar_children.rs"
+        },
+        {
+          "path": "registry/toolbar/toolbar_group.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/toolbar_group.rs"
+        },
+        {
+          "path": "registry/toolbar/toolbar_input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/toolbar_input.rs"
+        },
+        {
+          "path": "registry/toolbar/toolbar_root.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/toolbar_root.rs"
+        },
+        {
+          "path": "registry/toolbar/toolbar_tests.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/toolbar_tests.rs"
+        },
+        {
+          "path": "registry/toolbar/toolbar_wiring.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/toolbar_wiring.rs"
         }
       ]
     },
@@ -744,6 +925,34 @@
           "path": "registry/tooltip/tooltip.rs",
           "type": "registry:file",
           "target": "~/src/ui/tooltip.rs"
+        }
+      ]
+    },
+    {
+      "name": "virtual-list",
+      "type": "registry:item",
+      "title": "Virtual List",
+      "description": "Virtualized native rows with stable identity, selection, keyboard navigation and fixed row heights.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/scroll_area/scroll_area.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/scroll_area.rs"
+        },
+        {
+          "path": "registry/tooltip/tooltip.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/tooltip.rs"
+        },
+        {
+          "path": "registry/virtual_list/virtual_list.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/virtual_list.rs"
         }
       ]
     }

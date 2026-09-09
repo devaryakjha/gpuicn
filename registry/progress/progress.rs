@@ -2,12 +2,13 @@
 //! Nova-styled determinate and indeterminate Progress backed by Base GPUI.
 
 use base_gpui::progress::{ProgressIndicator, ProgressRoot, ProgressTrack};
-use gpui::{App, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window, px};
+use gpui::{App, ElementId, IntoElement, RenderOnce, SharedString, Styled, Window};
 
 use super::theme::UiTheme;
 
 #[derive(IntoElement)]
 pub struct Progress {
+    style: gpui::StyleRefinement,
     id: ElementId,
     value: Option<f64>,
     min: f64,
@@ -18,6 +19,7 @@ pub struct Progress {
 impl Progress {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             value: None,
             min: 0.,
@@ -47,7 +49,8 @@ impl Progress {
 impl RenderOnce for Progress {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
-        let mut root = ProgressRoot::new()
+        let spacing = theme.spacing.unit;
+        let root = ProgressRoot::new()
             .id(self.id)
             .value(self.value)
             .min(self.min)
@@ -55,7 +58,8 @@ impl RenderOnce for Progress {
             .w_full()
             .flex()
             .flex_col()
-            .gap(px(6.));
+            .gap(spacing * 1.5_f32);
+        let mut root = super::theme::apply_style(root, &self.style);
         if let Some(label) = self.label {
             root = root.label(label);
         }
@@ -63,7 +67,7 @@ impl RenderOnce for Progress {
             ProgressTrack::new()
                 .relative()
                 .w_full()
-                .h(px(4.))
+                .h(spacing * 1_f32)
                 .rounded_full()
                 .overflow_hidden()
                 .bg(theme.colors.muted)
@@ -74,5 +78,11 @@ impl RenderOnce for Progress {
                         .bg(theme.colors.primary),
                 ),
         )
+    }
+}
+
+impl gpui::Styled for Progress {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
     }
 }

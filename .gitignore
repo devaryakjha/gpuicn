@@ -1,6 +1,7 @@
 /target/
 /site/dist/
 /fixtures/registry-install/target/
+/fixtures/registry-install/gpuicn.toml
 /fixtures/registry-install/src/ui/*.rs
 !/fixtures/registry-install/src/ui/mod.rs
 /web/src/generated/
@@ -9,3 +10,4 @@
 /fixtures/registry-install/assets/
 /.cargo/config.toml
 /web/public/icons/
+/web/public/downloads/

@@ -13,13 +13,15 @@ pub use base_gpui::form::{
 /// Creates a styled Form with Base GPUI submit, validation, and focus behavior.
 pub fn form(id: impl Into<ElementId>, cx: &App) -> Form {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     Form::new().id(id).style_with_state(move |_state, base| {
         base.flex()
             .flex_col()
             .w_full()
-            .gap(px(24.0))
+            .gap(spacing * 6_f32)
             .font_family(theme.fonts.body.clone())
-            .text_size(px(14.0))
+            .text_size(px(14.0) * text_scale)
             .text_color(theme.colors.foreground)
     })
 }

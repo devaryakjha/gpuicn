@@ -51,8 +51,10 @@ pub fn menu_portal<P: Clone + 'static>() -> MenuPortal<P> {
 }
 
 /// Creates a dropdown positioner with the pinned 4px content offset.
-pub fn menu_positioner<P: Clone + 'static>() -> MenuPositioner<P> {
-    MenuPositioner::new().side_offset(px(4.))
+pub fn menu_positioner<P: Clone + 'static>(cx: &App) -> MenuPositioner<P> {
+    let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    MenuPositioner::new().side_offset(spacing * 1_f32)
 }
 
 /// Creates the styled dropdown popup.
@@ -60,7 +62,7 @@ pub fn menu_popup<P: Clone + 'static>(id: impl Into<ElementId>, cx: &App) -> Men
     let theme = UiTheme::read(cx).clone();
     MenuPopup::new()
         .id(id)
-        .style_with_state(move |_state, base| popup_style(base, &theme, px(128.)))
+        .style_with_state(move |_state, base| popup_style(base, &theme, theme.space(32.)))
 }
 
 /// Creates a styled dropdown item.
@@ -88,6 +90,7 @@ pub fn menu_checkbox_item<P: Clone + 'static>(
 /// Creates a check indicator for [`menu_checkbox_item`].
 pub fn menu_checkbox_item_indicator<P: Clone + 'static>(cx: &App) -> MenuCheckboxItemIndicator<P> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     let foreground = theme.colors.foreground;
     MenuCheckboxItemIndicator::new()
         .keep_mounted(true)
@@ -96,7 +99,7 @@ pub fn menu_checkbox_item_indicator<P: Clone + 'static>(cx: &App) -> MenuCheckbo
         })
         .child(
             lucide(LucideIcon::Check)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(foreground),
         )
 }
@@ -125,6 +128,7 @@ pub fn menu_radio_item_indicator<P: Clone + 'static, V: Clone + Eq + 'static>(
     cx: &App,
 ) -> MenuRadioItemIndicator<P, V> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     let foreground = theme.colors.foreground;
     MenuRadioItemIndicator::new()
         .keep_mounted(true)
@@ -133,7 +137,7 @@ pub fn menu_radio_item_indicator<P: Clone + 'static, V: Clone + Eq + 'static>(
         })
         .child(
             lucide(LucideIcon::Check)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(foreground),
         )
 }
@@ -146,12 +150,14 @@ pub fn menu_group<P: Clone + 'static>() -> MenuGroup<P> {
 /// Creates a styled dropdown group label.
 pub fn menu_group_label<P: Clone + 'static>(cx: &App) -> MenuGroupLabel<P> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     MenuGroupLabel::new().style_with_state(move |_state, base| {
-        base.px(px(6.))
-            .py(px(4.))
+        base.px(spacing * 1.5_f32)
+            .py(spacing * 1_f32)
             .font_family(theme.fonts.body.clone())
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(12.))
+            .text_size(px(12.) * text_scale)
             .text_color(theme.colors.muted_foreground)
     })
 }
@@ -159,10 +165,11 @@ pub fn menu_group_label<P: Clone + 'static>(cx: &App) -> MenuGroupLabel<P> {
 /// Creates a styled dropdown separator.
 pub fn menu_separator(cx: &App) -> MenuSeparator {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     MenuSeparator::new().style_with_state(move |_state, base| {
         base.h(px(1.))
-            .mx(px(-4.))
-            .my(px(4.))
+            .mx(spacing * -1_f32)
+            .my(spacing * 1_f32)
             .bg(theme.colors.border)
     })
 }
@@ -178,6 +185,7 @@ pub fn menu_submenu_trigger<P: Clone + 'static>(
     cx: &App,
 ) -> MenuSubmenuTrigger<P> {
     let theme = UiTheme::read(cx).clone();
+    let spacing = theme.spacing.unit;
     let icon_color = theme.colors.muted_foreground;
     MenuSubmenuTrigger::new()
         .id(id)
@@ -192,21 +200,23 @@ pub fn menu_submenu_trigger<P: Clone + 'static>(
         })
         .child(
             lucide(LucideIcon::ChevronRight)
-                .size(px(16.))
+                .size(spacing * 4_f32)
                 .text_color(icon_color),
         )
 }
 
 pub(crate) fn popup_style(base: Div, theme: &UiTheme, min_width: gpui::Pixels) -> Div {
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     base.min_w(min_width)
-        .max_h(px(288.))
+        .max_h(spacing * 72_f32)
         .overflow_hidden()
         .rounded(theme.radius.lg)
-        .p(px(4.))
+        .p(spacing * 1_f32)
         .bg(theme.colors.popover)
         .text_color(theme.colors.popover_foreground)
         .font_family(theme.fonts.body.clone())
-        .text_size(px(14.))
+        .text_size(px(14.) * text_scale)
         .border_1()
         .border_color(theme.colors.foreground.opacity(0.10))
         .shadow(theme.shadows.md.clone())
@@ -219,16 +229,18 @@ pub(crate) fn item_style(
     theme: &UiTheme,
     has_indicator: bool,
 ) -> Div {
+    let spacing = theme.spacing.unit;
+    let text_scale = theme.text_scale;
     base.relative()
         .flex()
         .items_center()
-        .gap(px(6.))
+        .gap(spacing * 1.5_f32)
         .rounded(theme.radius.sm)
-        .py(px(4.))
-        .pr(px(if has_indicator { 32. } else { 6. }))
-        .pl(px(6.))
+        .py(spacing * 1_f32)
+        .pr(spacing * if has_indicator { 8. } else { 1.5 })
+        .pl(spacing * 1.5_f32)
         .font_family(theme.fonts.body.clone())
-        .text_size(px(14.))
+        .text_size(px(14.) * text_scale)
         .text_color(theme.colors.popover_foreground)
         .when(!disabled, |base| base.cursor_pointer())
         .when(highlighted && !disabled, |base| {
@@ -239,10 +251,11 @@ pub(crate) fn item_style(
 }
 
 pub(crate) fn indicator_style(base: Div, theme: &UiTheme) -> Div {
+    let spacing = theme.spacing.unit;
     base.absolute()
-        .right(px(8.))
+        .right(spacing * 2_f32)
         .flex()
-        .size(px(16.))
+        .size(spacing * 4_f32)
         .items_center()
         .justify_center()
         .text_color(theme.colors.popover_foreground)

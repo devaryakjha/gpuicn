@@ -12,6 +12,7 @@ use super::theme::UiTheme;
 /// A compact, circular Avatar with an optional image and fallback content.
 #[derive(IntoElement)]
 pub struct Avatar {
+    style: gpui::StyleRefinement,
     id: ElementId,
     image: Option<ImageSource>,
     fallback: Vec<AnyElement>,
@@ -30,6 +31,7 @@ pub enum AvatarSize {
 impl Avatar {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             image: None,
             fallback: Vec::new(),
@@ -66,13 +68,14 @@ impl RenderOnce for Avatar {
             AvatarSize::Default => 32.,
             AvatarSize::Lg => 40.,
         };
-        let mut root = AvatarRoot::new()
+        let root = AvatarRoot::new()
             .id(self.id)
             .relative()
             .flex_shrink_0()
-            .size(px(size))
+            .size(theme.space(size / 4.))
             .rounded_full()
             .overflow_hidden();
+        let mut root = super::theme::apply_style(root, &self.style);
         if let Some(label) = self.aria_label {
             root = root.aria_label(label);
         }
@@ -101,12 +104,18 @@ impl RenderOnce for Avatar {
                 .rounded_full()
                 .bg(theme.colors.muted)
                 .text_color(theme.colors.muted_foreground)
-                .text_size(px(if self.size == AvatarSize::Sm {
+                .text_size(theme.text(if self.size == AvatarSize::Sm {
                     12.
                 } else {
                     14.
                 }))
                 .children(self.fallback),
         )
+    }
+}
+
+impl gpui::Styled for Avatar {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
     }
 }

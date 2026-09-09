@@ -50,14 +50,13 @@ function LandingPage() {
             Get started <ArrowRightIcon data-icon="inline-end" />
           </Link>
           <Link
-            to="/introduction"
-            hash="components"
+            to="/showcase"
             className={cn(
               buttonVariants({ variant: "outline", size: "lg" }),
               "px-5"
             )}
           >
-            View components
+            Download example app
           </Link>
         </div>
       </section>

@@ -17,6 +17,7 @@ type ChangeHandler = Rc<
 >;
 
 pub struct ToggleGroupItem {
+    style: gpui::StyleRefinement,
     id: ElementId,
     value: SharedString,
     disabled: bool,
@@ -26,6 +27,7 @@ pub struct ToggleGroupItem {
 impl ToggleGroupItem {
     pub fn new(id: impl Into<ElementId>, value: impl Into<SharedString>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             value: value.into(),
             disabled: false,
@@ -48,6 +50,8 @@ impl ToggleGroupItem {
         first: bool,
         last: bool,
     ) -> BaseToggle<SharedString> {
+        let spacing = theme.spacing.unit;
+        let text_scale = theme.text_scale;
         let colors = theme.colors;
         let focus_ring = theme.focus_ring();
         let radius = theme.radius.lg;
@@ -56,44 +60,47 @@ impl ToggleGroupItem {
             .value(self.value)
             .disabled(self.disabled)
             .style_with_state(move |state, base| {
-                let pressed = state.pressed;
-                let focus_ring = focus_ring.clone();
-                base.flex()
-                    .items_center()
-                    .justify_center()
-                    .gap(px(4.))
-                    .h(px(32.))
-                    .min_w(px(32.))
-                    .px(px(10.))
-                    .rounded(if joined { px(0.) } else { radius })
-                    .when(joined && first, |base| base.rounded_l(radius))
-                    .when(joined && last, |base| base.rounded_r(radius))
-                    .border_1()
-                    .border_color(colors.background.opacity(0.0))
-                    .text_size(px(14.))
-                    .text_color(colors.foreground)
-                    .bg(if state.pressed {
-                        colors.muted
-                    } else {
-                        colors.background.opacity(0.)
-                    })
-                    .focus_visible(move |style| {
-                        style
-                            .bg(if pressed {
-                                colors.muted
-                            } else {
-                                colors.background
-                            })
-                            .border_color(colors.ring)
-                            .shadow(focus_ring.clone())
-                    })
-                    .when(state.disabled, |base| {
-                        base.opacity(0.50).cursor_not_allowed()
-                    })
-                    .when(!state.disabled, |base| {
-                        base.cursor_pointer()
-                            .hover(move |style| style.bg(colors.muted))
-                    })
+                let base = {
+                    let pressed = state.pressed;
+                    let focus_ring = focus_ring.clone();
+                    base.flex()
+                        .items_center()
+                        .justify_center()
+                        .gap(spacing * 1_f32)
+                        .h(spacing * 8_f32)
+                        .min_w(spacing * 8_f32)
+                        .px(spacing * 2.5_f32)
+                        .rounded(if joined { px(0.) } else { radius })
+                        .when(joined && first, |base| base.rounded_l(radius))
+                        .when(joined && last, |base| base.rounded_r(radius))
+                        .border_1()
+                        .border_color(colors.background.opacity(0.0))
+                        .text_size(px(14.) * text_scale)
+                        .text_color(colors.foreground)
+                        .bg(if state.pressed {
+                            colors.muted
+                        } else {
+                            colors.background.opacity(0.)
+                        })
+                        .focus_visible(move |style| {
+                            style
+                                .bg(if pressed {
+                                    colors.muted
+                                } else {
+                                    colors.background
+                                })
+                                .border_color(colors.ring)
+                                .shadow(focus_ring.clone())
+                        })
+                        .when(state.disabled, |base| {
+                            base.opacity(0.50).cursor_not_allowed()
+                        })
+                        .when(!state.disabled, |base| {
+                            base.cursor_pointer()
+                                .hover(move |style| style.bg(colors.muted))
+                        })
+                };
+                super::theme::apply_style(base, &self.style)
             })
             .children(self.children);
         if let Some(label) = self.aria_label {
@@ -110,6 +117,7 @@ impl ParentElement for ToggleGroupItem {
 
 #[derive(IntoElement)]
 pub struct ToggleGroup {
+    style: gpui::StyleRefinement,
     id: ElementId,
     default_value: Vec<SharedString>,
     value: Option<Vec<SharedString>>,
@@ -123,6 +131,7 @@ pub struct ToggleGroup {
 impl ToggleGroup {
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
+            style: gpui::StyleRefinement::default(),
             id: id.into(),
             default_value: Vec::new(),
             value: None,
@@ -183,7 +192,7 @@ impl RenderOnce for ToggleGroup {
             .multiple(self.multiple)
             .disabled(self.disabled)
             .flex()
-            .gap(px(if self.joined { 0. } else { 8. }));
+            .gap(theme.space(if self.joined { 0. } else { 2. }));
         if let Some(value) = self.value {
             group = group.value(value);
         }
@@ -196,8 +205,22 @@ impl RenderOnce for ToggleGroup {
             });
         }
         let item_count = self.items.len();
-        group.children(self.items.into_iter().enumerate().map(|(index, item)| {
-            item.render(&theme, self.joined, index == 0, index + 1 == item_count)
-        }))
+        super::theme::apply_style(group, &self.style).children(
+            self.items.into_iter().enumerate().map(|(index, item)| {
+                item.render(&theme, self.joined, index == 0, index + 1 == item_count)
+            }),
+        )
+    }
+}
+
+impl gpui::Styled for ToggleGroupItem {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
+    }
+}
+
+impl gpui::Styled for ToggleGroup {
+    fn style(&mut self) -> &mut gpui::StyleRefinement {
+        &mut self.style
     }
 }
