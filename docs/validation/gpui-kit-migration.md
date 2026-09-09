@@ -77,8 +77,9 @@ and performance budgets have not been qualified in this pass.
   commit `64d1bd9678d365c2f1367431c700c36184fb5142`. Consumers do not need a
   separate local compatibility checkout. Keep the root Cargo patch until the
   retained base dependency adopts the shared package directly.
-- Clean remote CI on the gpuicn migration is pending. No new gpuicn release or
-  production deployment has been made.
+- [PR #55](https://github.com/devaryakjha/gpuicn/pull/55) tracks clean remote
+  native and WASM CI for this migration. No new gpuicn release or production
+  deployment has been made.
 
 ## Review disposition
 
