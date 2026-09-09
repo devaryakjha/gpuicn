@@ -196,10 +196,10 @@ impl VirtualListState {
         data.selected
             .retain(|id| positions.get(id).is_some_and(|i| !items[*i].disabled));
         data.focused = new_focus;
-        if !data
+        if data
             .anchor
             .as_ref()
-            .is_some_and(|id| positions.get(id).is_some_and(|i| !items[*i].disabled))
+            .is_none_or(|id| positions.get(id).is_none_or(|i| items[*i].disabled))
         {
             data.anchor = data.focused.clone();
         }
