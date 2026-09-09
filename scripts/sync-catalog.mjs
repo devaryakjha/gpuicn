@@ -51,15 +51,18 @@ for (const item of registry.items.filter((item) => item.name !== "theme")) {
       [name, sidebarExample(name === "docs" || name === "mail" ? name : "application")])
   ) : undefined;
 
+  const helperModules = new Set(item.files.flatMap((file) =>
+    [...read(file.path).matchAll(/#\[path = "([^"/]+)\.rs"\]/g)].map((match) => match[1])
+  ));
   writeFileSync(`${destination}/${item.name}.json`, `${JSON.stringify({
     preview: preview.replace(/^    /gm, ""),
     examples,
     usage,
-    usageCall: usage.includes("fn example(cx:") ? "example(cx)" : "example()",
+    usageCall: item.name === "virtual-list" ? "example(&self.list)" : usage.includes("fn example(cx:") ? "example(cx)" : "example()",
     source,
     api,
     parity,
-    modules: item.files.filter((file) => file.path.endsWith(".rs") && !file.path.endsWith("/modal_focus.rs")).map((file) => file.path.split("/").at(-1).replace(".rs", "")),
+    modules: item.files.filter((file) => file.path.endsWith(".rs") && !helperModules.has(file.path.split("/").at(-1).replace(".rs", ""))).map((file) => file.path.split("/").at(-1).replace(".rs", "")),
   }, null, 2)}\n`);
 }
 

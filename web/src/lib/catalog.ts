@@ -201,11 +201,17 @@ export const components: CatalogComponent[] = [
     name: "Tooltip",
     description: "Shows short information on hover or keyboard focus.",
   },
+  {
+    slug: "virtual-list",
+    name: "Virtual List",
+    description: "Large lists with stable selection, keyboard navigation, and fast fixed-height rows.",
+  },
 ]
 
 export const sections = [
   { to: "/introduction", label: "Introduction" },
   { to: "/installation", label: "Installation" },
+  { to: "/showcase", label: "Example app" },
   { to: "/theming", label: "Theming" },
   { to: "/icons", label: "Icons" },
   { to: "/registry", label: "Registry" },
@@ -216,7 +222,7 @@ export function findComponent(slug: string) {
 }
 
 export function previewHeight(slug: string) {
-  if (slug === "sidebar") return 520
+  if (slug === "sidebar" || slug === "virtual-list") return 520
   if (
     [
       "alert-dialog",

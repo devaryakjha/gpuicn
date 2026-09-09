@@ -10,6 +10,7 @@ Create a Rust app with `cargo new my-app`, then add these pinned dependencies:
 
 ```toml
 [dependencies]
+unicode-segmentation = "1.13"
 web-time = "1.1"
 base-gpui = { git = "https://github.com/LukeTandjung/base-gpui", rev = "64b22337b6a790c636aab248e768e4875bb28ba8" }
 gpui = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d" }
@@ -104,7 +105,12 @@ curl -fL https://ui.imajha.com/examples/hello.rs -o src/main.rs
 cargo run
 ```
 
-The starter registers Base GPUI actions, installs the theme, loads Geist,
+The starter calls `ui::theme::init(cx)` to register component actions, keyboard
+traversal and the default theme, then loads Geist,
 and composes the icon asset source. You can replace the fonts and theme with
 your own. Native builds require the platform's GPUI build tools; macOS needs
 Xcode and its Metal toolchain.
+
+Copied sources include focused behavior checks. To run them with `cargo test`,
+add the same pinned `gpui` dependency under `[dev-dependencies]` with
+`features = ["test-support"]`. The starter dependency block includes this.

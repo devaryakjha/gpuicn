@@ -7,6 +7,7 @@
 use std::rc::Rc;
 
 use base_gpui::button::ButtonRoot;
+pub use base_gpui::button::ButtonRootStyleState as ButtonStyleState;
 use gpui::{
     AnyElement, App, ClickEvent, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement,
     ParentElement, RenderOnce, SharedString, Styled, Window, prelude::FluentBuilder as _, px,
@@ -15,6 +16,7 @@ use gpui::{
 use super::theme::{ThemeMode, UiRadius, UiTheme};
 
 type ButtonClickHandler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
+type ButtonStyleHandler = Rc<dyn Fn(ButtonStyleState, Div) -> Div>;
 
 /// The pinned shadcn Button visual variant.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -113,6 +115,7 @@ pub struct Button {
     disabled: bool,
     aria_label: Option<SharedString>,
     on_click: Option<ButtonClickHandler>,
+    style_with_state: Option<ButtonStyleHandler>,
     children: Vec<AnyElement>,
 }
 
@@ -127,6 +130,7 @@ impl Button {
             disabled: false,
             aria_label: None,
             on_click: None,
+            style_with_state: None,
             children: Vec::new(),
         }
     }
@@ -149,9 +153,17 @@ impl Button {
         self
     }
 
-    /// Sets the accessible name, required for icon-only Buttons.
+    /// Sets the accessible name for icon or custom content. Use `label` for plain text.
     pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
         self.aria_label = Some(label.into());
+        self
+    }
+
+    /// Adds visible text and uses it as the accessible name unless one was supplied.
+    pub fn label(mut self, label: impl Into<SharedString>) -> Self {
+        let label = label.into();
+        self.aria_label.get_or_insert_with(|| label.clone());
+        self.children.push(label.into_any_element());
         self
     }
 
@@ -161,6 +173,16 @@ impl Button {
         handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.on_click = Some(Rc::new(handler));
+        self
+    }
+
+    /// Replaces the visual styling while retaining button interaction.
+    /// Include a visible keyboard focus treatment in custom styles.
+    pub fn style_with_state(
+        mut self,
+        handler: impl Fn(ButtonStyleState, Div) -> Div + 'static,
+    ) -> Self {
+        self.style_with_state = Some(Rc::new(handler));
         self
     }
 }
@@ -180,7 +202,10 @@ impl RenderOnce for Button {
             .id(self.id)
             .disabled(self.disabled)
             .style_with_state(move |state, base| {
-                let base = { style_button(base, state.disabled, variant, size, &theme) };
+                let base = match &self.style_with_state {
+                    Some(style) => style(state, base),
+                    None => style_button(base, state.disabled, variant, size, &theme),
+                };
                 super::theme::apply_style(base, &self.style)
             })
             .children(self.children);

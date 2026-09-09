@@ -133,7 +133,7 @@ fn run(cli: Cli) -> Result<()> {
                 .context("create config (an existing config is never overwritten)")?
                 .write_all(text.as_bytes())?;
             println!(
-                "Created {}. Run `gpuicn add button` next.\nAdd `mod ui;` to your crate root and initialize Base GPUI and UiTheme.\nCargo dependencies, fonts, and application code remain yours; see docs/registry.md.",
+                "Created {}. Run `gpuicn add button` next.\nAdd `mod ui;` to your crate root and call `ui::theme::init(cx)` at application startup.\nCargo dependencies, fonts, and application code remain yours; see docs/registry.md.",
                 cli.config.display()
             );
         }

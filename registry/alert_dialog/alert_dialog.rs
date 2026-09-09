@@ -15,8 +15,18 @@ use super::{
 };
 
 /// Creates an Alert Dialog root with a caller-owned stable ID.
+/// An internal handle reconciles controlled focus. If replacing `.handle(...)`,
+/// drive open/close transitions through the supplied handle.
 pub fn alert_dialog_root(id: impl Into<ElementId>) -> AlertDialogRoot<()> {
-    AlertDialogRoot::new().id(id)
+    let id = id.into();
+    let handle = base_gpui::alert_dialog::AlertDialogHandle::new();
+    AlertDialogRoot::new()
+        .id(id.clone())
+        .handle(handle.clone())
+        .child_any(super::dialog::modal_focus::RootFocus::new(
+            id,
+            handle.dialog_handle(),
+        ))
 }
 
 /// Creates an outline Alert Dialog trigger.

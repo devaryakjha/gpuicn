@@ -3,9 +3,8 @@
 
 use gpui::{
     App, AppContext as _, Bounds, Context, Entity, InteractiveElement as _, IntoElement,
-    ParentElement as _, Render, ScrollStrategy, StatefulInteractiveElement as _, Styled,
-    UniformListScrollHandle, Window, WindowBounds, WindowOptions, canvas, div,
-    prelude::FluentBuilder as _, px, size, uniform_list,
+    ParentElement as _, Render, StatefulInteractiveElement as _, Styled, Window, WindowBounds,
+    WindowOptions, canvas, div, prelude::FluentBuilder as _, px, size,
 };
 use gpui_icons::{LucideAssetSource, LucideIcon, lucide};
 use gpuicn::{
@@ -14,6 +13,7 @@ use gpuicn::{
     input::Input,
     resizable::{PaneLimits, Resizable},
     sidebar::{Sidebar, SidebarItem, sidebar_group_label},
+    virtual_list::{ListItem, ListSelectionMode, VirtualList, VirtualListState},
 };
 use std::{
     borrow::Cow,
@@ -55,7 +55,21 @@ fn main() {
                     let rows = Rc::new(Cell::new(0));
                     let content = cx.new(|_| Content {
                         rows: rows.clone(),
-                        scroll: UniformListScrollHandle::new(),
+                        list: {
+                            let state = VirtualListState::new(
+                                (0..100_000usize)
+                                    .map(|index| {
+                                        ListItem::new(
+                                            ("row", index),
+                                            format!("Row {:06} — synthetic content", index + 1),
+                                        )
+                                    })
+                                    .collect(),
+                            )
+                            .expect("unique fixture IDs");
+                            state.set_selection_mode(ListSelectionMode::Multiple);
+                            state
+                        },
                     });
                     cx.new(|_| Desktop {
                         collapsed: false,
@@ -96,19 +110,18 @@ impl Render for Desktop {
             let frame = benchmark.borrow().cpu_ms.len();
             if frame < 660 {
                 let entity = cx.entity();
-                window.on_next_frame(move |_, cx| {
+                window.on_next_frame(move |window, cx| {
                     entity.update(cx, |this, cx| {
                         this.sidebar_width = px(180. + (frame % 180) as f32);
                         this.collapsed = (frame / 120) % 2 == 1;
                         this.content_height = px(200. + (frame % 240) as f32);
                         this.content.update(cx, |content, cx| {
-                            content
-                                .scroll
-                                .scroll_to_item((frame * 137) % 99_950, ScrollStrategy::Top);
+                            content.list.reveal(&("row", (frame * 137) % 99_950).into());
                             cx.notify();
                         });
                         cx.notify();
-                    })
+                    });
+                    window.refresh();
                 });
             } else {
                 benchmark.borrow().save(self.rows.get());
@@ -207,8 +220,8 @@ impl Render for Desktop {
             .child("Narrow the window: panes retain their minimum size and the group scrolls. Collapse restores your preferred sidebar width.")
             .child(Button::new("lab.measure").aria_label("Inspect rendered range").variant(ButtonVariant::Outline)
                 .on_click(cx.listener(|this, _, _, cx| { this.measured = this.rows.get(); cx.notify(); }))
-                .child("Inspect rendered range"))
-            .child(format!("Largest row range requested: {} / 100,000 (render count, not a frame-time benchmark)", self.measured));
+                .label("Inspect rendered range"))
+            .child(format!("Maximum rows built per layout: {} / 100,000 (render count, not a frame-time benchmark)", self.measured));
         let split = Resizable::new(
             "lab.content-split",
             "Resize list and details",
@@ -260,7 +273,7 @@ impl Render for Desktop {
                                 this.content.update(cx, |_, cx| cx.notify());
                                 cx.notify();
                             }))
-                            .child("Switch theme"),
+                            .label("Switch theme"),
                     )
                     .child(
                         Button::new("lab.personalize")
@@ -271,7 +284,7 @@ impl Render for Desktop {
                                 let mode = UiTheme::read(cx).mode;
                                 set_review_theme(mode, this.personalized, cx);
                             }))
-                            .child("Personalize"),
+                            .label("Personalize"),
                     )
                     .child(
                         div()
@@ -364,32 +377,80 @@ impl Render for Desktop {
 }
 struct Content {
     rows: Rc<Cell<usize>>,
-    scroll: UniformListScrollHandle,
+    list: VirtualListState,
 }
 impl Render for Content {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let theme = UiTheme::read(cx).clone();
         let count = self.rows.clone();
-        div().size_full().flex().flex_col().min_h_0().min_w_0()
-            .child(div().flex().items_center().gap(px(12.)).p(px(16.)).flex_shrink_0()
-                .child(div().w(px(300.)).child(Input::new("lab.note").aria_label("Persistent test text").placeholder("Type here; resizing should preserve this text")))
-                .child(dialog_root("lab.dialog")
-                    .child(dialog_trigger("lab.dialog.trigger", cx).aria_label("Open dialog").child("Open dialog"))
-                    .child(dialog_portal().child(dialog_backdrop(cx)).child(dialog_viewport(cx).child(
-                        dialog_popup("lab.dialog.popup", "Native focus check", cx)
-                            .child_any(dialog_title("lab.dialog.title", cx).child("Native focus check"))
-                            .child_any(Input::new("lab.dialog.input").aria_label("Dialog test input").placeholder("Tab through this dialog"))
-                            .child_any(dialog_close("lab.dialog.close", cx).aria_label("Close dialog").child("Close")),
-                    )))))
-            .child(div().flex_1().min_h_0().overflow_hidden().child(
-                uniform_list("lab.rows", 100_000, move |range, _, _| {
-                    count.set(count.get().max(range.len()));
-                    range.map(|index| div().h(px(28.)).px(px(16.)).flex().items_center()
-                        .bg(if index % 2 == 0 { theme.colors.background } else { theme.colors.muted.opacity(0.35) })
-                        .child(format!("Row {:06} — synthetic content for resizing and scroll checks", index + 1)))
-                        .collect::<Vec<_>>()
-                }).track_scroll(&self.scroll).size_full(),
-            ))
+        let state = self.list.clone();
+        div()
+            .size_full()
+            .flex()
+            .flex_col()
+            .min_h_0()
+            .min_w_0()
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(12.))
+                    .p(px(16.))
+                    .flex_shrink_0()
+                    .child(
+                        div().w(px(300.)).child(
+                            Input::new("lab.note")
+                                .aria_label("Persistent test text")
+                                .placeholder("Type here; resizing should preserve this text"),
+                        ),
+                    )
+                    .child(
+                        dialog_root("lab.dialog")
+                            .child(
+                                dialog_trigger("lab.dialog.trigger", cx)
+                                    .aria_label("Open dialog")
+                                    .child("Open dialog"),
+                            )
+                            .child(
+                                dialog_portal().child(dialog_backdrop(cx)).child(
+                                    dialog_viewport(cx).child(
+                                        dialog_popup("lab.dialog.popup", "Native focus check", cx)
+                                            .child_any(
+                                                dialog_title("lab.dialog.title", cx)
+                                                    .child("Native focus check"),
+                                            )
+                                            .child_any(
+                                                Input::new("lab.dialog.input")
+                                                    .aria_label("Dialog test input")
+                                                    .placeholder("Tab through this dialog"),
+                                            )
+                                            .child_any(
+                                                dialog_close("lab.dialog.close", cx)
+                                                    .aria_label("Close dialog")
+                                                    .child("Close"),
+                                            ),
+                                    ),
+                                ),
+                            ),
+                    ),
+            )
+            .child(
+                div().flex_1().min_h_0().overflow_hidden().child(
+                    VirtualList::new(
+                        "lab.rows",
+                        "Synthetic rows",
+                        self.list.clone(),
+                        move |row, _, _| {
+                            count.set(count.get().max(state.rows_rendered()));
+                            div()
+                                .flex()
+                                .items_center()
+                                .child(row.item.label.clone())
+                                .into_any_element()
+                        },
+                    )
+                    .row_height(px(28.)),
+                ),
+            )
     }
 }
 

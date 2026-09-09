@@ -18,6 +18,7 @@ mod accordion {
                     accordion_header().child(
                         accordion_trigger(cx)
                             .id("faq.shipping.trigger")
+                            .aria_label("When will it arrive?")
                             .child("When will it arrive?"),
                     ),
                 )
@@ -32,7 +33,11 @@ mod alert_dialog {
 
     fn example(cx: &App) -> impl IntoElement {
         alert_dialog_root("discard")
-            .child(alert_dialog_trigger("discard.trigger", cx).child("Discard changes"))
+            .child(
+                alert_dialog_trigger("discard.trigger", cx)
+                    .aria_label("Discard changes")
+                    .child("Discard changes"),
+            )
             .child(
                 alert_dialog_portal()
                     .child(alert_dialog_backdrop(cx))
@@ -48,9 +53,15 @@ mod alert_dialog {
                                         .child("Your unsaved edits will be lost."),
                                 )
                                 .child(
-                                    alert_dialog_cancel("discard.cancel", cx).child("Keep editing"),
+                                    alert_dialog_cancel("discard.cancel", cx)
+                                        .aria_label("Keep editing")
+                                        .child("Keep editing"),
                                 )
-                                .child(alert_dialog_action("discard.confirm", cx).child("Discard")),
+                                .child(
+                                    alert_dialog_action("discard.confirm", cx)
+                                        .aria_label("Discard")
+                                        .child("Discard"),
+                                ),
                         ),
                     ),
             )
@@ -99,12 +110,12 @@ mod avatar {
 
 mod button {
     use crate::ui::button::Button;
-    use gpui::{IntoElement, ParentElement};
+    use gpui::IntoElement;
 
     fn example() -> impl IntoElement {
         Button::new("open-docs")
             .on_click(|_, _, cx| cx.open_url("https://ui.imajha.com"))
-            .child("Open docs")
+            .label("Open docs")
     }
 }
 
@@ -154,6 +165,7 @@ mod collapsible {
             .child(
                 collapsible_trigger(cx)
                     .id("details.trigger")
+                    .aria_label("Show details")
                     .child("Show details"),
             )
             .child(collapsible_content(cx).child("Your order has shipped."))
@@ -204,6 +216,11 @@ mod context_menu {
                     context_menu_positioner(cx).child(
                         context_menu_popup("file-menu.popup", cx).child(
                             context_menu_item("file-menu.copy", cx)
+                                .on_click(|_, cx| {
+                                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(
+                                        "Copied from gpuicn".into(),
+                                    ))
+                                })
                                 .label("Copy")
                                 .child("Copy"),
                         ),
@@ -219,7 +236,11 @@ mod dialog {
 
     fn example(cx: &App) -> impl IntoElement {
         dialog_root("welcome")
-            .child(dialog_trigger("welcome.trigger", cx).child("Open dialog"))
+            .child(
+                dialog_trigger("welcome.trigger", cx)
+                    .aria_label("Open dialog")
+                    .child("Open dialog"),
+            )
             .child(
                 dialog_portal().child(dialog_backdrop(cx)).child(
                     dialog_viewport(cx).child(
@@ -242,7 +263,11 @@ mod drawer {
 
     fn example(cx: &App) -> impl IntoElement {
         drawer_root("details")
-            .child(drawer_trigger("details.trigger", cx).child("Show details"))
+            .child(
+                drawer_trigger("details.trigger", cx)
+                    .aria_label("Show details")
+                    .child("Show details"),
+            )
             .child(
                 drawer_portal().child(drawer_backdrop(cx)).child(
                     drawer_viewport().child(
@@ -304,7 +329,7 @@ mod form {
             )
             .child(
                 Button::new("subscribe.submit")
-                    .child("Subscribe")
+                    .label("Subscribe")
                     .on_click(|_, window, cx| {
                         window.dispatch_action(Box::new(FormSubmitAction), cx)
                     }),
@@ -329,12 +354,17 @@ mod menu {
 
     fn example(cx: &App) -> impl IntoElement {
         menu_root::<()>("account")
-            .child(menu_trigger("account.trigger", cx).child("Account"))
+            .child(
+                menu_trigger("account.trigger", cx)
+                    .aria_label("Account")
+                    .child("Account"),
+            )
             .child(
                 menu_portal().child(
                     menu_positioner(cx).child(
                         menu_popup("account.popup", cx).child(
                             menu_item("account.profile", cx)
+                                .on_click(|_, cx| cx.open_url("https://github.com/devaryakjha"))
                                 .label("Profile")
                                 .child("Profile"),
                         ),
@@ -352,15 +382,20 @@ mod menubar {
         menubar("app-menu", cx)
             .aria_label("Application menu")
             .child(
-                menubar_menu::<()>("file")
-                    .child(menubar_trigger("file.trigger", cx).child("File"))
+                menubar_menu::<()>("help")
+                    .child(
+                        menubar_trigger("help.trigger", cx)
+                            .aria_label("Help")
+                            .child("Help"),
+                    )
                     .child(
                         menubar_portal().child(
                             menu_positioner(cx).child(
-                                menubar_content("file.popup", cx).child(
-                                    menubar_item("file.new", cx)
-                                        .label("New file")
-                                        .child("New file"),
+                                menubar_content("help.popup", cx).child(
+                                    menubar_item("help.docs", cx)
+                                        .on_click(|_, cx| cx.open_url("https://ui.imajha.com"))
+                                        .label("Documentation")
+                                        .child("Documentation"),
                                 ),
                             ),
                         ),
@@ -390,10 +425,20 @@ mod navigation_menu {
                 navigation_menu_list().child(
                     navigation_menu_item()
                         .value("docs")
-                        .child(navigation_menu_trigger(cx).child_any("Docs"))
                         .child(
-                            navigation_menu_content(cx)
-                                .child(navigation_menu_link::<&str>(cx).child("Getting started")),
+                            navigation_menu_trigger(cx)
+                                .aria_label("Docs")
+                                .child_any("Docs"),
+                        )
+                        .child(
+                            navigation_menu_content(cx).child(
+                                navigation_menu_link::<&str>(cx)
+                                    .aria_label("Getting started")
+                                    .on_activate(|_, cx| {
+                                        cx.open_url("https://ui.imajha.com/installation")
+                                    })
+                                    .child("Getting started"),
+                            ),
                         ),
                 ),
             )
@@ -412,6 +457,7 @@ mod number_field {
 
     fn example() -> impl IntoElement {
         NumberField::new("quantity")
+            .aria_label("Quantity")
             .default_value(1.)
             .range(Some(1.), Some(10.))
     }
@@ -432,7 +478,11 @@ mod popover {
 
     fn example(cx: &App) -> impl IntoElement {
         popover_root("help")
-            .child(popover_trigger("help.trigger", cx).child("Help"))
+            .child(
+                popover_trigger("help.trigger", cx)
+                    .aria_label("Help")
+                    .child("Help"),
+            )
             .child(
                 popover_portal().child(
                     popover_positioner(cx).child(
@@ -454,7 +504,11 @@ mod preview_card {
 
     fn example(cx: &App) -> impl IntoElement {
         preview_card_root("profile")
-            .child(preview_card_trigger("profile.trigger").child("@ada"))
+            .child(
+                preview_card_trigger("profile.trigger")
+                    .aria_label("@ada")
+                    .child("@ada"),
+            )
             .child(
                 preview_card_portal().child(preview_card_positioner(cx).child(
                     preview_card_popup("profile.popup", cx).child_any("Ada — software engineer"),
@@ -597,12 +651,14 @@ mod tabs {
                     .child(
                         tabs_trigger(TabsVariant::Default, cx)
                             .id("settings.account")
+                            .aria_label("Account")
                             .value("account")
                             .child("Account"),
                     )
                     .child(
                         tabs_trigger(TabsVariant::Default, cx)
                             .id("settings.password")
+                            .aria_label("Password")
                             .value("password")
                             .child("Password"),
                     ),
@@ -618,14 +674,14 @@ mod tabs {
 
 mod toast {
     use crate::ui::{button::Button, toast::*};
-    use gpui::{App, IntoElement, ParentElement};
+    use gpui::{App, IntoElement};
 
     fn example(cx: &App) -> impl IntoElement {
         let manager = create_toast_manager::<()>();
         let notifications = manager.clone();
         toast_provider("notifications")
             .manager(manager)
-            .child_any(Button::new("save").child("Save").on_click(move |_, _, cx| {
+            .child_any(Button::new("save").label("Save").on_click(move |_, _, cx| {
                 notifications.add(
                     ToastOptions::new()
                         .title("Saved")
@@ -698,7 +754,7 @@ mod tooltip {
         tooltip_provider("tooltips").child(
             tooltip_root("save-hint")
                 .child(
-                    tooltip_trigger("save-hint.trigger").child(Button::new("save").child("Save")),
+                    tooltip_trigger("save-hint.trigger").child(Button::new("save").label("Save")),
                 )
                 .child(
                     tooltip_portal().child(tooltip_positioner(cx).child(
@@ -740,5 +796,27 @@ mod sidebar {
             .child(SidebarItem::new("changes", "Changes").selected(true))
             .child(SidebarItem::new("history", "History").on_activate(|_, _, _| {}))
             .footer(SidebarItem::new("settings", "Settings"))
+    }
+}
+
+mod virtual_list {
+    use crate::ui::virtual_list::{ListItem, ListSelectionMode, VirtualList, VirtualListState};
+    use gpui::{IntoElement, ParentElement, div};
+
+    // Store this once as `list: VirtualListState` in your view, not in render.
+    fn create_list() -> VirtualListState {
+        let state = VirtualListState::new(vec![
+            ListItem::new("readme", "README.md"),
+            ListItem::new("main", "src/main.rs"),
+        ])
+        .expect("unique application IDs");
+        state.set_selection_mode(ListSelectionMode::Multiple);
+        state
+    }
+
+    fn example(state: &VirtualListState) -> impl IntoElement {
+        VirtualList::new("files", "Files", state.clone(), |row, _, _| {
+            div().child(row.item.label.clone()).into_any_element()
+        })
     }
 }

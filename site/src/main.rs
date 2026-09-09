@@ -1,3 +1,8 @@
+#[cfg(not(target_family = "wasm"))]
+mod gallery;
+#[cfg(not(target_family = "wasm"))]
+mod workspace;
+
 use base_gpui::{alert_dialog::AlertDialogHandle, dialog::DialogHandle, drawer::DrawerHandle};
 use std::borrow::Cow;
 
@@ -90,7 +95,9 @@ use gpuicn::{
     toast::{ToastOptions, create_toast_manager, toast_portal, toast_provider, toast_viewport},
     toggle::{Toggle, ToggleVariant},
     toggle_group::{ToggleGroup, ToggleGroupItem},
-    toolbar::{toolbar, toolbar_button, toolbar_group, toolbar_input, toolbar_separator},
+    toolbar::{
+        toolbar, toolbar_button, toolbar_group, toolbar_input_with_label, toolbar_separator,
+    },
     tooltip::{
         tooltip_popup, tooltip_portal, tooltip_positioner, tooltip_provider, tooltip_root,
         tooltip_trigger,
@@ -139,23 +146,6 @@ fn launch(cx: &mut App) {
         ])
         .expect("failed to load pinned Geist fonts");
     gpuicn::init(cx);
-    #[cfg(target_family = "wasm")]
-    {
-        // WASM has no macOS target_os, so Base GPUI only registers Control
-        // shortcuts. Accept Command as well for previews on macOS browsers.
-        use base_gpui::primitives::input::{
-            INPUT_KEY_CONTEXT, InputCopy, InputCut, InputEnd, InputHome, InputPaste, InputSelectAll,
-        };
-        use gpui::KeyBinding;
-        cx.bind_keys([
-            KeyBinding::new("cmd-a", InputSelectAll, Some(INPUT_KEY_CONTEXT)),
-            KeyBinding::new("cmd-c", InputCopy, Some(INPUT_KEY_CONTEXT)),
-            KeyBinding::new("cmd-v", InputPaste, Some(INPUT_KEY_CONTEXT)),
-            KeyBinding::new("cmd-x", InputCut, Some(INPUT_KEY_CONTEXT)),
-            KeyBinding::new("cmd-left", InputHome, Some(INPUT_KEY_CONTEXT)),
-            KeyBinding::new("cmd-right", InputEnd, Some(INPUT_KEY_CONTEXT)),
-        ]);
-    }
 
     let demo = requested_value("demo")
         .and_then(|value| Demo::parse(&value))
@@ -165,13 +155,26 @@ fn launch(cx: &mut App) {
         _ => ThemeMode::Light,
     };
     UiTheme::switch(cx, mode);
+    #[cfg(not(target_family = "wasm"))]
+    if requested_value("demo")
+        .as_deref()
+        .is_none_or(|value| value == "--workspace")
+    {
+        workspace::launch(cx);
+        return;
+    }
+    #[cfg(not(target_family = "wasm"))]
+    if requested_value("demo").as_deref() == Some("--catalog") {
+        gallery::launch(cx);
+        return;
+    }
 
     let bounds = Bounds::centered(
         None,
         size(
             px(requested_dimension(
                 "width",
-                if matches!(demo, Demo::Sidebar) {
+                if matches!(demo, Demo::Sidebar | Demo::VirtualList) {
                     960.
                 } else {
                     640.
@@ -181,7 +184,7 @@ fn launch(cx: &mut App) {
             )),
             px(requested_dimension(
                 "height",
-                if matches!(demo, Demo::Sidebar) {
+                if matches!(demo, Demo::Sidebar | Demo::VirtualList) {
                     600.
                 } else {
                     288.
@@ -198,42 +201,7 @@ fn launch(cx: &mut App) {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 ..Default::default()
             },
-            move |_window, cx| {
-                cx.new(move |_| Showcase {
-                    demo,
-                    count: 0,
-                    checked: false,
-                    pressed: false,
-                    italic: false,
-                    underline: false,
-                    collapsible_open: true,
-                    alert_dialog_open: false,
-                    dialog_open: false,
-                    drawer_open: false,
-                    drawer_direction: DrawerSwipeDirection::Down,
-                    goal: 350,
-                    volume: 50.,
-                    pane_width: px(160.),
-                    sidebar_state: Default::default(),
-                    sidebar_example: requested_value("example")
-                        .unwrap_or_else(|| "workspace".into()),
-                    sidebar_mobile: false,
-                    sidebar_selected: 0,
-                    sidebar_workspace: 0,
-                    sidebar_search: String::new(),
-                    sidebar_nested: true,
-                    sidebar_projects: 2,
-                    sidebar_note: String::new(),
-                    sidebar_loaded: false,
-                    sidebar_message: 0,
-                    sidebar_unread: false,
-                    sidebar_sections: [true, true, false],
-                    icon: requested_value("icon")
-                        .as_deref()
-                        .and_then(LucideIcon::from_name)
-                        .unwrap_or(LucideIcon::House),
-                })
-            },
+            move |_window, cx| cx.new(move |_| Showcase::new(demo)),
         )
         .expect("failed to open showcase window");
     #[cfg(target_family = "wasm")]
@@ -303,6 +271,7 @@ enum Demo {
     Separator,
     Sidebar,
     Resizable,
+    VirtualList,
     Slider,
     Switch,
     Tabs,
@@ -348,6 +317,7 @@ impl Demo {
             "separator" => Some(Self::Separator),
             "sidebar" => Some(Self::Sidebar),
             "resizable" => Some(Self::Resizable),
+            "virtual-list" => Some(Self::VirtualList),
             "slider" => Some(Self::Slider),
             "switch" => Some(Self::Switch),
             "tabs" => Some(Self::Tabs),
@@ -361,9 +331,25 @@ impl Demo {
     }
 }
 
+fn virtual_list_state(count: usize) -> gpuicn::virtual_list::VirtualListState {
+    use gpuicn::virtual_list::{ListItem, ListSelectionMode, VirtualListState};
+    let state = VirtualListState::new(
+        (0..count)
+            .map(|index| {
+                ListItem::new(("file", index), format!("component_{index:05}.rs"))
+                    .disabled(index == 7)
+            })
+            .collect(),
+    )
+    .expect("fixture IDs are unique");
+    state.set_selection_mode(ListSelectionMode::Multiple);
+    state
+}
+
 struct Showcase {
     demo: Demo,
     count: usize,
+    demo_action: String,
     checked: bool,
     pressed: bool,
     italic: bool,
@@ -389,6 +375,10 @@ struct Showcase {
     sidebar_message: usize,
     sidebar_unread: bool,
     sidebar_sections: [bool; 3],
+    virtual_rows: Option<gpuicn::virtual_list::VirtualListState>,
+    virtual_details: bool,
+    virtual_reversed: bool,
+    virtual_note: String,
     icon: LucideIcon,
 }
 
@@ -403,19 +393,73 @@ impl Render for Showcase {
             .flex()
             .items_center()
             .justify_center()
-            .p(px(if matches!(self.demo, Demo::Sidebar) {
-                0.
-            } else {
-                16.
-            }))
+            .p(px(
+                if matches!(self.demo, Demo::Sidebar | Demo::VirtualList) {
+                    0.
+                } else {
+                    16.
+                },
+            ))
             .bg(theme.colors.background)
             .text_color(theme.colors.foreground)
             .font_family(theme.fonts.body)
+            .when(!self.demo_action.is_empty(), |view| {
+                view.flex_col().gap(px(16.))
+            })
             .child(self.preview(cx))
+            .when(!self.demo_action.is_empty(), |view| {
+                view.child(
+                    div()
+                        .text_size(px(13.))
+                        .text_color(theme.colors.muted_foreground)
+                        .child(format!("Last action: {}", self.demo_action)),
+                )
+            })
     }
 }
 
 impl Showcase {
+    fn new(demo: Demo) -> Self {
+        Self {
+            demo,
+            count: 0,
+            demo_action: String::new(),
+            checked: false,
+            pressed: false,
+            italic: false,
+            underline: false,
+            collapsible_open: true,
+            alert_dialog_open: false,
+            dialog_open: false,
+            drawer_open: false,
+            drawer_direction: DrawerSwipeDirection::Down,
+            goal: 350,
+            volume: 50.,
+            pane_width: px(160.),
+            sidebar_state: Default::default(),
+            sidebar_example: requested_value("example").unwrap_or_else(|| "workspace".into()),
+            sidebar_mobile: false,
+            sidebar_selected: 0,
+            sidebar_workspace: 0,
+            sidebar_search: String::new(),
+            sidebar_nested: true,
+            sidebar_projects: 2,
+            sidebar_note: String::new(),
+            sidebar_loaded: false,
+            sidebar_message: 0,
+            sidebar_unread: false,
+            sidebar_sections: [true, true, false],
+            virtual_rows: matches!(demo, Demo::VirtualList).then(|| virtual_list_state(100_000)),
+            virtual_details: false,
+            virtual_reversed: false,
+            virtual_note: String::new(),
+            icon: requested_value("icon")
+                .as_deref()
+                .and_then(LucideIcon::from_name)
+                .unwrap_or(LucideIcon::House),
+        }
+    }
+
     fn preview(&self, cx: &mut Context<Self>) -> gpui::AnyElement {
         match self.demo {
             Demo::Icons => self.icons_preview(cx).into_any_element(),
@@ -449,6 +493,7 @@ impl Showcase {
             Demo::Select => self.select_preview(cx).into_any_element(),
             Demo::Separator => self.separator_preview().into_any_element(),
             Demo::Sidebar => self.sidebar_preview(cx).into_any_element(),
+            Demo::VirtualList => self.virtual_list_preview(cx).into_any_element(),
             Demo::Resizable => self.resizable_preview(cx).into_any_element(),
             Demo::Slider => self.slider_preview(cx).into_any_element(),
             Demo::Switch => self.switch_preview(cx).into_any_element(),
@@ -482,7 +527,7 @@ impl Showcase {
                         this.count += 1;
                         cx.notify();
                     }))
-                    .child(format!("Clicked {} times", self.count)),
+                    .label(format!("Clicked {} times", self.count)),
             )
             .child(
                 div()
@@ -493,7 +538,7 @@ impl Showcase {
                     .children(variants.into_iter().map(|(variant, label)| {
                         Button::new(format!("preview.button.{}", label.to_lowercase()))
                             .variant(variant)
-                            .child(label)
+                            .label(label)
                     })),
             )
             .child(
@@ -504,12 +549,12 @@ impl Showcase {
                     .child(
                         Button::new("preview.button.small")
                             .size(ButtonSize::Xs)
-                            .child("Extra small"),
+                            .label("Extra small"),
                     )
                     .child(
                         Button::new("preview.button.large")
                             .size(ButtonSize::Lg)
-                            .child("Large"),
+                            .label("Large"),
                     )
                     .child(
                         Button::new("preview.button.icon")
@@ -529,7 +574,7 @@ impl Showcase {
                     .child(
                         Button::new("preview.button.disabled")
                             .disabled(true)
-                            .child("Disabled"),
+                            .label("Disabled"),
                     ),
             )
     }
@@ -584,6 +629,7 @@ impl Showcase {
                         accordion_header().child(
                             accordion_trigger(cx)
                                 .id(format!("preview.accordion.{value}.trigger"))
+                                .aria_label(trigger)
                                 .child(trigger),
                         ),
                     )
@@ -647,7 +693,11 @@ impl Showcase {
                     })
                     .ok();
             })
-            .child(alert_dialog_trigger("preview.alert-dialog.trigger", cx).child("Delete account"))
+            .child(
+                alert_dialog_trigger("preview.alert-dialog.trigger", cx)
+                    .aria_label("Delete account")
+                    .child("Delete account"),
+            )
             .child(
                 alert_dialog_portal()
                     .child(alert_dialog_backdrop(cx))
@@ -675,14 +725,14 @@ impl Showcase {
                                             .on_click(move |_, window, cx| {
                                                 cancel.close(window, cx);
                                             })
-                                            .child("Cancel"),
+                                            .label("Cancel"),
                                     )
                                     .child(
                                         Button::new("preview.alert-dialog.action")
                                             .on_click(move |_, window, cx| {
                                                 confirm.close(window, cx);
                                             })
-                                            .child("Continue"),
+                                            .label("Continue"),
                                     ),
                             ),
                         ),
@@ -817,6 +867,7 @@ impl Showcase {
                             })
                             .child(
                                 collapsible_trigger(cx)
+                                    .aria_label("components")
                                     .w_full()
                                     .justify_start()
                                     .gap(px(8.0))
@@ -981,6 +1032,19 @@ impl Showcase {
             )
     }
 
+    fn demo_action_handler(
+        label: &'static str,
+        cx: &Context<Self>,
+    ) -> impl Fn(&mut Window, &mut App) + 'static {
+        let view = cx.entity().downgrade();
+        move |_, cx| {
+            let _ = view.update(cx, |this, cx| {
+                this.demo_action = label.into();
+                cx.notify();
+            });
+        }
+    }
+
     fn context_menu_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let border = UiTheme::read(cx).colors.border;
         context_menu_root::<()>("preview.context-menu")
@@ -1005,22 +1069,21 @@ impl Showcase {
                         context_menu_popup("preview.context-menu.popup", cx)
                             .child(
                                 context_menu_item("preview.context-menu.back", cx)
+                                    .on_click(Self::demo_action_handler("Back", cx))
                                     .label("Back")
-                                    .child("Back")
-                                    .child(shortcut("Cmd [", cx)),
+                                    .child("Back"),
                             )
                             .child(
                                 context_menu_item("preview.context-menu.forward", cx)
                                     .label("Forward")
                                     .disabled(true)
-                                    .child("Forward")
-                                    .child(shortcut("Cmd ]", cx)),
+                                    .child("Forward"),
                             )
                             .child(
                                 context_menu_item("preview.context-menu.reload", cx)
+                                    .on_click(Self::demo_action_handler("Reload", cx))
                                     .label("Reload")
-                                    .child("Reload")
-                                    .child(shortcut("Cmd R", cx)),
+                                    .child("Reload"),
                             )
                             .child(context_menu_separator(cx))
                             .child(
@@ -1065,7 +1128,11 @@ impl Showcase {
                     })
                     .ok();
             })
-            .child(dialog_trigger("preview.dialog.trigger", cx).child("Open dialog"))
+            .child(
+                dialog_trigger("preview.dialog.trigger", cx)
+                    .aria_label("Open dialog")
+                    .child("Open dialog"),
+            )
             .child(
                 dialog_portal().child(dialog_backdrop(cx)).child(
                     dialog_viewport(cx).child(
@@ -1104,7 +1171,7 @@ impl Showcase {
                                         .on_click(move |_, window, cx| {
                                             handle.close(window, cx);
                                         })
-                                        .child("Save changes"),
+                                        .label("Save changes"),
                                 ),
                             )
                             .child(dialog_close("preview.dialog.close", cx)),
@@ -1283,7 +1350,7 @@ impl Showcase {
                                                                 .on_click(move |_, window, cx| {
                                                                     submit.close(window, cx);
                                                                 })
-                                                                .child("Submit"),
+                                                                .label("Submit"),
                                                         )
                                                         .child(
                                                             Button::new("preview.drawer.close")
@@ -1291,7 +1358,7 @@ impl Showcase {
                                                                 .on_click(move |_, window, cx| {
                                                                     close.close(window, cx);
                                                                 })
-                                                                .child("Cancel"),
+                                                                .label("Cancel"),
                                                         ),
                                                 ),
                                         ),
@@ -1383,7 +1450,7 @@ impl Showcase {
                     .on_click(|_, window, cx| {
                         window.dispatch_action(Box::new(FormSubmitAction), cx)
                     })
-                    .child("Subscribe"),
+                    .label("Subscribe"),
             )
             .when(self.count > 0, |form| form.child("Form submitted."))
     }
@@ -1416,7 +1483,11 @@ impl Showcase {
 
     fn menu_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         menu_root::<()>("preview.menu")
-            .child(menu_trigger("preview.menu.trigger", cx).child("Open menu"))
+            .child(
+                menu_trigger("preview.menu.trigger", cx)
+                    .aria_label("Open menu")
+                    .child("Open menu"),
+            )
             .child(
                 menu_portal().child(
                     menu_positioner(cx).child(
@@ -1430,22 +1501,21 @@ impl Showcase {
                                     )
                                     .child(
                                         menu_item("preview.menu.profile", cx)
+                                            .on_click(Self::demo_action_handler("Profile", cx))
                                             .label("Profile")
-                                            .child("Profile")
-                                            .child(shortcut("Shift Cmd P", cx)),
+                                            .child("Profile"),
                                     )
                                     .child(
                                         menu_item("preview.menu.billing", cx)
+                                            .on_click(Self::demo_action_handler("Billing", cx))
                                             .label("Billing")
-                                            .child("Billing")
-                                            .child(shortcut("Cmd B", cx)),
+                                            .child("Billing"),
                                     )
                                     .child(
                                         menu_item("preview.menu.settings", cx)
                                             .label("Settings")
                                             .disabled(true)
-                                            .child("Settings")
-                                            .child(shortcut("Cmd ,", cx)),
+                                            .child("Settings"),
                                     ),
                             )
                             .child(menu_separator(cx))
@@ -1487,29 +1557,32 @@ impl Showcase {
             .aria_label("Application menu")
             .child(
                 menubar_menu::<()>("preview.menubar.file")
-                    .child(menubar_trigger("preview.menubar.file.trigger", cx).child("File"))
+                    .child(
+                        menubar_trigger("preview.menubar.file.trigger", cx)
+                            .aria_label("File")
+                            .child("File"),
+                    )
                     .child(
                         menubar_portal().child(
                             menu_positioner(cx).child(
                                 menubar_content("preview.menubar.file.content", cx)
                                     .child(
                                         menubar_item("preview.menubar.new", cx)
+                                            .on_click(Self::demo_action_handler("New File", cx))
                                             .label("New File")
-                                            .child("New File")
-                                            .child(shortcut("Cmd N", cx)),
+                                            .child("New File"),
                                     )
                                     .child(
                                         menubar_item("preview.menubar.open", cx)
+                                            .on_click(Self::demo_action_handler("Open", cx))
                                             .label("Open")
-                                            .child("Open…")
-                                            .child(shortcut("Cmd O", cx)),
+                                            .child("Open…"),
                                     )
                                     .child(
                                         menubar_item("preview.menubar.save", cx)
                                             .label("Save")
                                             .disabled(true)
-                                            .child("Save")
-                                            .child(shortcut("Cmd S", cx)),
+                                            .child("Save"),
                                     )
                                     .child(menubar_separator(cx))
                                     .child(
@@ -1524,18 +1597,24 @@ impl Showcase {
             )
             .child(
                 menubar_menu::<()>("preview.menubar.edit")
-                    .child(menubar_trigger("preview.menubar.edit.trigger", cx).child("Edit"))
+                    .child(
+                        menubar_trigger("preview.menubar.edit.trigger", cx)
+                            .aria_label("Edit")
+                            .child("Edit"),
+                    )
                     .child(
                         menubar_portal().child(
                             menu_positioner(cx).child(
                                 menubar_content("preview.menubar.edit.content", cx)
                                     .child(
                                         menubar_item("preview.menubar.undo", cx)
+                                            .on_click(Self::demo_action_handler("Undo", cx))
                                             .label("Undo")
                                             .child("Undo"),
                                     )
                                     .child(
                                         menubar_item("preview.menubar.redo", cx)
+                                            .on_click(Self::demo_action_handler("Redo", cx))
                                             .label("Redo")
                                             .child("Redo"),
                                     ),
@@ -1569,18 +1648,21 @@ impl Showcase {
             .child("Quantity · 0 to 10")
             .child(
                 NumberField::new("preview.number-field")
+                    .aria_label("Quantity")
                     .default_value(4.0)
                     .range(Some(0.0), Some(10.0)),
             )
             .child("Read only")
             .child(
                 NumberField::new("preview.number-field.read-only")
+                    .aria_label("Read-only quantity")
                     .default_value(6.0)
                     .read_only(true),
             )
             .child("Disabled")
             .child(
                 NumberField::new("preview.number-field.disabled")
+                    .aria_label("Disabled quantity")
                     .default_value(8.0)
                     .disabled(true),
             )
@@ -1595,7 +1677,11 @@ impl Showcase {
                     .child(
                         navigation_menu_item()
                             .value("docs")
-                            .child(navigation_menu_trigger(cx).child_any("Docs"))
+                            .child(
+                                navigation_menu_trigger(cx)
+                                    .aria_label("Docs")
+                                    .child_any("Docs"),
+                            )
                             .child(
                                 navigation_menu_content(cx)
                                     .w(px(200.0))
@@ -1604,6 +1690,7 @@ impl Showcase {
                                     .child(
                                         div().id("preview.navigation-menu.getting-started").child(
                                             navigation_menu_link::<&str>(cx)
+                                                .aria_label("Getting started")
                                                 .on_activate(|_, cx| {
                                                     cx.open_url(
                                                         "https://ui.imajha.com/installation",
@@ -1615,6 +1702,7 @@ impl Showcase {
                                     .child(
                                         div().id("preview.navigation-menu.components").child(
                                             navigation_menu_link::<&str>(cx)
+                                                .aria_label("Components")
                                                 .on_activate(|_, cx| {
                                                     cx.open_url(
                                                         "https://ui.imajha.com/components/button",
@@ -1626,6 +1714,7 @@ impl Showcase {
                                     .child(
                                         div().id("preview.navigation-menu.theming").child(
                                             navigation_menu_link::<&str>(cx)
+                                                .aria_label("Theming")
                                                 .on_activate(|_, cx| {
                                                     cx.open_url("https://ui.imajha.com/theming")
                                                 })
@@ -1636,6 +1725,7 @@ impl Showcase {
                     )
                     .child(
                         navigation_menu_link(cx)
+                            .aria_label("Releases")
                             .on_activate(|_, cx| {
                                 cx.open_url("https://github.com/devaryakjha/gpuicn/releases")
                             })
@@ -1643,6 +1733,7 @@ impl Showcase {
                     )
                     .child(
                         navigation_menu_link(cx)
+                            .aria_label("GitHub")
                             .on_activate(|_, cx| {
                                 cx.open_url("https://github.com/devaryakjha/gpuicn")
                             })
@@ -1686,7 +1777,11 @@ impl Showcase {
 
     fn popover_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         popover_root("preview.popover")
-            .child(popover_trigger("preview.popover.trigger", cx).child("Open popover"))
+            .child(
+                popover_trigger("preview.popover.trigger", cx)
+                    .aria_label("Open popover")
+                    .child("Open popover"),
+            )
             .child(
                 popover_portal().child(
                     popover_positioner(cx).child(
@@ -1724,6 +1819,7 @@ impl Showcase {
         preview_card_root("preview.preview-card")
             .child(
                 preview_card_trigger("preview.preview-card.trigger")
+                    .aria_label("gpuicn profile")
                     .cursor_pointer()
                     .underline()
                     .child("@gpuicn"),
@@ -1904,6 +2000,163 @@ impl Showcase {
             .first_limits(PaneLimits::new(px(80.), px(300.)))
             .second_limits(PaneLimits::new(px(80.), px(300.))),
         )
+    }
+
+    fn virtual_list_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        use gpuicn::virtual_list::{ListItem, VirtualList, VirtualListEvent};
+        let t = UiTheme::read(cx).clone();
+        let s = t.spacing.unit;
+        let rows = self
+            .virtual_rows
+            .as_ref()
+            .expect("list preview state")
+            .clone();
+        let details = self.virtual_details;
+        let current = rows
+            .focused()
+            .and_then(|id| rows.index_of(&id))
+            .and_then(|index| rows.item(index));
+        let view = cx.entity().downgrade();
+        let menu_rows = rows.clone();
+        let menu_theme = t.clone();
+        let list = VirtualList::new(
+            "files.list",
+            "Source files",
+            rows.clone(),
+            move |row, _, cx| {
+                let state = menu_rows.clone();
+                let view = view.clone();
+                let target = row.item.id.clone();
+                let content = div()
+                    .w_full()
+                    .min_w_0()
+                    .flex()
+                    .items_center()
+                    .gap(s * 2_f32)
+                    .when(details, |el| el.py(s))
+                    .child(
+                        lucide(LucideIcon::FileCode)
+                            .size(s * 4_f32)
+                            .text_color(menu_theme.colors.muted_foreground),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .flex()
+                            .flex_col()
+                            .child(div().truncate().child(row.item.label.clone()))
+                            .when(details, |el| {
+                                el.child(
+                                    div()
+                                        .text_size(px(12.) * menu_theme.text_scale)
+                                        .line_height(px(16.) * menu_theme.text_scale)
+                                        .text_color(menu_theme.colors.muted_foreground)
+                                        .child("src/components · Updated a moment ago"),
+                                )
+                            }),
+                    )
+                    .child(
+                        div()
+                            .text_size(px(12.) * menu_theme.text_scale)
+                            .text_color(menu_theme.colors.muted_foreground)
+                            .child(if row.item.disabled { "Locked" } else { "M" }),
+                    );
+                context_menu_root::<()>(row.item.id.clone())
+                    .w_full()
+                    .disabled(row.item.disabled)
+                    .child(
+                        context_menu_trigger("files.context.trigger")
+                            .w_full()
+                            .child(content),
+                    )
+                    .child(
+                        context_menu_portal().child(
+                            context_menu_positioner(cx).child(
+                                context_menu_popup("files.context.popup", cx).child(
+                                    context_menu_item("files.context.inspect", cx)
+                                        .label("Inspect selection")
+                                        .child("Inspect selection")
+                                        .on_click(move |_, cx| {
+                                            // Resolve the captured ID against current data before acting.
+                                            if let Some(item) = state
+                                                .index_of(&target)
+                                                .and_then(|index| state.item(index))
+                                            {
+                                                let count = state.selected_count();
+                                                let _ = view.update(cx, |this, cx| {
+                                                    this.virtual_note = format!(
+                                                        "Inspect {} · {count} selected",
+                                                        item.label
+                                                    );
+                                                    cx.notify();
+                                                });
+                                            }
+                                        }),
+                                ),
+                            ),
+                        ),
+                    )
+                    .into_any_element()
+            },
+        )
+        .when(details, |list| list.row_height(s * 12_f32))
+        .on_event(cx.listener(|this, event, _, cx| {
+            if let VirtualListEvent::Activate(id) = event
+                && let Some(state) = &this.virtual_rows
+                && let Some(item) = state.index_of(id).and_then(|index| state.item(index))
+            {
+                this.virtual_note = format!("Opened {}", item.label);
+            }
+            cx.notify();
+        }));
+        div().size_full().min_w_0().min_h_0().flex().flex_col()
+            .font_family(t.fonts.body).text_size(px(14.) * t.text_scale).line_height(px(20.) * t.text_scale)
+            .child(div().px(s * 4_f32).py(s * 3_f32).flex().items_center().justify_between().gap(s * 2_f32)
+                .border_b_1().border_color(t.colors.border)
+                .child(div().flex().flex_col().child(div().font_weight(gpui::FontWeight::MEDIUM).child("Source files"))
+                    .child(div().text_size(px(12.) * t.text_scale).text_color(t.colors.muted_foreground)
+                        .child(format!("{} rows · Multi-select", rows.len()))))
+                .child(Button::new("files.details").aria_label("Toggle row details").variant(if details { ButtonVariant::Secondary } else { ButtonVariant::Outline })
+                    .size(ButtonSize::Sm).label("Details")
+                    .on_click(cx.listener(|this, _, _, cx| { this.virtual_details = !this.virtual_details; cx.notify(); }))))
+            .child(div().px(s * 3_f32).py(s * 2_f32).flex().flex_wrap().gap(s * 2_f32)
+                .border_b_1().border_color(t.colors.border)
+                .child(Button::new("files.reveal").aria_label("Jump to row 50,000").variant(ButtonVariant::Outline).size(ButtonSize::Sm).label("Jump to 50,000")
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        if let Some(rows) = &this.virtual_rows { rows.reveal(&("file", 49_999usize).into()); }
+                        cx.notify();
+                    })))
+                .child(Button::new("files.reverse").aria_label("Reverse row order").variant(ButtonVariant::Outline).size(ButtonSize::Sm)
+                    .child(if self.virtual_reversed { "Original order" } else { "Reverse order" })
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        if let Some(rows) = &this.virtual_rows {
+                            let items = (0..rows.len()).rev().filter_map(|index| rows.item(index)).collect();
+                            rows.replace_items(items).expect("reorder retains unique IDs");
+                            this.virtual_reversed = !this.virtual_reversed;
+                        }
+                        cx.notify();
+                    })))
+                .child(Button::new("files.refresh").aria_label("Refresh rows").variant(ButtonVariant::Outline).size(ButtonSize::Sm).label("Refresh rows")
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        if let Some(rows) = &this.virtual_rows {
+                            let added = gpui::ElementId::from("new-file");
+                            let existed = rows.index_of(&added).is_some();
+                            let mut items: Vec<_> = (0..rows.len()).filter_map(|index| rows.item(index)).filter(|item| item.id != added).collect();
+                            if !existed { items.insert(0, ListItem::new("new-file", "new_component.rs")); }
+                            rows.replace_items(items).expect("refresh keeps unique IDs");
+                            this.virtual_note = if existed { "Removed the added row; surviving selection and viewport retained." } else { "Added a row at the top; surviving selection and viewport retained." }.into();
+                        }
+                        cx.notify();
+                    }))))
+            .child(div().flex_1().min_h_0().min_w_0().px(s * 2_f32).py(s).child(list))
+            .child(div().px(s * 4_f32).py(s * 3_f32).border_t_1().border_color(t.colors.border).flex().flex_col().gap(s)
+                .child(div().flex().justify_between().gap(s * 2_f32)
+                    .child(format!("{} selected", rows.selected_count()))
+                    .child(div().min_w_0().truncate().text_color(t.colors.muted_foreground)
+                        .child(current.map(|item| item.label).unwrap_or_else(|| "Use arrows, Shift and Cmd/Ctrl".into()))))
+                .when(!self.virtual_note.is_empty(), |el| el.child(div().text_size(px(12.) * t.text_scale)
+                    .line_height(px(16.) * t.text_scale).text_color(t.colors.muted_foreground).child(self.virtual_note.clone()))))
     }
 
     fn sidebar_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -2234,7 +2487,7 @@ impl Showcase {
                     el.child(
                         Button::new("sidebar.close")
                             .variant(ButtonVariant::Ghost)
-                            .child("Close navigation")
+                            .label("Close navigation")
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.sidebar_state.mobile_open = false;
                                 cx.notify();
@@ -2441,24 +2694,14 @@ impl Showcase {
                     })),
             );
         }
-        let view = cx.entity().downgrade();
-        let async_cx = cx.to_async();
         let search = sidebar_input("mail.search", cx)
             .placeholder("Search mail…")
             .aria_label("Search mail")
-            .default_value(self.sidebar_search.clone())
-            .on_value_change(move |value| {
-                let view = view.clone();
-                // The public Input callback runs while App is borrowed. Queue the view update.
-                async_cx
-                    .spawn(async move |cx| {
-                        let _ = view.update(cx, |this, cx| {
-                            this.sidebar_search = value.to_string();
-                            cx.notify();
-                        });
-                    })
-                    .detach();
-            });
+            .value(self.sidebar_search.clone())
+            .on_change(cx.listener(|this, value: &gpui::SharedString, _, cx| {
+                this.sidebar_search = value.to_string();
+                cx.notify();
+            }));
         let mut list = Sidebar::new("mail.list", "Messages")
             .content_padding(px(0.))
             .header(
@@ -2707,8 +2950,6 @@ impl Showcase {
         ];
         let selected = self.sidebar_selected.min(11);
         let title = groups[selected / 4].1[selected % 4];
-        let view = cx.entity().downgrade();
-        let async_cx = cx.to_async();
         let header = div()
             .flex()
             .flex_col()
@@ -2731,19 +2972,11 @@ impl Showcase {
                 sidebar_input("docs.search", cx)
                     .aria_label("Search documentation pages")
                     .placeholder("Search documentation…")
-                    .default_value(self.sidebar_search.clone())
-                    .on_value_change(move |value| {
-                        let view = view.clone();
-                        // The public Input callback runs while App is borrowed. Queue the view update.
-                        async_cx
-                            .spawn(async move |cx| {
-                                let _ = view.update(cx, |this, cx| {
-                                    this.sidebar_search = value.to_string();
-                                    cx.notify();
-                                });
-                            })
-                            .detach();
-                    }),
+                    .value(self.sidebar_search.clone())
+                    .on_change(cx.listener(|this, value: &gpui::SharedString, _, cx| {
+                        this.sidebar_search = value.to_string();
+                        cx.notify();
+                    })),
             );
         let query = self.sidebar_search.to_lowercase();
         let mut navigation = Sidebar::new("docs.navigation", "Documentation pages")
@@ -2839,9 +3072,9 @@ impl Showcase {
                 .child(div().mt(s * 3_f32).text_size(px(14.) * t.text_scale).text_color(t.colors.muted_foreground)
                     .child("Browse the sections on the left, search for a page, or hide navigation to give the article more room."))
                 .child(div().mt(s * 6_f32).flex().justify_between().gap(s * 2_f32)
-                    .child(Button::new("docs.previous").variant(ButtonVariant::Outline).disabled(selected == 0).child("Previous")
+                    .child(Button::new("docs.previous").variant(ButtonVariant::Outline).disabled(selected == 0).label("Previous")
                         .on_click(cx.listener(|this, _, _, cx| { this.sidebar_selected = this.sidebar_selected.saturating_sub(1); cx.notify(); })))
-                    .child(Button::new("docs.next").variant(ButtonVariant::Outline).disabled(selected == 11).child("Next")
+                    .child(Button::new("docs.next").variant(ButtonVariant::Outline).disabled(selected == 11).label("Next")
                         .on_click(cx.listener(|this, _, _, cx| { this.sidebar_selected = (this.sidebar_selected + 1).min(11); cx.notify(); })))));
         SidebarLayout::new(
             "docs.layout",
@@ -2983,12 +3216,14 @@ impl Showcase {
                     .child(
                         tabs_trigger(TabsVariant::Default, cx)
                             .id("preview.tabs.account")
+                            .aria_label("Account")
                             .value("account")
                             .child("Account"),
                     )
                     .child(
                         tabs_trigger(TabsVariant::Default, cx)
                             .id("preview.tabs.password")
+                            .aria_label("Password")
                             .value("password")
                             .child("Password"),
                     ),
@@ -3021,18 +3256,21 @@ impl Showcase {
                             .child(
                                 tabs_trigger(TabsVariant::Line, cx)
                                     .id("preview.tabs.overview")
+                                    .aria_label("Overview")
                                     .value("overview")
                                     .child("Overview"),
                             )
                             .child(
                                 tabs_trigger(TabsVariant::Line, cx)
                                     .id("preview.tabs.activity")
+                                    .aria_label("Activity")
                                     .value("activity")
                                     .child("Activity"),
                             )
                             .child(
                                 tabs_trigger(TabsVariant::Line, cx)
                                     .id("preview.tabs.disabled")
+                                    .aria_label("Disabled")
                                     .value("disabled")
                                     .disabled(true)
                                     .child("Disabled"),
@@ -3066,7 +3304,7 @@ impl Showcase {
                             cx,
                         );
                     })
-                    .child("Show toast"),
+                    .label("Show toast"),
             )
             .child(toast_portal().child(toast_viewport("preview.toast.viewport", cx)))
     }
@@ -3157,10 +3395,19 @@ impl Showcase {
                 .multiple(true)
                 .joined(false)
                 .default_value(["bold"])
-                .item(ToggleGroupItem::new("preview.toggle-group.bold", "bold").child("Bold"))
-                .item(ToggleGroupItem::new("preview.toggle-group.italic", "italic").child("Italic"))
+                .item(
+                    ToggleGroupItem::new("preview.toggle-group.bold", "bold")
+                        .aria_label("Bold")
+                        .child("Bold"),
+                )
+                .item(
+                    ToggleGroupItem::new("preview.toggle-group.italic", "italic")
+                        .aria_label("Italic")
+                        .child("Italic"),
+                )
                 .item(
                     ToggleGroupItem::new("preview.toggle-group.underline", "underline")
+                        .aria_label("Underline")
                         .child("Underline"),
                 ),
         )
@@ -3240,7 +3487,7 @@ impl Showcase {
             )
             .child(toolbar_separator(cx).h(px(16.0)).w(px(1.0)))
             .child(
-                toolbar_input(cx)
+                toolbar_input_with_label("Find text", cx)
                     .id("preview.toolbar.input")
                     .placeholder("Find…")
                     .w(px(120.)),
@@ -3261,7 +3508,7 @@ impl Showcase {
                     tooltip_trigger("preview.tooltip.trigger").child(
                         Button::new("preview.tooltip.button")
                             .variant(ButtonVariant::Outline)
-                            .child("Hover me"),
+                            .label("Hover me"),
                     ),
                 )
                 .child(tooltip_portal().child(tooltip_positioner(cx).child(
@@ -3310,16 +3557,7 @@ fn drawer_direction_button(
             .ok();
             handle.open_with_payload((), window, cx);
         })
-        .child(label)
-}
-
-fn shortcut(value: &'static str, cx: &App) -> gpui::Div {
-    div()
-        .ml_auto()
-        .font_family(UiTheme::read(cx).fonts.mono.clone())
-        .text_size(px(12.0))
-        .text_color(UiTheme::read(cx).colors.muted_foreground)
-        .child(value)
+        .label(label)
 }
 
 fn dialog_field(label: &'static str, input: Input, cx: &App) -> gpui::Div {
@@ -3424,6 +3662,7 @@ mod audit_tests {
 
     fn showcase(demo: Demo, active: bool) -> Showcase {
         Showcase {
+            demo_action: String::new(),
             demo,
             count: 0,
             checked: active,
@@ -3451,8 +3690,59 @@ mod audit_tests {
             sidebar_message: 0,
             sidebar_unread: false,
             sidebar_sections: [true, true, false],
+            virtual_rows: matches!(demo, Demo::VirtualList).then(|| virtual_list_state(100_000)),
+            virtual_details: active,
+            virtual_reversed: false,
+            virtual_note: String::new(),
             icon: LucideIcon::House,
         }
+    }
+
+    #[test]
+    fn list_context_action_preserves_range_selection() {
+        use gpui::{Modifiers, MouseButton, VisualTestContext, point};
+        let mut cx = TestAppContext::single();
+        cx.update(|cx| {
+            gpuicn::init(cx);
+            UiTheme::set(cx, UiTheme::neutral_light());
+        });
+        let window = cx.add_window(|_, _| showcase(Demo::VirtualList, false));
+        let mut visual = VisualTestContext::from_window(window.into(), &cx);
+        visual.simulate_resize(size(px(960.), px(600.)));
+        let draw = |cx: &mut TestAppContext| {
+            cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx))
+                .unwrap();
+        };
+        draw(&mut cx);
+        visual.simulate_click(point(px(150.), px(130.)), Modifiers::default());
+        visual.simulate_keystrokes("shift-down");
+        draw(&mut cx);
+        let state = cx
+            .read_window(&window, |view, cx| {
+                view.read(cx).virtual_rows.clone().unwrap()
+            })
+            .unwrap();
+        assert_eq!(state.selected_count(), 2);
+        visual.simulate_mouse_down(
+            point(px(150.), px(130.)),
+            MouseButton::Right,
+            Modifiers::default(),
+        );
+        visual.simulate_mouse_up(
+            point(px(150.), px(130.)),
+            MouseButton::Right,
+            Modifiers::default(),
+        );
+        draw(&mut cx);
+        assert_eq!(state.selected_count(), 2);
+        visual.simulate_click(point(px(180.), px(145.)), Modifiers::default());
+        draw(&mut cx);
+        assert_eq!(state.selected_count(), 2);
+        assert_eq!(
+            cx.read_window(&window, |view, cx| view.read(cx).virtual_note.clone())
+                .unwrap(),
+            "Inspect component_00000.rs · 2 selected"
+        );
     }
 
     #[test]
@@ -3599,6 +3889,7 @@ mod audit_tests {
             "separator",
             "sidebar",
             "resizable",
+            "virtual-list",
             "slider",
             "switch",
             "tabs",

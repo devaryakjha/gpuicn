@@ -4,11 +4,11 @@
 //! retains field registration, validation, label focus, and form integration.
 
 use base_gpui::field::{
-    FieldControl, FieldDescription, FieldError, FieldItem, FieldLabel, FieldRoot, FieldValidity,
+    FieldDescription, FieldError, FieldItem, FieldLabel, FieldRoot, FieldValidity,
 };
 use gpui::{App, Div, ElementId, FontWeight, Styled, prelude::FluentBuilder as _, px};
 
-use super::theme::{ThemeMode, UiTheme, input_text_layout};
+use super::{input::Input, theme::UiTheme};
 
 pub use base_gpui::field::{
     FieldErrorMatch, FieldValidationMode, FieldValidationResult, FieldValidityData,
@@ -56,11 +56,8 @@ pub fn field_root(id: impl Into<ElementId>, orientation: FieldOrientation, cx: &
 }
 
 /// Creates the text control used by a Field.
-pub fn field_control(id: impl Into<ElementId>, cx: &App) -> FieldControl {
-    let theme = UiTheme::read(cx).clone();
-    FieldControl::new()
-        .id(id)
-        .style_with_state(move |state, base| style_field_control(base, state, &theme))
+pub fn field_control(id: impl Into<ElementId>, _cx: &App) -> Input {
+    Input::new(id)
 }
 
 /// Creates a label that focuses its registered Field control on pointer press.
@@ -170,48 +167,6 @@ pub fn field_validity() -> FieldValidity {
     FieldValidity::new()
 }
 
-fn style_field_control(
-    base: Div,
-    state: base_gpui::primitives::InputStyleState,
-    theme: &UiTheme,
-) -> Div {
-    let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
-    let colors = theme.colors;
-    let focus_ring = theme.focus_ring();
-    let destructive_focus_ring = theme.destructive_focus_ring();
-    let border = if state.invalid {
-        colors.destructive
-    } else if state.focused {
-        colors.ring
-    } else {
-        colors.input
-    };
-    let background = match theme.mode {
-        ThemeMode::Light => colors.background,
-        ThemeMode::Dark => colors.input.opacity(0.30),
-    };
-
-    input_text_layout(base, text_scale)
-        .w_full()
-        .h(spacing * 8_f32)
-        .px(spacing * 2.5_f32)
-        .rounded(theme.radius.lg)
-        .border_1()
-        .border_color(border)
-        .bg(background)
-        .font_family(theme.fonts.body.clone())
-        .text_size(px(14.0) * text_scale)
-        .text_color(colors.foreground)
-        .when(state.focused, |base| base.shadow(focus_ring.clone()))
-        .when(state.invalid, |base| {
-            base.shadow(destructive_focus_ring.clone())
-        })
-        .when(state.disabled, |base| {
-            base.opacity(0.50).cursor_not_allowed()
-        })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -229,7 +184,6 @@ mod tests {
     impl Render for View {
         fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
             let bounds = self.bounds.clone();
-            let theme = UiTheme::read(cx).clone();
             gpui::div()
                 .w(px(240.))
                 .h(px(32.))
@@ -238,11 +192,11 @@ mod tests {
                     field_control("alignment", cx)
                         .value(self.value)
                         .placeholder("Ada Lovelace")
-                        .style_with_state(move |state, base| {
+                        .style_with_state(move |_, base| {
                             let bounds = bounds.clone();
-                            style_field_control(base, state, &theme).on_children_prepainted(
-                                move |children, _, _| *bounds.borrow_mut() = children.to_vec(),
-                            )
+                            base.on_children_prepainted(move |children, _, _| {
+                                *bounds.borrow_mut() = children.to_vec()
+                            })
                         }),
                 )
         }

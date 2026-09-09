@@ -30,7 +30,7 @@ visual language and themes to idiomatic GPUI APIs. It does not copy React APIs.
 > [!WARNING]
 > gpuicn is in beta. APIs and styling can change. Pin dependency revisions and review updates before replacing installed source.
 
-The registry covers 39 component families, including Sidebar and Resizable,
+The registry covers 40 component families, including Sidebar, Resizable, and Virtual List,
 with shadcn Neutral Nova defaults. The catalog uses real GPUI/WASM previews.
 Installed source stays editable.
 
@@ -58,11 +58,16 @@ Cargo dependencies and [theming](docs/theming.md) for colors, density, type,
 radius, per-instance styles, and motion.
 
 The [running TODO](TODO.md) tracks this local pass and later desktop batches.
-Launch the native review:
+Launch the local workspace example app:
 
 ```sh
-cargo run -p gpuicn --release --example desktop --features native-fixture,gpui_platform/runtime_shaders
+cargo run --release -p gpuicn-showcase --features gpui_platform/runtime_shaders
 ```
+
+The app combines projects, tasks and local chat with saved state. The component
+gallery is available with `-- --catalog`. Build a macOS app and website download with
+`python3 scripts/package-showcase.py`. See [showcase packaging](docs/showcase.md)
+for signing, validation, and distribution limits.
 
 ## Catalog development
 

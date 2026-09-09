@@ -92,3 +92,52 @@ The detailed dependencies and acceptance gates remain in [desktop-components.md]
 - [ ] Extend native integration and qualify each dependency-complete batch (T13/T14).
 
 No check here claims universal shadcn parity, Windows/Linux readiness, or performance readiness without the relevant evidence.
+
+## Virtual list foundation — active
+
+Current Sidebar/Resizable/theme/CLI work was committed and pushed as `a64266f`; releases and deployments remain deferred. The next authorized slice covers T05/T06, before the tree and diff components.
+
+- [x] Reuse pinned GPUI virtualization and Base GPUI scrollbar behavior.
+- [x] Add stable identities, atomic metadata replacement, viewport anchors and surviving selection/focus.
+- [x] Add range/toggle selection, keyboard navigation, disabled guards and activation callbacks.
+- [x] Verify 100k fixed-height rows, native interactions, and refresh/reorder behavior in a real preview.
+- [ ] Record native frame/memory measurements with their limits; performance budgets remain unapproved.
+- [x] Finish source installation, catalog examples, docs and static/regression checks.
+
+- [ ] T05 variable-height support: qualify the pinned engine's resize/height-estimate behavior before exposing this API.
+
+## Native showcase — current priority
+
+Further component work is paused while the native gallery is reviewed. macOS first; Windows and Linux follow.
+
+- [x] One native app with all catalog components, search, themes, reset and Sidebar examples.
+- [x] Package the Apple-silicon app and serve a verified ZIP/checksum from the local website.
+- [x] Fix shared scrollbar corner geometry and long-sidebar clipping; inspect native light/dark results.
+- [x] Check all gallery entries, search/navigation, native list reveal, Rust/WASM/web builds and lint.
+- [ ] User review of the native app.
+- [ ] Developer ID signing/notarization and public deployment; current package is a local developer preview.
+
+## Workspace example — replaces the gallery as the default app
+
+- [x] Projects, tasks, editable notes, completion/priority, search, deletion/undo and local project messages.
+- [x] Validated local persistence; protect unsaved task edits on navigation and quit.
+- [x] Correct panels icon; package and download page describe the working app.
+- [x] Rapid input and saved-content regression checks; native task/edit workflow review.
+- [ ] User review, then signing/public deployment. Windows/Linux follow macOS.
+
+### Workspace design review
+
+- Reworked the native workspace with monochrome light/dark themes, shared navigation, readable task details, and local chat.
+- Added shared Input autofocus and Enter submission; covered task/message persistence through keyboard submission.
+- Fixed missing app icon colors and card/scroll-surface seams in composition.
+- Keep visual acceptance with the user open. Shared wrappers now supply native input accessibility metadata.
+
+## Shared-control audit — 2026-09-09
+
+- [x] Shared SidebarLayout, focus-preserving chat/title editing, failed-save retry and quit guard.
+- [x] Installed theme initialization; native Input/Field editing, form Enter and inherited labels.
+- [x] Named gallery controls, working demo menu feedback and reachable native gallery.
+- [x] Native/browser interaction replay, final modal focus verification, and refreshed website screenshots; see the audit record for coverage.
+- [x] NumberField and Toolbar share native Input undo/redo and word editing; preserve numeric rules, roving focus and disabled guards.
+
+See `docs/validation/showcase.md` for observed behavior and verification limits.

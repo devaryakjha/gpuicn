@@ -2,6 +2,11 @@ name: Deploy ui.imajha.com
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag with the notarized macOS download
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -15,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag }}
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-08-17
@@ -27,6 +34,27 @@ jobs:
         with:
           version: "v0.21.14"
       - uses: oven-sh/setup-bun@v2
+      - name: Fetch and verify the notarized release download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern 'gpuicn-workspace-macos-arm64.zip*' --pattern 'showcase.json' \
+            --dir web/public/downloads
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, subprocess
+          folder = pathlib.Path("web/public/downloads")
+          data = json.loads((folder / "showcase.json").read_text())
+          archive = folder / "gpuicn-workspace-macos-arm64.zip"
+          assert data["notarized"] is True
+          assert data["url"] == "/downloads/" + archive.name
+          assert data["architecture"] == "arm64"
+          assert "v" + data["version"] == os.environ["RELEASE_TAG"]
+          assert data["build"] == subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+          assert data["bytes"] == archive.stat().st_size
+          assert data["sha256"] == hashlib.sha256(archive.read_bytes()).hexdigest()
+          PY
       - name: Build GPUI/WASM previews
         working-directory: site
         env:

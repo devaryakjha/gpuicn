@@ -20,8 +20,15 @@ use super::{
 };
 
 /// Creates the Dialog state root with a caller-owned stable ID.
+/// An internal handle reconciles controlled focus. If replacing `.handle(...)`,
+/// drive open/close transitions through the supplied handle.
 pub fn dialog_root(id: impl Into<ElementId>) -> DialogRoot<()> {
-    DialogRoot::new().id(id)
+    let id = id.into();
+    let handle = base_gpui::dialog::DialogHandle::new();
+    DialogRoot::new()
+        .id(id.clone())
+        .handle(handle.clone())
+        .child_any(modal_focus::RootFocus::new(id, handle))
 }
 
 /// Creates a styled Dialog trigger with a caller-owned stable ID.

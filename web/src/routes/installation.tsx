@@ -108,8 +108,8 @@ function InstallationPage() {
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
             Replace <code className="text-sm">src/main.rs</code> with this
-            starter. It registers Base GPUI actions, loads the fonts, installs a
-            theme, and renders a working counter button.
+            starter. It calls ui::theme::init(cx) to enable component actions and
+            keyboard navigation, loads the fonts, and renders a working counter button.
           </p>
           <CodeBlock className="mt-4" value={setup.starter} />
           <a

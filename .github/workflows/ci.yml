@@ -22,16 +22,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
       - run: cargo test --workspace --locked --features gpui_platform/runtime_shaders
-      - run: cargo clippy -p gpuicn --lib --tests --locked -- -D warnings
-      - run: cargo check -p gpuicn-showcase --locked
-      - run: cargo check -p gpuicn --example usage --locked
-      - run: cargo clippy -p gpuicn-cli --locked -- -D warnings
+      - run: cargo clippy --workspace --all-targets --locked --features gpui_platform/runtime_shaders -- -D warnings
       - name: Verify native registry install
         run: |
           cargo run -p gpuicn-cli --locked -- build
           cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
           cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml add --all
-          cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked
+          cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked --features gpui_platform/runtime_shaders
       - name: Verify stock registry install
         run: |
           node scripts/sync-catalog.mjs
@@ -47,7 +44,7 @@ jobs:
           perl -0pi -e 's/The narrow shadcn Nova Dialog visual port/Changed by the overwrite gate/' fixtures/registry-install/src/ui/dialog.rs
           npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
           cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
-      - run: cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked
+      - run: cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked --features gpui_platform/runtime_shaders
 
   wasm:
     runs-on: ubuntu-latest

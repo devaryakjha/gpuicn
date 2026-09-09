@@ -70,22 +70,21 @@ impl RenderOnce for Sidebar {
         let color = theme.colors.sidebar;
         let padding = self.content_padding.unwrap_or(spacing * 2_f32);
         let content = scroll_area(cx)
+            .size_full()
             .id(part(&self.id, "scroll"))
             .child(
-                scroll_area_viewport(cx)
-                    .style_with_state(move |_, base| base.size_full().bg(color))
-                    .child(
-                        scroll_area_content(cx)
-                            .style_with_state(move |_, base| {
-                                base.w_full()
-                                    .min_w_0()
-                                    .flex()
-                                    .flex_col()
-                                    .gap(px(0.))
-                                    .p(padding)
-                            })
-                            .children(self.children),
-                    ),
+                scroll_area_viewport(cx).child(
+                    scroll_area_content(cx)
+                        .style_with_state(move |_, base| {
+                            base.w_full()
+                                .min_w_0()
+                                .flex()
+                                .flex_col()
+                                .gap(px(0.))
+                                .p(padding)
+                        })
+                        .children(self.children),
+                ),
             )
             .child(
                 scroll_area_scrollbar(ScrollAreaOrientation::Vertical, cx)
@@ -108,7 +107,14 @@ impl RenderOnce for Sidebar {
             .when_some(self.header, |el, header| {
                 el.child(div().flex_shrink_0().p(spacing * 2_f32).child(header))
             })
-            .child(div().flex_1().min_h_0().min_w_0().child(content))
+            .child(
+                div()
+                    .flex_1()
+                    .min_h_0()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .child(content),
+            )
             .when_some(self.footer, |el, footer| {
                 el.child(div().flex_shrink_0().p(spacing * 2_f32).child(footer))
             })

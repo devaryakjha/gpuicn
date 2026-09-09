@@ -267,7 +267,7 @@ mod tests {
             for (group_disabled, item_disabled) in [(false, false), (true, false), (false, true)] {
                 let mut cx = TestAppContext::single();
                 cx.update(|cx| {
-                    crate::init(cx);
+                    super::super::theme::init(cx);
                     UiTheme::set(cx, theme.clone());
                 });
                 let changes = Rc::new(RefCell::new(Vec::new()));

@@ -11,6 +11,72 @@ use gpui::{
     SharedString, Styled, Window, black, px,
 };
 
+gpui::actions!(
+    gpuicn,
+    [
+        /// Move to the next keyboard tab stop.
+        FocusNext,
+        /// Move to the previous keyboard tab stop.
+        FocusPrevious
+    ]
+);
+
+struct Initialized;
+impl Global for Initialized {}
+
+/// Installs component actions, keyboard traversal and the default theme once.
+/// Call this from application startup for both copied source and crate usage.
+pub fn init(cx: &mut App) {
+    if cx.has_global::<Initialized>() {
+        return;
+    }
+    cx.set_global(Initialized);
+    if !cx.has_global::<UiTheme>() {
+        UiTheme::set(cx, UiTheme::neutral_light());
+    }
+    cx.bind_keys([
+        gpui::KeyBinding::new("tab", FocusNext, None),
+        gpui::KeyBinding::new("shift-tab", FocusPrevious, None),
+    ]);
+    cx.on_action(|_: &FocusNext, cx| advance_focus(false, cx));
+    cx.on_action(|_: &FocusPrevious, cx| advance_focus(true, cx));
+    // Later scoped bindings take precedence over window-wide defaults.
+    base_gpui::init(cx);
+    #[cfg(target_family = "wasm")]
+    {
+        // WASM has no macOS target_os, so Base GPUI only registers Control
+        // shortcuts. Accept Command as well for previews on macOS browsers.
+        use base_gpui::primitives::input::{
+            INPUT_KEY_CONTEXT, InputCopy, InputCut, InputEnd, InputHome, InputPaste, InputSelectAll,
+        };
+        use gpui::KeyBinding;
+        cx.bind_keys([
+            KeyBinding::new("cmd-a", InputSelectAll, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-c", InputCopy, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-v", InputPaste, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-x", InputCut, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-left", InputHome, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-right", InputEnd, Some(INPUT_KEY_CONTEXT)),
+        ]);
+    }
+}
+
+fn advance_focus(reverse: bool, cx: &mut App) {
+    let Some(handle) = cx.active_window() else {
+        return;
+    };
+    // Action dispatch still holds the window borrow until this callback returns.
+    cx.defer(move |cx| {
+        let _ = handle.update(cx, |_, window, cx| {
+            if reverse {
+                window.focus_prev(cx);
+            } else {
+                window.focus_next(cx);
+            }
+        });
+    });
+}
+
 /// The active color mode.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ThemeMode {
@@ -520,6 +586,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn editor_semantics_survive_upstream_id_assignment() {
+        use gpui::{Element as _, InteractiveElement as _, StatefulInteractiveElement as _};
+        let input = InputSemantics(gpui::div())
+            .role(gpui::Role::SpinButton)
+            .aria_label("Quantity")
+            .aria_value("4")
+            .aria_numeric_value(4.)
+            .0
+            .id("upstream-editor");
+        assert_eq!(input.a11y_role(), Some(gpui::Role::SpinButton));
+        let mut node = gpui::accesskit::Node::new(gpui::Role::SpinButton);
+        input.write_a11y_info(&mut node);
+        assert_eq!(node.label(), Some("Quantity"));
+        assert_eq!(node.value(), Some("4"));
+        assert_eq!(node.numeric_value(), Some(4.));
+    }
+
+    #[test]
     fn converts_pinned_neutral_tokens() {
         assert_eq!(
             neutral(1.0),
@@ -568,6 +652,22 @@ mod tests {
         assert_eq!(theme.shadows.md.len(), 2);
         assert_eq!(theme.shadows.lg.len(), 2);
         assert_eq!(theme.focus_ring()[0].spread_radius, px(3.));
+    }
+}
+
+/// Adds semantics to an upstream editor's existing Div before it receives its ID.
+/// Keeping the same Div preserves the editor's focus handle and event handlers.
+pub(crate) struct InputSemantics(pub Div);
+impl gpui::InteractiveElement for InputSemantics {
+    fn interactivity(&mut self) -> &mut gpui::Interactivity {
+        self.0.interactivity()
+    }
+}
+impl gpui::StatefulInteractiveElement for InputSemantics {}
+impl gpui::IntoElement for InputSemantics {
+    type Element = Div;
+    fn into_element(self) -> Div {
+        self.0
     }
 }
 

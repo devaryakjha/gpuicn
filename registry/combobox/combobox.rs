@@ -497,7 +497,7 @@ mod tests {
         use gpui::{Modifiers, VisualTestContext, point};
         let mut cx = TestAppContext::single();
         cx.update(|cx| {
-            crate::init(cx);
+            super::super::theme::init(cx);
             UiTheme::set(cx, UiTheme::neutral_light());
         });
         let changes = Rc::new(RefCell::new(Vec::new()));

@@ -15,7 +15,7 @@ fn main() {
     gpui_platform::application()
         .with_assets(LucideAssetSource)
         .run(|cx: &mut App| {
-            base_gpui::init(cx);
+            ui::theme::init(cx);
             cx.text_system()
                 .add_fonts(vec![
                     Cow::Borrowed(include_bytes!("../assets/fonts/Geist-Regular.ttf")),
@@ -55,7 +55,7 @@ impl Render for Hello {
                         this.count += 1;
                         cx.notify();
                     }))
-                    .child(format!("Clicked {} times", self.count)),
+                    .label(format!("Clicked {} times", self.count)),
             )
     }
 }

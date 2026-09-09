@@ -86,12 +86,14 @@ pub mod tooltip;
 pub mod resizable;
 #[path = "../../../registry/sidebar/sidebar.rs"]
 pub mod sidebar;
+#[path = "../../../registry/virtual_list/virtual_list.rs"]
+pub mod virtual_list;
 
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use checkbox::Checkbox;
 pub use theme::{ThemeMode, UiColors, UiFonts, UiRadius, UiShadows, UiSpacing, UiTheme};
 
-/// Registers every Base GPUI action used by the component catalog.
+/// Installs the default theme and all shared keyboard/component behavior.
 pub fn init(cx: &mut gpui::App) {
-    base_gpui::init(cx);
+    theme::init(cx);
 }
