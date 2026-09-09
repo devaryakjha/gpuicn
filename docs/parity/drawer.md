@@ -3,15 +3,11 @@
 Reference: [shadcn/ui Drawer](https://ui.shadcn.com/docs/components/base/drawer),
 checked 2026-09-10. Nova presentation, implemented with GPUI Kit 0.6.1.
 
-| Shadcn part | Rust API |
-| --- | --- |
-| Drawer | `Drawer::new(id, &handle)` |
-| DrawerTrigger / DrawerClose | `drawer_trigger` / `drawer_close` |
-| DrawerContent | `DrawerContent::new(id, label)` passed to `.content(...)` |
-| DrawerHeader | `drawer_header(side, cx)` |
-| DrawerTitle / DrawerDescription | `drawer_title` / `drawer_description` |
-| Scrollable content region | `drawer_body(id, cx)` |
-| DrawerFooter | `drawer_footer(cx)` |
+`Drawer` is the root; `drawer_trigger` and `drawer_close` act on its handle.
+Pass `DrawerContent` through `.content(...)`. Compose its children with
+`drawer_header`, `drawer_title`, `drawer_description`, `drawer_body` and
+`drawer_footer`. These correspond to shadcn's root, trigger, close, content,
+header, title, description and footer parts.
 
 Keep the root mounted and retain its `DrawerHandle`. Use `.direction(...)` for
 any edge and `.show_swipe_handle(true)` for an optional grip. Explicit close
