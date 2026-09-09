@@ -6,20 +6,13 @@ rust-version = "1.97.1"
 publish = false
 
 [dependencies]
-unicode-segmentation = "1.13"
 web-time = "1.1"
-base-gpui = { git = "https://github.com/LukeTandjung/base-gpui", rev = "64b22337b6a790c636aab248e768e4875bb28ba8" }
-gpui = { package = "gpui-pre", version = "=0.3.4" }
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.4", features = ["font-kit"] }
 gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "01ac07dd83e97f9d6a3526466413732fbdfc2975" }
 
-gpui-base = "=0.6.1"
 gpui-kit = { version = "=0.6.1", default-features = false }
 
-[patch."https://github.com/zed-industries/zed"]
-gpui = { git = "https://github.com/devaryakjha/gpuicn", rev = "64d1bd9678d365c2f1367431c700c36184fb5142" }
-
 [dev-dependencies]
-gpui = { package = "gpui-pre", version = "=0.3.4", features = ["test-support"] }
+gpui-kit = { version = "=0.6.1", default-features = false, features = ["test-support"] }
 
 [workspace]

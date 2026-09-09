@@ -5,7 +5,7 @@
 //! group becomes scrollable. Pass retained child entities for expensive content.
 
 use super::theme::UiTheme;
-use gpui::{
+use gpui_kit::{
     AccessibleAction, AnyElement, App, Bounds, DispatchPhase, ElementId, FocusHandle,
     InteractiveElement as _, IntoElement, MouseButton, MouseMoveEvent, MouseUpEvent, Orientation,
     ParentElement as _, Pixels, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
@@ -48,7 +48,7 @@ struct State {
 /// A controlled split with two children and a keyboard-accessible resize handle.
 #[derive(IntoElement)]
 pub struct Resizable {
-    style: gpui::StyleRefinement,
+    style: gpui_kit::StyleRefinement,
     id: ElementId,
     label: SharedString,
     axis: Orientation,
@@ -70,7 +70,7 @@ impl Resizable {
         on_resize: impl Fn(&Pixels, &mut Window, &mut App) + 'static,
     ) -> Self {
         Self {
-            style: gpui::StyleRefinement::default(),
+            style: gpui_kit::StyleRefinement::default(),
             id: id.into(),
             label: label.into(),
             axis: Orientation::Horizontal,
@@ -118,7 +118,7 @@ fn geometry(
     };
     (size, available - size, low, high)
 }
-fn coordinate(axis: Orientation, point: gpui::Point<Pixels>) -> f32 {
+fn coordinate(axis: Orientation, point: gpui_kit::Point<Pixels>) -> f32 {
     f32::from(if axis == Orientation::Horizontal {
         point.x
     } else {
@@ -382,7 +382,7 @@ mod tests {
 #[cfg(test)]
 mod interaction_tests {
     use super::*;
-    use gpui::{
+    use gpui_kit::{
         AppContext as _, Context, Modifiers, Render, TestAppContext, VisualTestContext, point,
     };
     struct View {
@@ -461,8 +461,8 @@ mod interaction_tests {
     }
 }
 
-impl gpui::Styled for Resizable {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
+impl gpui_kit::Styled for Resizable {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
     }
 }

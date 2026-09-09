@@ -1,7 +1,11 @@
 # Accordion parity
 
-- Upstream: shadcn/ui `4.19.0` at `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, `apps/v4/registry/bases/base/ui/accordion.tsx` and the Accordion section of `apps/v4/registry/styles/style-nova.css`.
-- gpuicn: `registry/accordion/accordion.rs`.
-- Difference type: platform animation and icon composition.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/accordion/accordion.rs`, using GPUI Kit 0.6.1.
 
-Base GPUI supplies disclosure state, roving focus, pointer activation, and keyboard activation. The port keeps Nova spacing, dividers, typography, hover, disabled, and focus-visible styling. The styled trigger includes the state-dependent chevron. CSS height animations are not reproduced; the pinned GPUI Accordion mounts or unmounts its panel from typed presence state.
+Kit supplies the accordion parts; the application passes each expanded state and handles trigger clicks. gpuicn adds Nova borders, spacing, typography and chevrons. Single or multiple expansion is an application choice.
+
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

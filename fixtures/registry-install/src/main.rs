@@ -4,7 +4,7 @@ mod ui;
 
 use std::borrow::Cow;
 
-use gpui::{
+use gpui_kit::{
     App, AppContext as _, Context, IntoElement, ParentElement as _, Render, Styled,
     Window, WindowOptions, div, px,
 };
@@ -12,7 +12,7 @@ use gpui_icons::LucideAssetSource;
 use ui::{button::Button, theme::UiTheme};
 
 fn main() {
-    gpui_kit::application()
+    gpui_kit::platform::application()
         .with_assets(LucideAssetSource)
         .run(|cx: &mut App| {
             ui::theme::init(cx);

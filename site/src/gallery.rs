@@ -1,8 +1,8 @@
 use super::*;
-use gpui::{Entity, Pixels};
+use gpui_kit::{Entity, Pixels};
 use gpuicn::sidebar::{Sidebar, SidebarItem};
 
-gpui::actions!(gallery, [Quit]);
+gpui_kit::actions!(gallery, [Quit]);
 
 // Matches the site catalog; both surfaces render Showcase examples.
 const COMPONENTS: &[(&str, &str, &str)] = &[
@@ -217,9 +217,9 @@ pub(super) fn launch(cx: &mut App) {
     })
     .detach();
     cx.on_action(|_: &Quit, cx| cx.quit());
-    cx.bind_keys([gpui::KeyBinding::new("cmd-q", Quit, None)]);
-    cx.set_menus([gpui::Menu::new("gpuicn Showcase")
-        .items([gpui::MenuItem::action("Quit gpuicn Showcase", Quit)])]);
+    cx.bind_keys([gpui_kit::KeyBinding::new("cmd-q", Quit, None)]);
+    cx.set_menus([gpui_kit::Menu::new("gpuicn Showcase")
+        .items([gpui_kit::MenuItem::action("Quit gpuicn Showcase", Quit)])]);
     open(cx);
 }
 
@@ -265,7 +265,20 @@ impl Gallery {
 }
 
 impl Render for Gallery {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let search = live_input(
+            "gallery.search",
+            self.query.clone(),
+            "Find a component…",
+            window,
+            cx,
+            |this, input, event, cx| {
+                if matches!(event, InputEvent::Change) {
+                    this.query = input.read(cx).value().to_string();
+                    cx.notify();
+                }
+            },
+        );
         let theme = UiTheme::read(cx).clone();
         let (_, name, description) = COMPONENTS[self.selected];
         let dark = theme.mode == ThemeMode::Dark;
@@ -279,19 +292,10 @@ impl Render for Gallery {
                     .p(px(8.))
                     .child(
                         div()
-                            .font_weight(gpui::FontWeight::SEMIBOLD)
+                            .font_weight(gpui_kit::FontWeight::SEMIBOLD)
                             .child("gpuicn"),
                     )
-                    .child(
-                        Input::new("gallery.search")
-                            .aria_label("Find a component")
-                            .placeholder("Find a component…")
-                            .value(self.query.clone())
-                            .on_change(cx.listener(|this, value: &gpui::SharedString, _, cx| {
-                                this.query = value.to_string();
-                                cx.notify();
-                            })),
-                    ),
+                    .child(Input::new(&search).aria_label("Find a component")),
             )
             .footer(
                 div()
@@ -342,7 +346,7 @@ impl Render for Gallery {
                     .child(
                         div()
                             .text_size(px(20.))
-                            .font_weight(gpui::FontWeight::SEMIBOLD)
+                            .font_weight(gpui_kit::FontWeight::SEMIBOLD)
                             .child(name),
                     )
                     .child(
@@ -458,7 +462,7 @@ impl Render for Gallery {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Modifiers, TestAppContext, VisualTestContext, point};
+    use gpui_kit::{Modifiers, TestAppContext, VisualTestContext, point};
 
     #[test]
     fn gallery_navigates_the_full_catalog_and_searches_without_reborrowing() {

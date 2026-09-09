@@ -192,7 +192,7 @@ function IconsPage() {
           </p>
           <CodeBlock
             className="mt-4"
-            value={`use gpui::{Styled, px, rgb};\nuse gpui_icons::{lucide, LucideIcon};\n\nlucide(${selected.rust})\n    .size(px(24.))\n    .text_color(rgb(0x171717))`}
+            value={`use gpui_kit::{Styled, px, rgb};\nuse gpui_icons::{lucide, LucideIcon};\n\nlucide(${selected.rust})\n    .size(px(24.))\n    .text_color(rgb(0x171717))`}
           />
           <p className="mt-4 text-sm leading-6 text-muted-foreground">
             Register <code className="text-xs">LucideAssetSource</code> on your

@@ -12,24 +12,14 @@ Create a Rust app with `cargo new my-app`, then add these dependencies:
 
 ```toml
 [dependencies]
-unicode-segmentation = "1.13"
 web-time = "1.1"
-base-gpui = { git = "https://github.com/LukeTandjung/base-gpui", rev = "64b22337b6a790c636aab248e768e4875bb28ba8" }
-gpui = { package = "gpui-pre", version = "=0.3.4" }
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.4", features = ["font-kit"] }
 gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "01ac07dd83e97f9d6a3526466413732fbdfc2975" }
 
-gpui-base = "=0.6.1"
 gpui-kit = { version = "=0.6.1", default-features = false }
-
-[patch."https://github.com/zed-industries/zed"]
-gpui = { git = "https://github.com/devaryakjha/gpuicn", rev = "64d1bd9678d365c2f1367431c700c36184fb5142" }
 ```
 
-The `gpui` patch is a small re-export crate. It directs retained `base-gpui`
-code to the same `gpui-pre` runtime used by Kit. Cargo patches must appear in
-the consuming application's root manifest; they do not propagate through dependencies.
-Do not omit it or mix the old Zed Git runtime with Kit types.
+Import GPUI types through `gpui_kit`. No compatibility crate or Cargo patch is required.
 
 ## Install the native CLI
 
@@ -125,5 +115,5 @@ your own. Native builds require the platform's GPUI build tools; macOS needs
 Xcode and its Metal toolchain.
 
 Copied sources include focused behavior checks. To run them with `cargo test`,
-add the same pinned `gpui` dependency under `[dev-dependencies]` with
+add the same pinned `gpui-kit` dependency under `[dev-dependencies]` with
 `features = ["test-support"]`. The starter dependency block includes this.

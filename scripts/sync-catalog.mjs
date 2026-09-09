@@ -58,7 +58,7 @@ for (const item of registry.items.filter((item) => item.name !== "theme")) {
     preview: preview.replace(/^    /gm, ""),
     examples,
     usage,
-    usageCall: item.name === "virtual-list" ? "example(&self.list)" : usage.includes("fn example(cx:") ? "example(cx)" : "example()",
+    usageCall: `example(${usage.match(/fn example\(([^)]*)\)/)?.[1].split(",").map((arg) => arg.trim().split(":")[0]).filter(Boolean).join(", ") ?? ""})`,
     source,
     api,
     parity,

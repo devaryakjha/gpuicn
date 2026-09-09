@@ -1,11 +1,11 @@
 # Field parity
 
-- Upstream: current shadcn/ui [Field](https://ui.shadcn.com/docs/components/field), based on `apps/v4/registry/new-york-v4/ui/field.tsx`.
-- gpuicn: `registry/field/field.rs`.
-- Difference types: platform, accessibility, and responsive layout.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/field/field.rs`, using GPUI Kit 0.6.1.
 
-`field_root`, `field_label`, `field_description`, `field_error`, `field_control`, and `field_item` style Base GPUI's Field parts. `field_group`, `field_content`, `field_title`, and `field_separator` are visual GPUI `Div` helpers because Base GPUI has no corresponding behavior primitive.
+Field takes the same retained InputState used by the editor. It supplies a clickable visible label, description, required marker, error text, and vertical or horizontal layout. Validation and values belong to the application; there is no hidden form registry.
 
-shadcn names the root `Field`; gpuicn calls its factory `field_root` to make the Base GPUI part explicit. The `Responsive` orientation uses the vertical layout: GPUI has no container-query API for shadcn's breakpoint switch. `field_control` returns the shared native `Input`, including undo/redo, word editing, IME support and an accessible text-field role. It remains single-line; textarea, select, checkbox, radio, and switch controls retain their own ports. Controls inherit the registered visible label; `aria_label` can override it. Enter submits the enclosing form unless the input has its own submit callback; required validation runs before submission.
-
-The pinned GPUI AccessKit surface has no `aria-invalid`, `aria-required`, or `aria-describedby` builders. Base GPUI keeps label-to-control text plumbing, validation, disabled state, and form registration, but does not expose those browser relationship attributes or a live error announcement. Revisit when GPUI adds those APIs.
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

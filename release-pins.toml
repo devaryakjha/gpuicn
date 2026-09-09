@@ -10,9 +10,6 @@ theme = "neutral"
 font_sans = "geist"
 font_mono = "geist-mono"
 
-[base_gpui]
-commit = "64b22337b6a790c636aab248e768e4875bb28ba8"
-
 [gpui]
 package = "gpui-pre"
 version = "0.3.4"
@@ -21,9 +18,6 @@ commit = "69164008341295ad481bb11c0334a712ca8c23e3"
 [gpui_kit]
 version = "0.6.1"
 commit = "36b51819deb52c947a79f8de29e0e9175eda7464"
-
-[gpui_compat]
-commit = "64d1bd9678d365c2f1367431c700c36184fb5142"
 
 [gpui_icons]
 version = "0.4.0"

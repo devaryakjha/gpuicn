@@ -1,9 +1,11 @@
 # Preview Card parity
 
-- Upstream: shadcn/ui Nova Hover Card at `ac60ef5c4db4265d71454dd9ecd3f93e255d7211`, `apps/v4/registry/bases/base/ui/hover-card.tsx` and `apps/v4/registry/styles/style-nova.css`.
-- gpuicn: `registry/preview_card/preview_card.rs`.
-- Difference types: platform, interaction, accessibility, and visual.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/preview_card/preview_card.rs`, using GPUI Kit 0.6.1.
 
-Base GPUI names the primitive `PreviewCard`; it keeps the delayed hover/focus lifecycle, safe polygon, outside dismissal, anchor collision handling, controlled state, and arrow. The wrapper maps only the public name and Nova surface.
+Kit HoverCard owns hover/focus timing, trigger and positioning. gpuicn supplies the Nova surface. The application provides trigger content and the preview closure.
 
-Base GPUI anchors the whole trigger bounds, not individual inline client rects. Nova motion is also omitted because GPUI lacks equivalent transition styling.
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

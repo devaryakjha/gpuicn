@@ -1,7 +1,11 @@
 # Tabs parity
 
-- Upstream: shadcn/ui `4.19.0` at `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, `apps/v4/registry/bases/base/ui/tabs.tsx` and the Tabs section of `apps/v4/registry/styles/style-nova.css`.
-- gpuicn: `registry/tabs/tabs.rs`.
-- Difference type: platform layout and animation.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/tabs/tabs.rs`, using GPUI Kit 0.6.1.
 
-Base GPUI owns selection and keyboard navigation. In the default manual mode, arrow keys move the highlighted tab and Enter activates it. The pinned implementation leaves physical focus on the original tab during arrow navigation; the styled highlight shows which tab Enter will activate. The port exposes the pinned `Default` and `Line` list treatments through `TabsVariant`; callers pass the same variant to their triggers. The selected line uses a bottom border rather than CSS pseudo-elements, and cross-panel motion is omitted pending GPUI transition support.
+The application passes the selected value and renders its matching panel. The tab list keeps one Tab stop; arrows and Home/End select enabled tabs. Kit tab primitives supply roles and control interaction. Nova supports filled and line variants.
+
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

@@ -41,7 +41,7 @@ jobs:
           for source in registry/*/*.rs; do
             cmp "$source" "fixtures/registry-install/src/ui/$(basename "$source")"
           done
-          perl -0pi -e 's/The narrow shadcn Nova Dialog visual port/Changed by the overwrite gate/' fixtures/registry-install/src/ui/dialog.rs
+          perl -0pi -e 's/Nova modal surfaces[^\n]+/Changed by the overwrite gate/' fixtures/registry-install/src/ui/dialog.rs
           npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
           cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
       - run: cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked --features gpui_platform/runtime_shaders

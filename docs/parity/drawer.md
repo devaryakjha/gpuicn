@@ -1,9 +1,11 @@
 # Drawer parity
 
-- Upstream: shadcn/ui Nova at `ac60ef5c4db4265d71454dd9ecd3f93e255d7211`, `apps/v4/registry/bases/base/ui/drawer.tsx` and `apps/v4/registry/styles/style-nova.css`.
-- gpuicn: `registry/drawer/drawer.rs`.
-- Difference types: platform, interaction, accessibility, and visual.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/drawer/drawer.rs`, using GPUI Kit 0.6.1.
 
-The wrapper keeps Base GPUI's drawer gesture, snap-point, nested-drawer, Escape, outside-press, focus-return, and modal handling. Modal Tab traversal includes app-owned focusable children. Its public root remains configurable for modal mode, focus trapping, snap callbacks, and nesting.
+Drawer takes a retained DialogHandle and one of four edges. Its modal surface traps Tab traversal and restores focus after closing. The grip tracks a native drag and dismisses beyond its distance threshold. The application owns the content and save action.
 
-Nova's CSS transform physics, responsive width rules, bleed pseudo-element, and transition curves have no direct GPUI equivalent. The wrapper keeps Base GPUI's native gesture state and surfaces the correct edge radius and border for each direction.
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

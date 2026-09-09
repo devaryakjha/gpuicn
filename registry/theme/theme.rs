@@ -5,12 +5,12 @@
 
 use std::time::Duration;
 
-use gpui::{
+use gpui_kit::{
     App, BoxShadow, Corners, Div, ElementId, Global, ParentElement as _, Pixels, Rgba,
     SharedString, Styled, Window, black, px,
 };
 
-gpui::actions!(
+gpui_kit::actions!(
     gpuicn,
     [
         /// Move to the next keyboard tab stop.
@@ -34,29 +34,34 @@ pub fn init(cx: &mut App) {
         UiTheme::set(cx, UiTheme::neutral_light());
     }
     cx.bind_keys([
-        gpui::KeyBinding::new("tab", FocusNext, None),
-        gpui::KeyBinding::new("shift-tab", FocusPrevious, None),
+        gpui_kit::KeyBinding::new("tab", FocusNext, None),
+        gpui_kit::KeyBinding::new("shift-tab", FocusPrevious, None),
     ]);
     cx.on_action(|_: &FocusNext, cx| advance_focus(false, cx));
     cx.on_action(|_: &FocusPrevious, cx| advance_focus(true, cx));
     // Later scoped bindings take precedence over window-wide defaults.
-    gpui_base::init(cx);
-    base_gpui::init(cx);
+    gpui_kit::base::init(cx);
     #[cfg(target_family = "wasm")]
     {
-        // WASM has no macOS target_os, so Base GPUI only registers Control
-        // shortcuts. Accept Command as well for previews on macOS browsers.
-        use base_gpui::primitives::input::{
-            INPUT_KEY_CONTEXT, InputCopy, InputCut, InputEnd, InputHome, InputPaste, InputSelectAll,
+        // Browser previews also accept macOS editing shortcuts.
+        use gpui_kit::KeyBinding;
+        use gpui_kit::base::input::{
+            Copy, Cut, MoveEnd, MoveHome, MoveToNextWord, MoveToPreviousWord, Paste, Redo,
+            SelectAll, SelectToNextWordEnd, SelectToPreviousWordStart, Undo,
         };
-        use gpui::KeyBinding;
         cx.bind_keys([
-            KeyBinding::new("cmd-a", InputSelectAll, Some(INPUT_KEY_CONTEXT)),
-            KeyBinding::new("cmd-c", InputCopy, Some(INPUT_KEY_CONTEXT)),
-            KeyBinding::new("cmd-v", InputPaste, Some(INPUT_KEY_CONTEXT)),
-            KeyBinding::new("cmd-x", InputCut, Some(INPUT_KEY_CONTEXT)),
-            KeyBinding::new("cmd-left", InputHome, Some(INPUT_KEY_CONTEXT)),
-            KeyBinding::new("cmd-right", InputEnd, Some(INPUT_KEY_CONTEXT)),
+            KeyBinding::new("cmd-a", SelectAll, Some("Input")),
+            KeyBinding::new("cmd-c", Copy, Some("Input")),
+            KeyBinding::new("cmd-v", Paste, Some("Input")),
+            KeyBinding::new("cmd-x", Cut, Some("Input")),
+            KeyBinding::new("cmd-left", MoveHome, Some("Input")),
+            KeyBinding::new("cmd-right", MoveEnd, Some("Input")),
+            KeyBinding::new("cmd-z", Undo, Some("Input")),
+            KeyBinding::new("cmd-shift-z", Redo, Some("Input")),
+            KeyBinding::new("alt-left", MoveToPreviousWord, Some("Input")),
+            KeyBinding::new("alt-right", MoveToNextWord, Some("Input")),
+            KeyBinding::new("alt-shift-left", SelectToPreviousWordStart, Some("Input")),
+            KeyBinding::new("alt-shift-right", SelectToNextWordEnd, Some("Input")),
         ]);
     }
 }
@@ -242,8 +247,8 @@ impl UiEasing {
     fn sample(self, progress: f32) -> f32 {
         match self {
             Self::Linear => progress,
-            Self::EaseOut => gpui::ease_out_quint()(progress),
-            Self::EaseInOut => gpui::ease_in_out(progress),
+            Self::EaseOut => gpui_kit::ease_out_quint()(progress),
+            Self::EaseInOut => gpui_kit::ease_in_out(progress),
         }
     }
 }
@@ -267,10 +272,10 @@ pub fn transition_value(
     } else {
         duration
     };
-    gpui_base::motion::transition(
+    gpui_kit::base::motion::transition(
         id.into(),
         target,
-        gpui_base::motion::Transition::new(duration)
+        gpui_kit::base::motion::Transition::new(duration)
             .ease(move |progress| motion.easing.sample(progress)),
         window,
         cx,
@@ -550,24 +555,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn editor_semantics_survive_upstream_id_assignment() {
-        use gpui::{Element as _, InteractiveElement as _, StatefulInteractiveElement as _};
-        let input = InputSemantics(gpui::div())
-            .role(gpui::Role::SpinButton)
-            .aria_label("Quantity")
-            .aria_value("4")
-            .aria_numeric_value(4.)
-            .0
-            .id("upstream-editor");
-        assert_eq!(input.a11y_role(), Some(gpui::Role::SpinButton));
-        let mut node = gpui::accesskit::Node::new(gpui::Role::SpinButton);
-        input.write_a11y_info(&mut node);
-        assert_eq!(node.label(), Some("Quantity"));
-        assert_eq!(node.value(), Some("4"));
-        assert_eq!(node.numeric_value(), Some(4.));
-    }
-
-    #[test]
     fn converts_pinned_neutral_tokens() {
         assert_eq!(
             neutral(1.0),
@@ -619,38 +606,15 @@ mod tests {
     }
 }
 
-/// Adds semantics to an upstream editor's existing Div before it receives its ID.
-/// Keeping the same Div preserves the editor's focus handle and event handlers.
-pub(crate) struct InputSemantics(pub Div);
-impl gpui::InteractiveElement for InputSemantics {
-    fn interactivity(&mut self) -> &mut gpui::Interactivity {
-        self.0.interactivity()
-    }
-}
-impl gpui::StatefulInteractiveElement for InputSemantics {}
-impl gpui::IntoElement for InputSemantics {
-    type Element = Div;
-    fn into_element(self) -> Div {
-        self.0
-    }
-}
-
-/// Centers the Base GPUI single-line editor independently of inherited typography.
-/// The editor sizes its text and caret from the line height, so padding alone
-/// cannot keep both centered across bordered and borderless controls.
-pub(crate) fn input_text_layout(base: Div, text_scale: f32) -> Div {
-    base.flex().items_center().line_height(px(20.) * text_scale)
-}
-
 /// Draws concentric focus corners; GPUI spread shadows retain the inner radius.
 pub(crate) fn focus_outline(mut base: Div, color: Rgba, radii: Corners<Pixels>) -> Div {
     let borders = base.style().border_widths.clone();
-    base.child(gpui::deferred(
-        gpui::canvas(
+    base.child(gpui_kit::deferred(
+        gpui_kit::canvas(
             |_, _, _| (),
             move |bounds, _, window, _| {
                 let rem = window.rem_size();
-                let borders = gpui::Edges {
+                let borders = gpui_kit::Edges {
                     left: borders.left.unwrap_or_default().to_pixels(rem),
                     top: borders.top.unwrap_or_default().to_pixels(rem),
                     right: borders.right.unwrap_or_default().to_pixels(rem),
@@ -665,16 +629,16 @@ pub(crate) fn focus_outline(mut base: Div, color: Rgba, radii: Corners<Pixels>) 
 }
 
 fn focus_outline_quad(
-    mut bounds: gpui::Bounds<Pixels>,
+    mut bounds: gpui_kit::Bounds<Pixels>,
     color: Rgba,
     radii: Corners<Pixels>,
-    borders: gpui::Edges<Pixels>,
-) -> gpui::PaintQuad {
+    borders: gpui_kit::Edges<Pixels>,
+) -> gpui_kit::PaintQuad {
     bounds.origin.x -= borders.left + px(3.);
     bounds.origin.y -= borders.top + px(3.);
     bounds.size.width += borders.left + borders.right + px(6.);
     bounds.size.height += borders.top + borders.bottom + px(6.);
-    gpui::outline(bounds, color, Default::default())
+    gpui_kit::outline(bounds, color, Default::default())
         .corner_radii(radii.map(|r| if *r > px(0.) { *r + px(3.) } else { *r }))
         .border_widths(px(3.))
 }
@@ -684,23 +648,26 @@ mod focus_outline_tests {
     use super::*;
     #[test]
     fn focus_outlines_follow_circle_and_segment_borders() {
-        let bounds = gpui::Bounds::new(gpui::point(px(1.), px(1.)), gpui::size(px(10.), px(10.)));
+        let bounds = gpui_kit::Bounds::new(
+            gpui_kit::point(px(1.), px(1.)),
+            gpui_kit::size(px(10.), px(10.)),
+        );
         let quad = focus_outline_quad(
             bounds,
             black().into(),
             Corners::all(px(6.)),
-            gpui::Edges::all(px(1.)),
+            gpui_kit::Edges::all(px(1.)),
         );
-        assert_eq!(quad.bounds.origin, gpui::point(px(-3.), px(-3.)));
-        assert_eq!(quad.bounds.size, gpui::size(px(18.), px(18.)));
+        assert_eq!(quad.bounds.origin, gpui_kit::point(px(-3.), px(-3.)));
+        assert_eq!(quad.bounds.size, gpui_kit::size(px(18.), px(18.)));
         assert_eq!(quad.corner_radii, Corners::all(px(9.)));
         let quad = focus_outline_quad(
             bounds,
             black().into(),
             Corners::all(px(0.)),
-            gpui::Edges {
+            gpui_kit::Edges {
                 left: px(0.),
-                ..gpui::Edges::all(px(1.))
+                ..gpui_kit::Edges::all(px(1.))
             },
         );
         assert_eq!(quad.bounds.origin.x, px(-2.));
@@ -710,22 +677,22 @@ mod focus_outline_tests {
 }
 
 // Refine the actual control after default styling; no extra layout or focus node.
-pub(crate) fn apply_style<T: Styled>(mut element: T, style: &gpui::StyleRefinement) -> T {
-    use gpui::Refineable as _;
+pub(crate) fn apply_style<T: Styled>(mut element: T, style: &gpui_kit::StyleRefinement) -> T {
+    use gpui_kit::Refineable as _;
     element.style().refine(style);
     element
 }
 
-#[derive(gpui::IntoElement)]
+#[derive(gpui_kit::IntoElement)]
 pub(crate) struct DisclosureIcon {
-    icon: gpui::Svg,
+    icon: gpui_kit::Svg,
     open: bool,
 }
-pub(crate) fn disclosure_icon(icon: gpui::Svg, open: bool) -> DisclosureIcon {
+pub(crate) fn disclosure_icon(icon: gpui_kit::Svg, open: bool) -> DisclosureIcon {
     DisclosureIcon { icon, open }
 }
-impl gpui::RenderOnce for DisclosureIcon {
-    fn render(self, window: &mut Window, cx: &mut App) -> impl gpui::IntoElement {
+impl gpui_kit::RenderOnce for DisclosureIcon {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl gpui_kit::IntoElement {
         let duration = UiTheme::read(cx).motion.fast;
         let value = transition_value(
             "disclosure-rotation",
@@ -735,7 +702,7 @@ impl gpui::RenderOnce for DisclosureIcon {
             cx,
         );
         self.icon
-            .with_transformation(gpui::Transformation::rotate(gpui::radians(
+            .with_transformation(gpui_kit::Transformation::rotate(gpui_kit::radians(
                 value * std::f32::consts::PI,
             )))
     }
@@ -744,7 +711,7 @@ impl gpui::RenderOnce for DisclosureIcon {
 #[cfg(test)]
 mod motion_tests {
     use super::*;
-    use gpui::{
+    use gpui_kit::{
         AppContext as _, Context, IntoElement, Render, TestAppContext, VisualTestContext, div,
     };
 
@@ -765,7 +732,7 @@ mod motion_tests {
         }
     }
 
-    #[gpui::test]
+    #[gpui_kit::test]
     fn theme_reduced_motion_snaps_an_active_upstream_transition(cx: &mut TestAppContext) {
         cx.update(init);
         let window = cx.add_window(|_, _| View {
@@ -797,5 +764,88 @@ mod motion_tests {
                 .unwrap(),
             1.
         );
+    }
+}
+
+/// Shared focus traversal for the tab, radio and toggle collections.
+pub(crate) struct RovingFocus {
+    pub handles: Vec<Option<gpui_kit::FocusHandle>>,
+    active: gpui_kit::Entity<Option<gpui_kit::FocusHandle>>,
+}
+impl RovingFocus {
+    pub fn new(
+        id: gpui_kit::ElementId,
+        items: &[(gpui_kit::ElementId, bool)],
+        selected: Option<usize>,
+        window: &mut gpui_kit::Window,
+        cx: &mut App,
+    ) -> Self {
+        let active =
+            window.use_keyed_state((id, "active"), cx, |_, _| None::<gpui_kit::FocusHandle>);
+        let mut handles: Vec<_> = items
+            .iter()
+            .map(|(id, disabled)| {
+                let handle = window
+                    .use_keyed_state((id.clone(), "focus"), cx, |_, cx| cx.focus_handle())
+                    .read(cx)
+                    .clone();
+                handle.clone().tab_stop(false);
+                (!disabled).then_some(handle)
+            })
+            .collect();
+        let index = handles
+            .iter()
+            .position(|h| h.as_ref().is_some_and(|h| h.is_focused(window)))
+            .or(selected.filter(|&i| handles.get(i).is_some_and(Option::is_some)))
+            .or_else(|| {
+                handles
+                    .iter()
+                    .position(|h| h.is_some() && h.as_ref() == active.read(cx).as_ref())
+            })
+            .or_else(|| handles.iter().position(Option::is_some));
+        if let Some(index) = index {
+            let handle = handles[index].as_ref().unwrap().clone().tab_stop(true);
+            handles[index] = Some(handle.clone());
+            active.update(cx, |value, _| *value = Some(handle));
+        }
+        Self { handles, active }
+    }
+    pub fn key(
+        &self,
+        event: &gpui_kit::KeyDownEvent,
+        axis: Option<gpui_kit::Axis>,
+        window: &mut gpui_kit::Window,
+        cx: &mut App,
+    ) -> Option<usize> {
+        if event.keystroke.modifiers.modified() {
+            return None;
+        }
+        let enabled: Vec<_> = self
+            .handles
+            .iter()
+            .enumerate()
+            .filter_map(|(i, h)| h.as_ref().map(|h| (i, h)))
+            .collect();
+        let current = enabled.iter().position(|(_, h)| h.is_focused(window))?;
+        let next = match event.keystroke.key.as_str() {
+            "home" => 0,
+            "end" => enabled.len() - 1,
+            "left" if axis != Some(gpui_kit::Axis::Vertical) => {
+                (current + enabled.len() - 1) % enabled.len()
+            }
+            "right" if axis != Some(gpui_kit::Axis::Vertical) => (current + 1) % enabled.len(),
+            "up" if axis != Some(gpui_kit::Axis::Horizontal) => {
+                (current + enabled.len() - 1) % enabled.len()
+            }
+            "down" if axis != Some(gpui_kit::Axis::Horizontal) => (current + 1) % enabled.len(),
+            _ => return None,
+        };
+        enabled[current].1.clone().tab_stop(false);
+        let handle = enabled[next].1.clone().tab_stop(true);
+        handle.focus(window, cx);
+        self.active.update(cx, |value, _| *value = Some(handle));
+        window.refresh();
+        cx.stop_propagation();
+        Some(enabled[next].0)
     }
 }

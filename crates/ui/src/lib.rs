@@ -1,6 +1,6 @@
 //! Open-code shadcn visual ports for GPUI.
 //!
-//! Every installed component root takes a caller-owned [`gpui::ElementId`].
+//! Component roots use a caller-owned [`gpui_kit::ElementId`] or a retained state entity.
 //! Keep IDs stable across renders and unique among siblings. Use semantic paths
 //! such as `settings.save`; never derive an ID from visible text, list position,
 //! a pointer, or a random value. Changing an ID resets GPUI's keyed state.
@@ -94,6 +94,6 @@ pub use checkbox::Checkbox;
 pub use theme::{ThemeMode, UiColors, UiFonts, UiRadius, UiShadows, UiSpacing, UiTheme};
 
 /// Installs the default theme and all shared keyboard/component behavior.
-pub fn init(cx: &mut gpui::App) {
+pub fn init(cx: &mut gpui_kit::App) {
     theme::init(cx);
 }

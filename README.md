@@ -13,10 +13,10 @@
 
 gpuicn is an open-source library of Rust components for native GPUI apps.
 Install the source in your app, then keep ownership of its styling and behavior.
-Applications use [GPUI Kit](https://github.com/longbridge/gpui-kit), with
-Longbridge's headless motion and retained [Base GPUI](https://github.com/LukeTandjung/base-gpui)
-controls on one GPUI runtime. See the [migration notes](docs/validation/gpui-kit-migration.md)
-for the compatibility dependency and verified behavior.
+Applications use [GPUI Kit](https://github.com/longbridge/gpui-kit) for native
+controls, text editing, motion, and popup hosts. gpuicn supplies Nova styling and
+application components. See the [migration notes](docs/validation/gpui-kit-migration.md)
+for the new APIs and verification status.
 
 The project follows the shadcn/ui source distribution model. It brings shadcn's
 visual language and themes to idiomatic GPUI APIs. It does not copy React APIs.
@@ -110,7 +110,7 @@ byte for byte, tests overwrite behavior, and compiles the app.
 
 ## Platform scope
 
-The components use Base GPUI's native state and input behavior. The browser
+The components use GPUI Kit's native state and input behavior. The browser
 catalog renders the same Rust components through WebGPU and WASM. It needs a
 WebGPU-capable browser. Source and installation instructions remain available
 when a preview cannot start.

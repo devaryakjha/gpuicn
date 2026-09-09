@@ -2,19 +2,35 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use gpui::{
+use gpui_kit::{
     AppContext, Context, IntoElement, ParentElement, Render, Styled, TestAppContext,
     VisualTestContext, Window, div, px,
 };
-use gpuicn::{Button, UiTheme, input::Input};
+use gpuicn::{
+    Button, UiTheme,
+    input::{Input, InputEvent, InputState},
+};
 
 struct View(Rc<RefCell<Vec<String>>>, bool);
 
 impl Render for View {
-    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let first = self.0.clone();
         let input = self.0.clone();
         let last = self.0.clone();
+        let editor = window
+            .use_keyed_state("keyboard.input", cx, |window, cx| {
+                let state = cx.new(|cx| InputState::new(window, cx).default_value("draft"));
+                let subscription = cx.subscribe(&state, move |_, state, event, cx| {
+                    if matches!(event, InputEvent::PressEnter { .. }) {
+                        input.borrow_mut().push(state.read(cx).value().to_string());
+                    }
+                });
+                (state, subscription)
+            })
+            .read(cx)
+            .0
+            .clone();
         div()
             .flex()
             .flex_col()
@@ -30,12 +46,7 @@ impl Render for View {
                     .child("Disabled")
                     .on_click(|_, _, _| panic!("disabled button activated")),
             )
-            .child(
-                Input::new("input")
-                    .disabled(self.1)
-                    .default_value("draft")
-                    .on_enter(move |value| input.borrow_mut().push(value.to_string())),
-            )
+            .child(Input::new(&editor).disabled(self.1))
             .child(
                 Button::new("last")
                     .child("Last")
@@ -44,7 +55,7 @@ impl Render for View {
     }
 }
 
-#[gpui::test]
+#[gpui_kit::test]
 fn tab_shift_tab_and_enter_work_across_controls(cx: &mut TestAppContext) {
     cx.update(|cx| {
         gpuicn::init(cx);
@@ -75,6 +86,14 @@ fn tab_shift_tab_and_enter_work_across_controls(cx: &mut TestAppContext) {
         "enter",
     ] {
         visual.simulate_keystrokes(keys);
+        visual.update(|window, cx| {
+            window.dispatch_event(
+                gpui_kit::PlatformInput::KeyUp(gpui_kit::KeyUpEvent {
+                    keystroke: gpui_kit::Keystroke::parse(keys).unwrap(),
+                }),
+                cx,
+            );
+        });
         visual.run_until_parked();
         cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx))
             .unwrap();

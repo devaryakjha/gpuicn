@@ -1,9 +1,11 @@
 # Tooltip parity
 
-- Upstream: shadcn/ui Nova at `ac60ef5c4db4265d71454dd9ecd3f93e255d7211`, `apps/v4/registry/bases/base/ui/tooltip.tsx` and `apps/v4/registry/styles/style-nova.css`.
-- gpuicn: `registry/tooltip/tooltip.rs`.
-- Difference types: platform, interaction, accessibility, and visual.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/tooltip/tooltip.rs`, using GPUI Kit 0.6.1.
 
-Base GPUI keeps the provider delay group, delayed hover/focus opening, collision handling, safe popup hover, controlled state, and disabled trigger guards. The wrapper leaves trigger appearance to its host control and applies Nova's inverse compact popup style.
+text_tooltip creates a themed view for the native GPUI tooltip attachment point. Attach it to one interactive trigger. Native pointer/focus behavior owns its visibility; gpuicn supplies the Nova tooltip surface.
 
-The pinned Base GPUI Tooltip has no Arrow layer, so Nova's rotated tooltip arrow is not available. It also lacks live-region announcement and browser relationship attributes; the existing GPUI role remains the available accessibility signal.
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

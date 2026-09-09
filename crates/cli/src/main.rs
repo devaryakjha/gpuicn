@@ -556,7 +556,7 @@ fn build(source: &Path, output: &Path) -> Result<()> {
             description: metadata
                 .and_then(|meta| meta.description.clone())
                 .unwrap_or_else(|| {
-                    format!("The shadcn default {title} visual port backed by Base GPUI behavior.")
+                    format!("The shadcn default {title} visual port backed by GPUI Kit behavior.")
                 }),
             files,
         });

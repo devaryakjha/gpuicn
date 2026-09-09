@@ -3,7 +3,7 @@
 The installed source belongs to your app. Start with the shadcn Nova defaults and change the application theme; no Bonsai model, router, or persistence layer is required.
 
 ```rust
-use gpui::{px, rgb};
+use gpui_kit::{px, rgb};
 use ui::theme::{UiRadius, UiTheme};
 
 let mut theme = UiTheme::neutral_light();
@@ -26,13 +26,15 @@ Colors, fonts, radius, spacing, shadows, overlay color, and motion are app-owned
 Wrapped controls implement GPUI `Styled`. Overrides refine the actual control after its default styling, without adding a layout or focus wrapper:
 
 ```rust
-use gpui::{Styled, px};
+use gpui_kit::{Styled, px};
 use ui::button::Button;
 
 Button::new("save").w(px(160.)).rounded(px(2.))
 ```
 
-Base GPUI composition helpers expose Base's native builders. Structural properties the helper does not set remain directly configurable. **Base's `style_with_state` replaces its previous callback**; it is a complete custom skin, not an additive override. To make a small change while keeping the default skin, change the theme or edit that one style line in the installed helper. This is an upstream API limit, not a claim that every Base builder override wins over gpuicn defaults.
+Composition helpers expose GPUI Kit builders. Use the theme for shared changes,
+`Styled` for a control's geometry, or edit the installed source for a custom skin.
+Input editing colors come from `UiTheme` and update with the surrounding controls.
 
 ## Motion
 
@@ -40,10 +42,14 @@ Base GPUI composition helpers expose Base's native builders. Structural properti
 
 Keep pointer dragging and keyboard navigation immediate. Width changes run native layout; they are not compositor-only animations. Both `theme.motion.reduced` and `cx.reduce_motion()` disable movement while preserving state feedback. The pinned GPUI does not automatically wire the operating system's reduced-motion preference into this flag; the application must set it.
 
-The pinned Base GPUI removes closed dialog/toast/disclosure content immediately. Full exit animations cannot preserve that content through a style callback, and gpuicn does not replace Base's focus, presence, or dismissal machinery to fake them.
+Closed modal content and dismissed notifications are removed by the host. This
+version does not claim animated exits for every component.
 
 ## Source update note
 
 The shared animation clock uses `web-time = "1.1"`, the same cross-platform clock used by GPUI. Keep that dependency in the consuming app; native `std::time::Instant::now()` panics in a browser WASM build.
 
-Theme-aware layout helpers that previously had no arguments now take `cx`: backdrop/viewport/header, list/group, and positioner helpers are affected. Keep source files and their shared theme from the same revision, review existing edits before overwriting, and use the compile-checked usage shown in the catalog.
+Input, numeric input, selectors, slider and OTP controls now take retained Kit state.
+Keep those entities and their event subscriptions in the owning view. Dialogs and
+drawers take a retained `DialogHandle`; keep the host mounted to restore focus after
+closing. The catalog's compile-checked examples show each new signature.

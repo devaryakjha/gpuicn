@@ -1,27 +1,23 @@
-//! shadcn-style form composition backed by Base GPUI Form primitives.
-
-use base_gpui::form::Form;
-use gpui::{App, ElementId, Styled, px};
+//! Nova form layout. The application owns values, validation and submission.
 
 use super::theme::UiTheme;
-
-pub use base_gpui::form::{
-    FormErrors, FormSubmitAction, FormSubmitDetails, FormSubmitReason, FormValidateAction,
-    FormValue, FormValues,
+use gpui_kit::{
+    App, Div, ElementId, InteractiveElement as _, Role, Stateful, StatefulInteractiveElement as _,
+    Styled, div,
 };
 
-/// Creates a styled Form with Base GPUI submit, validation, and focus behavior.
-pub fn form(id: impl Into<ElementId>, cx: &App) -> Form {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
-    Form::new().id(id).style_with_state(move |_state, base| {
-        base.flex()
-            .flex_col()
-            .w_full()
-            .gap(spacing * 6_f32)
-            .font_family(theme.fonts.body.clone())
-            .text_size(px(14.0) * text_scale)
-            .text_color(theme.colors.foreground)
-    })
+/// Groups fields semantically without an implicit global form context.
+/// Subscribe to each input's `InputEvent` and submit through the application's state.
+pub fn form(id: impl Into<ElementId>, cx: &App) -> Stateful<Div> {
+    let theme = UiTheme::read(cx);
+    div()
+        .id(id)
+        .role(Role::Form)
+        .flex()
+        .flex_col()
+        .w_full()
+        .gap(theme.space(6.))
+        .font_family(theme.fonts.body.clone())
+        .text_size(theme.text(14.))
+        .text_color(theme.colors.foreground)
 }

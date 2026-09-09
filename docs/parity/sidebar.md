@@ -21,6 +21,6 @@ Navigation uses Geist at 14px with a 20px line height, secondary text at 12px/16
 
 The six site examples cover workspace navigation, searchable documentation, searchable mail with unread filtering, a floating right sidebar, a mobile sheet, and loading content. Selection and filters are local demonstration data; they do not call a service.
 
-Base GPUI's public button API does not expose current/expanded accessibility state setters, so those states appear in the accessible name. Native tooltips do not add tab stops. macOS checks and browser checks do not establish Windows/Linux or full screen-reader coverage. See `docs/validation/sidebar.md` for evidence and remaining limits.
+Sidebar rows use Kit buttons; selected and expanded state also appear in the accessible name. Native tooltips do not add tab stops. macOS checks and browser checks do not establish Windows/Linux or full screen-reader coverage. See `docs/validation/sidebar.md` for evidence and remaining limits.
 
 In the embedded web preview, Shift-Tab can cross the iframe boundary even while GPUI navigation is modal. Native focus traversal is separately verified; browser modal containment remains a platform limitation.

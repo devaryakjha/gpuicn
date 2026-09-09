@@ -31,7 +31,7 @@ function ThemingPage() {
       <CodeBlock
         className="mt-4"
         value={
-          "use gpui::{px, rgb};\nuse crate::ui::theme::{UiRadius, UiTheme};\n\nlet mut theme = UiTheme::neutral_light();\ntheme.colors.primary = rgb(0x2563eb);\ntheme.colors.primary_foreground = rgb(0xffffff);\ntheme.radius = UiRadius::new(px(4.));\ntheme.spacing.unit = px(4.5);\ntheme.text_scale = 1.0;\ntheme.motion.reduced = false;\nUiTheme::set(cx, theme);"
+          "use gpui_kit::{px, rgb};\nuse crate::ui::theme::{UiRadius, UiTheme};\n\nlet mut theme = UiTheme::neutral_light();\ntheme.colors.primary = rgb(0x2563eb);\ntheme.colors.primary_foreground = rgb(0xffffff);\ntheme.radius = UiRadius::new(px(4.));\ntheme.spacing.unit = px(4.5);\ntheme.text_scale = 1.0;\ntheme.motion.reduced = false;\nUiTheme::set(cx, theme);"
         }
       />
       <h2 className="mt-10 text-2xl font-semibold tracking-tight">

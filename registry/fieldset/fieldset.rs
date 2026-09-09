@@ -1,52 +1,44 @@
-//! shadcn-style Fieldset composition backed by Base GPUI Fieldset primitives.
-
-use base_gpui::fieldset::{FieldsetLegend, FieldsetRoot};
-use gpui::{App, ElementId, FontWeight, Styled, prelude::FluentBuilder as _, px};
-
+//! Nova field groups and headings. Pass disabled state to their controls explicitly.
 use super::theme::UiTheme;
+use gpui_kit::{
+    App, Div, ElementId, FontWeight, InteractiveElement as _, Role, Stateful,
+    StatefulInteractiveElement as _, Styled, div,
+};
 
-/// shadcn's two FieldLegend visual variants.
+/// The two visual treatments for a group legend.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum FieldsetLegendVariant {
-    /// Section heading styling.
+    /// A section heading.
     #[default]
     Legend,
-    /// Compact label styling for nested field groups.
+    /// A compact field label.
     Label,
 }
 
-/// Creates a styled Fieldset root with Base GPUI disabled-state cascading.
-pub fn fieldset_root(id: impl Into<ElementId>, cx: &App) -> FieldsetRoot {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    FieldsetRoot::new()
+/// Creates a semantic group; give it an accessible label matching its legend.
+pub fn fieldset_root(id: impl Into<ElementId>, cx: &App) -> Stateful<Div> {
+    let t = UiTheme::read(cx);
+    div()
         .id(id)
-        .style_with_state(move |state, base| {
-            base.flex()
-                .flex_col()
-                .w_full()
-                .gap(spacing * 6_f32)
-                .font_family(theme.fonts.body.clone())
-                .text_color(theme.colors.foreground)
-                .when(state.disabled, |base| base.opacity(0.50))
-        })
+        .role(Role::Group)
+        .flex()
+        .flex_col()
+        .w_full()
+        .gap(t.space(6.))
+        .font_family(t.fonts.body.clone())
+        .text_color(t.colors.foreground)
 }
-
-/// Creates a Fieldset legend. Give the root the same literal `aria_label`.
-pub fn fieldset_legend(variant: FieldsetLegendVariant, cx: &App) -> FieldsetLegend {
-    let theme = UiTheme::read(cx).clone();
-    let text_scale = theme.text_scale;
-    FieldsetLegend::new().style_with_state(move |state, base| {
-        let text_size = match variant {
-            FieldsetLegendVariant::Legend => 16.0,
-            FieldsetLegendVariant::Label => 14.0,
-        };
-
-        base.font_family(theme.fonts.body.clone())
-            .font_weight(FontWeight::MEDIUM)
-            .text_size(px(text_size) * text_scale)
-            .line_height(px(20.0) * text_scale)
-            .text_color(theme.colors.foreground)
-            .when(state.disabled, |base| base.opacity(0.50))
-    })
+/// Creates the group heading.
+pub fn fieldset_legend(variant: FieldsetLegendVariant, cx: &App) -> Div {
+    let t = UiTheme::read(cx);
+    div()
+        .font_family(t.fonts.body.clone())
+        .font_weight(FontWeight::MEDIUM)
+        .text_size(t.text(if variant == FieldsetLegendVariant::Legend {
+            16.
+        } else {
+            14.
+        }))
+        .line_height(t.text(20.))
+        .text_color(t.colors.foreground)
 }

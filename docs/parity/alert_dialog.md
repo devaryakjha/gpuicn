@@ -1,9 +1,11 @@
 # Alert Dialog parity
 
-- Upstream: shadcn/ui Nova at `ac60ef5c4db4265d71454dd9ecd3f93e255d7211`, `apps/v4/registry/bases/base/ui/alert-dialog.tsx` and `apps/v4/registry/styles/style-nova.css`.
-- gpuicn: `registry/alert_dialog/alert_dialog.rs`.
-- Difference types: platform, interaction, accessibility, and visual.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/alert_dialog/alert_dialog.rs`, using GPUI Kit 0.6.1.
 
-Alert Dialog reuses Base GPUI's Dialog implementation, including trigger activation, Escape, outside press, Close, focus return, and modal Tab cycling over GPUI's tab stops, including app-owned children. It does not provide relationship attributes, outside-content inertness, nested-dialog safety, non-modal parity, or a browser accessibility tree.
+A retained Kit DialogHandle owns visibility. Explicit confirm and cancel buttons route actions through the alert host, which can veto confirmation. Tab traversal stays within the popup and closing restores focus. Enter activates the focused button; the host does not convert every Enter press into confirmation.
 
-Nova's fade/zoom motion and backdrop blur are omitted because GPUI does not expose matching transition or backdrop-filter behavior. Revisit these gaps when GPUI and Base GPUI add those APIs.
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

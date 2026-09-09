@@ -2,7 +2,7 @@ mod data;
 
 use super::*;
 use data::{Data, Store, Task};
-use gpui::{ElementId, FontWeight, Pixels, Rgba, SharedString, rgb};
+use gpui_kit::{ElementId, Focusable as _, FontWeight, Pixels, Rgba, SharedString, rgb};
 use gpuicn::{
     resizable::{PaneLimits, Resizable},
     sidebar::{
@@ -10,14 +10,14 @@ use gpuicn::{
     },
 };
 
-gpui::actions!(workspace, [Quit, OpenGallery]);
+gpui_kit::actions!(workspace, [Quit, OpenGallery]);
 
 pub(super) fn launch(cx: &mut App) {
     UiTheme::set(cx, workspace_theme(UiTheme::read(cx).mode));
-    cx.bind_keys([gpui::KeyBinding::new("cmd-q", Quit, None)]);
-    cx.set_menus([gpui::Menu::new("gpuicn Workspace").items([
-        gpui::MenuItem::action("Component Gallery", OpenGallery),
-        gpui::MenuItem::action("Quit gpuicn Workspace", Quit),
+    cx.bind_keys([gpui_kit::KeyBinding::new("cmd-q", Quit, None)]);
+    cx.set_menus([gpui_kit::Menu::new("gpuicn Workspace").items([
+        gpui_kit::MenuItem::action("Component Gallery", OpenGallery),
+        gpui_kit::MenuItem::action("Quit gpuicn Workspace", Quit),
     ])]);
     cx.on_window_closed(|cx, _| {
         if cx.windows().is_empty() {
@@ -38,9 +38,9 @@ pub(super) fn launch(cx: &mut App) {
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 window_min_size: Some(size(px(1000.), px(680.))),
-                titlebar: Some(gpui::TitlebarOptions {
+                titlebar: Some(gpui_kit::TitlebarOptions {
                     appears_transparent: true,
-                    traffic_light_position: Some(gpui::point(px(20.), px(20.))),
+                    traffic_light_position: Some(gpui_kit::point(px(20.), px(20.))),
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -70,7 +70,7 @@ pub(super) fn launch(cx: &mut App) {
     cx.activate(true);
 }
 
-fn request_quit(workspace: gpui::WindowHandle<Workspace>, cx: &mut App) {
+fn request_quit(workspace: gpui_kit::WindowHandle<Workspace>, cx: &mut App) {
     // Global key actions still run inside the active window's update.
     // Defer until that borrow ends so an update error cannot bypass the save guard.
     cx.defer(move |cx| {
@@ -117,7 +117,7 @@ struct Workspace {
     task_draft: String,
     project_draft: String,
     message_drafts: std::collections::HashMap<u64, String>,
-    chat_scroll: gpui::ScrollHandle,
+    chat_scroll: gpui_kit::ScrollHandle,
     title_draft: String,
     note_draft: String,
     error: Option<String>,
@@ -129,7 +129,7 @@ struct Workspace {
     unsaved: bool,
     list_width: Pixels,
     adding_task: bool,
-    task_focus: gpui::FocusHandle,
+    task_focus: std::rc::Rc<std::cell::RefCell<Option<gpui_kit::FocusHandle>>>,
     adding_project: bool,
     editing_note: bool,
     editing_title: bool,
@@ -137,7 +137,7 @@ struct Workspace {
 }
 
 impl Workspace {
-    fn new(store: Store, data: Data, error: Option<String>, cx: &mut Context<Self>) -> Self {
+    fn new(store: Store, data: Data, error: Option<String>, _cx: &mut Context<Self>) -> Self {
         let project = data.projects[0].id;
         let mut view = Self {
             store,
@@ -150,7 +150,7 @@ impl Workspace {
             task_draft: String::new(),
             project_draft: String::new(),
             message_drafts: Default::default(),
-            chat_scroll: gpui::ScrollHandle::new(),
+            chat_scroll: gpui_kit::ScrollHandle::new(),
             title_draft: String::new(),
             note_draft: String::new(),
             error,
@@ -162,7 +162,7 @@ impl Workspace {
             unsaved: false,
             list_width: px(560.),
             adding_task: false,
-            task_focus: cx.focus_handle(),
+            task_focus: Default::default(),
             sidebar: SidebarState::default(),
             adding_project: false,
             editing_note: false,
@@ -303,71 +303,88 @@ impl Workspace {
         label: &'static str,
         value: &str,
         field: Draft,
+        window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> gpui::Div {
+    ) -> gpui_kit::Div {
         let project = self.project;
         let epoch = self.epoch(field);
         let id: ElementId = id.into();
         let theme = UiTheme::read(cx).clone();
-        let input = Input::new((id, epoch.to_string()))
+        let state = live_input(
+            (id, epoch.to_string()),
+            value.to_owned(),
+            label,
+            window,
+            cx,
+            move |this, input, event, cx| {
+                if this.epoch(field) != epoch || this.project != project {
+                    return;
+                }
+                let value = input.read(cx).value();
+                match event {
+                    InputEvent::PressEnter { .. } => match field {
+                        Draft::Task => {
+                            this.task_draft = value.to_string();
+                            this.navigate(Destination::AddTask, cx);
+                        }
+                        Draft::Project => {
+                            this.project_draft = value.to_string();
+                            this.create_project(cx);
+                        }
+                        Draft::Message => {
+                            this.message_drafts.insert(project, value.to_string());
+                            this.send_message(cx);
+                        }
+                        Draft::Title => {
+                            this.title_draft = value.to_string();
+                            this.save_details(cx);
+                        }
+                        Draft::Note => {
+                            this.note_draft = value.to_string();
+                            this.save_details(cx);
+                        }
+                        Draft::Search => {}
+                    },
+                    InputEvent::Change => {
+                        let draft = match field {
+                            Draft::Search => &mut this.search,
+                            Draft::Task => &mut this.task_draft,
+                            Draft::Project => &mut this.project_draft,
+                            Draft::Message => this.message_drafts.entry(project).or_default(),
+                            Draft::Title => &mut this.title_draft,
+                            Draft::Note => &mut this.note_draft,
+                        };
+                        *draft = value.to_string();
+                        cx.notify();
+                    }
+                    _ => {}
+                }
+            },
+        );
+        if matches!(field, Draft::Task) {
+            *self.task_focus.borrow_mut() = Some(state.read(cx).focus_handle(cx));
+        }
+        if !matches!(field, Draft::Search) {
+            let focus = state.read(cx).focus_handle(cx);
+            window.use_keyed_state(
+                ("workspace.input-focus", state.entity_id()),
+                cx,
+                move |window, cx| focus.focus(window, cx),
+            );
+        }
+        let input = Input::new(&state)
             .aria_label(label)
-            .placeholder(label)
-            .value(value.to_owned())
             .h(px(36.))
             .bg(theme.colors.card)
             .when(matches!(field, Draft::Search | Draft::Task), |input| {
                 input.h(px(32.))
             })
-            .when(matches!(field, Draft::Task), |input| {
-                input.focus_handle(self.task_focus.clone())
-            })
-            .auto_focus(matches!(
-                field,
-                Draft::Task | Draft::Project | Draft::Note | Draft::Title | Draft::Message
-            ))
             .when(matches!(field, Draft::Title), |input| {
                 input
                     .h(px(44.))
                     .text_size(px(22.))
                     .font_weight(FontWeight::MEDIUM)
-            })
-            .on_submit(
-                cx.listener(move |this, value: &SharedString, _, cx| match field {
-                    Draft::Task => {
-                        this.task_draft = value.to_string();
-                        this.navigate(Destination::AddTask, cx);
-                    }
-                    Draft::Project => {
-                        this.project_draft = value.to_string();
-                        this.create_project(cx);
-                    }
-                    Draft::Message => {
-                        this.message_drafts.insert(project, value.to_string());
-                        this.send_message(cx);
-                    }
-                    Draft::Title => {
-                        this.title_draft = value.to_string();
-                        this.save_details(cx);
-                    }
-                    Draft::Note => {
-                        this.note_draft = value.to_string();
-                        this.save_details(cx);
-                    }
-                    Draft::Search => {}
-                }),
-            )
-            .on_change(cx.listener(move |this, value: &SharedString, _, cx| {
-                let draft = match field {
-                    Draft::Search => &mut this.search,
-                    Draft::Task => &mut this.task_draft,
-                    Draft::Project => &mut this.project_draft,
-                    Draft::Message => this.message_drafts.entry(project).or_default(),
-                    Draft::Title => &mut this.title_draft,
-                    Draft::Note => &mut this.note_draft,
-                };
-                *draft = value.to_string();
-                cx.notify();
-            }));
+            });
         div()
             .w_full()
             .debug_selector(move || label.to_owned())
@@ -422,7 +439,7 @@ impl Workspace {
         }
     }
 
-    fn tasks(&self, cx: &mut Context<Self>) -> gpui::Div {
+    fn tasks(&self, window: &mut Window, cx: &mut Context<Self>) -> gpui_kit::Div {
         let theme = UiTheme::read(cx).clone();
         let c = theme.colors;
         let query = self.search.trim().to_lowercase();
@@ -504,7 +521,7 @@ impl Workspace {
                             .when(task.priority && !task.done, |el| {
                                 el.child(icon(LucideIcon::Flag, 14., c.muted_foreground))
                             })
-                            .on_pressed_change(move |_, _, _, cx| {
+                            .on_change(move |_, _, _, cx| {
                                 let _ = row_view.update(cx, |this, cx| {
                                     this.navigate(Destination::Task(id), cx)
                                 });
@@ -515,7 +532,7 @@ impl Workspace {
                             Checkbox::new(("workspace.done", id))
                                 .checked(task.done)
                                 .aria_label(format!("Complete {}", task.title))
-                                .on_checked_change(move |done, _, _, cx| {
+                                .on_change(move |done, _, _, cx| {
                                     let _ = view.update(cx, |this, cx| this.complete(id, done, cx));
                                 }),
                         ),
@@ -615,21 +632,14 @@ impl Workspace {
                 "Search tasks",
                 &self.search,
                 Draft::Search,
+                window,
                 cx,
             )))
             .child(
                 div().flex_1().min_h_0().overflow_hidden().child(
-                    scroll_area(cx)
-                        .id("workspace.task-scroll")
+                    ScrollArea::new("workspace.task-scroll")
                         .size_full()
-                        .child(
-                            scroll_area_viewport(cx)
-                                .child(scroll_area_content(cx).w_full().child(rows)),
-                        )
-                        .child(
-                            scroll_area_scrollbar(ScrollAreaOrientation::Vertical, cx)
-                                .child(scroll_area_thumb(cx)),
-                        ),
+                        .child(rows),
                 ),
             )
             .child(
@@ -650,6 +660,7 @@ impl Workspace {
                                     "Add a task…",
                                     &self.task_draft,
                                     Draft::Task,
+                                    window,
                                     cx,
                                 )))
                                 .child(
@@ -696,7 +707,7 @@ impl Workspace {
                 "Resize tasks and details",
                 self.list_width,
                 list,
-                self.details(cx),
+                self.details(window, cx),
                 cx.listener(|this, value, _, cx| {
                     this.list_width = *value;
                     cx.notify();
@@ -707,7 +718,7 @@ impl Workspace {
         )
     }
 
-    fn details(&self, cx: &mut Context<Self>) -> gpui::Div {
+    fn details(&self, window: &mut Window, cx: &mut Context<Self>) -> gpui_kit::Div {
         let theme = UiTheme::read(cx).clone();
         let c = theme.colors;
         let mut content = div()
@@ -727,21 +738,38 @@ impl Workspace {
             let done = task.done;
             let menu_complete = cx.entity().downgrade();
             let menu_delete = menu_complete.clone();
+            let items = [
+                MenuItem::new(
+                    "complete",
+                    if done { "Reopen task" } else { "Mark complete" },
+                )
+                .on_click(move |_, _, cx| {
+                    let _ = menu_complete.update(cx, |this, cx| this.complete(id, !done, cx));
+                }),
+                MenuItem::separator(),
+                MenuItem::new("delete-task", "Delete task").on_click(move |_, _, cx| {
+                    let _ = menu_delete.update(cx, |this, cx| this.delete_task(id, cx));
+                }),
+            ];
+            let task_menu = window
+                .use_keyed_state(
+                    (
+                        ElementId::from(("workspace.task-menu", id)),
+                        done.to_string(),
+                    ),
+                    cx,
+                    |_, cx| cx.new(|cx| MenuState::new(items, cx)),
+                )
+                .read(cx)
+                .clone();
             let changed = self.details_changed();
             content = content.child(div().h(px(58.)).px(px(20.)).flex_shrink_0().flex().items_center().justify_between().border_b_1().border_color(c.border)
                 .child(div().font_family(theme.fonts.mono.clone()).text_size(px(11.)).text_color(c.muted_foreground).child(format!("TASK-{id:03}")))
-                .child(menu_root::<()>("workspace.task-menu")
-                    .child(menu_trigger("workspace.task-menu-trigger", cx).aria_label("Task actions").child(icon(LucideIcon::Ellipsis, 16., c.muted_foreground)))
-                    .child(menu_portal().child(menu_positioner(cx).child(menu_popup("workspace.task-menu-popup", cx)
-                        .child(menu_item("workspace.menu.complete", cx).child(if done { "Reopen task" } else { "Mark complete" })
-                            .on_click(move |_, cx| { let _ = menu_complete.update(cx, |this, cx| this.complete(id, !done, cx)); }))
-                        .child(menu_separator(cx))
-                        .child(menu_item("workspace.menu.delete", cx).child("Delete task")
-                            .on_click(move |_, cx| { let _ = menu_delete.update(cx, |this, cx| this.delete_task(id, cx)); })))))))
-                .child(div().flex_1().min_h_0().overflow_hidden().child(scroll_area(cx).id("workspace.details-scroll").size_full()
-                    .child(scroll_area_viewport(cx).child(scroll_area_content(cx).w_full().child(
+                .child(Menu::new(&task_menu, "Task actions").trigger(icon(LucideIcon::Ellipsis, 16., c.muted_foreground))))
+                .child(div().flex_1().min_h_0().overflow_hidden().child(ScrollArea::new("workspace.details-scroll").size_full()
+                    .child(
                         div().p(px(24.)).flex().flex_col().gap(px(22.))
-                            .when(self.editing_title, |el| el.child(self.input(("workspace.title", id), "Task title", &self.title_draft, Draft::Title, cx)))
+                            .when(self.editing_title, |el| el.child(self.input(("workspace.title", id), "Task title", &self.title_draft, Draft::Title, window, cx)))
                             .when(!self.editing_title, |el| el.child(div().flex().items_start().gap(px(8.))
                                 .child(div().flex_1().min_w_0().text_size(px(24.)).line_height(px(31.)).font_weight(FontWeight::MEDIUM).child(task.title.clone()))
                                 .child(Button::new("workspace.edit-title").aria_label("Edit task title").variant(ButtonVariant::Ghost).size(ButtonSize::IconSm)
@@ -764,7 +792,7 @@ impl Workspace {
                                     }))))
                             .child(div().flex().items_center().justify_between().text_size(px(12.))
                                 .child(div().text_color(c.muted_foreground).child("Assigned to"))
-                                .child(div().flex().items_center().gap(px(8.)).child(Avatar::new("workspace.assignee").size(AvatarSize::Sm).child("Y")).child("You")))
+                                .child(div().flex().items_center().gap(px(8.)).child(Avatar::new("workspace.assignee").size(AvatarSize::Sm).fallback("Y")).child("You")))
                             .child(Separator::new("workspace.notes-separator"))
                             .child(div().flex().flex_col().gap(px(12.))
                                 .child(div().flex().items_center().justify_between().font_weight(FontWeight::MEDIUM).text_size(px(12.)).child("Notes")
@@ -773,11 +801,10 @@ impl Workspace {
                                         .on_click(cx.listener(|this, _, _, cx| { this.editing_note = !this.editing_note; cx.notify(); }))))
                                 .child(div().text_size(px(13.)).line_height(px(22.)).text_color(c.muted_foreground)
                                     .child(if self.note_draft.is_empty() { "A good place for the details, links, and little things worth remembering.".into() } else { self.note_draft.clone() }))
-                                .when(self.editing_note, |el| el.child(self.input(("workspace.note", id), "Add a note", &self.note_draft, Draft::Note, cx))))
+                                .when(self.editing_note, |el| el.child(self.input(("workspace.note", id), "Add a note", &self.note_draft, Draft::Note, window, cx))))
                             .when(changed, |el| el.child(Button::new("workspace.save-task").aria_label("Save task changes").label("Save changes")
                                 .disabled(self.title_draft.trim().is_empty()).on_click(cx.listener(|this, _, _, cx| { this.save_details(cx); }))))
                     )))
-                    .child(scroll_area_scrollbar(ScrollAreaOrientation::Vertical, cx).child(scroll_area_thumb(cx)))))
                 .child(div().px(px(24.)).py(px(16.)).flex().items_center().gap(px(8.)).border_t_1().border_color(c.border)
                     .child(icon(if changed { LucideIcon::Circle } else { LucideIcon::Check }, 13., c.muted_foreground))
                     .child(div().text_size(px(11.)).text_color(c.muted_foreground).child(if changed || self.unsaved { "Unsaved changes" } else { "Saved on this Mac" })));
@@ -816,6 +843,7 @@ impl Workspace {
             .is_some()
         {
             self.message_drafts.remove(&self.project);
+            self.message_epoch += 1;
             self.chat_scroll.scroll_to_bottom();
             self.persist("Message saved", cx);
         } else {
@@ -824,7 +852,7 @@ impl Workspace {
         }
     }
 
-    fn chat(&self, cx: &mut Context<Self>) -> gpui::Div {
+    fn chat(&self, window: &mut Window, cx: &mut Context<Self>) -> gpui_kit::Div {
         let c = UiTheme::read(cx).colors;
         let messages: Vec<_> = self
             .data
@@ -858,7 +886,7 @@ impl Workspace {
                     .flex()
                     .items_start()
                     .gap(px(12.))
-                    .child(Avatar::new(("workspace.avatar", message.id)).child("Y"))
+                    .child(Avatar::new(("workspace.avatar", message.id)).fallback("Y"))
                     .child(
                         div()
                             .flex_1()
@@ -911,6 +939,7 @@ impl Workspace {
                                     .map(String::as_str)
                                     .unwrap_or_default(),
                                 Draft::Message,
+                                window,
                                 cx,
                             ),
                         ),
@@ -951,14 +980,14 @@ impl Workspace {
     }
 }
 
-fn icon(name: LucideIcon, size: f32, color: Rgba) -> gpui::Svg {
+fn icon(name: LucideIcon, size: f32, color: Rgba) -> gpui_kit::Svg {
     lucide(name)
         .size(px(size))
         .flex_shrink_0()
         .text_color(color)
 }
 
-fn tag(label: impl Into<SharedString>, foreground: Rgba, background: Rgba) -> gpui::Div {
+fn tag(label: impl Into<SharedString>, foreground: Rgba, background: Rgba) -> gpui_kit::Div {
     div()
         .px(px(6.))
         .py(px(2.))
@@ -1000,7 +1029,7 @@ pub(super) fn workspace_theme(mode: ThemeMode) -> UiTheme {
 }
 
 impl Render for Workspace {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let c = theme.colors;
         let project_name = self
@@ -1159,6 +1188,7 @@ impl Render for Workspace {
                         "New project name",
                         &self.project_draft,
                         Draft::Project,
+                        window,
                         cx,
                     ))
                     .child(
@@ -1189,7 +1219,7 @@ impl Render for Workspace {
                 .child(if dark { "Light appearance" } else { "Dark appearance" })
                 .on_click(cx.listener(move |_, _, _, cx| { UiTheme::set(cx, workspace_theme(if dark { ThemeMode::Light } else { ThemeMode::Dark })); })))
             .child(div().flex().items_center().gap(px(10.))
-                .child(Avatar::new("workspace.profile").size(AvatarSize::Sm).child("Y"))
+                .child(Avatar::new("workspace.profile").size(AvatarSize::Sm).fallback("Y"))
                 .child(div().text_size(px(12.)).text_color(c.sidebar_accent_foreground).child("Your workspace"))
                 .child(icon(LucideIcon::LockKeyhole, 12., c.sidebar_foreground))));
         let view = cx.entity().downgrade();
@@ -1203,7 +1233,7 @@ impl Render for Workspace {
             .child(
                 div()
                     .id("workspace.titlebar")
-                    .window_control_area(gpui::WindowControlArea::Drag)
+                    .window_control_area(gpui_kit::WindowControlArea::Drag)
                     .h(px(52.))
                     .flex_shrink_0()
                     .px(px(28.))
@@ -1306,66 +1336,46 @@ impl Render for Workspace {
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.mode = "tasks";
                                 this.adding_task = true;
-                                this.task_focus.focus(window, cx);
+                                if let Some(focus) = this.task_focus.borrow().as_ref() {
+                                    focus.focus(window, cx);
+                                }
                                 cx.notify();
                             })),
                     ),
             )
             .child(
-                tabs(cx)
-                    .id("workspace.tabs")
-                    .value(Some(self.mode))
+                div()
+                    .flex()
+                    .flex_col()
                     .gap(px(0.))
                     .flex_1()
                     .min_h_0()
-                    .on_value_change(move |mode, _, cx| {
-                        if let Some(mode) = mode {
-                            let _ = view.update(cx, |this, cx| {
-                                this.mode = mode;
-                                if *mode == "chat" {
-                                    this.chat_scroll.scroll_to_bottom();
-                                }
-                                cx.notify();
-                            });
-                        }
-                    })
                     .child(
-                        tabs_list_with_variant(TabsVariant::Line, cx)
+                        Tabs::new("workspace.tabs")
+                            .selected(self.mode)
+                            .variant(TabsVariant::Line)
                             .mx(px(28.))
-                            .child(
-                                tabs_trigger(TabsVariant::Line, cx)
-                                    .id("workspace.tasks-tab")
-                                    .aria_label("Tasks")
-                                    .value("tasks")
-                                    .child(icon(LucideIcon::ListTodo, 15., c.muted_foreground))
-                                    .child("Tasks"),
-                            )
-                            .child(
-                                tabs_trigger(TabsVariant::Line, cx)
-                                    .id("workspace.chat-tab")
-                                    .aria_label("Local chat")
-                                    .value("chat")
-                                    .child(icon(
-                                        LucideIcon::MessagesSquare,
-                                        15.,
-                                        c.muted_foreground,
-                                    ))
-                                    .child("Local chat"),
-                            ),
+                            .item(Tab::new("workspace.tasks-tab", "tasks", "Tasks"))
+                            .item(Tab::new("workspace.chat-tab", "chat", "Local chat"))
+                            .on_change(move |mode, _, cx| {
+                                let _ = view.update(cx, |this, cx| {
+                                    this.mode = if mode == "chat" { "chat" } else { "tasks" };
+                                    if this.mode == "chat" {
+                                        this.chat_scroll.scroll_to_bottom();
+                                    }
+                                    cx.notify();
+                                });
+                            }),
                     )
                     .child(
-                        tabs_content(cx)
-                            .value("tasks")
+                        tabs_content("workspace.panel", self.mode, cx)
                             .flex_1()
                             .min_h_0()
-                            .child(self.tasks(cx)),
-                    )
-                    .child(
-                        tabs_content(cx)
-                            .value("chat")
-                            .flex_1()
-                            .min_h_0()
-                            .child(self.chat(cx)),
+                            .child(if self.mode == "tasks" {
+                                self.tasks(window, cx)
+                            } else {
+                                self.chat(window, cx)
+                            }),
                     ),
             )
             .child(
@@ -1459,87 +1469,94 @@ impl Render for Workspace {
         } else {
             "You have edits to this task. Save them before moving on, or discard them."
         };
-        dialog_root("workspace.unsaved")
-            .open(self.pending.is_some())
-            .on_open_change(move |open, _, _, cx| {
-                if !open {
-                    let _ = modal.update(cx, |this, cx| {
-                        this.pending = None;
-                        cx.notify();
-                    });
-                }
+        let handle = window
+            .use_keyed_state("workspace.unsaved.handle", cx, |_, _| {
+                DialogHandle::new(false)
             })
-            .child_any(main)
+            .read(cx)
+            .clone();
+        if self.pending.is_some() && !handle.is_open() {
+            handle.open(window, cx);
+        }
+        if self.pending.is_none() && handle.is_open() {
+            handle.close(window, cx);
+        }
+        let popup = dialog_popup("workspace.unsaved.popup", save_title, cx)
+            .child(dialog_title("workspace.unsaved.title", cx).child(save_title))
+            .child(dialog_description("workspace.unsaved.description", cx).child(save_description))
             .child(
-                dialog_portal().child(dialog_backdrop(cx)).child(
-                    dialog_viewport(cx).child(
-                        dialog_popup("workspace.unsaved.popup", save_title, cx)
-                            .child(dialog_title("workspace.unsaved.title", cx).child(save_title))
-                            .child(
-                                dialog_description("workspace.unsaved.description", cx)
-                                    .child(save_description),
-                            )
-                            .child_any(
-                                div()
-                                    .flex()
-                                    .justify_end()
-                                    .gap(px(8.))
-                                    .child(
-                                        Button::new("workspace.unsaved.cancel")
-                                            .aria_label("Keep editing task")
-                                            .variant(ButtonVariant::Outline)
-                                            .label("Keep editing")
-                                            .on_click(cx.listener(|this, _, _, cx| {
-                                                this.pending = None;
-                                                cx.notify();
-                                            })),
-                                    )
-                                    .child(
-                                        Button::new("workspace.unsaved.discard")
-                                            .aria_label("Discard task edits")
-                                            .variant(ButtonVariant::Ghost)
-                                            .label("Discard")
-                                            .on_click(cx.listener(|this, _, _, cx| {
-                                                this.select_task(this.selected);
-                                                if let Some(next) = this.pending.take() {
-                                                    this.continue_to(next, cx);
-                                                }
-                                                cx.notify();
-                                            })),
-                                    )
-                                    .child(
-                                        Button::new("workspace.unsaved.save")
-                                            .aria_label("Save task and continue")
-                                            .label("Save and continue")
-                                            .on_click(cx.listener(|this, _, _, cx| {
-                                                if this.save_details(cx)
-                                                    && let Some(next) = this.pending.take()
-                                                {
-                                                    this.continue_to(next, cx);
-                                                }
-                                                cx.notify();
-                                            })),
-                                    ),
-                            ),
+                div()
+                    .flex()
+                    .justify_end()
+                    .gap(px(8.))
+                    .child(
+                        Button::new("workspace.unsaved.cancel")
+                            .aria_label("Keep editing task")
+                            .variant(ButtonVariant::Outline)
+                            .label("Keep editing")
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.pending = None;
+                                cx.notify();
+                            })),
+                    )
+                    .child(
+                        Button::new("workspace.unsaved.discard")
+                            .aria_label("Discard task edits")
+                            .variant(ButtonVariant::Ghost)
+                            .label("Discard")
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.select_task(this.selected);
+                                if let Some(next) = this.pending.take() {
+                                    this.continue_to(next, cx);
+                                }
+                                cx.notify();
+                            })),
+                    )
+                    .child(
+                        Button::new("workspace.unsaved.save")
+                            .aria_label("Save task and continue")
+                            .label("Save and continue")
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                if this.save_details(cx)
+                                    && let Some(next) = this.pending.take()
+                                {
+                                    this.continue_to(next, cx);
+                                }
+                                cx.notify();
+                            })),
                     ),
-                ),
-            )
+            );
+        div().size_full().child(main).child(
+            dialog("workspace.unsaved", &handle, popup, window, cx).on_open_change(
+                move |open, _, _, cx| {
+                    if !open {
+                        let modal = modal.clone();
+                        cx.defer(move |cx| {
+                            let _ = modal.update(cx, |this, cx| {
+                                this.pending = None;
+                                cx.notify();
+                            });
+                        });
+                    }
+                },
+            ),
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{Modifiers, TestAppContext, VisualTestContext};
+    use gpui_kit::{Modifiers, TestAppContext, VisualTestContext};
 
-    #[gpui::test]
+    #[gpui_kit::test]
     fn cmd_q_from_focused_dirty_input_opens_save_confirmation(cx: &mut TestAppContext) {
         let temp = tempfile::tempdir().unwrap();
         let (store, data, error) = Store::open(temp.path().join("workspace.json"));
         cx.update(|cx| {
             gpuicn::init(cx);
             UiTheme::set(cx, workspace_theme(ThemeMode::Light));
-            cx.bind_keys([gpui::KeyBinding::new("cmd-q", Quit, None)]);
+            cx.bind_keys([gpui_kit::KeyBinding::new("cmd-q", Quit, None)]);
         });
         let window = cx.add_window(|_, cx| {
             let mut view = Workspace::new(store, data, error, cx);
@@ -1582,7 +1599,16 @@ mod tests {
             "reverse wrap goes to the last button"
         );
         visual.simulate_keystrokes("tab");
+        visual.update(|window, cx| window.draw(cx).clear(cx));
         visual.simulate_keystrokes("enter");
+        visual.update(|window, cx| {
+            window.dispatch_event(
+                gpui_kit::PlatformInput::KeyUp(gpui_kit::KeyUpEvent {
+                    keystroke: gpui_kit::Keystroke::parse("enter").unwrap(),
+                }),
+                cx,
+            );
+        });
         cx.run_until_parked();
         assert!(
             cx.read_window(&window, |view, cx| view.read(cx).pending.is_none())
@@ -1591,7 +1617,7 @@ mod tests {
         );
     }
 
-    #[gpui::test]
+    #[gpui_kit::test]
     fn failed_save_stays_unsaved_and_can_be_retried(cx: &mut TestAppContext) {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("workspace.json");
@@ -1635,13 +1661,22 @@ mod tests {
         visual.simulate_resize(size(px(1240.), px(800.)));
         visual.update(|window, cx| window.draw(cx).clear(cx));
         // The header toggle must work as a control, including in the drag area.
-        visual.simulate_click(gpui::point(px(266.), px(26.)), Modifiers::default());
+        visual.simulate_click(gpui_kit::point(px(266.), px(26.)), Modifiers::default());
         visual.update(|window, cx| window.draw(cx).clear(cx));
         assert!(
             !cx.read_window(&window, |view, cx| view.read(cx).sidebar.open)
                 .unwrap()
         );
+        visual.update(|window, cx| window.draw(cx).clear(cx));
         visual.simulate_keystrokes("enter");
+        visual.update(|window, cx| {
+            window.dispatch_event(
+                gpui_kit::PlatformInput::KeyUp(gpui_kit::KeyUpEvent {
+                    keystroke: gpui_kit::Keystroke::parse("enter").unwrap(),
+                }),
+                cx,
+            );
+        });
         visual.update(|window, cx| window.draw(cx).clear(cx));
         assert!(
             cx.read_window(&window, |view, cx| view.read(cx).sidebar.open)
@@ -1689,7 +1724,7 @@ mod tests {
         // New task must return focus to an already-open composer without resetting it.
         let search = visual.debug_bounds("Search tasks").unwrap();
         visual.simulate_click(search.center(), Modifiers::default());
-        visual.simulate_click(gpui::point(px(1150.), px(107.)), Modifiers::default());
+        visual.simulate_click(gpui_kit::point(px(1150.), px(107.)), Modifiers::default());
         visual.update(|window, cx| window.draw(cx).clear(cx));
         visual.simulate_input("!");
         assert_eq!(
@@ -1698,7 +1733,16 @@ mod tests {
             "Review the native workspace!"
         );
         visual.simulate_keystrokes("backspace");
+        visual.update(|window, cx| window.draw(cx).clear(cx));
         visual.simulate_keystrokes("enter");
+        visual.update(|window, cx| {
+            window.dispatch_event(
+                gpui_kit::PlatformInput::KeyUp(gpui_kit::KeyUpEvent {
+                    keystroke: gpui_kit::Keystroke::parse("enter").unwrap(),
+                }),
+                cx,
+            );
+        });
         cx.run_until_parked();
         visual.update(|window, cx| window.draw(cx).clear(cx));
         let (_, saved, error) = Store::open(path.clone());
@@ -1757,14 +1801,32 @@ mod tests {
         }
         cx.run_until_parked();
         visual.update(|window, cx| window.draw(cx).clear(cx));
+        visual.update(|window, cx| window.draw(cx).clear(cx));
         visual.simulate_keystrokes("enter");
+        visual.update(|window, cx| {
+            window.dispatch_event(
+                gpui_kit::PlatformInput::KeyUp(gpui_kit::KeyUpEvent {
+                    keystroke: gpui_kit::Keystroke::parse("enter").unwrap(),
+                }),
+                cx,
+            );
+        });
         cx.run_until_parked();
         visual.update(|window, cx| window.draw(cx).clear(cx));
         // Sending a message must leave the new composer ready to type.
         visual.simulate_input("A second message");
         cx.run_until_parked();
         visual.update(|window, cx| window.draw(cx).clear(cx));
+        visual.update(|window, cx| window.draw(cx).clear(cx));
         visual.simulate_keystrokes("enter");
+        visual.update(|window, cx| {
+            window.dispatch_event(
+                gpui_kit::PlatformInput::KeyUp(gpui_kit::KeyUpEvent {
+                    keystroke: gpui_kit::Keystroke::parse("enter").unwrap(),
+                }),
+                cx,
+            );
+        });
         cx.run_until_parked();
         visual.update(|window, cx| window.draw(cx).clear(cx));
         let (_, saved, error) = Store::open(path);

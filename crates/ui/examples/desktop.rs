@@ -1,16 +1,16 @@
 //! Local native review surface for the first desktop component batch.
 //! Run: cargo run -p gpuicn --example desktop --features native-fixture,gpui_platform/runtime_shaders
 
-use gpui::{
+use gpui_icons::{LucideAssetSource, LucideIcon, lucide};
+use gpui_kit::{
     App, AppContext as _, Bounds, Context, Entity, InteractiveElement as _, IntoElement,
     ParentElement as _, Render, StatefulInteractiveElement as _, Styled, Window, WindowBounds,
     WindowOptions, canvas, div, prelude::FluentBuilder as _, px, size,
 };
-use gpui_icons::{LucideAssetSource, LucideIcon, lucide};
 use gpuicn::{
     Button, ButtonSize, ButtonVariant, ThemeMode, UiTheme,
     dialog::*,
-    input::Input,
+    input::{Input, InputState},
     resizable::{PaneLimits, Resizable},
     sidebar::{Sidebar, SidebarItem, sidebar_group_label},
     virtual_list::{ListItem, ListSelectionMode, VirtualList, VirtualListState},
@@ -23,7 +23,7 @@ use std::{
 };
 
 fn main() {
-    gpui_platform::application()
+    gpui_kit::platform::application()
         .with_assets(LucideAssetSource)
         .run(|cx: &mut App| {
             gpuicn::init(cx);
@@ -94,8 +94,8 @@ fn main() {
 struct Desktop {
     collapsed: bool,
     personalized: bool,
-    sidebar_width: gpui::Pixels,
-    content_height: gpui::Pixels,
+    sidebar_width: gpui_kit::Pixels,
+    content_height: gpui_kit::Pixels,
     selected: &'static str,
     resize_count: usize,
     content: Entity<Content>,
@@ -162,7 +162,7 @@ impl Render for Desktop {
                     .when(!collapsed, |el| {
                         el.child(
                             div()
-                                .font_weight(gpui::FontWeight::SEMIBOLD)
+                                .font_weight(gpui_kit::FontWeight::SEMIBOLD)
                                 .child("gpuicn"),
                         )
                     }),
@@ -212,7 +212,7 @@ impl Render for Desktop {
         }
         let status = div().id("lab.status").size_full().overflow_y_scroll().p(px(20.))
             .flex().flex_col().gap(px(12.))
-            .child(div().font_weight(gpui::FontWeight::SEMIBOLD).child("Try the native interactions"))
+            .child(div().font_weight(gpui_kit::FontWeight::SEMIBOLD).child("Try the native interactions"))
             .child(format!("Destination: {}", self.selected))
             .child(format!("Preferred sidebar: {:.0}px · top pane: {:.0}px · resize events: {}",
                 f32::from(self.sidebar_width), f32::from(self.content_height), self.resize_count))
@@ -228,7 +228,7 @@ impl Render for Desktop {
             self.content_height,
             self.content.clone(),
             status,
-            cx.listener(|this, value: &gpui::Pixels, _, cx| {
+            cx.listener(|this, value: &gpui_kit::Pixels, _, cx| {
                 this.content_height = *value;
                 this.resize_count += 1;
                 cx.notify();
@@ -256,7 +256,7 @@ impl Render for Desktop {
                     .border_color(theme.colors.border)
                     .child(
                         div()
-                            .font_weight(gpui::FontWeight::SEMIBOLD)
+                            .font_weight(gpui_kit::FontWeight::SEMIBOLD)
                             .child("Component review"),
                     )
                     .child(
@@ -295,7 +295,7 @@ impl Render for Desktop {
                                 gpuicn::switch::Switch::new("lab.motion")
                                     .aria_label("Reduce motion")
                                     .checked(theme.motion.reduced)
-                                    .on_checked_change(|checked, _, _, cx| {
+                                    .on_change(|checked, _, _, cx| {
                                         let mut theme = UiTheme::read(cx).clone();
                                         theme.motion.reduced = checked;
                                         UiTheme::set(cx, theme);
@@ -343,7 +343,7 @@ impl Render for Desktop {
                     width,
                     sidebar,
                     workspace,
-                    cx.listener(|this, value: &gpui::Pixels, _, cx| {
+                    cx.listener(|this, value: &gpui_kit::Pixels, _, cx| {
                         if !this.collapsed && this.sidebar_width != *value {
                             this.sidebar_width = *value;
                             this.resize_count += 1;
@@ -380,7 +380,21 @@ struct Content {
     list: VirtualListState,
 }
 impl Render for Content {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let note = window.use_keyed_state("lab.note", cx, |window, cx| {
+            InputState::new(window, cx).placeholder("Type here; resizing should preserve this text")
+        });
+        let input = window.use_keyed_state("lab.dialog.input", cx, |window, cx| {
+            InputState::new(window, cx).placeholder("Tab through this dialog")
+        });
+        let handle = window
+            .use_keyed_state("lab.dialog.handle", cx, |_, _| DialogHandle::new(false))
+            .read(cx)
+            .clone();
+        let popup = dialog_popup("lab.dialog.popup", "Native focus check", cx)
+            .child(dialog_title("lab.dialog.title", cx).child("Native focus check"))
+            .child(Input::new(&input).aria_label("Dialog test input"))
+            .child(dialog_action("lab.dialog.close", &handle, cx).label("Close"));
         let count = self.rows.clone();
         let state = self.list.clone();
         div()
@@ -397,40 +411,17 @@ impl Render for Content {
                     .p(px(16.))
                     .flex_shrink_0()
                     .child(
-                        div().w(px(300.)).child(
-                            Input::new("lab.note")
-                                .aria_label("Persistent test text")
-                                .placeholder("Type here; resizing should preserve this text"),
-                        ),
+                        div()
+                            .w(px(300.))
+                            .child(Input::new(&note).aria_label("Persistent test text")),
                     )
                     .child(
-                        dialog_root("lab.dialog")
+                        div()
                             .child(
-                                dialog_trigger("lab.dialog.trigger", cx)
-                                    .aria_label("Open dialog")
-                                    .child("Open dialog"),
+                                dialog_trigger("lab.dialog.trigger", &handle, cx)
+                                    .label("Open dialog"),
                             )
-                            .child(
-                                dialog_portal().child(dialog_backdrop(cx)).child(
-                                    dialog_viewport(cx).child(
-                                        dialog_popup("lab.dialog.popup", "Native focus check", cx)
-                                            .child_any(
-                                                dialog_title("lab.dialog.title", cx)
-                                                    .child("Native focus check"),
-                                            )
-                                            .child_any(
-                                                Input::new("lab.dialog.input")
-                                                    .aria_label("Dialog test input")
-                                                    .placeholder("Tab through this dialog"),
-                                            )
-                                            .child_any(
-                                                dialog_close("lab.dialog.close", cx)
-                                                    .aria_label("Close dialog")
-                                                    .child("Close"),
-                                            ),
-                                    ),
-                                ),
-                            ),
+                            .child(dialog("lab.dialog", &handle, popup, window, cx)),
                     ),
             )
             .child(
@@ -495,13 +486,13 @@ fn review_theme(mode: ThemeMode, personalized: bool) -> UiTheme {
     if personalized {
         theme.radius = gpuicn::theme::UiRadius::new(px(4.));
         theme.spacing.unit = px(4.5);
-        theme.colors.primary = gpui::rgb(0x2563eb);
-        theme.colors.primary_foreground = gpui::rgb(0xffffff);
+        theme.colors.primary = gpui_kit::rgb(0x2563eb);
+        theme.colors.primary_foreground = gpui_kit::rgb(0xffffff);
         theme.colors.ring = theme.colors.primary;
         theme.colors.sidebar_ring = theme.colors.primary;
         theme.colors.sidebar_accent = match mode {
-            ThemeMode::Light => gpui::rgb(0xdbeafe),
-            ThemeMode::Dark => gpui::rgb(0x172554),
+            ThemeMode::Light => gpui_kit::rgb(0xdbeafe),
+            ThemeMode::Dark => gpui_kit::rgb(0x172554),
         };
         theme.colors.sidebar_accent_foreground = theme.colors.foreground;
     }
