@@ -71,6 +71,12 @@ the version, source revision, notarization flag, file size, and checksum before
 building the catalog with the same download. The release tag and packaged source
 must refer to the same clean commit.
 
+The GitHub workflow requires `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` repository secrets. A signed-in local release checkout
+can instead build the catalog with `cd web && bun run build`, then run
+`bunx wrangler@4.129.0 deploy` from the repository root. Keep the verified
+release download files in `web/public/downloads/` for either path.
+
 [The audit record](validation/showcase.md) distinguishes automated checks,
 completed native/browser journeys, and remaining limits. NumberField and toolbar
 inputs now expose native editor roles, names and values.

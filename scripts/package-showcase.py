@@ -49,6 +49,8 @@ def main():
         contents = app / "Contents"
         (contents / "MacOS").mkdir(parents=True)
         (contents / "Resources").mkdir()
+        shutil.copy2(root / "LICENSE", contents / "Resources/LICENSE")
+        shutil.copytree(root / "LICENSES", contents / "Resources/LICENSES")
         shutil.copy2(root / "target/release/showcase", contents / "MacOS/gpuicn-workspace")
         iconset = Path(folder) / "Showcase.iconset"
         iconset.mkdir()
