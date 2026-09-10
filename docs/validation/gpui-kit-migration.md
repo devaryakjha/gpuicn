@@ -1,7 +1,9 @@
 # Direct GPUI Kit migration qualification — 2026-09-10
 
 [PR #55](https://github.com/devaryakjha/gpuicn/pull/55) replaces the previous
-compatibility approach. The published gpuicn beta remains unchanged.
+compatibility approach. This qualification covers the changes for
+gpuicn v0.5.0-beta.2, including the sidebar follow-up in
+[PR #56](https://github.com/devaryakjha/gpuicn/pull/56).
 
 ## Implementation
 
@@ -65,7 +67,7 @@ embedding this runtime on the web need the same handling until upstream fixes it
 
 | Check | Result |
 | --- | --- |
-| Workspace tests | 44 passed |
+| Workspace tests | 45 passed |
 | Workspace Clippy, all targets, warnings denied | Passed |
 | Independent registry install with its own lockfile | Passed; unused public re-export warnings only |
 | Optimized native showcase | Built and launched with isolated temporary data |
@@ -77,6 +79,7 @@ embedding this runtime on the web need the same handling until upstream fixes it
 | Actual WASM drawer | Four layouts, grip snap-back, vertical/horizontal swipe dismissal, Escape and backdrop dismissal passed |
 | Actual WASM dialog | Input editing, Tab to Save, Enter activation, closing and focus return passed |
 | Actual WASM component audit fixes | Select mouse/keyboard commit, disclosure toggles/layout, tooltip focus/Escape, moving indeterminate progress, menu indicators and three-toast stack passed |
+| Sidebar workspace/account triggers | Expanded padding and collapsed bounds passed regression checks; both menus and rail checked in the browser |
 | Native regression checks for audit fixes | Disabled click guard, drag Escape, long-dialog scrolling, disclosure exit/reduced motion and rendered tooltip lifecycle passed |
 | Web build, TypeScript, lint and highlighting | Passed |
 | Preview event boundary check | Passed |
@@ -90,7 +93,8 @@ their original revisions and are not evidence for this migration.
 
 ## Release status
 
-The icon release is already published. This change updates PR #55; it does not
-publish gpuicn, merge the PR or deploy the website. The PR checks record remote
-validation for its current head; the earlier compatibility implementation's green
-run does not apply.
+The icon release is already published, and PR #55 is merged. PR #56 contains
+the sidebar spacing fix and beta.2 release preparation. The PR checks record
+remote validation for each head. See the [beta.2 release notes](../releases/v0.5.0-beta.2.md)
+for the release scope; the earlier compatibility implementation's green run
+does not apply.
