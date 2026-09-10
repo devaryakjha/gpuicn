@@ -252,19 +252,18 @@ export function ComponentPage({
           GPUI handles rendering and input. These notes record the current
           platform differences, including accessibility and interaction limits.
         </p>
-        <div className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
-          {docs.parity
-            .split(/\n\n+/)
-            .slice(1)
-            .filter((paragraph) => !paragraph.startsWith("- Upstream:"))
-            .map((paragraph, index) => (
-              <p className="whitespace-pre-line" key={index}>
-                {paragraph.replaceAll("`", "")}
-              </p>
-            ))}
-        </div>
+        <PlatformNotes content={docs.parityHtml} />
       </section>
     </DocsLayout>
+  )
+}
+
+export function PlatformNotes({ content }: { content: string }) {
+  return (
+    <div
+      className="platform-notes mt-4 space-y-3 text-sm leading-6 text-muted-foreground"
+      dangerouslySetInnerHTML={{ __html: content }}
+    />
   )
 }
 

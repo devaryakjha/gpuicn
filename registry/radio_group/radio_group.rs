@@ -153,13 +153,7 @@ impl RenderOnce for RadioGroup {
                     } else {
                         colors.background.opacity(0.)
                     })
-                    .when(focused, |d| {
-                        super::theme::focus_outline(
-                            d,
-                            colors.ring.opacity(0.5),
-                            gpui_kit::Corners::all(theme.space(2.)),
-                        )
-                    })
+                    .when(focused, |d| d.border_color(colors.ring))
                     .when(checked, |d| {
                         d.child(
                             div()

@@ -131,7 +131,6 @@ impl RenderOnce for Tabs {
             .map(|(index, item)| {
                 let active = Some(index) == selected;
                 let change = self.on_change.clone();
-                let ring = theme.focus_ring();
                 let handle = focus.handles[index].as_ref();
                 gpui_kit::base::Tab::new(item.id)
                     .accessibility_label(item.label.clone())
@@ -150,9 +149,12 @@ impl RenderOnce for Tabs {
                         colors.muted_foreground
                     })
                     .when(self.variant == TabsVariant::Default, |tab| {
-                        tab.rounded(theme.radius.sm).when(active, |tab| {
-                            tab.bg(colors.background).shadow(theme.shadows.sm.clone())
-                        })
+                        tab.rounded(theme.radius.sm)
+                            .border_1()
+                            .border_color(colors.background.opacity(0.))
+                            .when(active, |tab| {
+                                tab.bg(colors.background).shadow(theme.shadows.sm.clone())
+                            })
                     })
                     .when(self.variant == TabsVariant::Line, |tab| {
                         tab.border_b_2().border_color(if active {
@@ -163,7 +165,7 @@ impl RenderOnce for Tabs {
                     })
                     .when(item.disabled, |tab| tab.opacity(0.5).cursor_not_allowed())
                     .when(!item.disabled, |tab| tab.cursor_pointer())
-                    .focus_visible(move |s| s.shadow(ring.clone()))
+                    .focus_visible(move |s| s.border_color(colors.ring))
                     .when_some(change, |tab, handler| {
                         tab.on_click(move |_, window, cx| handler(item.value.clone(), window, cx))
                     })

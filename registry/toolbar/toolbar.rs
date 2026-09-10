@@ -92,7 +92,6 @@ impl ToolbarButton {
         let id = id.into();
         let theme = UiTheme::read(cx);
         let colors = theme.colors;
-        let ring = theme.focus_ring();
         Self {
             id: id.clone(),
             disabled: false,
@@ -101,13 +100,13 @@ impl ToolbarButton {
                 .h(theme.space(7.))
                 .px(theme.space(2.))
                 .rounded(theme.radius.sm)
+                .border_1()
+                .border_color(colors.background.opacity(0.))
                 .text_size(theme.text(14.))
                 .text_color(colors.foreground)
                 .cursor_pointer()
                 .hover(move |s| s.bg(colors.muted))
-                .focus_visible(move |s| {
-                    s.border_1().border_color(colors.ring).shadow(ring.clone())
-                }),
+                .focus_visible(move |s| s.border_color(colors.ring)),
         }
     }
     /// Disables interaction and applies the disabled appearance.

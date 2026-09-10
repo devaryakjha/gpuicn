@@ -1,6 +1,6 @@
 # Virtual List
 
-A native desktop composition using GPUI's pinned `uniform_list` engine and GPUI Kit's shared scrollbar. It is not a direct shadcn component port. Its typography, spacing, selected/hover colors, focus ring and radius use the same gpuicn theme as Sidebar and other controls.
+A native desktop composition using GPUI's pinned `uniform_list` engine and GPUI Kit's shared scrollbar. It is not a direct shadcn component port. Its typography, spacing, selected/hover colors, focus border and radius use the same gpuicn theme as Sidebar and other controls.
 
 Keep `VirtualListState` in your application view. It stores identity/label/disabled metadata, selection, anchor, active row and scroll state; application records and loading stay outside. `replace_items` runs only when that metadata changes. Notify your view after application-driven changes. Interactive gestures update the retained state before `on_event`; the callback can replace selection or data through the same state.
 

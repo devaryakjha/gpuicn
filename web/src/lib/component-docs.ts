@@ -5,7 +5,7 @@ export type ComponentDocs = {
   usageCall: string
   source: string
   api: { signature: string; description: string }[]
-  parity: string
+  parityHtml: string
   modules: string[]
 }
 

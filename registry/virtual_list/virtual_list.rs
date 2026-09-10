@@ -583,14 +583,15 @@ impl RenderOnce for VirtualList {
         } else {
             "Use arrow keys to navigate and Enter to activate."
         };
-        let empty_focus_ring = theme.focus_ring();
         let mut root = div()
             .id(self.id.clone())
             .role(Role::ListBox)
             .aria_label(self.label)
             .aria_description(instructions)
+            .border_1()
+            .border_color(theme.colors.background.opacity(0.))
             .when(self.state.focused().is_none(), |el| {
-                el.focus_visible(move |el| el.shadow(empty_focus_ring))
+                el.focus_visible(move |el| el.border_color(theme.colors.ring))
             })
             .track_focus(&focus.clone().tab_stop(true))
             .relative()
@@ -648,7 +649,6 @@ impl RenderOnce for VirtualList {
                         let left_change = change.clone();
                         let activate_state = state.clone();
                         let activate_change = change.clone();
-                        let ring = rows_theme.focus_ring();
                         let has_focus = focus.is_focused(window);
                         let content = renderer(&row, window, cx);
                         let tooltip_label = row.item.label.clone();
@@ -675,6 +675,8 @@ impl RenderOnce for VirtualList {
                             .h(height)
                             .overflow_hidden()
                             .rounded(rows_theme.radius.md)
+                            .border_1()
+                            .border_color(rows_theme.colors.background.opacity(0.))
                             .when(row.selected, |el| {
                                 el.bg(rows_theme.colors.accent)
                                     .text_color(rows_theme.colors.accent_foreground)
@@ -682,7 +684,9 @@ impl RenderOnce for VirtualList {
                             .when(!row.item.disabled, |el| {
                                 el.hover(|el| el.bg(rows_theme.colors.accent))
                             })
-                            .when(row.focused && has_focus, |el| el.shadow(ring))
+                            .when(row.focused && has_focus, |el| {
+                                el.border_color(rows_theme.colors.ring)
+                            })
                             .font_weight(if row.selected {
                                 FontWeight::MEDIUM
                             } else {

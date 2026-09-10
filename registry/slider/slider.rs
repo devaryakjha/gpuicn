@@ -95,7 +95,9 @@ impl RenderOnce for Slider {
             .border_1()
             .border_color(colors.ring)
             .bg(colors.background)
-            .when(focused && !self.disabled, |t| t.shadow(theme.focus_ring()))
+            .when(focused && !self.disabled, |t| {
+                t.border_color(colors.foreground)
+            })
             .when(!self.disabled, |t| {
                 t.on_mouse_down(MouseButton::Left, move |_, window, cx| {
                     thumb_focus.focus(window, cx)

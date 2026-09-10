@@ -227,26 +227,6 @@ pub(super) fn style_button<
         ButtonVariant::Destructive => colors.destructive.opacity(0.40),
         _ => colors.ring,
     };
-    let focus_ring = match variant {
-        ButtonVariant::Destructive => theme.destructive_focus_ring(),
-        _ => theme.focus_ring(),
-    };
-    let focus_background = match variant {
-        ButtonVariant::Default => colors.primary,
-        ButtonVariant::Outline => match theme.mode {
-            ThemeMode::Light => colors.background,
-            ThemeMode::Dark => colors.background.blend(colors.input.opacity(0.30)),
-        },
-        ButtonVariant::Secondary => colors.secondary,
-        ButtonVariant::Ghost | ButtonVariant::Link => colors.background,
-        ButtonVariant::Destructive => colors.background.blend(colors.destructive.opacity(
-            if theme.mode == ThemeMode::Light {
-                0.10
-            } else {
-                0.20
-            },
-        )),
-    };
 
     let base = base
         .flex()
@@ -262,12 +242,7 @@ pub(super) fn style_button<
         .font_family(theme.fonts.body.clone())
         .font_weight(FontWeight::MEDIUM)
         .text_size(theme.text(metrics.text_size))
-        .focus_visible(move |style| {
-            style
-                .bg(focus_background)
-                .border_color(focus_border)
-                .shadow(focus_ring.clone())
-        })
+        .focus_visible(move |style| style.border_color(focus_border))
         .when(metrics.icon_only, |base| {
             base.w(theme.space(metrics.height / 4.)).p_0()
         })

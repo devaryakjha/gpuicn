@@ -74,4 +74,5 @@ jobs:
           bun run build
           bun run lint
           bun scripts/check-highlighting.ts
+          bun scripts/check-platform-notes.tsx
           node ../scripts/check-preview-updates.mjs

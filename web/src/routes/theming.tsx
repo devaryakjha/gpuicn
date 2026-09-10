@@ -42,7 +42,7 @@ function ThemingPage() {
           Semantic colors for surfaces, content, controls, borders, and focus.
         </li>
         <li>Geist body and heading fonts, plus Geist Mono for code.</li>
-        <li>Corner radii, spacing, shadows, and focus rings.</li>
+        <li>Corner radii, spacing, shadows, and focus borders.</li>
         <li>Independent type scale, motion durations, easing, and reduced motion.</li>
       </ul>
       <p className="mt-5 leading-7 text-muted-foreground">

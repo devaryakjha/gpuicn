@@ -30,22 +30,18 @@ pub fn collapsible(
 pub fn collapsible_trigger(id: impl Into<ElementId>, open: bool, cx: &App) -> Button {
     let theme = UiTheme::read(cx);
     let colors = theme.colors;
-    let ring = theme.focus_ring();
     Button::new(id)
         .aria_expanded(open)
         .px(theme.space(2.5))
         .py(theme.space(1.5))
         .rounded(theme.radius.lg)
+        .border_1()
+        .border_color(colors.background.opacity(0.))
         .text_size(theme.text(14.))
         .text_color(colors.foreground)
         .cursor_pointer()
         .hover(move |s| s.bg(colors.muted))
-        .focus_visible(move |s| {
-            s.bg(colors.background)
-                .border_1()
-                .border_color(colors.ring)
-                .shadow(ring.clone())
-        })
+        .focus_visible(move |s| s.border_color(colors.ring))
 }
 /// Creates the disclosure content's text treatment.
 pub fn collapsible_content(cx: &App) -> Div {

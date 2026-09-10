@@ -36,7 +36,6 @@ pub fn accordion_trigger(
 ) -> AccordionTrigger {
     let theme = UiTheme::read(cx);
     let colors = theme.colors;
-    let ring = theme.focus_ring();
     AccordionTrigger::new(id)
         .open(open)
         .disabled(disabled)
@@ -75,11 +74,7 @@ pub fn accordion_trigger(
         .font_weight(FontWeight::MEDIUM)
         .text_size(theme.text(14.))
         .text_color(colors.foreground)
-        .focus_visible(move |s| {
-            s.bg(colors.background)
-                .border_color(colors.ring)
-                .shadow(ring.clone())
-        })
+        .focus_visible(move |s| s.border_color(colors.ring))
         .child(super::theme::disclosure_icon(
             lucide(LucideIcon::ChevronDown)
                 .size(theme.space(4.))

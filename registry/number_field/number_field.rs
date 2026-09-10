@@ -53,7 +53,6 @@ impl Styled for NumberField {
 impl RenderOnce for NumberField {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let t = UiTheme::read(cx).clone();
-        let ring = t.focus_ring();
         let focused = self.state.focus_handle(cx).is_focused(window) && !self.disabled;
         let mut input = Input::new(&self.state)
             .bordered(false)
@@ -69,9 +68,7 @@ impl RenderOnce for NumberField {
             .rounded(t.radius.lg)
             .border_1()
             .border_color(t.colors.input)
-            .when(focused, |root| {
-                root.border_color(t.colors.ring).shadow(ring)
-            })
+            .when(focused, |root| root.border_color(t.colors.ring))
             .when(self.disabled, |root| root.opacity(0.5))
             .decrement_button({
                 let t = t.clone();

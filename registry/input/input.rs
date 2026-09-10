@@ -89,11 +89,6 @@ impl RenderOnce for Input {
         let action_state = self.state.clone();
         let click_state = self.state.clone();
         let a11y_focus = self.state.clone();
-        let ring = if self.invalid {
-            theme.destructive_focus_ring()
-        } else {
-            theme.focus_ring()
-        };
         let root = InputBase::new(ElementId::from(("input", self.state.entity_id())))
             .focused(focused)
             .disabled(self.disabled)
@@ -151,7 +146,6 @@ impl RenderOnce for Input {
                 } else {
                     colors.ring
                 })
-                .shadow(ring)
             })
             .when(self.disabled, |root| root.opacity(0.5).cursor_not_allowed())
             .child(self.state);
