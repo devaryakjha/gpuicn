@@ -144,9 +144,12 @@ impl SelectState {
             });
         self.value = text.as_ref().and(value);
         let text = text.unwrap_or_default();
-        self.syncing_value = Some(text.clone());
-        self.input
-            .update(cx, |input, cx| input.set_value(text, window, cx));
+        // Plain selects have no rendered editor or initialized editor font.
+        if self.mode != Mode::Select {
+            self.syncing_value = Some(text.clone());
+            self.input
+                .update(cx, |input, cx| input.set_value(text, window, cx));
+        }
         cx.notify();
     }
     fn visible(&self, cx: &App) -> Vec<usize> {
@@ -241,6 +244,23 @@ impl SelectState {
     }
 }
 impl EventEmitter<SelectEvent> for SelectState {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[gpui_kit::test]
+    fn choosing_an_option_without_a_rendered_editor(cx: &mut gpui_kit::TestAppContext) {
+        let window = cx.add_empty_window();
+        window.update(|window, cx| {
+            crate::init(cx);
+            let state =
+                cx.new(|cx| SelectState::new([SelectItem::new("pear", "Pear")], window, cx));
+            state.update(cx, |state, cx| state.choose(0, window, cx));
+            assert_eq!(state.read(cx).value().map(|v| v.as_ref()), Some("pear"));
+            assert!(state.read(cx).input.read(cx).value().is_empty());
+        });
+    }
+}
 impl Focusable for SelectState {
     fn focus_handle(&self, cx: &App) -> FocusHandle {
         if self.mode == Mode::Select {
@@ -266,14 +286,22 @@ impl Render for SelectState {
                 .accessibility_label("Clear selection")
                 .size(theme.space(6.))
                 .on_click(cx.listener(|this, _, window, cx| this.clear(window, cx)))
-                .child(lucide(LucideIcon::X).size(theme.space(3.5)));
+                .child(
+                    lucide(LucideIcon::X)
+                        .size(theme.space(3.5))
+                        .text_color(colors.muted_foreground),
+                );
             let toggle = Button::new((id.clone(), "toggle"))
                 .focusable(false)
                 .disabled(self.disabled)
                 .accessibility_label("Show options")
                 .size(theme.space(6.))
                 .on_click(cx.listener(|this, _, _, cx| this.set_open(!this.open, cx)))
-                .child(lucide(LucideIcon::ChevronDown).size(theme.space(4.)));
+                .child(
+                    lucide(LucideIcon::ChevronDown)
+                        .size(theme.space(4.))
+                        .text_color(colors.muted_foreground),
+                );
             div()
                 .flex()
                 .items_center()
@@ -324,7 +352,11 @@ impl Render for SelectState {
                         }))
                 })
                 .child(text)
-                .child(lucide(LucideIcon::ChevronDown).size(theme.space(4.)))
+                .child(
+                    lucide(LucideIcon::ChevronDown)
+                        .size(theme.space(4.))
+                        .text_color(colors.muted_foreground),
+                )
                 .into_any_element()
         };
         let mut content = div().w_full().child(trigger);
@@ -412,7 +444,10 @@ impl Render for SelectState {
             .on_open_change(move |open, _, cx| {
                 open_state.update(cx, |state, cx| state.set_open(open, cx))
             })
-            .on_confirm(move |window, cx| state.update(cx, |this, cx| this.confirm(window, cx)))
+            .on_confirm(move |window, cx| {
+                state.update(cx, |this, cx| this.confirm(window, cx));
+                cx.stop_propagation();
+            })
             .child(content);
         apply_style(
             div()

@@ -632,3 +632,122 @@ fn drawer_edges_keep_footer_visible_and_swipes_dismiss(cx: &mut TestAppContext) 
         );
     }
 }
+
+#[gpui_kit::test]
+fn disclosures_reveal_retain_exiting_content_and_remove_it(cx: &mut TestAppContext) {
+    use gpuicn::{accordion::*, collapsible::*, theme::UiTheme};
+    use std::time::Duration;
+    struct Disclosures(bool);
+    impl Render for Disclosures {
+        fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            div()
+                .w(px(300.))
+                .flex()
+                .flex_col()
+                .child(
+                    div().debug_selector(|| "collapsible-region".into()).child(
+                        collapsible("reveal", self.0, window, cx).content(
+                            collapsible_content(cx)
+                                .h(px(100.))
+                                .debug_selector(|| "collapsible-content".into()),
+                        ),
+                    ),
+                )
+                .child(
+                    div().debug_selector(|| "accordion-region".into()).child(
+                        accordion_item(cx).open(self.0).panel(accordion_content(
+                            "panel",
+                            self.0,
+                            div()
+                                .h(px(100.))
+                                .debug_selector(|| "accordion-content".into()),
+                            window,
+                            cx,
+                        )),
+                    ),
+                )
+        }
+    }
+    cx.update(gpuicn::init);
+    let (view, cx) = cx.add_window_view(|_, _| Disclosures(false));
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(cx.debug_bounds("collapsible-content").is_none());
+    assert!(cx.debug_bounds("accordion-content").is_none());
+    cx.update(|window, cx| {
+        view.update(cx, |view, cx| {
+            view.0 = true;
+            cx.notify();
+        });
+        window.draw(cx).clear(cx);
+    });
+    cx.executor().advance_clock(Duration::from_millis(60));
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    for selector in ["collapsible-region", "accordion-region"] {
+        let height = cx.debug_bounds(selector).unwrap().size.height;
+        assert!(height > px(0.) && height < px(100.));
+    }
+    cx.update(|window, cx| {
+        view.update(cx, |view, cx| {
+            view.0 = false;
+            cx.notify();
+        });
+        window.draw(cx).clear(cx);
+    });
+    assert!(cx.debug_bounds("collapsible-content").is_some());
+    assert!(cx.debug_bounds("accordion-content").is_some());
+    cx.executor().advance_clock(Duration::from_millis(200));
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    assert!(cx.debug_bounds("collapsible-content").is_none());
+    assert!(cx.debug_bounds("accordion-content").is_none());
+    cx.update(|window, cx| {
+        let mut theme = UiTheme::read(cx).clone();
+        theme.motion.reduced = true;
+        UiTheme::set(cx, theme);
+        view.update(cx, |view, cx| {
+            view.0 = true;
+            cx.notify();
+        });
+        window.draw(cx).clear(cx);
+        window.draw(cx).clear(cx);
+    });
+    let content = cx.debug_bounds("collapsible-content").unwrap();
+    assert_eq!(content.size.width, px(300.));
+    assert_eq!(
+        cx.debug_bounds("collapsible-region").unwrap().size.height,
+        px(100.)
+    );
+}
+
+#[gpui_kit::test]
+fn long_dialog_content_can_scroll_to_the_footer(cx: &mut TestAppContext) {
+    use gpui_kit::{ScrollDelta, ScrollWheelEvent, point};
+    use gpuicn::dialog::*;
+    struct LongDialog;
+    impl Render for LongDialog {
+        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            dialog_popup("long-popup", "Long dialog", cx)
+                .debug_selector(|| "long-popup".into())
+                .child(div().h(px(900.)).flex_shrink_0().child("Long content"))
+                .child(
+                    div()
+                        .h(px(32.))
+                        .flex_shrink_0()
+                        .debug_selector(|| "long-footer".into())
+                        .child("Last action"),
+                )
+        }
+    }
+    cx.update(gpuicn::init);
+    let (_, cx) = cx.add_window_view(|_, _| LongDialog);
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    let popup = cx.debug_bounds("long-popup").unwrap();
+    assert!(cx.debug_bounds("long-footer").unwrap().bottom() > popup.bottom());
+    cx.simulate_event(ScrollWheelEvent {
+        position: popup.center(),
+        delta: ScrollDelta::Pixels(point(px(0.), px(-1000.))),
+        ..Default::default()
+    });
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    let footer = cx.debug_bounds("long-footer").unwrap();
+    assert!(footer.top() >= popup.top() && footer.bottom() <= popup.bottom());
+}

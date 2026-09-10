@@ -214,7 +214,11 @@ impl RenderOnce for Resizable {
                 };
                 let key = event.keystroke.key.as_str();
                 if key == "escape" {
-                    key_state.update(cx, |state, _| state.drag = None);
+                    let dragging = key_state.update(cx, |state, _| state.drag.take().is_some());
+                    if dragging {
+                        window.prevent_default();
+                        cx.stop_propagation();
+                    }
                     return;
                 }
                 let next = match key {
@@ -387,31 +391,43 @@ mod interaction_tests {
     };
     struct View {
         size: Pixels,
+        escaped: bool,
     }
     impl Render for View {
         fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-            div().w(px(700.)).h(px(300.)).child(
-                Resizable::new(
-                    "test.split",
-                    "Resize test",
-                    self.size,
-                    div(),
-                    div(),
-                    cx.listener(|this, value: &Pixels, _, cx| {
-                        this.size = *value;
-                        cx.notify();
-                    }),
+            div()
+                .w(px(700.))
+                .h(px(300.))
+                .on_key_down(cx.listener(|this, event: &gpui_kit::KeyDownEvent, _, _| {
+                    if event.keystroke.key == "escape" {
+                        this.escaped = true;
+                    }
+                }))
+                .child(
+                    Resizable::new(
+                        "test.split",
+                        "Resize test",
+                        self.size,
+                        div(),
+                        div(),
+                        cx.listener(|this, value: &Pixels, _, cx| {
+                            this.size = *value;
+                            cx.notify();
+                        }),
+                    )
+                    .first_limits(PaneLimits::new(px(160.), px(400.)))
+                    .second_limits(PaneLimits::new(px(240.), px(800.))),
                 )
-                .first_limits(PaneLimits::new(px(160.), px(400.)))
-                .second_limits(PaneLimits::new(px(240.), px(800.))),
-            )
         }
     }
     #[test]
     fn pointer_and_keyboard_share_bounds_and_release_ends_drag() {
         let mut cx = TestAppContext::single();
         cx.update(|cx| UiTheme::set(cx, UiTheme::neutral_light()));
-        let window = cx.add_window(|_, _| View { size: px(200.) });
+        let window = cx.add_window(|_, _| View {
+            size: px(200.),
+            escaped: false,
+        });
         for _ in 0..2 {
             cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx))
                 .unwrap();
@@ -439,6 +455,29 @@ mod interaction_tests {
             cx.read_window(&window, |view, cx| view.read(cx).size)
                 .unwrap(),
             px(280.)
+        );
+        let handle = visual.debug_bounds("resizable-handle").unwrap().center();
+        visual.simulate_mouse_down(handle, MouseButton::Left, Modifiers::default());
+        visual.simulate_keystrokes("escape");
+        assert!(
+            !cx.read_window(&window, |view, cx| view.read(cx).escaped)
+                .unwrap()
+        );
+        visual.simulate_mouse_move(
+            point(px(600.), handle.y),
+            Some(MouseButton::Left),
+            Modifiers::default(),
+        );
+        assert_eq!(
+            cx.read_window(&window, |view, cx| view.read(cx).size)
+                .unwrap(),
+            px(280.)
+        );
+        visual.simulate_mouse_up(handle, MouseButton::Left, Modifiers::default());
+        visual.simulate_keystrokes("escape");
+        assert!(
+            cx.read_window(&window, |view, cx| view.read(cx).escaped)
+                .unwrap()
         );
         visual.simulate_keystrokes("right");
         assert_eq!(

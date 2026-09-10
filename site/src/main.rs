@@ -575,7 +575,13 @@ impl Showcase {
                                 })
                             }),
                     ))
-                    .panel(accordion_content(cx).child(text))
+                    .panel(accordion_content(
+                        ("faq-content", i),
+                        selected == i,
+                        text,
+                        window,
+                        cx,
+                    ))
             }),
         )
     }
@@ -726,23 +732,58 @@ impl Showcase {
             )
     }
 
-    fn collapsible_preview(
-        &self,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> impl IntoElement {
-        collapsible(cx)
-            .open(self.collapsible_open)
-            .w(px(320.))
-            .child(
-                collapsible_trigger("preview.disclosure", self.collapsible_open, cx)
-                    .child("Recent projects")
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.collapsible_open = !this.collapsible_open;
-                        cx.notify();
-                    })),
-            )
-            .content(collapsible_content(cx).child("Design system · Documentation · Website"))
+    fn collapsible_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = UiTheme::read(cx).clone();
+        let project = |name: &'static str| {
+            div()
+                .w_full()
+                .rounded(theme.radius.lg)
+                .border_1()
+                .border_color(theme.colors.border)
+                .px(theme.space(4.))
+                .py(theme.space(2.5))
+                .font_family(theme.fonts.mono.clone())
+                .text_size(theme.text(13.))
+                .child(name)
+        };
+        div().w(px(340.)).h(px(240.)).child(
+            collapsible("preview.projects", self.collapsible_open, window, cx)
+                .gap(theme.space(2.))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .child(
+                            div()
+                                .font_weight(gpui_kit::FontWeight::MEDIUM)
+                                .child("Recent projects"),
+                        )
+                        .child(
+                            collapsible_trigger("preview.disclosure", self.collapsible_open, cx)
+                                .accessibility_label("Toggle recent projects")
+                                .child(
+                                    lucide(LucideIcon::ChevronsUpDown)
+                                        .size(theme.space(4.))
+                                        .text_color(theme.colors.foreground),
+                                )
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.collapsible_open = !this.collapsible_open;
+                                    cx.notify();
+                                })),
+                        ),
+                )
+                .child(project("Design system"))
+                .content(
+                    collapsible_content(cx)
+                        .pt(px(0.))
+                        .flex()
+                        .flex_col()
+                        .gap(theme.space(2.))
+                        .child(project("Documentation"))
+                        .child(project("Website")),
+                ),
+        )
     }
 
     fn checkbox_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -2647,15 +2688,20 @@ impl Showcase {
     fn toast_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let state = window.use_keyed_state("notifications", cx, |_, cx| ToastState::new(cx));
         let trigger = state.clone();
+        let sequence = window.use_keyed_state("notification-sequence", cx, |_, _| 0_usize);
         div()
             .child(
                 Button::new("notify")
                     .variant(ButtonVariant::Outline)
                     .label("Show notification")
                     .on_click(move |_, _, cx| {
+                        let id = sequence.update(cx, |next, _| {
+                            *next += 1;
+                            format!("saved-{}", *next)
+                        });
                         trigger.update(cx, |state, cx| {
                             state.push(
-                                "saved",
+                                id,
                                 "Changes saved",
                                 "Your settings are up to date.",
                                 Some(std::time::Duration::from_secs(5)),
@@ -2765,16 +2811,21 @@ impl Showcase {
             .button(ToolbarButton::new("more", "More options", cx).child("More"))
     }
 
-    fn tooltip_preview(&self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        gpui_kit::base::Button::new("tooltip-trigger")
-            .accessibility_label("Add to library")
-            .tooltip(|_, cx| text_tooltip("Add to library".into(), cx))
-            .px(px(12.))
-            .py(px(8.))
-            .border_1()
-            .border_color(UiTheme::read(cx).colors.border)
-            .rounded(px(8.))
-            .child("Hover for tooltip")
+    fn tooltip_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        tooltip(
+            "preview.tooltip",
+            "Add to library",
+            gpui_kit::base::Button::new("tooltip-trigger")
+                .accessibility_label("Add to library")
+                .px(px(12.))
+                .py(px(8.))
+                .border_1()
+                .border_color(UiTheme::read(cx).colors.border)
+                .rounded(px(8.))
+                .child("Hover or focus"),
+            window,
+            cx,
+        )
     }
 }
 

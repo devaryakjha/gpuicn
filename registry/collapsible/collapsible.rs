@@ -3,12 +3,25 @@ use super::theme::UiTheme;
 use gpui_kit::base::Button;
 pub use gpui_kit::base::Collapsible;
 use gpui_kit::{
-    App, Div, ElementId, InteractiveElement as _, StatefulInteractiveElement as _, Styled, div,
+    App, Div, ElementId, InteractiveElement as _, StatefulInteractiveElement as _, Styled, Window,
+    div,
 };
 
-/// Creates a region whose caller sets `.open(...)` and supplies `.content(...)`.
-pub fn collapsible(cx: &App) -> Collapsible {
-    Collapsible::new()
+/// Creates a controlled region that reveals and removes its content with theme motion.
+pub fn collapsible(
+    id: impl Into<ElementId>,
+    open: bool,
+    window: &mut Window,
+    cx: &mut App,
+) -> Collapsible {
+    let id = id.into();
+    let presence = super::theme::presence(id.clone(), open, window, cx);
+    let visible = presence.should_render() && (open || presence.progress > 0.);
+    let mut region = Collapsible::new().open(visible);
+    if visible {
+        region = region.reveal(id, presence.progress);
+    }
+    region
         .flex()
         .flex_col()
         .font_family(UiTheme::read(cx).fonts.body.clone())
@@ -38,6 +51,7 @@ pub fn collapsible_trigger(id: impl Into<ElementId>, open: bool, cx: &App) -> Bu
 pub fn collapsible_content(cx: &App) -> Div {
     let theme = UiTheme::read(cx);
     div()
+        .w_full()
         .pt(theme.space(2.))
         .overflow_hidden()
         .font_family(theme.fonts.body.clone())

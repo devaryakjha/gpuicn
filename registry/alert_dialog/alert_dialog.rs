@@ -1,7 +1,7 @@
 //! Nova confirmation dialog using Kit's non-dismissible alert host.
 use super::{
     button::{Button, ButtonVariant},
-    dialog::{DialogHandle, dialog_backdrop, modal_focus},
+    dialog::{DialogHandle, dialog_backdrop, modal_focus, modal_viewport},
     theme::UiTheme,
 };
 pub use gpui_kit::base::AlertDialog;
@@ -22,13 +22,13 @@ pub fn alert_dialog(
     let scope = modal_focus::ModalFocus::new(id.clone());
     let popup = scope
         .trap(div(), true)
-        .id(id)
+        .id(id.clone())
         .track_focus(&focus)
         .w_full()
         .max_w(UiTheme::read(cx).space(96.))
         .child(scope.boundary(false))
         .child(scope.boundary(true))
-        .child(popup);
+        .child(modal_viewport((id, "viewport"), popup, window, cx));
     AlertDialog::new(cx)
         .handle(handle.clone())
         .close_on_escape(false)

@@ -2,8 +2,8 @@
 
 use gpui_kit::base::{Progress as BaseProgress, ProgressIndicator, ProgressTrack};
 use gpui_kit::{
-    App, ElementId, IntoElement, ParentElement as _, RenderOnce, SharedString, Styled, Window,
-    relative,
+    Animation, AnimationExt as _, App, ElementId, IntoElement, ParentElement as _, RenderOnce,
+    SharedString, Styled, Window, relative,
 };
 
 use super::theme::UiTheme;
@@ -59,7 +59,7 @@ impl RenderOnce for Progress {
         let theme = UiTheme::read(cx).clone();
         let spacing = theme.spacing.unit;
         let progress = self.value.map(|value| ratio(value, self.min, self.max));
-        let root = BaseProgress::new(self.id)
+        let root = BaseProgress::new(self.id.clone())
             .value(progress.unwrap_or(0.) * 100.)
             .indeterminate(progress.is_none())
             .w_full()
@@ -70,6 +70,22 @@ impl RenderOnce for Progress {
         if let Some(label) = self.label {
             root = root.accessibility_label(label);
         }
+        let indicator = ProgressIndicator::new()
+            .w(relative(progress.unwrap_or(0.33)))
+            .h_full()
+            .rounded_full()
+            .bg(theme.colors.primary);
+        let indicator = if progress.is_none() && !theme.motion.reduced && !cx.reduce_motion() {
+            indicator
+                .with_animation(
+                    (self.id, "indeterminate"),
+                    Animation::new(std::time::Duration::from_millis(1400)).repeat(),
+                    |bar, phase| bar.relative().left(relative(-0.33 + phase * 1.33)),
+                )
+                .into_any_element()
+        } else {
+            indicator.into_any_element()
+        };
         root.child(
             ProgressTrack::new()
                 .relative()
@@ -78,13 +94,7 @@ impl RenderOnce for Progress {
                 .rounded_full()
                 .overflow_hidden()
                 .bg(theme.colors.muted)
-                .child(
-                    ProgressIndicator::new()
-                        .w(relative(progress.unwrap_or(0.33)))
-                        .h_full()
-                        .rounded_full()
-                        .bg(theme.colors.primary),
-                ),
+                .child(indicator),
         )
     }
 }

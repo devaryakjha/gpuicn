@@ -3,7 +3,7 @@
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
 `registry/tooltip/tooltip.rs`, using GPUI Kit 0.6.1.
 
-text_tooltip creates a themed view for the native GPUI tooltip attachment point. Attach it to one interactive trigger. Native pointer/focus behavior owns its visibility; gpuicn supplies the Nova tooltip surface.
+`tooltip` attaches a Nova surface to one Kit button and shows it on pointer hover or keyboard focus. Escape dismisses it. Kit supplies the delayed overlay and viewport-aware placement. `text_tooltip` remains available for GPUI's pointer-only `.tooltip(...)` attachment.
 
 The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
 exact exit animations and cross-platform screen-reader parity are not implied by

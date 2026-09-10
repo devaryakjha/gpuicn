@@ -25,7 +25,7 @@ pub fn dialog(
     let scope = modal_focus::ModalFocus::new(id.clone());
     let popup = scope
         .trap(div(), true)
-        .id(id)
+        .id(id.clone())
         .track_focus(&focus)
         .w_full()
         .max_w(UiTheme::read(cx).space(96.))
@@ -37,7 +37,7 @@ pub fn dialog(
         })
         .child(scope.boundary(false))
         .child(scope.boundary(true))
-        .child(popup);
+        .child(modal_viewport((id.clone(), "viewport"), popup, window, cx));
     Dialog::new(cx)
         .handle(handle.clone())
         .close_on_escape(false)
@@ -50,6 +50,20 @@ pub fn dialog(
         // Enter in an arbitrary child must not dismiss an unfinished form.
         .on_ok(|_, _, _| false)
 }
+/// Keeps a modal's full content reachable even in a short window.
+pub(crate) fn modal_viewport(
+    id: impl Into<ElementId>,
+    popup: impl IntoElement,
+    window: &Window,
+    cx: &App,
+) -> Stateful<Div> {
+    div()
+        .id(id)
+        .max_h((window.viewport_size().height - UiTheme::read(cx).space(8.)).max(px(0.)))
+        .overflow_y_scroll()
+        .child(popup)
+}
+
 /// A keyboard-accessible button opening the caller's handle.
 pub fn dialog_trigger(id: impl Into<ElementId>, handle: &DialogHandle, _cx: &App) -> Button {
     let handle = handle.clone();
@@ -100,7 +114,7 @@ pub fn dialog_popup(
         .min_w(px(0.))
         .max_w(t.space(96.))
         .max_h(t.space(100.))
-        .overflow_hidden()
+        .overflow_y_scroll()
         .flex()
         .flex_col()
         .gap(t.space(4.))

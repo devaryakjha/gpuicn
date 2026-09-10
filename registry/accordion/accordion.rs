@@ -5,8 +5,8 @@ pub use gpui_kit::base::{
     Accordion, AccordionHeader, AccordionItem, AccordionPanel, AccordionTrigger,
 };
 use gpui_kit::{
-    App, ElementId, FontWeight, InteractiveElement as _, ParentElement as _, Styled,
-    prelude::FluentBuilder as _,
+    App, ElementId, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _, Styled,
+    Window, div, prelude::FluentBuilder as _,
 };
 
 /// Creates the accordion collection. Each item receives its expanded state from the caller.
@@ -43,7 +43,24 @@ pub fn accordion_trigger(
         .when(!disabled, |b| {
             b.tab_index(0).cursor_pointer().hover(|s| s.underline())
         })
-        .when(disabled, |b| b.opacity(0.5).cursor_not_allowed())
+        .when(disabled, |b| {
+            b.opacity(0.5)
+                .cursor_not_allowed()
+                .capture_any_mouse_down(|_, window, cx| {
+                    window.prevent_default();
+                    cx.stop_propagation();
+                })
+                .capture_any_mouse_up(|_, window, cx| {
+                    window.prevent_default();
+                    cx.stop_propagation();
+                })
+                .capture_key_down(|event, window, cx| {
+                    if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                        window.prevent_default();
+                        cx.stop_propagation();
+                    }
+                })
+        })
         .w_full()
         .flex()
         .flex_row_reverse()
@@ -70,13 +87,66 @@ pub fn accordion_trigger(
             open,
         ))
 }
-/// Creates the panel; attach it with `AccordionItem::panel` to share visibility.
-pub fn accordion_content(cx: &App) -> AccordionPanel {
+/// Creates a controlled panel, retaining its content only while the exit motion runs.
+pub fn accordion_content(
+    id: impl Into<ElementId>,
+    open: bool,
+    content: impl IntoElement,
+    window: &mut Window,
+    cx: &mut App,
+) -> AccordionPanel {
+    let id = id.into();
+    let presence = super::theme::presence(id.clone(), open, window, cx);
     let theme = UiTheme::read(cx);
     AccordionPanel::new()
-        .overflow_hidden()
-        .pb(theme.space(2.5))
-        .font_family(theme.fonts.body.clone())
-        .text_size(theme.text(14.))
-        .text_color(theme.colors.foreground)
+        .open(open)
+        .keep_mounted(presence.should_render() && (open || presence.progress > 0.))
+        .child(gpui_kit::base::motion::MotionReveal::new(
+            id,
+            presence.progress,
+            div()
+                .w_full()
+                .pb(theme.space(2.5))
+                .font_family(theme.fonts.body.clone())
+                .text_size(theme.text(14.))
+                .text_color(theme.colors.foreground)
+                .child(content)
+                .into_any_element(),
+        ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui_kit::{
+        Context, Modifiers, Render, StatefulInteractiveElement as _, TestAppContext, point, px,
+    };
+    use std::{cell::Cell, rc::Rc};
+
+    #[gpui_kit::test]
+    fn disabled_trigger_blocks_caller_click_handlers(cx: &mut TestAppContext) {
+        struct Probe {
+            disabled: bool,
+            clicks: Rc<Cell<usize>>,
+        }
+        impl Render for Probe {
+            fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+                let clicks = self.clicks.clone();
+                accordion_trigger("trigger", false, self.disabled, cx)
+                    .size(px(100.))
+                    .on_click(move |_, _, _| clicks.set(clicks.get() + 1))
+            }
+        }
+        cx.update(|cx| UiTheme::set(cx, UiTheme::neutral_light()));
+        for disabled in [false, true] {
+            let clicks = Rc::new(Cell::new(0));
+            let (_, visual) = cx.add_window_view({
+                let clicks = clicks.clone();
+                move |_, _| Probe { disabled, clicks }
+            });
+            visual.update(|window, cx| window.draw(cx).clear(cx));
+            visual.simulate_click(point(px(10.), px(10.)), Modifiers::default());
+            assert_eq!(clicks.get(), usize::from(!disabled));
+        }
+    }
 }

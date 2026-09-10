@@ -124,6 +124,12 @@ impl Render for ToastState {
                         .size(theme.space(4.))
                         .text_color(colors.muted_foreground),
                 );
+            let presence = super::theme::presence(
+                ElementId::from((ElementId::from(id.clone()), "presence")),
+                phase != ToastTransitionStatus::Ending,
+                window,
+                cx,
+            );
             let toast = Toast::new(id.clone())
                 .transition_status(phase)
                 .relative()
@@ -140,11 +146,7 @@ impl Render for ToastState {
                 .flex()
                 .flex_col()
                 .gap(theme.space(1.))
-                .opacity(if phase == ToastTransitionStatus::Ending {
-                    0.
-                } else {
-                    1.
-                })
+                .opacity(presence.progress)
                 .child(
                     div()
                         .font_weight(FontWeight::MEDIUM)

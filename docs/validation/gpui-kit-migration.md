@@ -34,6 +34,21 @@ a scrollable body with fixed header/footer, reversible Kit presence transitions
 and captured grip dragging. Reduced-motion and focus restoration follow the
 visual lifecycle. See [Drawer parity](../parity/drawer.md) for the exact API scope.
 
+The component audit follow-up fixes Select's WASM font panic by skipping writes to
+its unused hidden editor, and consumes Enter after a selection commits. SVG menu
+and selector indicators now have explicit colors. Accordion and Collapsible use
+Kit's measured reveal and presence lifecycle, Progress animates unknown completion,
+and Toast fades through exit while its demo uses unique IDs. The Collapsible demo
+has a dedicated toggle and separate project rows with a fixed starting position.
+
+Dialog and alert content can scroll within the viewport. Disabled accordion
+triggers block caller click handlers; Escape cancels an active resize without
+closing its parent. Tooltips show on focus or hover and Escape dismisses either.
+The two review findings about hover dismissal and rendered tooltip assertions are
+resolved. Regression checks cover these behaviors and reduced-motion disclosure
+mounting; browser checks cover Select mouse/keyboard commits, disclosure layout,
+progress movement, menu indicators, tooltip focus and notification stacking.
+
 ## Behavior checks
 
 The migration exposed and fixed three integration issues: context-menu focus
@@ -50,7 +65,7 @@ embedding this runtime on the web need the same handling until upstream fixes it
 
 | Check | Result |
 | --- | --- |
-| Workspace tests | 39 passed |
+| Workspace tests | 44 passed |
 | Workspace Clippy, all targets, warnings denied | Passed |
 | Independent registry install with its own lockfile | Passed; unused public re-export warnings only |
 | Optimized native showcase | Built and launched with isolated temporary data |
@@ -61,6 +76,8 @@ embedding this runtime on the web need the same handling until upstream fixes it
 | Actual WASM form | Invalid Enter submission showed an error; valid Enter submission succeeded |
 | Actual WASM drawer | Four layouts, grip snap-back, vertical/horizontal swipe dismissal, Escape and backdrop dismissal passed |
 | Actual WASM dialog | Input editing, Tab to Save, Enter activation, closing and focus return passed |
+| Actual WASM component audit fixes | Select mouse/keyboard commit, disclosure toggles/layout, tooltip focus/Escape, moving indeterminate progress, menu indicators and three-toast stack passed |
+| Native regression checks for audit fixes | Disabled click guard, drag Escape, long-dialog scrolling, disclosure exit/reduced motion and rendered tooltip lifecycle passed |
 | Web build, TypeScript, lint and highlighting | Passed |
 | Preview event boundary check | Passed |
 

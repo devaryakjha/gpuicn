@@ -282,6 +282,27 @@ pub fn transition_value(
     )
 }
 
+/// Shares the theme's disclosure and notification timing with Kit's presence lifecycle.
+pub(crate) fn presence(
+    id: impl Into<ElementId>,
+    present: bool,
+    window: &mut Window,
+    cx: &mut App,
+) -> gpui_kit::base::motion::PresenceSample {
+    let motion = UiTheme::read(cx).motion;
+    let duration = if motion.reduced {
+        Duration::ZERO
+    } else {
+        motion.fast
+    };
+    gpui_kit::base::motion::Presence::new(id.into(), present)
+        .transition(
+            gpui_kit::base::motion::Transition::new(duration)
+                .ease(move |progress| motion.easing.sample(progress)),
+        )
+        .sample(window, cx)
+}
+
 /// Shared shadcn elevation tokens.
 #[derive(Clone, Debug, PartialEq)]
 pub struct UiShadows {

@@ -8,16 +8,22 @@ fn main() {}
 
 mod accordion {
     use crate::ui::accordion::*;
-    use gpui_kit::{App, IntoElement, ParentElement};
+    use gpui_kit::{App, IntoElement, ParentElement, Window};
 
-    fn example(open: bool, cx: &App) -> impl IntoElement {
+    fn example(open: bool, window: &mut Window, cx: &mut App) -> impl IntoElement {
         accordion("faq", cx).child(
             accordion_item(cx)
                 .open(open)
                 .header(accordion_header(
                     accordion_trigger("shipping", open, false, cx).child("When will it arrive?"),
                 ))
-                .panel(accordion_content(cx).child("Within three working days.")),
+                .panel(accordion_content(
+                    "shipping-content",
+                    open,
+                    "Within three working days.",
+                    window,
+                    cx,
+                )),
         )
     }
 }
@@ -118,11 +124,10 @@ mod checkbox_group {
 
 mod collapsible {
     use crate::ui::collapsible::*;
-    use gpui_kit::{App, IntoElement, ParentElement};
+    use gpui_kit::{App, IntoElement, ParentElement, Window};
 
-    fn example(open: bool, cx: &App) -> impl IntoElement {
-        collapsible(cx)
-            .open(open)
+    fn example(open: bool, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        collapsible("projects-region", open, window, cx)
             .child(collapsible_trigger("projects", open, cx).child("Recent projects"))
             .content(collapsible_content(cx).child("Design system"))
     }
@@ -557,12 +562,16 @@ mod toolbar {
 
 mod tooltip {
     use crate::ui::tooltip::*;
-    use gpui_kit::{IntoElement, StatefulInteractiveElement};
+    use gpui_kit::{App, IntoElement, Window};
 
-    fn example() -> impl IntoElement {
-        gpui_kit::base::Button::new("save")
-            .accessibility_label("Save")
-            .tooltip(|_, cx| text_tooltip("Save changes".into(), cx))
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        tooltip(
+            "save-tooltip",
+            "Save changes",
+            gpui_kit::base::Button::new("save").accessibility_label("Save"),
+            window,
+            cx,
+        )
     }
 }
 

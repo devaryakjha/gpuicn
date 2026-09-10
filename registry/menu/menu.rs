@@ -469,10 +469,18 @@ impl Render for MenuState {
                     }))
                     .child(div().flex_1().child(item.label))
                     .when(item.checked == Some(true), |b| {
-                        b.child(lucide(LucideIcon::Check).size(t.space(4.)))
+                        b.child(
+                            lucide(LucideIcon::Check)
+                                .size(t.space(4.))
+                                .text_color(t.colors.popover_foreground),
+                        )
                     })
                     .when(submenu, |b| {
-                        b.child(lucide(LucideIcon::ChevronRight).size(t.space(4.)))
+                        b.child(
+                            lucide(LucideIcon::ChevronRight)
+                                .size(t.space(4.))
+                                .text_color(t.colors.popover_foreground),
+                        )
                     });
                 popup = popup.child(row);
             }
