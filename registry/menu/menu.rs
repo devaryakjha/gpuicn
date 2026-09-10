@@ -517,6 +517,7 @@ pub struct Menu {
     disabled: bool,
     context: Option<AnyElement>,
     trigger: Option<AnyElement>,
+    trigger_style: Option<Box<dyn FnOnce(Button) -> Button>>,
     style: StyleRefinement,
 }
 impl Menu {
@@ -528,12 +529,18 @@ impl Menu {
             disabled: false,
             context: None,
             trigger: None,
+            trigger_style: None,
             style: Default::default(),
         }
     }
     /// Supplies custom content for the named trigger button.
     pub fn trigger(mut self, child: impl IntoElement) -> Self {
         self.trigger = Some(child.into_any_element());
+        self
+    }
+    /// Replaces trigger styling while retaining menu behavior. Include a visible keyboard focus treatment.
+    pub fn trigger_style_with(mut self, style: impl FnOnce(Button) -> Button + 'static) -> Self {
+        self.trigger_style = Some(Box::new(style));
         self
     }
     /// Disables interaction and applies the disabled appearance.
@@ -603,31 +610,35 @@ impl RenderOnce for Menu {
                 .child(area);
         } else {
             base = base.child(
-                style_button(
-                    Button::new(("menu-button", state.entity_id()))
-                        .track_focus(&focus)
-                        .tab_stop(focus.tab_stop)
-                        .disabled(disabled)
-                        .accessibility_label(self.label.clone())
-                        .aria_expanded(open),
-                    disabled,
-                    ButtonVariant::Outline,
-                    ButtonSize::Default,
-                    UiTheme::read(cx),
-                )
-                .on_click(move |_, window, cx| {
-                    state.update(cx, |this, cx| {
-                        if this.open {
-                            this.close(true, window, cx);
-                        } else {
-                            this.open(window, cx);
-                        }
+                Button::new(("menu-button", state.entity_id()))
+                    .track_focus(&focus)
+                    .tab_stop(focus.tab_stop)
+                    .disabled(disabled)
+                    .accessibility_label(self.label.clone())
+                    .aria_expanded(open)
+                    .map(|button| match self.trigger_style {
+                        Some(style) => style(button),
+                        None => style_button(
+                            button,
+                            disabled,
+                            ButtonVariant::Outline,
+                            ButtonSize::Default,
+                            UiTheme::read(cx),
+                        ),
                     })
-                })
-                .child(
-                    self.trigger
-                        .unwrap_or_else(|| self.label.into_any_element()),
-                ),
+                    .on_click(move |_, window, cx| {
+                        state.update(cx, |this, cx| {
+                            if this.open {
+                                this.close(true, window, cx);
+                            } else {
+                                this.open(window, cx);
+                            }
+                        })
+                    })
+                    .child(
+                        self.trigger
+                            .unwrap_or_else(|| self.label.into_any_element()),
+                    ),
             );
         }
         apply_style(base.child(self.state), &self.style)
