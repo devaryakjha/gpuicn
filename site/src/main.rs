@@ -1699,7 +1699,7 @@ impl Showcase {
             })
             .read(cx)
             .clone();
-        let team_menu = sidebar_dropdown(&state, "Switch workspace", cx).trigger(
+        let team_menu = sidebar_dropdown(&state, "Switch workspace", collapsed, cx).trigger(
             div()
                 .flex()
                 .w_full()
@@ -1876,7 +1876,7 @@ impl Showcase {
             })
             .read(cx)
             .clone();
-        let account = sidebar_dropdown(&state, "Account menu", cx).trigger(
+        let account = sidebar_dropdown(&state, "Account menu", collapsed, cx).trigger(
             div()
                 .flex()
                 .w_full()

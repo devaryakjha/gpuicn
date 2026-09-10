@@ -883,19 +883,89 @@ pub fn sidebar_rail(
 }
 
 /// A sidebar menu with caller-owned state and a readable trigger label.
+/// Collapsed triggers fit the icon rail; expanded triggers leave room for two-line labels.
 pub fn sidebar_dropdown(
     state: &gpui_kit::Entity<super::menu::MenuState>,
     label: impl Into<SharedString>,
+    collapsed: bool,
     cx: &App,
 ) -> super::menu::Menu {
+    let theme = UiTheme::read(cx).clone();
     super::menu::Menu::new(state, label)
         .w_full()
-        .text_color(UiTheme::read(cx).colors.sidebar_foreground)
+        .trigger_style_with(move |button| {
+            let ring = theme.focus_ring();
+            button
+                .w_full()
+                .h_auto()
+                .min_h(theme.space(if collapsed { 8. } else { 12. }))
+                .p(theme.space(if collapsed { 0. } else { 2. }))
+                .rounded(theme.radius.lg)
+                .cursor_pointer()
+                .font_family(theme.fonts.body.clone())
+                .text_size(theme.text(14.))
+                .line_height(theme.text(20.))
+                .focus_visible(move |style| style.shadow(ring.clone()))
+                .bg(theme.colors.sidebar)
+                .text_color(theme.colors.sidebar_foreground)
+                .hover(move |style| {
+                    style
+                        .bg(theme.colors.sidebar_accent)
+                        .text_color(theme.colors.sidebar_accent_foreground)
+                })
+        })
 }
 
 #[cfg(test)]
 mod sidebar_tests {
     use super::*;
+    #[gpui_kit::test]
+    fn dropdown_trigger_fits_expanded_labels_and_collapsed_icons(
+        cx: &mut gpui_kit::TestAppContext,
+    ) {
+        use super::super::menu::MenuState;
+        use gpui_kit::{AppContext as _, Context, Entity, Render};
+        struct Probe {
+            state: Entity<MenuState>,
+            collapsed: bool,
+        }
+        impl Render for Probe {
+            fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+                div().flex().flex_col().items_start().child(
+                    div()
+                        .w(px(if self.collapsed { 32. } else { 240. }))
+                        .debug_selector(|| "header".into())
+                        .child(
+                            sidebar_dropdown(&self.state, "Workspace", self.collapsed, cx).trigger(
+                                div()
+                                    .w_full()
+                                    .h(px(if self.collapsed { 32. } else { 34. }))
+                                    .debug_selector(|| "team-content".into()),
+                            ),
+                        ),
+                )
+            }
+        }
+        cx.update(crate::init);
+        for collapsed in [false, true] {
+            let (_, visual) = cx.add_window_view(move |_, cx| Probe {
+                state: cx.new(|cx| MenuState::new(vec![], cx)),
+                collapsed,
+            });
+            visual.update(|window, cx| window.draw(cx).clear(cx));
+            let header = visual.debug_bounds("header").unwrap();
+            let content = visual.debug_bounds("team-content").unwrap();
+            let padding = px(if collapsed { 0. } else { 8. });
+            assert_eq!(content.left() - header.left(), padding);
+            assert_eq!(header.right() - content.right(), padding);
+            assert!(content.top() - header.top() >= padding);
+            assert!(header.bottom() - content.bottom() >= padding);
+            if collapsed {
+                assert_eq!(header.size.height, px(32.));
+            }
+        }
+    }
+
     #[test]
     fn mobile_and_desktop_state_are_independent() {
         let mut state = SidebarState::default();
