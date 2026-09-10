@@ -77,7 +77,6 @@ impl RenderOnce for Switch {
             ThemeMode::Light => colors.input,
             ThemeMode::Dark => colors.input.opacity(0.80),
         };
-        let focus_ring = theme.focus_ring();
         let thumb_id = ElementId::NamedChild(Arc::new(self.id.clone()), "thumb-motion".into());
         let root = BaseSwitch::new(self.id)
             .checked(self.checked)
@@ -95,7 +94,7 @@ impl RenderOnce for Switch {
             } else {
                 unchecked
             })
-            .focus_visible(move |style| style.border_color(colors.ring).shadow(focus_ring.clone()))
+            .focus_visible(move |style| style.border_color(colors.ring))
             .when(!self.disabled && !self.read_only, |root| {
                 root.cursor_pointer()
             })

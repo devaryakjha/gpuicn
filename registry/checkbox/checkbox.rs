@@ -87,7 +87,6 @@ impl RenderOnce for Checkbox {
                 ThemeMode::Dark => colors.input.opacity(0.30),
             }
         };
-        let focus_ring = theme.focus_ring();
         let root = BaseCheckbox::new(self.id)
             .checked(self.checked)
             .indeterminate(self.indeterminate)
@@ -106,7 +105,7 @@ impl RenderOnce for Checkbox {
                 colors.input
             })
             .bg(background)
-            .focus_visible(move |style| style.border_color(colors.ring).shadow(focus_ring.clone()))
+            .focus_visible(move |style| style.border_color(colors.ring))
             .when(!self.disabled && !self.read_only, |root| {
                 root.cursor_pointer()
             })

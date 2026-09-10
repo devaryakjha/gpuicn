@@ -156,7 +156,6 @@ impl RenderOnce for ToggleGroup {
                 if !pressed {
                     next.push(item.value);
                 }
-                let ring = theme.focus_ring();
                 let toggle = gpui_kit::base::Toggle::new(item.id)
                     .pressed(pressed)
                     .disabled(disabled)
@@ -187,15 +186,7 @@ impl RenderOnce for ToggleGroup {
                     } else {
                         colors.background.opacity(0.)
                     })
-                    .focus_visible(move |s| {
-                        s.bg(if pressed {
-                            colors.muted
-                        } else {
-                            colors.background
-                        })
-                        .border_color(colors.ring)
-                        .shadow(ring.clone())
-                    })
+                    .focus_visible(move |s| s.border_color(colors.ring))
                     .when(disabled, |t| t.opacity(0.5).cursor_not_allowed())
                     .when(!disabled, |t| {
                         t.cursor_pointer().hover(move |s| s.bg(colors.muted))

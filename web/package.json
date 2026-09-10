@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun run sync:static && vite",
     "build": "bun run sync:static && vite build && tsc -b",
-    "sync:static": "node ../scripts/sync-catalog.mjs && mkdir -p public/r && cp -R ../site/pages/r/. public/r/",
+    "sync:static": "node ../scripts/sync-catalog.mjs && bun scripts/render-platform-notes.mjs && mkdir -p public/r && cp -R ../site/pages/r/. public/r/",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",

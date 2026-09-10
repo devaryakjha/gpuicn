@@ -108,7 +108,6 @@ impl RenderOnce for Toggle {
         let theme = UiTheme::read(cx).clone();
         let spacing = theme.spacing.unit;
         let colors = theme.colors;
-        let focus_ring = theme.focus_ring();
         let variant = self.variant;
         let (height, radius, text_size) = match self.size {
             ToggleSize::Sm => (28., theme.radius.md, 12.8),
@@ -136,16 +135,7 @@ impl RenderOnce for Toggle {
             } else {
                 colors.background.opacity(0.)
             })
-            .focus_visible(move |style| {
-                style
-                    .bg(if pressed {
-                        colors.muted
-                    } else {
-                        colors.background
-                    })
-                    .border_color(colors.ring)
-                    .shadow(focus_ring.clone())
-            })
+            .focus_visible(move |style| style.border_color(colors.ring))
             .when(disabled, |base| base.opacity(0.50).cursor_not_allowed())
             .when(!disabled, |base| {
                 base.cursor_pointer()

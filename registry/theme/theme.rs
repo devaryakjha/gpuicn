@@ -6,8 +6,7 @@
 use std::time::Duration;
 
 use gpui_kit::{
-    App, BoxShadow, Corners, Div, ElementId, Global, ParentElement as _, Pixels, Rgba,
-    SharedString, Styled, Window, black, px,
+    App, BoxShadow, ElementId, Global, Pixels, Rgba, SharedString, Styled, Window, black, px,
 };
 
 gpui_kit::actions!(
@@ -154,7 +153,7 @@ pub struct UiColors {
     pub sidebar_accent_foreground: Rgba,
     /// Sidebar border.
     pub sidebar_border: Rgba,
-    /// Sidebar focus ring.
+    /// Sidebar focus border color.
     pub sidebar_ring: Rgba,
     /// Scrim behind modal surfaces.
     pub overlay: Rgba,
@@ -334,7 +333,7 @@ pub struct UiTheme {
     pub radius: UiRadius,
     /// Base spacing unit.
     pub spacing: UiSpacing,
-    /// Shared elevation and focus-ring tokens.
+    /// Shared elevation tokens.
     pub shadows: UiShadows,
     /// Shared motion durations and reduced-motion preference.
     pub motion: UiMotion,
@@ -398,30 +397,6 @@ impl UiTheme {
     /// Scales typography independently of spacing; sizes use Nova's default pixels.
     pub fn text(&self, size: f32) -> Pixels {
         px(size * self.text_scale)
-    }
-
-    /// Builds shadcn's three-pixel focus ring from the active semantic ring color.
-    pub fn focus_ring(&self) -> Vec<BoxShadow> {
-        vec![
-            BoxShadow::new(px(0.), px(0.), self.colors.ring.opacity(0.50).into())
-                .spread_radius(px(3.)),
-        ]
-    }
-
-    /// Builds shadcn's invalid focus ring from the active destructive color.
-    pub fn destructive_focus_ring(&self) -> Vec<BoxShadow> {
-        let alpha = match self.mode {
-            ThemeMode::Light => 0.20,
-            ThemeMode::Dark => 0.40,
-        };
-        vec![
-            BoxShadow::new(
-                px(0.),
-                px(0.),
-                self.colors.destructive.opacity(alpha).into(),
-            )
-            .spread_radius(px(3.)),
-        ]
     }
 
     fn new(mode: ThemeMode, colors: UiColors) -> Self {
@@ -623,77 +598,6 @@ mod tests {
         assert_eq!(theme.shadows.sm.len(), 2);
         assert_eq!(theme.shadows.md.len(), 2);
         assert_eq!(theme.shadows.lg.len(), 2);
-        assert_eq!(theme.focus_ring()[0].spread_radius, px(3.));
-    }
-}
-
-/// Draws concentric focus corners; GPUI spread shadows retain the inner radius.
-pub(crate) fn focus_outline(mut base: Div, color: Rgba, radii: Corners<Pixels>) -> Div {
-    let borders = base.style().border_widths.clone();
-    base.child(gpui_kit::deferred(
-        gpui_kit::canvas(
-            |_, _, _| (),
-            move |bounds, _, window, _| {
-                let rem = window.rem_size();
-                let borders = gpui_kit::Edges {
-                    left: borders.left.unwrap_or_default().to_pixels(rem),
-                    top: borders.top.unwrap_or_default().to_pixels(rem),
-                    right: borders.right.unwrap_or_default().to_pixels(rem),
-                    bottom: borders.bottom.unwrap_or_default().to_pixels(rem),
-                };
-                window.paint_quad(focus_outline_quad(bounds, color, radii, borders));
-            },
-        )
-        .absolute()
-        .inset_0(),
-    ))
-}
-
-fn focus_outline_quad(
-    mut bounds: gpui_kit::Bounds<Pixels>,
-    color: Rgba,
-    radii: Corners<Pixels>,
-    borders: gpui_kit::Edges<Pixels>,
-) -> gpui_kit::PaintQuad {
-    bounds.origin.x -= borders.left + px(3.);
-    bounds.origin.y -= borders.top + px(3.);
-    bounds.size.width += borders.left + borders.right + px(6.);
-    bounds.size.height += borders.top + borders.bottom + px(6.);
-    gpui_kit::outline(bounds, color, Default::default())
-        .corner_radii(radii.map(|r| if *r > px(0.) { *r + px(3.) } else { *r }))
-        .border_widths(px(3.))
-}
-
-#[cfg(test)]
-mod focus_outline_tests {
-    use super::*;
-    #[test]
-    fn focus_outlines_follow_circle_and_segment_borders() {
-        let bounds = gpui_kit::Bounds::new(
-            gpui_kit::point(px(1.), px(1.)),
-            gpui_kit::size(px(10.), px(10.)),
-        );
-        let quad = focus_outline_quad(
-            bounds,
-            black().into(),
-            Corners::all(px(6.)),
-            gpui_kit::Edges::all(px(1.)),
-        );
-        assert_eq!(quad.bounds.origin, gpui_kit::point(px(-3.), px(-3.)));
-        assert_eq!(quad.bounds.size, gpui_kit::size(px(18.), px(18.)));
-        assert_eq!(quad.corner_radii, Corners::all(px(9.)));
-        let quad = focus_outline_quad(
-            bounds,
-            black().into(),
-            Corners::all(px(0.)),
-            gpui_kit::Edges {
-                left: px(0.),
-                ..gpui_kit::Edges::all(px(1.))
-            },
-        );
-        assert_eq!(quad.bounds.origin.x, px(-2.));
-        assert_eq!(quad.bounds.size.width, px(17.));
-        assert_eq!(quad.corner_radii, Corners::all(px(0.)));
     }
 }
 

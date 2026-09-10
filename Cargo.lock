@@ -2970,7 +2970,7 @@ checksum = "70a09e0bf58aede45b8e7eed6e8d5d6552381c431014d62b349b0133008737bd"
 
 [[package]]
 name = "gpuicn"
-version = "0.5.0-beta.2"
+version = "0.5.0-beta.3"
 dependencies = [
  "gpui-icons",
  "gpui-kit",
@@ -2994,7 +2994,7 @@ dependencies = [
 
 [[package]]
 name = "gpuicn-showcase"
-version = "0.5.0-beta.2"
+version = "0.5.0-beta.3"
 dependencies = [
  "gpui-icons",
  "gpui-kit",

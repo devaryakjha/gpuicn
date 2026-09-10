@@ -79,7 +79,7 @@ impl RenderOnce for OtpField {
                 .text_color(t.colors.foreground)
                 .when(
                     focused && index == chars.len().min(length.saturating_sub(1)),
-                    |cell| cell.border_color(t.colors.ring).shadow(t.focus_ring()),
+                    |cell| cell.border_color(t.colors.ring),
                 )
                 .when_some(chars.get(index), |cell, ch| {
                     cell.child(if masked { "•".into() } else { ch.to_string() })

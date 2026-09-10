@@ -5,6 +5,25 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.platform-notes {
+    overflow-wrap: anywhere;
+    & :is(h2, h3, h4, h5, h6) { @apply mt-5 font-medium text-foreground; }
+    & h2 { @apply text-lg; }
+    & h3 { @apply text-base; }
+    & a { @apply text-foreground underline underline-offset-4; }
+    & a:focus-visible { @apply rounded-sm outline-2 outline-offset-2 outline-ring; }
+    & code { @apply rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground; }
+    & pre { @apply overflow-x-auto rounded-lg bg-muted p-3; }
+    & pre code { @apply bg-transparent p-0; }
+    & strong { @apply font-medium text-foreground; }
+    & ul { @apply list-disc space-y-1 pl-5; }
+    & ol { @apply list-decimal space-y-1 pl-5; }
+    & blockquote { @apply border-l-2 pl-4; }
+    & table { @apply w-full border-collapse text-left; }
+    & :is(th, td) { @apply border-b px-3 py-2 align-top; }
+    & th { @apply font-medium text-foreground; }
+}
+
 .syntax-code {
     --syntax-keyword: #a626a4;
     --syntax-string: #32743b;

@@ -145,13 +145,7 @@ impl RenderOnce for CheckboxGroup {
                     } else {
                         colors.background.opacity(0.)
                     })
-                    .when(focused, |d| {
-                        super::theme::focus_outline(
-                            d,
-                            colors.ring.opacity(0.5),
-                            gpui_kit::Corners::all(radius),
-                        )
-                    })
+                    .when(focused, |d| d.border_color(colors.ring))
                     .when(checked, |d| {
                         d.child(
                             lucide(LucideIcon::Check)

@@ -284,8 +284,11 @@ impl RenderOnce for SidebarItem {
                         )
                         .font_family(theme.fonts.body.clone())
                         .font_weight(FontWeight::NORMAL)
-                        .when(outline, |el| {
-                            el.border_1().border_color(theme.colors.sidebar_border)
+                        .border_1()
+                        .border_color(if outline {
+                            theme.colors.sidebar_border
+                        } else {
+                            theme.colors.sidebar.opacity(0.)
                         })
                         .min_w_0()
                         .flex_shrink_0()
@@ -315,11 +318,7 @@ impl RenderOnce for SidebarItem {
                                     .text_color(theme.colors.sidebar_accent_foreground)
                             })
                         })
-                        .focus_visible(|style| {
-                            style
-                                .border_color(theme.colors.sidebar_ring)
-                                .shadow(theme.focus_ring())
-                        })
+                        .focus_visible(|style| style.border_color(theme.colors.sidebar_ring))
                 };
                 super::theme::apply_style(base, &self.style)
             })
@@ -894,18 +893,24 @@ pub fn sidebar_dropdown(
     super::menu::Menu::new(state, label)
         .w_full()
         .trigger_style_with(move |button| {
-            let ring = theme.focus_ring();
             button
                 .w_full()
                 .h_auto()
                 .min_h(theme.space(if collapsed { 8. } else { 12. }))
-                .p(theme.space(if collapsed { 0. } else { 2. }))
+                .p(if collapsed {
+                    px(0.)
+                } else {
+                    theme.space(2.) - px(1.)
+                })
+                .when(collapsed, |button| button.h(theme.space(8.)))
                 .rounded(theme.radius.lg)
+                .border_1()
+                .border_color(theme.colors.sidebar.opacity(0.))
                 .cursor_pointer()
                 .font_family(theme.fonts.body.clone())
                 .text_size(theme.text(14.))
                 .line_height(theme.text(20.))
-                .focus_visible(move |style| style.shadow(ring.clone()))
+                .focus_visible(move |style| style.border_color(theme.colors.sidebar_ring))
                 .bg(theme.colors.sidebar)
                 .text_color(theme.colors.sidebar_foreground)
                 .hover(move |style| {
@@ -955,11 +960,12 @@ mod sidebar_tests {
             visual.update(|window, cx| window.draw(cx).clear(cx));
             let header = visual.debug_bounds("header").unwrap();
             let content = visual.debug_bounds("team-content").unwrap();
-            let padding = px(if collapsed { 0. } else { 8. });
+            let padding = px(if collapsed { 1. } else { 8. });
             assert_eq!(content.left() - header.left(), padding);
             assert_eq!(header.right() - content.right(), padding);
-            assert!(content.top() - header.top() >= padding);
-            assert!(header.bottom() - content.bottom() >= padding);
+            let vertical_padding = if collapsed { px(0.) } else { padding };
+            assert!(content.top() - header.top() >= vertical_padding);
+            assert!(header.bottom() - content.bottom() >= vertical_padding);
             if collapsed {
                 assert_eq!(header.size.height, px(32.));
             }
