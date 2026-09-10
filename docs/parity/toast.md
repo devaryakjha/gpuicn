@@ -1,11 +1,11 @@
 # Toast parity
 
-- Upstream: shadcn/ui Nova at `ac60ef5c4db4265d71454dd9ecd3f93e255d7211`, `apps/v4/registry/bases/base/ui/toast.tsx` and `apps/v4/registry/styles/style-nova.css`.
-- gpuicn: `registry/toast/toast.rs`.
-- Difference types: platform, interaction, accessibility, and visual.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/toast/toast.rs`, using GPUI Kit 0.6.1.
 
-Base GPUI owns the typed manager, queue, upsert, timeout, pause/resume, stack limit, Escape, close action, and swipe-to-dismiss behavior. The wrapper supplies a bottom-aligned viewport, rounded toast surface, and compact controls while leaving provider timeout and limit configuration intact.
+A retained ToastState owns Kit notification entries and expiry tasks. The application pushes or dismisses notifications by ID. gpuicn renders Nova titles, descriptions and dismissal controls; a timeout is optional.
 
-`toast_viewport(id, cx)` builds the standard title, description, and close control. Applications can override its `content_builder` for custom toast content.
-
-Nova's CSS stack transforms, transition timing, and icon-by-type helper are not reproduced. The pinned GPUI revision has no live-region API, so new toasts are not announced automatically to screen readers.
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

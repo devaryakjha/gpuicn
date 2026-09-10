@@ -1,9 +1,11 @@
 # Menubar parity
 
-- Upstream: shadcn/ui `4.19.0` at `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, `apps/v4/registry/bases/base/ui/menubar.tsx` and the Menubar section of `apps/v4/registry/styles/style-nova.css`.
-- gpuicn: `registry/menubar/menubar.rs`.
-- Difference types: platform, animation, and accessibility.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/menubar/menubar.rs`, using GPUI Kit 0.6.1.
 
-The port keeps Base GPUI's menubar roving focus, horizontal and vertical navigation, menu coordination, modal behavior, and hosted menu semantics. It applies Nova's compact 32px bar, trigger, popup, item, label, separator, and check styles.
+Menubar composes retained MenuState entities. It maintains one Tab stop across triggers, moves between them with Left/Right and switches open menus on hover. Each popup uses Menu keyboard navigation and focus restoration.
 
-Nova's animation classes and browser disabled-state attributes are not available in the pinned GPUI surface. Base GPUI does retain the interactive behavior and the `role=menubar` / `role=menuitem` access semantics it supports.
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

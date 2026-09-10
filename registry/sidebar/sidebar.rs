@@ -1,9 +1,9 @@
-//! Sidebar navigation composed from Base GPUI buttons, Scroll Area and Tooltip.
+//! Sidebar navigation composed from GPUI Kit buttons, Scroll Area and Tooltip.
 //! Applications own navigation and collapsed state; this component owns no router.
 
 use super::{scroll_area::*, theme::UiTheme, tooltip::text_tooltip};
-use base_gpui::button::ButtonRoot;
-use gpui::{
+use gpui_kit::base::Button as BaseButton;
+use gpui_kit::{
     AnyElement, App, ClickEvent, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement,
     ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _, Styled, Text,
     Window, div, prelude::FluentBuilder as _, px,
@@ -19,11 +19,11 @@ fn part(id: &ElementId, name: &'static str) -> ElementId {
 /// Width and collapse state belong to its parent layout.
 #[derive(IntoElement)]
 pub struct Sidebar {
-    style: gpui::StyleRefinement,
+    style: gpui_kit::StyleRefinement,
     id: ElementId,
     label: SharedString,
     header: Option<AnyElement>,
-    content_padding: Option<gpui::Pixels>,
+    content_padding: Option<gpui_kit::Pixels>,
     footer: Option<AnyElement>,
     children: Vec<AnyElement>,
 }
@@ -31,7 +31,7 @@ impl Sidebar {
     /// Creates a navigation region with a caller-owned ID and accessible name.
     pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>) -> Self {
         Self {
-            style: gpui::StyleRefinement::default(),
+            style: gpui_kit::StyleRefinement::default(),
             id: id.into(),
             label: label.into(),
             header: None,
@@ -42,7 +42,7 @@ impl Sidebar {
     }
     /// Override the content inset, for example zero for full-width mail rows.
     /// Header and footer retain their standard inset.
-    pub fn content_padding(mut self, padding: gpui::Pixels) -> Self {
+    pub fn content_padding(mut self, padding: gpui_kit::Pixels) -> Self {
         self.content_padding = Some(padding.max(px(0.)));
         self
     }
@@ -69,26 +69,17 @@ impl RenderOnce for Sidebar {
         let text_scale = theme.text_scale;
         let color = theme.colors.sidebar;
         let padding = self.content_padding.unwrap_or(spacing * 2_f32);
-        let content = scroll_area(cx)
+        let content = ScrollArea::new(part(&self.id, "scroll"))
             .size_full()
-            .id(part(&self.id, "scroll"))
+            .aria_label(self.label.clone())
             .child(
-                scroll_area_viewport(cx).child(
-                    scroll_area_content(cx)
-                        .style_with_state(move |_, base| {
-                            base.w_full()
-                                .min_w_0()
-                                .flex()
-                                .flex_col()
-                                .gap(px(0.))
-                                .p(padding)
-                        })
-                        .children(self.children),
-                ),
-            )
-            .child(
-                scroll_area_scrollbar(ScrollAreaOrientation::Vertical, cx)
-                    .child(scroll_area_thumb(cx)),
+                div()
+                    .w_full()
+                    .min_w_0()
+                    .flex()
+                    .flex_col()
+                    .p(padding)
+                    .children(self.children),
             );
         div()
             .id(self.id)
@@ -144,7 +135,7 @@ pub fn sidebar_group_label(label: impl Into<SharedString>, cx: &App) -> Div {
 /// stable across rail/expanded layouts so focus survives the change.
 #[derive(IntoElement)]
 pub struct SidebarItem {
-    style: gpui::StyleRefinement,
+    style: gpui_kit::StyleRefinement,
     id: ElementId,
     label: SharedString,
     selected: bool,
@@ -161,7 +152,7 @@ impl SidebarItem {
     /// Creates a navigation action. Its label is also used for accessibility and tooltips.
     pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>) -> Self {
         Self {
-            style: gpui::StyleRefinement::default(),
+            style: gpui_kit::StyleRefinement::default(),
             id: id.into(),
             label: label.into(),
             selected: false,
@@ -180,7 +171,7 @@ impl SidebarItem {
         self.selected = value;
         self
     }
-    /// Prevents activation using the shared Base GPUI button guard.
+    /// Prevents activation using the shared GPUI Kit button guard.
     pub fn disabled(mut self, value: bool) -> Self {
         self.disabled = value;
         self
@@ -253,11 +244,10 @@ impl RenderOnce for SidebarItem {
             })
         });
         let tooltip_label = self.label.clone();
-        ButtonRoot::new()
-            .id(part(&self.id, "button"))
-            .aria_label(accessible)
+        BaseButton::new(part(&self.id, "button"))
+            .accessibility_label(accessible)
             .disabled(self.disabled)
-            .style_with_state(move |state, base| {
+            .map(|base| {
                 let base = {
                     let mut base = base;
                     let label = tooltip_label.clone();
@@ -317,8 +307,8 @@ impl RenderOnce for SidebarItem {
                         })
                         .when(selected, |el| el.font_weight(FontWeight::MEDIUM))
                         .when(collapsed, |el| el.w(spacing * 8_f32).justify_center())
-                        .when(state.disabled, |el| el.opacity(0.5).cursor_not_allowed())
-                        .when(!state.disabled, |el| {
+                        .when(self.disabled, |el| el.opacity(0.5).cursor_not_allowed())
+                        .when(!self.disabled, |el| {
                             el.cursor_pointer().hover(|style| {
                                 style
                                     .bg(theme.colors.sidebar_accent)
@@ -356,14 +346,14 @@ impl RenderOnce for SidebarItem {
     }
 }
 
-impl gpui::Styled for Sidebar {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
+impl gpui_kit::Styled for Sidebar {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
     }
 }
 
-impl gpui::Styled for SidebarItem {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
+impl gpui_kit::Styled for SidebarItem {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
     }
 }
@@ -439,10 +429,10 @@ pub fn sidebar_is_mobile(window: &Window) -> bool {
 
 struct SidebarFocus {
     mobile_open: bool,
-    return_to: Option<gpui::FocusHandle>,
-    navigation: gpui::FocusHandle,
-    content: gpui::FocusHandle,
-    sheet: gpui::FocusHandle,
+    return_to: Option<gpui_kit::FocusHandle>,
+    navigation: gpui_kit::FocusHandle,
+    content: gpui_kit::FocusHandle,
+    sheet: gpui_kit::FocusHandle,
 }
 
 type StateHandler = Rc<dyn Fn(&SidebarState, &mut Window, &mut App)>;
@@ -458,14 +448,14 @@ pub struct SidebarLayout {
     side: SidebarSide,
     variant: SidebarVariant,
     collapsible: SidebarCollapsible,
-    width: Option<gpui::Pixels>,
-    icon_width: Option<gpui::Pixels>,
-    mobile_width: Option<gpui::Pixels>,
+    width: Option<gpui_kit::Pixels>,
+    icon_width: Option<gpui_kit::Pixels>,
+    mobile_width: Option<gpui_kit::Pixels>,
     rail: bool,
     sidebar: AnyElement,
     content: AnyElement,
     on_change: StateHandler,
-    style: gpui::StyleRefinement,
+    style: gpui_kit::StyleRefinement,
 }
 impl SidebarLayout {
     /// Compose navigation and application content with controlled state.
@@ -515,23 +505,23 @@ impl SidebarLayout {
         self
     }
     /// Icon rail width before floating/inset gutters; defaults to a themed 48px.
-    pub fn icon_width(mut self, width: gpui::Pixels) -> Self {
+    pub fn icon_width(mut self, width: gpui_kit::Pixels) -> Self {
         self.icon_width = Some(width);
         self
     }
     /// Mobile sheet width; defaults to a themed 288px and cannot exceed its viewport.
-    pub fn mobile_width(mut self, width: gpui::Pixels) -> Self {
+    pub fn mobile_width(mut self, width: gpui_kit::Pixels) -> Self {
         self.mobile_width = Some(width);
         self
     }
     /// Expanded width. Invalid values fall back to the themed 256px default.
-    pub fn width(mut self, width: gpui::Pixels) -> Self {
+    pub fn width(mut self, width: gpui_kit::Pixels) -> Self {
         self.width = Some(width);
         self
     }
 }
 impl Styled for SidebarLayout {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
     }
 }
@@ -545,7 +535,7 @@ impl RenderOnce for SidebarLayout {
         let inset = self.variant == SidebarVariant::Inset && !mobile;
         let floating = self.variant == SidebarVariant::Floating && !mobile;
         let padded = inset || floating;
-        let valid_width = |width: Option<gpui::Pixels>, default| {
+        let valid_width = |width: Option<gpui_kit::Pixels>, default| {
             width
                 .filter(|w| f32::from(*w).is_finite() && *w > px(0.))
                 .unwrap_or(default)
@@ -642,40 +632,34 @@ impl RenderOnce for SidebarLayout {
                 }
             });
         if mobile {
-            // Base Dialog owns Escape, outside dismissal, modal isolation and focus return.
             let id = part(&self.id, "sheet");
+            let popup_focus = modal_focus::prepare(id.clone(), self.state.mobile_open, window, cx);
             let focus = modal_focus::ModalFocus::new(id.clone());
-            let edge = self.side;
-            let popup = DialogPopup::new()
+            let popup = focus
+                .trap(div(), true)
                 .id(id)
+                .track_focus(&popup_focus)
                 .aria_label("Navigation")
-                .child_any(focus.boundary(false))
-                .child_any(focus.boundary(true))
-                .style_with_state(move |state, base| {
-                    focus
-                        .trap(
-                            base,
-                            state.modal_mode.traps_focus() && !state.nested_dialog_open,
-                        )
-                        .h_full()
-                        .w(mobile_width)
-                        .max_w_full()
-                        .flex()
-                        .flex_col()
-                        .bg(theme.colors.sidebar)
-                        .text_color(theme.colors.sidebar_foreground)
-                })
-                .child_any(
+                .occlude()
+                .h_full()
+                .w(mobile_width)
+                .max_w_full()
+                .flex()
+                .flex_col()
+                .bg(theme.colors.sidebar)
+                .text_color(theme.colors.sidebar_foreground)
+                .child(focus.boundary(false))
+                .child(focus.boundary(true))
+                .child(
                     div()
                         .size_full()
                         .track_focus(&sheet_focus)
                         .child(self.sidebar),
                 );
             let change = self.on_change;
-            let root = dialog_root(part(&self.id, "mobile"))
-                .size_full()
-                .flex()
+            let root = Dialog::new(cx)
                 .open(self.state.mobile_open)
+                .on_ok(|_, _, _| false)
                 .on_open_change(move |open, _, window, cx| {
                     change(
                         &SidebarState {
@@ -686,18 +670,16 @@ impl RenderOnce for SidebarLayout {
                         cx,
                     );
                 })
-                .child_any(main)
-                .child(
-                    dialog_portal().child(dialog_backdrop(cx)).child(
-                        DialogViewport::new()
-                            .absolute()
-                            .inset_0()
-                            .flex()
-                            .when(edge == SidebarSide::Right, |el| el.justify_end())
-                            .child(popup),
-                    ),
+                .backdrop(dialog_backdrop(cx))
+                .popup(
+                    div()
+                        .absolute()
+                        .inset_0()
+                        .flex()
+                        .when(self.side == SidebarSide::Right, |el| el.justify_end())
+                        .child(popup),
                 );
-            shell = shell.child(root);
+            shell = shell.child(main).child(root);
         } else {
             let navigation = div()
                 .track_focus(&navigation_focus)
@@ -822,9 +804,12 @@ pub fn sidebar_separator(cx: &App) -> Div {
         .bg(t.colors.sidebar_border)
 }
 /// Sidebar-sized text field; input editing and accessibility remain in the existing Input.
-pub fn sidebar_input(id: impl Into<ElementId>, cx: &App) -> super::input::Input {
+pub fn sidebar_input(
+    state: &gpui_kit::Entity<super::input::InputState>,
+    cx: &App,
+) -> super::input::Input {
     let t = UiTheme::read(cx);
-    super::input::Input::new(id)
+    super::input::Input::new(state)
         .h(t.spacing.unit * 8_f32)
         .w_full()
         .bg(t.colors.background)
@@ -885,7 +870,7 @@ pub fn sidebar_rail(
     id: impl Into<ElementId>,
     on_toggle: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     cx: &App,
-) -> gpui::Stateful<Div> {
+) -> gpui_kit::Stateful<Div> {
     let border = UiTheme::read(cx).colors.sidebar_border;
     div()
         .id(id)
@@ -897,40 +882,15 @@ pub fn sidebar_rail(
         .on_click(on_toggle)
 }
 
-/// A menu trigger styled as a Sidebar row rather than an outlined form button.
-/// Use large rows for workspace/account menus; caller content can include an avatar,
-/// two lines of text and a chevron. Dropdown keyboard behavior stays in Menu.
-pub fn sidebar_menu_trigger<P: Clone + 'static>(
-    id: impl Into<ElementId>,
-    collapsed: bool,
+/// A sidebar menu with caller-owned state and a readable trigger label.
+pub fn sidebar_dropdown(
+    state: &gpui_kit::Entity<super::menu::MenuState>,
+    label: impl Into<SharedString>,
     cx: &App,
-) -> super::menu::MenuTrigger<P> {
-    let t = UiTheme::read(cx).clone();
-    let s = t.spacing.unit;
-    super::menu::MenuTrigger::new()
-        .id(id)
-        .style_with_state(move |state, base| {
-            base.w_full()
-                .min_w_0()
-                .h(s * if collapsed { 8_f32 } else { 12_f32 })
-                .flex()
-                .items_center()
-                .gap(s * 2_f32)
-                .p(s * if collapsed { 0_f32 } else { 2_f32 })
-                .rounded(t.radius.md)
-                .text_size(px(14.) * t.text_scale)
-                .line_height(px(20.) * t.text_scale)
-                .font_family(t.fonts.body.clone())
-                .font_weight(FontWeight::NORMAL)
-                .text_color(t.colors.sidebar_foreground)
-                .when(state.open, |el| el.bg(t.colors.sidebar_accent))
-                .when(state.disabled, |el| el.opacity(0.5).cursor_not_allowed())
-                .when(!state.disabled, |el| {
-                    el.cursor_pointer()
-                        .hover(|el| el.bg(t.colors.sidebar_accent))
-                })
-                .focus_visible(|el| el.shadow(t.focus_ring()))
-        })
+) -> super::menu::Menu {
+    super::menu::Menu::new(state, label)
+        .w_full()
+        .text_color(UiTheme::read(cx).colors.sidebar_foreground)
 }
 
 #[cfg(test)]
@@ -950,7 +910,7 @@ mod sidebar_tests {
     }
     #[test]
     fn controlled_sheet_takes_focus_wraps_tabs_and_restores_the_opener() {
-        use gpui::{
+        use gpui_kit::{
             AppContext as _, Context, FocusHandle, Render, TestAppContext, VisualTestContext,
         };
         struct View {
@@ -993,7 +953,7 @@ mod sidebar_tests {
         }
         let mut cx = TestAppContext::single();
         cx.update(|cx| {
-            base_gpui::init(cx);
+            super::super::theme::init(cx);
             UiTheme::set(cx, UiTheme::neutral_light());
         });
         let window = cx.add_window(|_, cx| View {

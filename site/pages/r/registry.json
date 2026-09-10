@@ -20,7 +20,7 @@
       "name": "accordion",
       "type": "registry:item",
       "title": "Accordion",
-      "description": "The shadcn default Accordion visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Accordion visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -38,7 +38,7 @@
       "name": "alert-dialog",
       "type": "registry:item",
       "title": "Alert Dialog",
-      "description": "The shadcn default Alert Dialog visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Alert Dialog visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -71,7 +71,7 @@
       "name": "autocomplete",
       "type": "registry:item",
       "title": "Autocomplete",
-      "description": "The shadcn default Autocomplete visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Autocomplete visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -79,9 +79,14 @@
           "target": "~/src/ui/theme.rs"
         },
         {
-          "path": "registry/combobox/combobox.rs",
+          "path": "registry/input/input.rs",
           "type": "registry:file",
-          "target": "~/src/ui/combobox.rs"
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/select/select.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/select.rs"
         },
         {
           "path": "registry/autocomplete/autocomplete.rs",
@@ -94,7 +99,7 @@
       "name": "avatar",
       "type": "registry:item",
       "title": "Avatar",
-      "description": "The shadcn default Avatar visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Avatar visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -112,7 +117,7 @@
       "name": "button",
       "type": "registry:item",
       "title": "Button",
-      "description": "The shadcn default Button visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Button visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -130,7 +135,7 @@
       "name": "checkbox",
       "type": "registry:item",
       "title": "Checkbox",
-      "description": "The shadcn default Checkbox visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Checkbox visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -148,7 +153,7 @@
       "name": "checkbox-group",
       "type": "registry:item",
       "title": "Checkbox Group",
-      "description": "The shadcn default Checkbox Group visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Checkbox Group visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -166,7 +171,7 @@
       "name": "collapsible",
       "type": "registry:item",
       "title": "Collapsible",
-      "description": "The shadcn default Collapsible visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Collapsible visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -184,12 +189,22 @@
       "name": "combobox",
       "type": "registry:item",
       "title": "Combobox",
-      "description": "The shadcn default Combobox visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Combobox visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
           "type": "registry:file",
           "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/select/select.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/select.rs"
         },
         {
           "path": "registry/combobox/combobox.rs",
@@ -202,7 +217,7 @@
       "name": "context-menu",
       "type": "registry:item",
       "title": "Context Menu",
-      "description": "The shadcn default Context Menu visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Context Menu visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -230,7 +245,7 @@
       "name": "dialog",
       "type": "registry:item",
       "title": "Dialog",
-      "description": "The shadcn default Dialog visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Dialog visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -258,7 +273,7 @@
       "name": "drawer",
       "type": "registry:item",
       "title": "Drawer",
-      "description": "The shadcn default Drawer visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Drawer visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -291,7 +306,7 @@
       "name": "field",
       "type": "registry:item",
       "title": "Field",
-      "description": "The shadcn default Field visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Field visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -304,16 +319,6 @@
           "target": "~/src/ui/input.rs"
         },
         {
-          "path": "registry/input/input_editing.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/input_editing.rs"
-        },
-        {
-          "path": "registry/input/input_text.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/input_text.rs"
-        },
-        {
           "path": "registry/field/field.rs",
           "type": "registry:file",
           "target": "~/src/ui/field.rs"
@@ -324,7 +329,7 @@
       "name": "fieldset",
       "type": "registry:item",
       "title": "Fieldset",
-      "description": "The shadcn default Fieldset visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Fieldset visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -342,7 +347,7 @@
       "name": "form",
       "type": "registry:item",
       "title": "Form",
-      "description": "The shadcn default Form visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Form visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -371,16 +376,6 @@
           "path": "registry/input/input.rs",
           "type": "registry:file",
           "target": "~/src/ui/input.rs"
-        },
-        {
-          "path": "registry/input/input_editing.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/input_editing.rs"
-        },
-        {
-          "path": "registry/input/input_text.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/input_text.rs"
         }
       ]
     },
@@ -388,7 +383,7 @@
       "name": "menu",
       "type": "registry:item",
       "title": "Menu",
-      "description": "The shadcn default Menu visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Menu visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -411,7 +406,7 @@
       "name": "menubar",
       "type": "registry:item",
       "title": "Menubar",
-      "description": "The shadcn default Menubar visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Menubar visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -439,7 +434,7 @@
       "name": "meter",
       "type": "registry:item",
       "title": "Meter",
-      "description": "The shadcn default Meter visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Meter visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -457,12 +452,27 @@
       "name": "navigation-menu",
       "type": "registry:item",
       "title": "Navigation Menu",
-      "description": "The shadcn default Navigation Menu visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Navigation Menu visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
           "type": "registry:file",
           "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/menu/menu.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/menu.rs"
+        },
+        {
+          "path": "registry/menubar/menubar.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/menubar.rs"
         },
         {
           "path": "registry/navigation_menu/navigation_menu.rs",
@@ -475,7 +485,7 @@
       "name": "number-field",
       "type": "registry:item",
       "title": "Number Field",
-      "description": "The shadcn default Number Field visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Number Field visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -488,16 +498,6 @@
           "target": "~/src/ui/input.rs"
         },
         {
-          "path": "registry/input/input_editing.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/input_editing.rs"
-        },
-        {
-          "path": "registry/input/input_text.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/input_text.rs"
-        },
-        {
           "path": "registry/number_field/number_field.rs",
           "type": "registry:file",
           "target": "~/src/ui/number_field.rs"
@@ -508,7 +508,7 @@
       "name": "otp-field",
       "type": "registry:item",
       "title": "OTP Field",
-      "description": "The shadcn default OTP Field visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default OTP Field visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -526,7 +526,7 @@
       "name": "popover",
       "type": "registry:item",
       "title": "Popover",
-      "description": "The shadcn default Popover visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Popover visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -549,7 +549,7 @@
       "name": "preview-card",
       "type": "registry:item",
       "title": "Preview Card",
-      "description": "The shadcn default Preview Card visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Preview Card visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -567,7 +567,7 @@
       "name": "progress",
       "type": "registry:item",
       "title": "Progress",
-      "description": "The shadcn default Progress visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Progress visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -585,7 +585,7 @@
       "name": "radio-group",
       "type": "registry:item",
       "title": "Radio Group",
-      "description": "The shadcn default Radio Group visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Radio Group visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -621,7 +621,7 @@
       "name": "scroll-area",
       "type": "registry:item",
       "title": "Scroll Area",
-      "description": "The shadcn default Scroll Area visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Scroll Area visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -639,12 +639,17 @@
       "name": "select",
       "type": "registry:item",
       "title": "Select",
-      "description": "The shadcn default Select visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Select visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
           "type": "registry:file",
           "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
         },
         {
           "path": "registry/select/select.rs",
@@ -657,7 +662,7 @@
       "name": "separator",
       "type": "registry:item",
       "title": "Separator",
-      "description": "The shadcn default Separator visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Separator visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -675,7 +680,7 @@
       "name": "sidebar",
       "type": "registry:item",
       "title": "Sidebar",
-      "description": "Shadcn-styled navigation composed from Base GPUI buttons and scroll areas.",
+      "description": "Shadcn-styled navigation composed from GPUI Kit buttons and scroll areas.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -713,16 +718,6 @@
           "target": "~/src/ui/input.rs"
         },
         {
-          "path": "registry/input/input_editing.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/input_editing.rs"
-        },
-        {
-          "path": "registry/input/input_text.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/input_text.rs"
-        },
-        {
           "path": "registry/menu/menu.rs",
           "type": "registry:file",
           "target": "~/src/ui/menu.rs"
@@ -738,7 +733,7 @@
       "name": "slider",
       "type": "registry:item",
       "title": "Slider",
-      "description": "The shadcn default Slider visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Slider visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -756,7 +751,7 @@
       "name": "switch",
       "type": "registry:item",
       "title": "Switch",
-      "description": "The shadcn default Switch visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Switch visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -774,7 +769,7 @@
       "name": "tabs",
       "type": "registry:item",
       "title": "Tabs",
-      "description": "The shadcn default Tabs visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Tabs visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -792,7 +787,7 @@
       "name": "toast",
       "type": "registry:item",
       "title": "Toast",
-      "description": "The shadcn default Toast visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Toast visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -815,7 +810,7 @@
       "name": "toggle",
       "type": "registry:item",
       "title": "Toggle",
-      "description": "The shadcn default Toggle visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Toggle visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -833,7 +828,7 @@
       "name": "toggle-group",
       "type": "registry:item",
       "title": "Toggle Group",
-      "description": "The shadcn default Toggle Group visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Toggle Group visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -851,7 +846,7 @@
       "name": "toolbar",
       "type": "registry:item",
       "title": "Toolbar",
-      "description": "The shadcn default Toolbar visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Toolbar visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",
@@ -864,49 +859,9 @@
           "target": "~/src/ui/input.rs"
         },
         {
-          "path": "registry/input/input_editing.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/input_editing.rs"
-        },
-        {
-          "path": "registry/input/input_text.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/input_text.rs"
-        },
-        {
           "path": "registry/toolbar/toolbar.rs",
           "type": "registry:file",
           "target": "~/src/ui/toolbar.rs"
-        },
-        {
-          "path": "registry/toolbar/toolbar_children.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/toolbar_children.rs"
-        },
-        {
-          "path": "registry/toolbar/toolbar_group.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/toolbar_group.rs"
-        },
-        {
-          "path": "registry/toolbar/toolbar_input.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/toolbar_input.rs"
-        },
-        {
-          "path": "registry/toolbar/toolbar_root.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/toolbar_root.rs"
-        },
-        {
-          "path": "registry/toolbar/toolbar_tests.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/toolbar_tests.rs"
-        },
-        {
-          "path": "registry/toolbar/toolbar_wiring.rs",
-          "type": "registry:file",
-          "target": "~/src/ui/toolbar_wiring.rs"
         }
       ]
     },
@@ -914,7 +869,7 @@
       "name": "tooltip",
       "type": "registry:item",
       "title": "Tooltip",
-      "description": "The shadcn default Tooltip visual port backed by Base GPUI behavior.",
+      "description": "The shadcn default Tooltip visual port backed by GPUI Kit behavior.",
       "files": [
         {
           "path": "registry/theme/theme.rs",

@@ -1,10 +1,9 @@
-#![allow(missing_docs)]
-//! Nova-styled Avatar primitives backed by Base GPUI.
+//! Nova-styled Avatar with native image loading and error fallback.
 
-use base_gpui::avatar::{AvatarFallback, AvatarImage, AvatarRoot};
-use gpui::{
-    AnyElement, App, ElementId, ImageSource, IntoElement, ObjectFit, ParentElement, RenderOnce,
-    SharedString, Styled, StyledImage, Window, img, px,
+use gpui_kit::{
+    App, ElementId, ImageSource, InteractiveElement as _, IntoElement, ObjectFit, ParentElement,
+    RenderOnce, SharedString, StatefulInteractiveElement as _, Styled, StyledImage, Window, div,
+    img,
 };
 
 use super::theme::UiTheme;
@@ -12,51 +11,58 @@ use super::theme::UiTheme;
 /// A compact, circular Avatar with an optional image and fallback content.
 #[derive(IntoElement)]
 pub struct Avatar {
-    style: gpui::StyleRefinement,
+    style: gpui_kit::StyleRefinement,
     id: ElementId,
     image: Option<ImageSource>,
-    fallback: Vec<AnyElement>,
+    fallback: SharedString,
     aria_label: Option<SharedString>,
     size: AvatarSize,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+/// Nova avatar dimensions.
 pub enum AvatarSize {
+    /// Compact dimensions.
     Sm,
     #[default]
+    /// The default Nova presentation.
     Default,
+    /// Large dimensions.
     Lg,
 }
 
 impl Avatar {
+    /// Creates a `Avatar` with a stable caller-owned ID.
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
-            style: gpui::StyleRefinement::default(),
+            style: gpui_kit::StyleRefinement::default(),
             id: id.into(),
             image: None,
-            fallback: Vec::new(),
+            fallback: SharedString::default(),
             aria_label: None,
             size: AvatarSize::Default,
         }
     }
 
+    /// Sets the text shown while the image is unavailable.
+    pub fn fallback(mut self, text: impl Into<SharedString>) -> Self {
+        self.fallback = text.into();
+        self
+    }
+    /// Sets the avatar image source.
     pub fn image(mut self, source: impl Into<ImageSource>) -> Self {
         self.image = Some(source.into());
         self
     }
+    /// Sets the accessible name of the control.
     pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
         self.aria_label = Some(label.into());
         self
     }
+    /// Selects the Nova control dimensions.
     pub fn size(mut self, size: AvatarSize) -> Self {
         self.size = size;
         self
-    }
-}
-
-impl ParentElement for Avatar {
-    fn extend(&mut self, children: impl IntoIterator<Item = AnyElement>) {
-        self.fallback.extend(children);
     }
 }
 
@@ -68,35 +74,9 @@ impl RenderOnce for Avatar {
             AvatarSize::Default => 32.,
             AvatarSize::Lg => 40.,
         };
-        let root = AvatarRoot::new()
-            .id(self.id)
-            .relative()
-            .flex_shrink_0()
-            .size(theme.space(size / 4.))
-            .rounded_full()
-            .overflow_hidden();
-        let mut root = super::theme::apply_style(root, &self.style);
-        if let Some(label) = self.aria_label {
-            root = root.aria_label(label);
-        }
-        if let Some(image) = self.image {
-            // Base GPUI styles the image wrapper, but GPUI needs the radius on Img itself.
-            // Keep its image node for loading/fallback state; paint the same cached image below.
-            root = root
-                .child(AvatarImage::new(image.clone()).size_full().invisible())
-                .child(
-                    img(image)
-                        .absolute()
-                        .top(px(0.))
-                        .left(px(0.))
-                        .size_full()
-                        .rounded_full()
-                        .object_fit(ObjectFit::Cover)
-                        .into_any_element(),
-                );
-        }
-        root.child(
-            AvatarFallback::new()
+        let image_size = theme.space(size / 4.);
+        let fallback = move || {
+            div()
                 .size_full()
                 .flex()
                 .items_center()
@@ -109,13 +89,40 @@ impl RenderOnce for Avatar {
                 } else {
                     14.
                 }))
-                .children(self.fallback),
-        )
+                .child(self.fallback.clone())
+                .into_any_element()
+        };
+        let content = match self.image {
+            Some(source) => {
+                let loading = fallback.clone();
+                img(source)
+                    .size_full()
+                    .rounded_full()
+                    .object_fit(ObjectFit::Cover)
+                    .with_loading(loading)
+                    .with_fallback(fallback)
+                    .into_any_element()
+            }
+            None => fallback(),
+        };
+        let root = div()
+            .id(self.id)
+            .size(image_size)
+            .flex_shrink_0()
+            .rounded_full()
+            .overflow_hidden()
+            .child(content);
+        let root = if let Some(label) = self.aria_label {
+            root.aria_label(label)
+        } else {
+            root
+        };
+        super::theme::apply_style(root, &self.style)
     }
 }
 
-impl gpui::Styled for Avatar {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
+impl gpui_kit::Styled for Avatar {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
     }
 }

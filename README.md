@@ -13,8 +13,10 @@
 
 gpuicn is an open-source library of Rust components for native GPUI apps.
 Install the source in your app, then keep ownership of its styling and behavior.
-The components use [Base GPUI](https://github.com/LukeTandjung/base-gpui) and
-native desktop input behavior.
+Applications use [GPUI Kit](https://github.com/longbridge/gpui-kit) for native
+controls, text editing, motion, and popup hosts. gpuicn supplies Nova styling and
+application components. See the [migration notes](docs/validation/gpui-kit-migration.md)
+for the new APIs and verification status.
 
 The project follows the shadcn/ui source distribution model. It brings shadcn's
 visual language and themes to idiomatic GPUI APIs. It does not copy React APIs.
@@ -74,7 +76,7 @@ for signing, validation, and distribution limits.
 The TanStack/shadcn website lives in `web/`. The Rust crate in `site/` builds
 the embedded GPUI/WASM previews.
 
-Use Rust 1.95 for native development, the pinned WASM nightly, Trunk 0.21.14,
+Use Rust 1.97.1 for native development, the pinned WASM nightly, Trunk 0.21.14,
 and Bun. On macOS, native builds require Xcode's Metal toolchain.
 
 ```sh
@@ -87,7 +89,7 @@ bun run dev
 ```
 
 The site generates its code examples and API reference from the same Rust source
-used by the previews. It also includes a searchable gallery of all 1,776 Lucide
+used by the previews. It also includes a searchable gallery of all 1,818 Lucide
 icons, backed by the standalone `gpui-icons` library.
 
 ## Verify changes
@@ -108,7 +110,7 @@ byte for byte, tests overwrite behavior, and compiles the app.
 
 ## Platform scope
 
-The components use Base GPUI's native state and input behavior. The browser
+The components use GPUI Kit's native state and input behavior. The browser
 catalog renders the same Rust components through WebGPU and WASM. It needs a
 WebGPU-capable browser. Source and installation instructions remain available
 when a preview cannot start.

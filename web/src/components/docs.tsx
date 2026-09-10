@@ -220,7 +220,7 @@ export function ComponentPage({
         </h2>
         <p className="mt-3 leading-7 text-muted-foreground">
           Public constructors and methods from the source you install. Functions
-          that return Base GPUI parts also support those parts’ builder methods.
+          that return GPUI Kit parts also support those parts’ builder methods.
         </p>
         <div className="mt-4 divide-y rounded-xl border px-4">
           {docs.api.map((entry, index) => (

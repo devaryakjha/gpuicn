@@ -4,15 +4,14 @@ resolver = "3"
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.95"
+rust-version = "1.97.1"
 license = "MIT"
 repository = "https://github.com/devaryakjha/gpuicn"
 
 [workspace.dependencies]
-base-gpui = { git = "https://github.com/LukeTandjung/base-gpui", rev = "64b22337b6a790c636aab248e768e4875bb28ba8", package = "base-gpui" }
-gpui = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d", package = "gpui" }
-gpui_platform = { git = "https://github.com/zed-industries/zed", rev = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d", package = "gpui_platform", features = ["font-kit"] }
-gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "b25a5ebae2e1a5f4ddfca1389ab9d21d481d9ec8", package = "gpui-icons" }
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.4", features = ["font-kit"] }
+gpui-kit = { version = "=0.6.1", default-features = false }
+gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "01ac07dd83e97f9d6a3526466413732fbdfc2975" }
 
 [profile.dev]
 debug = 1

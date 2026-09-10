@@ -1,4 +1,16 @@
 (function () {
+  // GPUI 0.3.4 listens on its IME textarea, then blurs it for non-editable
+  // controls. Forward those keys without refocusing it or opening a mobile IME.
+  for (var type of ["keydown", "keyup"]) {
+    window.addEventListener(type, function (event) {
+      if (event.target !== document.body && event.target?.tagName !== "CANVAS") return;
+      var input = document.querySelector("body > textarea");
+      if (input && !input.dispatchEvent(new KeyboardEvent(event.type, event))) {
+        event.preventDefault();
+      }
+    });
+  }
+
   window.gpuicnPreviewUpdates = function (update) {
     window.addEventListener("message", function (event) {
       var data = event.data;

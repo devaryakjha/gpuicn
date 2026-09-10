@@ -1,112 +1,48 @@
-#![allow(missing_docs)]
-//! Nova-styled Toggle Group backed by Base GPUI roving focus and selection rules.
-
+//! Nova toggle sets with controlled selection and arrow-key focus.
+use super::theme::{RovingFocus, UiTheme, apply_style};
+use gpui_kit::{
+    AnyElement, App, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
+    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
+    prelude::FluentBuilder as _, px,
+};
 use std::rc::Rc;
 
-use base_gpui::toggle::Toggle as BaseToggle;
-use base_gpui::toggle_group::{ToggleGroup as BaseToggleGroup, ToggleGroupValueChangeDetails};
-use gpui::{
-    AnyElement, App, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
-    SharedString, Styled, Window, prelude::FluentBuilder as _, px,
-};
-
-use super::theme::UiTheme;
-
-type ChangeHandler = Rc<
-    dyn Fn(&[SharedString], &mut ToggleGroupValueChangeDetails, &mut Window, &mut App) + 'static,
->;
-
+type ChangeHandler = Rc<dyn Fn(Vec<SharedString>, &mut Window, &mut App)>;
+/// A labeled toggle option with custom child content.
 pub struct ToggleGroupItem {
-    style: gpui::StyleRefinement,
     id: ElementId,
     value: SharedString,
-    disabled: bool,
-    aria_label: Option<SharedString>,
+    label: Option<SharedString>,
     children: Vec<AnyElement>,
+    disabled: bool,
+    style: StyleRefinement,
 }
 impl ToggleGroupItem {
+    /// Creates a `ToggleGroupItem` with a stable caller-owned ID.
     pub fn new(id: impl Into<ElementId>, value: impl Into<SharedString>) -> Self {
         Self {
-            style: gpui::StyleRefinement::default(),
             id: id.into(),
             value: value.into(),
-            disabled: false,
-            aria_label: None,
+            label: None,
             children: Vec::new(),
+            disabled: false,
+            style: Default::default(),
         }
     }
+    /// Disables interaction and applies the disabled appearance.
     pub fn disabled(mut self, value: bool) -> Self {
         self.disabled = value;
         self
     }
-    pub fn aria_label(mut self, value: impl Into<SharedString>) -> Self {
-        self.aria_label = Some(value.into());
+    /// Sets the accessible name of the control.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.label = Some(label.into());
         self
     }
-    fn render(
-        self,
-        theme: &UiTheme,
-        joined: bool,
-        first: bool,
-        last: bool,
-    ) -> BaseToggle<SharedString> {
-        let spacing = theme.spacing.unit;
-        let text_scale = theme.text_scale;
-        let colors = theme.colors;
-        let focus_ring = theme.focus_ring();
-        let radius = theme.radius.lg;
-        let mut toggle = BaseToggle::new()
-            .id(self.id)
-            .value(self.value)
-            .disabled(self.disabled)
-            .style_with_state(move |state, base| {
-                let base = {
-                    let pressed = state.pressed;
-                    let focus_ring = focus_ring.clone();
-                    base.flex()
-                        .items_center()
-                        .justify_center()
-                        .gap(spacing * 1_f32)
-                        .h(spacing * 8_f32)
-                        .min_w(spacing * 8_f32)
-                        .px(spacing * 2.5_f32)
-                        .rounded(if joined { px(0.) } else { radius })
-                        .when(joined && first, |base| base.rounded_l(radius))
-                        .when(joined && last, |base| base.rounded_r(radius))
-                        .border_1()
-                        .border_color(colors.background.opacity(0.0))
-                        .text_size(px(14.) * text_scale)
-                        .text_color(colors.foreground)
-                        .bg(if state.pressed {
-                            colors.muted
-                        } else {
-                            colors.background.opacity(0.)
-                        })
-                        .focus_visible(move |style| {
-                            style
-                                .bg(if pressed {
-                                    colors.muted
-                                } else {
-                                    colors.background
-                                })
-                                .border_color(colors.ring)
-                                .shadow(focus_ring.clone())
-                        })
-                        .when(state.disabled, |base| {
-                            base.opacity(0.50).cursor_not_allowed()
-                        })
-                        .when(!state.disabled, |base| {
-                            base.cursor_pointer()
-                                .hover(move |style| style.bg(colors.muted))
-                        })
-                };
-                super::theme::apply_style(base, &self.style)
-            })
-            .children(self.children);
-        if let Some(label) = self.aria_label {
-            toggle = toggle.aria_label(label);
-        }
-        toggle
+}
+impl Styled for ToggleGroupItem {
+    fn style(&mut self) -> &mut StyleRefinement {
+        &mut self.style
     }
 }
 impl ParentElement for ToggleGroupItem {
@@ -114,113 +50,171 @@ impl ParentElement for ToggleGroupItem {
         self.children.extend(children);
     }
 }
-
 #[derive(IntoElement)]
+/// A controlled collection of toggles with roving keyboard focus.
 pub struct ToggleGroup {
-    style: gpui::StyleRefinement,
     id: ElementId,
-    default_value: Vec<SharedString>,
-    value: Option<Vec<SharedString>>,
-    multiple: bool,
+    value: Vec<SharedString>,
+    label: Option<SharedString>,
     disabled: bool,
-    aria_label: Option<SharedString>,
+    multiple: bool,
     joined: bool,
     items: Vec<ToggleGroupItem>,
-    on_value_change: Option<ChangeHandler>,
+    on_change: Option<ChangeHandler>,
+    style: StyleRefinement,
 }
 impl ToggleGroup {
+    /// Creates a `ToggleGroup` with a stable caller-owned ID.
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
-            style: gpui::StyleRefinement::default(),
             id: id.into(),
-            default_value: Vec::new(),
-            value: None,
-            multiple: false,
+            value: Vec::new(),
+            label: None,
             disabled: false,
-            aria_label: None,
+            multiple: false,
             joined: true,
             items: Vec::new(),
-            on_value_change: None,
+            on_change: None,
+            style: Default::default(),
         }
     }
-    pub fn default_value(
-        mut self,
-        values: impl IntoIterator<Item = impl Into<SharedString>>,
-    ) -> Self {
-        self.default_value = values.into_iter().map(Into::into).collect();
-        self
-    }
+    /// Sets the caller-owned value displayed by this control.
     pub fn value(mut self, values: impl IntoIterator<Item = impl Into<SharedString>>) -> Self {
-        self.value = Some(values.into_iter().map(Into::into).collect());
+        self.value = values.into_iter().map(Into::into).collect();
         self
     }
-    pub fn multiple(mut self, value: bool) -> Self {
-        self.multiple = value;
+    /// Sets the accessible name of the control.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.label = Some(label.into());
         self
     }
+    /// Disables interaction and applies the disabled appearance.
     pub fn disabled(mut self, value: bool) -> Self {
         self.disabled = value;
         self
     }
-    pub fn aria_label(mut self, value: impl Into<SharedString>) -> Self {
-        self.aria_label = Some(value.into());
+    /// Allows multiple selected values instead of one.
+    pub fn multiple(mut self, value: bool) -> Self {
+        self.multiple = value;
         self
     }
+    /// Removes gaps between adjacent toggles.
     pub fn joined(mut self, value: bool) -> Self {
         self.joined = value;
         self
     }
+    /// Appends an option to the group.
     pub fn item(mut self, item: ToggleGroupItem) -> Self {
         self.items.push(item);
         self
     }
-    pub fn on_value_change(
+    /// Reports a requested value change; retain the next value in the owning view.
+    pub fn on_change(
         mut self,
-        handler: impl Fn(&[SharedString], &mut ToggleGroupValueChangeDetails, &mut Window, &mut App)
-        + 'static,
+        handler: impl Fn(Vec<SharedString>, &mut Window, &mut App) + 'static,
     ) -> Self {
-        self.on_value_change = Some(Rc::new(handler));
+        self.on_change = Some(Rc::new(handler));
         self
     }
 }
+impl Styled for ToggleGroup {
+    fn style(&mut self) -> &mut StyleRefinement {
+        &mut self.style
+    }
+}
 impl RenderOnce for ToggleGroup {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
-        let mut group = BaseToggleGroup::new()
-            .id(self.id)
-            .default_value(self.default_value)
-            .multiple(self.multiple)
-            .disabled(self.disabled)
+        let colors = theme.colors;
+        let focus = RovingFocus::new(
+            self.id.clone(),
+            &self
+                .items
+                .iter()
+                .map(|i| (i.id.clone(), self.disabled || i.disabled))
+                .collect::<Vec<_>>(),
+            None,
+            window,
+            cx,
+        );
+        let count = self.items.len();
+        let children = self
+            .items
+            .into_iter()
+            .enumerate()
+            .map(|(index, item)| {
+                let pressed = self.value.contains(&item.value);
+                let disabled = self.disabled || item.disabled;
+                let handle = focus.handles[index].as_ref();
+                let change = self.on_change.clone();
+                let mut next = if self.multiple {
+                    self.value.clone()
+                } else {
+                    Vec::new()
+                };
+                next.retain(|value| value != &item.value);
+                if !pressed {
+                    next.push(item.value);
+                }
+                let ring = theme.focus_ring();
+                let toggle = gpui_kit::base::Toggle::new(item.id)
+                    .pressed(pressed)
+                    .disabled(disabled)
+                    .when_some(item.label, |toggle, label| {
+                        toggle.accessibility_label(label)
+                    })
+                    .when_some(handle, |toggle, h| {
+                        toggle.track_focus(h).tab_stop(h.tab_stop)
+                    })
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .gap(theme.space(1.))
+                    .h(theme.space(8.))
+                    .min_w(theme.space(8.))
+                    .px(theme.space(2.5))
+                    .rounded(if self.joined { px(0.) } else { theme.radius.lg })
+                    .when(self.joined && index == 0, |t| t.rounded_l(theme.radius.lg))
+                    .when(self.joined && index + 1 == count, |t| {
+                        t.rounded_r(theme.radius.lg)
+                    })
+                    .border_1()
+                    .border_color(colors.background.opacity(0.))
+                    .text_size(theme.text(14.))
+                    .text_color(colors.foreground)
+                    .bg(if pressed {
+                        colors.muted
+                    } else {
+                        colors.background.opacity(0.)
+                    })
+                    .focus_visible(move |s| {
+                        s.bg(if pressed {
+                            colors.muted
+                        } else {
+                            colors.background
+                        })
+                        .border_color(colors.ring)
+                        .shadow(ring.clone())
+                    })
+                    .when(disabled, |t| t.opacity(0.5).cursor_not_allowed())
+                    .when(!disabled, |t| {
+                        t.cursor_pointer().hover(move |s| s.bg(colors.muted))
+                    })
+                    .children(item.children)
+                    .when_some(change, |toggle, handler| {
+                        toggle.on_change(move |_, _, window, cx| handler(next.clone(), window, cx))
+                    });
+                apply_style(toggle, &item.style)
+            })
+            .collect::<Vec<_>>();
+        let root = gpui_kit::base::ToggleGroup::new(self.id)
             .flex()
-            .gap(theme.space(if self.joined { 0. } else { 2. }));
-        if let Some(value) = self.value {
-            group = group.value(value);
-        }
-        if let Some(label) = self.aria_label {
-            group = group.aria_label(label);
-        }
-        if let Some(handler) = self.on_value_change {
-            group = group.on_value_change(move |values, details, window, cx| {
-                handler(values, details, window, cx)
-            });
-        }
-        let item_count = self.items.len();
-        super::theme::apply_style(group, &self.style).children(
-            self.items.into_iter().enumerate().map(|(index, item)| {
-                item.render(&theme, self.joined, index == 0, index + 1 == item_count)
-            }),
-        )
-    }
-}
-
-impl gpui::Styled for ToggleGroupItem {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
-        &mut self.style
-    }
-}
-
-impl gpui::Styled for ToggleGroup {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
-        &mut self.style
+            .gap(theme.space(if self.joined { 0. } else { 2. }))
+            .when_some(self.label, |root, label| root.aria_label(label))
+            .on_key_down(move |event, window, cx| {
+                focus.key(event, Some(gpui_kit::Axis::Horizontal), window, cx);
+            })
+            .children(children);
+        apply_style(root, &self.style)
     }
 }

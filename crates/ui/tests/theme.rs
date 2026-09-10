@@ -1,10 +1,10 @@
 //! Theme global-state integration checks.
 
-use gpui::{TestAppContext, px};
+use gpui_kit::{TestAppContext, px};
 use gpuicn::theme::UiRadius;
 use gpuicn::{ThemeMode, UiTheme};
 
-#[gpui::test]
+#[gpui_kit::test]
 fn switches_the_app_owned_theme(cx: &mut TestAppContext) {
     cx.update(|cx| {
         UiTheme::switch(cx, ThemeMode::Dark);

@@ -2,21 +2,20 @@
 //!
 //! Visual source: shadcn/ui 4.19.0 `button.tsx` and `style-nova.css` at
 //! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`. Interaction comes from the
-//! pinned Base GPUI `ButtonRoot`.
+//! GPUI Kit headless button.
 
 use std::rc::Rc;
 
-use base_gpui::button::ButtonRoot;
-pub use base_gpui::button::ButtonRootStyleState as ButtonStyleState;
-use gpui::{
-    AnyElement, App, ClickEvent, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement,
-    ParentElement, RenderOnce, SharedString, Styled, Window, prelude::FluentBuilder as _, px,
+use gpui_kit::base::Button as BaseButton;
+use gpui_kit::{
+    AnyElement, App, ClickEvent, ElementId, FontWeight, IntoElement, ParentElement, RenderOnce,
+    SharedString, Styled, Window, px,
 };
 
 use super::theme::{ThemeMode, UiRadius, UiTheme};
 
 type ButtonClickHandler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
-type ButtonStyleHandler = Rc<dyn Fn(ButtonStyleState, Div) -> Div>;
+type ButtonStyleHandler = Rc<dyn Fn(BaseButton) -> BaseButton>;
 
 /// The pinned shadcn Button visual variant.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -105,17 +104,17 @@ impl ButtonMetrics {
     }
 }
 
-/// A styled Button that keeps Base GPUI's pointer and keyboard behavior.
+/// A styled Button that keeps GPUI Kit's pointer and keyboard behavior.
 #[derive(IntoElement)]
 pub struct Button {
-    style: gpui::StyleRefinement,
+    style: gpui_kit::StyleRefinement,
     id: ElementId,
     variant: ButtonVariant,
     size: ButtonSize,
     disabled: bool,
     aria_label: Option<SharedString>,
     on_click: Option<ButtonClickHandler>,
-    style_with_state: Option<ButtonStyleHandler>,
+    style_with: Option<ButtonStyleHandler>,
     children: Vec<AnyElement>,
 }
 
@@ -123,14 +122,14 @@ impl Button {
     /// Creates a Button with a caller-owned stable ID.
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
-            style: gpui::StyleRefinement::default(),
+            style: gpui_kit::StyleRefinement::default(),
             id: id.into(),
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
             disabled: false,
             aria_label: None,
             on_click: None,
-            style_with_state: None,
+            style_with: None,
             children: Vec::new(),
         }
     }
@@ -178,11 +177,8 @@ impl Button {
 
     /// Replaces the visual styling while retaining button interaction.
     /// Include a visible keyboard focus treatment in custom styles.
-    pub fn style_with_state(
-        mut self,
-        handler: impl Fn(ButtonStyleState, Div) -> Div + 'static,
-    ) -> Self {
-        self.style_with_state = Some(Rc::new(handler));
+    pub fn style_with(mut self, handler: impl Fn(BaseButton) -> BaseButton + 'static) -> Self {
+        self.style_with = Some(Rc::new(handler));
         self
     }
 }
@@ -198,20 +194,15 @@ impl RenderOnce for Button {
         let theme = UiTheme::read(cx).clone();
         let variant = self.variant;
         let size = self.size;
-        let mut root = ButtonRoot::new()
-            .id(self.id)
-            .disabled(self.disabled)
-            .style_with_state(move |state, base| {
-                let base = match &self.style_with_state {
-                    Some(style) => style(state, base),
-                    None => style_button(base, state.disabled, variant, size, &theme),
-                };
-                super::theme::apply_style(base, &self.style)
-            })
-            .children(self.children);
+        let root = BaseButton::new(self.id).disabled(self.disabled);
+        let root = match self.style_with {
+            Some(style) => style(root),
+            None => style_button(root, self.disabled, variant, size, &theme),
+        };
+        let mut root = super::theme::apply_style(root, &self.style).children(self.children);
 
         if let Some(label) = self.aria_label {
-            root = root.aria_label(label);
+            root = root.accessibility_label(label);
         }
         if let Some(handler) = self.on_click {
             root = root.on_click(move |event, window, cx| handler(event, window, cx));
@@ -221,13 +212,15 @@ impl RenderOnce for Button {
     }
 }
 
-pub(super) fn style_button(
-    base: Div,
+pub(super) fn style_button<
+    T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude::FluentBuilder,
+>(
+    base: T,
     disabled: bool,
     variant: ButtonVariant,
     size: ButtonSize,
     theme: &UiTheme,
-) -> Div {
+) -> T {
     let colors = theme.colors;
     let metrics = size.metrics(theme.radius);
     let focus_border = match variant {
@@ -353,8 +346,8 @@ pub(super) fn style_button(
         .when(disabled, |base| base.opacity(0.50).cursor_not_allowed())
 }
 
-impl gpui::Styled for Button {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
+impl gpui_kit::Styled for Button {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
     }
 }
@@ -375,14 +368,19 @@ mod tests {
                 ButtonVariant::Link,
             ] {
                 for disabled in [false, true] {
-                    let mut button =
-                        style_button(gpui::div(), disabled, variant, ButtonSize::Default, &theme);
+                    let mut button = style_button(
+                        gpui_kit::div(),
+                        disabled,
+                        variant,
+                        ButtonSize::Default,
+                        &theme,
+                    );
                     assert_eq!(
                         button.style().mouse_cursor,
                         Some(if disabled {
-                            gpui::CursorStyle::OperationNotAllowed
+                            gpui_kit::CursorStyle::OperationNotAllowed
                         } else {
-                            gpui::CursorStyle::PointingHand
+                            gpui_kit::CursorStyle::PointingHand
                         })
                     );
                 }

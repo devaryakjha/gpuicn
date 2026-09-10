@@ -222,13 +222,13 @@ export function findComponent(slug: string) {
 }
 
 export function previewHeight(slug: string) {
+  if (slug === "drawer") return 560
   if (slug === "sidebar" || slug === "virtual-list") return 520
   if (
     [
       "alert-dialog",
       "context-menu",
       "dialog",
-      "drawer",
       "menu",
       "menubar",
       "navigation-menu",

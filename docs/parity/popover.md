@@ -1,9 +1,11 @@
 # Popover parity
 
-- Upstream: shadcn/ui Nova at `ac60ef5c4db4265d71454dd9ecd3f93e255d7211`, `apps/v4/registry/bases/base/ui/popover.tsx` and `apps/v4/registry/styles/style-nova.css`.
-- gpuicn: `registry/popover/popover.rs`.
-- Difference types: platform, interaction, accessibility, and visual.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/popover/popover.rs`, using GPUI Kit 0.6.1.
 
-Base GPUI supplies controlled state, anchor collision handling, outside press dismissal, modal support, focus tracking, and the optional arrow. The wrapper uses its 4px Nova side offset and visual surface only.
+Kit Popover owns the retained popup state, trigger and positioning. The caller supplies content with a closure; gpuicn provides Nova trigger, surface and text helpers. Use native buttons as triggers without nesting another button inside them.
 
-The Nova open/close fade, zoom, and directional slide transitions are omitted. GPUI has no browser relationship attributes or matching motion system; callers should keep the popup `aria_label` explicit.
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

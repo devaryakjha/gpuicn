@@ -1,5 +1,5 @@
 [rust]
-toolchain = "1.95.0"
+toolchain = "1.97.1"
 
 [shadcn]
 version = "4.19.0"
@@ -10,18 +10,20 @@ theme = "neutral"
 font_sans = "geist"
 font_mono = "geist-mono"
 
-[base_gpui]
-commit = "64b22337b6a790c636aab248e768e4875bb28ba8"
-
 [gpui]
-version = "0.2.2"
-commit = "59b2ebf10351b5c0b5cd4403f01ed0460eeec06d"
+package = "gpui-pre"
+version = "0.3.4"
+commit = "69164008341295ad481bb11c0334a712ca8c23e3"
+
+[gpui_kit]
+version = "0.6.1"
+commit = "36b51819deb52c947a79f8de29e0e9175eda7464"
 
 [gpui_icons]
-version = "0.3.0"
-commit = "b25a5ebae2e1a5f4ddfca1389ab9d21d481d9ec8"
-lucide_version = "1.33.0"
-lucide_commit = "59978cecf84986af59f1f9f503bcebdc89c6d166"
+version = "0.4.0"
+commit = "01ac07dd83e97f9d6a3526466413732fbdfc2975"
+lucide_version = "1.43.0"
+lucide_commit = "ba95e4c988b1e1b39cf5544e73b25a74b76816ee"
 
 [geist]
 version = "1.7.1"
@@ -33,5 +35,5 @@ mono_regular_sha256 = "5a0de4b3d54ab272f76a1d8c84b7fb24c67bbec6591d5300e61c7bc10
 
 [wasm]
 rust = "nightly-2026-08-17"
-wasm_bindgen = "0.2.120"
+wasm_bindgen = "0.2.121"
 trunk = "0.21.14"

@@ -51,7 +51,7 @@ function IconsPage() {
         description="The complete Lucide set for GPUI. Original SVGs, consistent strokes, and editable application code."
       />
       <p className="mt-4 text-sm leading-6 text-muted-foreground">
-        {icons.length.toLocaleString()} icons · Lucide 1.33.0 · Native and WASM
+        {icons.length.toLocaleString()} icons · Lucide 1.43.0 · Native and WASM
         ·{" "}
         <a
           className="underline underline-offset-4"
@@ -192,7 +192,7 @@ function IconsPage() {
           </p>
           <CodeBlock
             className="mt-4"
-            value={`use gpui::{Styled, px, rgb};\nuse gpui_icons::{lucide, LucideIcon};\n\nlucide(${selected.rust})\n    .size(px(24.))\n    .text_color(rgb(0x171717))`}
+            value={`use gpui_kit::{Styled, px, rgb};\nuse gpui_icons::{lucide, LucideIcon};\n\nlucide(${selected.rust})\n    .size(px(24.))\n    .text_color(rgb(0x171717))`}
           />
           <p className="mt-4 text-sm leading-6 text-muted-foreground">
             Register <code className="text-xs">LucideAssetSource</code> on your

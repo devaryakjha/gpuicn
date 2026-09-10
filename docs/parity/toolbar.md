@@ -1,9 +1,11 @@
 # Toolbar parity
 
-- Upstream: no shadcn/ui Toolbar component exists in the pinned `4.19.0` base registry.
-- gpuicn: `registry/toolbar/toolbar.rs`.
-- Difference type: visual adaptation.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/toolbar/toolbar.rs`, using GPUI Kit 0.6.1.
 
-Base GPUI provides the toolbar runtime, keyboard actions, buttons, links and separators. The local composition retains its typed child wiring and disabled cascade while using the shared native Input. The port applies the same Neutral Nova controls as Button, Tabs, and Navigation Menu. This is intentionally a visual adaptation rather than a claimed shadcn API or source port.
+Toolbar composes Kit buttons and retained Kit InputState editors. One enabled item participates in Tab order; arrows and Home/End move between controls. Editing keys remain in a focused input. The application owns actions and editor subscriptions.
 
-`toolbar_input_with_label("Find text", cx)` gives the shared toolbar editor a native TextInput role, name and current value. `toolbar_input(cx)` remains available with a generic accessible name. Undo/redo and Unicode word editing use the same editor as standalone Input. Plain arrows leave only at the matching caret edge with no selection; modified word arrows stay in the editor. Roving entry selects the text, and the toolbar keeps one Tab stop.
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

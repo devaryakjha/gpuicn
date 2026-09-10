@@ -1,5 +1,11 @@
 # Checkbox Group parity
 
-- Upstream visual source: shadcn/ui `4.19.0` Nova Checkbox; behavior source: Base GPUI Checkbox Group.
-- gpuicn: `registry/checkbox_group/checkbox_group.rs`.
-- Base GPUI supplies group value ownership, controlled/uncontrolled values, and disabled propagation. The wrapper exposes individual styled group items; labelled field composition stays in the Field layer.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/checkbox_group/checkbox_group.rs`, using GPUI Kit 0.6.1.
+
+The application owns the selected values and handles on_change. Each item has a stable ID, value, visible label and disabled flag. The group composes Kit checkbox controls under a named group.
+
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

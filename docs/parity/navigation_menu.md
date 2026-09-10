@@ -1,9 +1,11 @@
 # Navigation Menu parity
 
-- Upstream: shadcn/ui `4.19.0` at `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, `apps/v4/registry/bases/base/ui/navigation-menu.tsx` and the Navigation Menu section of `apps/v4/registry/styles/style-nova.css`.
-- gpuicn: `registry/navigation_menu/navigation_menu.rs`.
-- Difference type: platform animation and icon composition.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/navigation_menu/navigation_menu.rs`, using GPUI Kit 0.6.1.
 
-Base GPUI owns hover delays, patient-click behavior, safe-polygon handling, keyboard navigation, portal positioning, and dismissals. The port keeps the Nova trigger, link, popover, viewport, arrow, and focus treatment. Callers provide icon drawing within `navigation_menu_icon()`; CSS chevron rotation and CSS popup motion remain absent until GPUI exposes equivalent transform and transition APIs.
+Navigation Menu composes the Menubar trigger and popup behavior with link items. The application handles link activation and routing through `on_click`. Arbitrary rich navigation panels are outside this API.
 
-Keyboard limitation in the pinned Base GPUI revision: links placed inside generic `NavigationMenuContent` children do not receive the typed link focus wiring. The link primitive handles pointer and accessibility Click activation, but does not register its own Enter/Space activation handler. Treat complete keyboard activation of these links as unresolved; the visual wrapper does not repair that behavior.
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

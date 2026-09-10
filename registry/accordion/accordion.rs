@@ -1,100 +1,152 @@
-//! The shadcn Nova Accordion visual port.
-//!
-//! Visual source: shadcn/ui 4.19.0 `accordion.tsx` and `style-nova.css` at
-//! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`. Interaction, roving focus,
-//! and disclosure state come from the pinned Base GPUI Accordion primitives.
-
-pub use base_gpui::accordion::{
-    AccordionHeader, AccordionItem, AccordionOrientation, AccordionPanel, AccordionRoot,
-    AccordionTrigger,
-};
-use gpui::{
-    App, FontWeight, InteractiveElement as _, ParentElement as _, Styled,
-    prelude::FluentBuilder as _, px,
-};
-use gpui_icons::{LucideIcon, lucide};
-
+//! Nova accordion presentation with caller-owned disclosure state.
 use super::theme::UiTheme;
+use gpui_icons::{LucideIcon, lucide};
+pub use gpui_kit::base::{
+    Accordion, AccordionHeader, AccordionItem, AccordionPanel, AccordionTrigger,
+};
+use gpui_kit::{
+    App, ElementId, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _, Styled,
+    Window, div, prelude::FluentBuilder as _,
+};
 
-/// Creates a full-width, vertical Accordion root.
-pub fn accordion<T: Clone + Eq + 'static>(cx: &App) -> AccordionRoot<T> {
-    let theme = UiTheme::read(cx).clone();
-    AccordionRoot::new()
+/// Creates the accordion collection. Each item receives its expanded state from the caller.
+pub fn accordion(id: impl Into<ElementId>, cx: &App) -> Accordion {
+    Accordion::new(id)
         .flex()
         .flex_col()
         .w_full()
-        .font_family(theme.fonts.body)
+        .font_family(UiTheme::read(cx).fonts.body.clone())
+}
+/// Creates an item with the Nova divider.
+pub fn accordion_item(cx: &App) -> AccordionItem {
+    AccordionItem::new()
+        .border_b_1()
+        .border_color(UiTheme::read(cx).colors.border)
+}
+/// Creates a heading around a trigger.
+pub fn accordion_header(trigger: AccordionTrigger) -> AccordionHeader {
+    AccordionHeader::new(trigger).flex()
+}
+/// Creates a keyboard-focusable disclosure trigger with a chevron.
+pub fn accordion_trigger(
+    id: impl Into<ElementId>,
+    open: bool,
+    disabled: bool,
+    cx: &App,
+) -> AccordionTrigger {
+    let theme = UiTheme::read(cx);
+    let colors = theme.colors;
+    let ring = theme.focus_ring();
+    AccordionTrigger::new(id)
+        .open(open)
+        .disabled(disabled)
+        .when(!disabled, |b| {
+            b.tab_index(0).cursor_pointer().hover(|s| s.underline())
+        })
+        .when(disabled, |b| {
+            b.opacity(0.5)
+                .cursor_not_allowed()
+                .capture_any_mouse_down(|_, window, cx| {
+                    window.prevent_default();
+                    cx.stop_propagation();
+                })
+                .capture_any_mouse_up(|_, window, cx| {
+                    window.prevent_default();
+                    cx.stop_propagation();
+                })
+                .capture_key_down(|event, window, cx| {
+                    if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                        window.prevent_default();
+                        cx.stop_propagation();
+                    }
+                })
+        })
+        .w_full()
+        .flex()
+        .flex_row_reverse()
+        .items_start()
+        .justify_between()
+        .rounded(theme.radius.lg)
+        .border_1()
+        .border_color(colors.background.opacity(0.))
+        .py(theme.space(2.5))
+        .text_left()
+        .font_family(theme.fonts.body.clone())
+        .font_weight(FontWeight::MEDIUM)
+        .text_size(theme.text(14.))
+        .text_color(colors.foreground)
+        .focus_visible(move |s| {
+            s.bg(colors.background)
+                .border_color(colors.ring)
+                .shadow(ring.clone())
+        })
+        .child(super::theme::disclosure_icon(
+            lucide(LucideIcon::ChevronDown)
+                .size(theme.space(4.))
+                .text_color(colors.muted_foreground),
+            open,
+        ))
+}
+/// Creates a controlled panel, retaining its content only while the exit motion runs.
+pub fn accordion_content(
+    id: impl Into<ElementId>,
+    open: bool,
+    content: impl IntoElement,
+    window: &mut Window,
+    cx: &mut App,
+) -> AccordionPanel {
+    let id = id.into();
+    let presence = super::theme::presence(id.clone(), open, window, cx);
+    let theme = UiTheme::read(cx);
+    AccordionPanel::new()
+        .open(open)
+        .keep_mounted(presence.should_render() && (open || presence.progress > 0.))
+        .child(gpui_kit::base::motion::MotionReveal::new(
+            id,
+            presence.progress,
+            div()
+                .w_full()
+                .pb(theme.space(2.5))
+                .font_family(theme.fonts.body.clone())
+                .text_size(theme.text(14.))
+                .text_color(theme.colors.foreground)
+                .child(content)
+                .into_any_element(),
+        ))
 }
 
-/// Creates an Accordion item with the pinned Neutral divider.
-/// Set a unique `.id(...)` on each item.
-pub fn accordion_item<T: Clone + Eq + 'static>(value: T, cx: &App) -> AccordionItem<T> {
-    let theme = UiTheme::read(cx).clone();
-    AccordionItem::new(value)
-        .style_with_state(move |_state, base| base.border_b_1().border_color(theme.colors.border))
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui_kit::{
+        Context, Modifiers, Render, StatefulInteractiveElement as _, TestAppContext, point, px,
+    };
+    use std::{cell::Cell, rc::Rc};
 
-/// Creates the layout-only Accordion header.
-pub fn accordion_header<T: Clone + Eq + 'static>() -> AccordionHeader<T> {
-    AccordionHeader::new().flex()
-}
-
-/// Creates a Nova Accordion trigger with its chevron. Add the caller's label as a child.
-/// Set a unique `.id(...)` on each trigger to keep keyboard focus independent.
-pub fn accordion_trigger<T: Clone + Eq + 'static>(cx: &App) -> AccordionTrigger<T> {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
-    let icon_color = theme.colors.muted_foreground;
-    let focus_ring = theme.focus_ring();
-    AccordionTrigger::new().style_with_state(move |state, base| {
-        let colors = theme.colors;
-        let focus_ring = focus_ring.clone();
-        base.w_full()
-            .flex()
-            .flex_row_reverse()
-            .items_start()
-            .justify_between()
-            .rounded(theme.radius.lg)
-            .border_1()
-            .border_color(colors.background.opacity(0.0))
-            .py(spacing * 2.5_f32)
-            .text_left()
-            .font_family(theme.fonts.body.clone())
-            .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0) * text_scale)
-            .text_color(colors.foreground)
-            .when(!state.item.disabled, |base| {
-                base.cursor_pointer().hover(|style| style.underline())
-            })
-            .when(state.item.disabled, |base| {
-                base.opacity(0.50).cursor_not_allowed()
-            })
-            .focus_visible(move |style| {
-                style
-                    .bg(colors.background)
-                    .border_color(colors.ring)
-                    .shadow(focus_ring.clone())
-            })
-            .child(super::theme::disclosure_icon(
-                lucide(LucideIcon::ChevronDown)
-                    .size(spacing * 4_f32)
-                    .text_color(icon_color),
-                state.panel_open,
-            ))
-    })
-}
-
-/// Creates an Accordion panel with the pinned content inset.
-pub fn accordion_content<T: Clone + Eq + 'static>(cx: &App) -> AccordionPanel<T> {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
-    AccordionPanel::new().style_with_state(move |_state, base| {
-        base.overflow_hidden()
-            .pb(spacing * 2.5_f32)
-            .font_family(theme.fonts.body.clone())
-            .text_size(px(14.0) * text_scale)
-            .text_color(theme.colors.foreground)
-    })
+    #[gpui_kit::test]
+    fn disabled_trigger_blocks_caller_click_handlers(cx: &mut TestAppContext) {
+        struct Probe {
+            disabled: bool,
+            clicks: Rc<Cell<usize>>,
+        }
+        impl Render for Probe {
+            fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+                let clicks = self.clicks.clone();
+                accordion_trigger("trigger", false, self.disabled, cx)
+                    .size(px(100.))
+                    .on_click(move |_, _, _| clicks.set(clicks.get() + 1))
+            }
+        }
+        cx.update(|cx| UiTheme::set(cx, UiTheme::neutral_light()));
+        for disabled in [false, true] {
+            let clicks = Rc::new(Cell::new(0));
+            let (_, visual) = cx.add_window_view({
+                let clicks = clicks.clone();
+                move |_, _| Probe { disabled, clicks }
+            });
+            visual.update(|window, cx| window.draw(cx).clear(cx));
+            visual.simulate_click(point(px(10.), px(10.)), Modifiers::default());
+            assert_eq!(clicks.get(), usize::from(!disabled));
+        }
+    }
 }

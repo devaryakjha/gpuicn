@@ -1,254 +1,140 @@
-//! The shadcn Nova Checkbox visual port.
-//!
-//! Visual source: shadcn/ui 4.19.0 `checkbox.tsx` and `style-nova.css` at
-//! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`. Interaction and state come from
-//! the pinned Base GPUI Checkbox primitives.
-
-use std::rc::Rc;
-
-use base_gpui::checkbox::{
-    CheckboxCheckedChangeDetails, CheckboxIndicator, CheckboxRoot, CheckboxRootStyleState,
-};
-use gpui::ParentElement as _;
-use gpui::{
-    App, ElementId, InteractiveElement as _, IntoElement, RenderOnce, SharedString, Styled, Window,
-    prelude::FluentBuilder as _,
-};
-use gpui_icons::{LucideIcon, lucide};
+//! Nova-styled controlled checkbox using GPUI Kit's interaction and accessibility.
 
 use super::theme::{ThemeMode, UiTheme};
+use gpui_icons::{LucideIcon, lucide};
+use gpui_kit::base::{Checkbox as BaseCheckbox, CheckboxState};
+use gpui_kit::{
+    App, ClickEvent, ElementId, InteractiveElement as _, IntoElement, ParentElement as _,
+    RenderOnce, SharedString, StatefulInteractiveElement as _, Styled, Window,
+    prelude::FluentBuilder as _,
+};
+use std::rc::Rc;
 
-type CheckedChangeHandler =
-    Rc<dyn Fn(bool, &mut CheckboxCheckedChangeDetails, &mut Window, &mut App) + 'static>;
+type ChangeHandler = Rc<dyn Fn(bool, &ClickEvent, &mut Window, &mut App)>;
 
-/// A 16px styled Checkbox backed by Base GPUI state and actions.
 #[derive(IntoElement)]
+/// A controlled Nova checkbox with optional mixed state.
 pub struct Checkbox {
-    style: gpui::StyleRefinement,
+    style: gpui_kit::StyleRefinement,
     id: ElementId,
-    default_checked: bool,
-    checked: Option<bool>,
+    checked: bool,
     indeterminate: bool,
     disabled: bool,
     read_only: bool,
-    aria_label: Option<SharedString>,
-    on_checked_change: Option<CheckedChangeHandler>,
+    label: Option<SharedString>,
+    on_change: Option<ChangeHandler>,
 }
 
 impl Checkbox {
-    /// Creates an uncontrolled Checkbox with a caller-owned stable ID.
+    /// Creates a `Checkbox` with a stable caller-owned ID.
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
-            style: gpui::StyleRefinement::default(),
+            style: Default::default(),
             id: id.into(),
-            default_checked: false,
-            checked: None,
+            checked: false,
             indeterminate: false,
             disabled: false,
             read_only: false,
-            aria_label: None,
-            on_checked_change: None,
+            label: None,
+            on_change: None,
         }
     }
-
-    /// Sets the initial value for an uncontrolled Checkbox.
-    pub fn default_checked(mut self, checked: bool) -> Self {
-        self.default_checked = checked;
+    /// Sets the caller-owned checked state.
+    pub fn checked(mut self, value: bool) -> Self {
+        self.checked = value;
         self
     }
-
-    /// Makes the Checkbox controlled with the given value.
-    pub fn checked(mut self, checked: bool) -> Self {
-        self.checked = Some(checked);
+    /// Shows mixed or unknown state.
+    pub fn indeterminate(mut self, value: bool) -> Self {
+        self.indeterminate = value;
         self
     }
-
-    /// Shows the mixed-state Minus indicator.
-    pub fn indeterminate(mut self, indeterminate: bool) -> Self {
-        self.indeterminate = indeterminate;
+    /// Disables interaction and applies the disabled appearance.
+    pub fn disabled(mut self, value: bool) -> Self {
+        self.disabled = value;
         self
     }
-
-    /// Prevents input and removes the Checkbox from tab order.
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.disabled = disabled;
+    /// Prevents user changes while preserving focus and reading.
+    pub fn read_only(mut self, value: bool) -> Self {
+        self.read_only = value;
         self
     }
-
-    /// Prevents value changes while keeping normal visual styling.
-    pub fn read_only(mut self, read_only: bool) -> Self {
-        self.read_only = read_only;
+    /// Sets the accessible name of the control.
+    pub fn aria_label(mut self, value: impl Into<SharedString>) -> Self {
+        self.label = Some(value.into());
         self
     }
-
-    /// Sets the accessible name.
-    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.aria_label = Some(label.into());
-        self
-    }
-
-    /// Runs after an accepted pointer or Space toggle request.
-    pub fn on_checked_change(
+    /// Reports a requested value change; retain the next value in the owning view.
+    pub fn on_change(
         mut self,
-        handler: impl Fn(bool, &mut CheckboxCheckedChangeDetails, &mut Window, &mut App) + 'static,
+        handler: impl Fn(bool, &ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
-        self.on_checked_change = Some(Rc::new(handler));
+        self.on_change = Some(Rc::new(handler));
         self
     }
 }
 
 impl RenderOnce for Checkbox {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
-        let spacing = theme.spacing.unit;
-        let indicator_color = theme.colors.primary_foreground;
-        let mut root = CheckboxRoot::new()
-            .id(self.id)
-            .default_checked(self.default_checked)
+        let colors = theme.colors;
+        let selected = self.checked || self.indeterminate;
+        let background = if selected {
+            colors.primary
+        } else {
+            match theme.mode {
+                ThemeMode::Light => colors.background.opacity(0.),
+                ThemeMode::Dark => colors.input.opacity(0.30),
+            }
+        };
+        let focus_ring = theme.focus_ring();
+        let root = BaseCheckbox::new(self.id)
+            .checked(self.checked)
             .indeterminate(self.indeterminate)
             .disabled(self.disabled)
-            .read_only(self.read_only)
-            .relative()
-            .style_with_state(move |state, base| {
-                super::theme::apply_style(style_checkbox(base, state, &theme), &self.style)
+            .when(self.read_only, |root| root.aria_description("Read only"))
+            .flex()
+            .flex_shrink_0()
+            .items_center()
+            .justify_center()
+            .size(theme.space(4.))
+            .rounded(theme.radius.sm * (2. / 3.))
+            .border_1()
+            .border_color(if selected {
+                colors.primary
+            } else {
+                colors.input
             })
-            .child(
-                CheckboxIndicator::new()
-                    .keep_mounted(true)
-                    .absolute()
-                    .inset_0()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .style_with_state(|state, base| {
-                        base.opacity(if show_check(state.root) { 1.0 } else { 0.0 })
+            .bg(background)
+            .focus_visible(move |style| style.border_color(colors.ring).shadow(focus_ring.clone()))
+            .when(!self.disabled && !self.read_only, |root| {
+                root.cursor_pointer()
+            })
+            .when(self.disabled, |root| root.opacity(0.5).cursor_not_allowed())
+            .when_some(self.label, |root, label| root.accessibility_label(label))
+            .when(selected, |root| {
+                root.child(
+                    lucide(if self.indeterminate {
+                        LucideIcon::Minus
+                    } else {
+                        LucideIcon::Check
                     })
-                    .child(
-                        lucide(LucideIcon::Check)
-                            .size(spacing * 3.5_f32)
-                            .text_color(indicator_color),
-                    ),
-            )
-            .child(
-                CheckboxIndicator::new()
-                    .keep_mounted(true)
-                    .absolute()
-                    .inset_0()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .style_with_state(|state, base| {
-                        base.opacity(if show_minus(state.root) { 1.0 } else { 0.0 })
+                    .size(theme.space(3.5))
+                    .text_color(colors.primary_foreground),
+                )
+            })
+            .when(!self.read_only, |root| {
+                root.when_some(self.on_change, |root, handler| {
+                    root.on_change(move |state, event, window, cx| {
+                        handler(state == CheckboxState::Checked, event, window, cx)
                     })
-                    .child(
-                        lucide(LucideIcon::Minus)
-                            .size(spacing * 3.5_f32)
-                            .text_color(indicator_color),
-                    ),
-            );
-
-        if let Some(checked) = self.checked {
-            root = root.checked(Some(checked));
-        }
-        if let Some(label) = self.aria_label {
-            root = root.aria_label(label);
-        }
-        if let Some(handler) = self.on_checked_change {
-            root = root.on_checked_change(move |checked, details, window, cx| {
-                handler(checked, details, window, cx);
+                })
             });
-        }
-
-        root
+        super::theme::apply_style(root, &self.style)
     }
 }
-
-fn style_checkbox(base: gpui::Div, state: CheckboxRootStyleState, theme: &UiTheme) -> gpui::Div {
-    let spacing = theme.spacing.unit;
-    let colors = theme.colors;
-    let focus_ring = theme.focus_ring();
-    let selected = state.checked || state.indeterminate;
-    let background = if selected {
-        colors.primary
-    } else {
-        match theme.mode {
-            ThemeMode::Light => colors.background.opacity(0.0),
-            ThemeMode::Dark => colors.input.opacity(0.30),
-        }
-    };
-    let border = if selected {
-        colors.primary
-    } else {
-        colors.input
-    };
-
-    base.flex()
-        .flex_shrink_0()
-        .items_center()
-        .justify_center()
-        .w(spacing * 4_f32)
-        .h(spacing * 4_f32)
-        .rounded(theme.radius.sm * (2. / 3.))
-        .border_1()
-        .border_color(border)
-        .bg(background)
-        .text_color(if selected {
-            colors.primary_foreground
-        } else {
-            colors.foreground
-        })
-        .focus_visible(move |style| style.border_color(colors.ring).shadow(focus_ring.clone()))
-        .when(!state.disabled && !state.read_only, |base| {
-            base.cursor_pointer()
-        })
-        .when(state.disabled, |base| {
-            base.opacity(0.50).cursor_not_allowed()
-        })
-}
-
-fn show_check(state: CheckboxRootStyleState) -> bool {
-    state.checked && !state.indeterminate
-}
-
-fn show_minus(state: CheckboxRootStyleState) -> bool {
-    state.indeterminate
-}
-
-impl gpui::Styled for Checkbox {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
+impl Styled for Checkbox {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn cursor_matches_checkbox_interactivity() {
-        for (disabled, read_only, expected) in [
-            (false, false, Some(gpui::CursorStyle::PointingHand)),
-            (true, false, Some(gpui::CursorStyle::OperationNotAllowed)),
-            (false, true, None),
-        ] {
-            let state =
-                CheckboxRootStyleState::new(false, disabled, read_only, false, false, false);
-            let mut checkbox = style_checkbox(gpui::div(), state, &UiTheme::default());
-            assert_eq!(checkbox.style().mouse_cursor, expected);
-        }
-    }
-
-    #[test]
-    fn indicator_selection_is_unambiguous() {
-        let unchecked = CheckboxRootStyleState::default();
-        let checked = CheckboxRootStyleState::new(true, false, false, false, false, false);
-        let mixed = CheckboxRootStyleState::new(false, false, false, false, true, false);
-
-        assert!(!show_check(unchecked));
-        assert!(!show_minus(unchecked));
-        assert!(show_check(checked));
-        assert!(!show_minus(checked));
-        assert!(!show_check(mixed));
-        assert!(show_minus(mixed));
     }
 }

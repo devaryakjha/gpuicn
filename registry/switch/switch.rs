@@ -1,69 +1,69 @@
-#![allow(missing_docs)]
-//! Nova-styled Switch backed by Base GPUI toggle, focus, and keyboard behavior.
+//! Nova-styled controlled Switch using GPUI Kit.
 
 use std::{rc::Rc, sync::Arc};
 
-use base_gpui::switch::{SwitchCheckedChangeDetails, SwitchRoot, SwitchThumb};
-use gpui::{
-    App, ElementId, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce,
-    SharedString, Styled, Window, div, prelude::FluentBuilder as _, px,
+use gpui_kit::base::Switch as BaseSwitch;
+use gpui_kit::{
+    App, ClickEvent, ElementId, InteractiveElement as _, IntoElement, ParentElement as _,
+    RenderOnce, SharedString, StatefulInteractiveElement as _, Styled, Window, div,
+    prelude::FluentBuilder as _, px,
 };
 
 use super::theme::{ThemeMode, UiTheme, transition_value};
 
-type ChangeHandler =
-    Rc<dyn Fn(bool, &mut SwitchCheckedChangeDetails, &mut Window, &mut App) + 'static>;
+type ChangeHandler = Rc<dyn Fn(bool, &ClickEvent, &mut Window, &mut App) + 'static>;
 
 #[derive(IntoElement)]
+/// A controlled Nova switch with a themed thumb transition.
 pub struct Switch {
-    style: gpui::StyleRefinement,
+    style: gpui_kit::StyleRefinement,
     id: ElementId,
-    default_checked: bool,
-    checked: Option<bool>,
+    checked: bool,
     disabled: bool,
     read_only: bool,
     aria_label: Option<SharedString>,
-    on_checked_change: Option<ChangeHandler>,
+    on_change: Option<ChangeHandler>,
 }
 
 impl Switch {
+    /// Creates a `Switch` with a stable caller-owned ID.
     pub fn new(id: impl Into<ElementId>) -> Self {
         Self {
-            style: gpui::StyleRefinement::default(),
+            style: gpui_kit::StyleRefinement::default(),
             id: id.into(),
-            default_checked: false,
-            checked: None,
+            checked: false,
             disabled: false,
             read_only: false,
             aria_label: None,
-            on_checked_change: None,
+            on_change: None,
         }
     }
-    pub fn default_checked(mut self, checked: bool) -> Self {
-        self.default_checked = checked;
-        self
-    }
+    /// Sets the caller-owned checked state.
     pub fn checked(mut self, checked: bool) -> Self {
-        self.checked = Some(checked);
+        self.checked = checked;
         self
     }
+    /// Disables interaction and applies the disabled appearance.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
     }
+    /// Prevents user changes while preserving focus and reading.
     pub fn read_only(mut self, read_only: bool) -> Self {
         self.read_only = read_only;
         self
     }
+    /// Sets the accessible name of the control.
     pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
         self.aria_label = Some(label.into());
         self
     }
-    pub fn on_checked_change(
+    /// Reports a requested value change; retain the next value in the owning view.
+    pub fn on_change(
         mut self,
-        handler: impl Fn(bool, &mut SwitchCheckedChangeDetails, &mut Window, &mut App) + 'static,
+        handler: impl Fn(bool, &ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
-        self.on_checked_change = Some(Rc::new(handler));
+        self.on_change = Some(Rc::new(handler));
         self
     }
 }
@@ -79,56 +79,44 @@ impl RenderOnce for Switch {
         };
         let focus_ring = theme.focus_ring();
         let thumb_id = ElementId::NamedChild(Arc::new(self.id.clone()), "thumb-motion".into());
-        let mut root = SwitchRoot::new()
-            .id(self.id)
-            .default_checked(self.default_checked)
+        let root = BaseSwitch::new(self.id)
+            .checked(self.checked)
             .disabled(self.disabled)
-            .read_only(self.read_only)
+            .when(self.read_only, |root| root.aria_description("Read only"))
             .relative()
             .flex_shrink_0()
-            .style_with_state(move |state, base| {
-                let base = {
-                    let focus_ring = focus_ring.clone();
-                    base.w(spacing * 8_f32)
-                        .h(spacing * 4.6_f32)
-                        .rounded_full()
-                        .border_1()
-                        .border_color(colors.background.opacity(0.0))
-                        .bg(if state.checked {
-                            colors.primary
-                        } else {
-                            unchecked
-                        })
-                        .focus_visible(move |style| {
-                            style.border_color(colors.ring).shadow(focus_ring.clone())
-                        })
-                        .when(!state.disabled && !state.read_only, |base| {
-                            base.cursor_pointer()
-                        })
-                        .when(state.disabled, |base| {
-                            base.opacity(0.50).cursor_not_allowed()
-                        })
-                };
-                super::theme::apply_style(base, &self.style)
+            .w(spacing * 8_f32)
+            .h(spacing * 4.6_f32)
+            .rounded_full()
+            .border_1()
+            .border_color(colors.background.opacity(0.))
+            .bg(if self.checked {
+                colors.primary
+            } else {
+                unchecked
             })
-            .child(SwitchThumb::new().style_with_state(move |state, base| {
-                base.absolute().inset_0().child(AnimatedThumb {
-                    id: thumb_id.clone(),
-                    checked: state.root.checked,
+            .focus_visible(move |style| style.border_color(colors.ring).shadow(focus_ring.clone()))
+            .when(!self.disabled && !self.read_only, |root| {
+                root.cursor_pointer()
+            })
+            .when(self.disabled, |root| {
+                root.opacity(0.50).cursor_not_allowed()
+            })
+            .when_some(self.aria_label, |root, label| {
+                root.accessibility_label(label)
+            })
+            .child(AnimatedThumb {
+                id: thumb_id,
+                checked: self.checked,
+            })
+            .when(!self.read_only, |root| {
+                root.when_some(self.on_change, |root, handler| {
+                    root.on_change(move |checked, event, window, cx| {
+                        handler(checked, event, window, cx)
+                    })
                 })
-            }));
-        if let Some(checked) = self.checked {
-            root = root.checked(Some(checked));
-        }
-        if let Some(label) = self.aria_label {
-            root = root.aria_label(label);
-        }
-        if let Some(handler) = self.on_checked_change {
-            root = root.on_checked_change(move |checked, details, window, cx| {
-                handler(checked, details, window, cx)
             });
-        }
-        root
+        super::theme::apply_style(root, &self.style)
     }
 }
 
@@ -164,8 +152,8 @@ impl RenderOnce for AnimatedThumb {
     }
 }
 
-impl gpui::Styled for Switch {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
+impl gpui_kit::Styled for Switch {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
     }
 }

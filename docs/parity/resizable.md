@@ -2,7 +2,7 @@
 
 Visual reference: [shadcn Resizable](https://github.com/shadcn-ui/ui/blob/1773ecfeeb4a04366978d353e69b5c7ded78dcb2/apps/v4/registry/bases/base/ui/resizable.tsx) and its pinned Nova grip treatment.
 
-`Resizable` is a native GPUI interaction; the pinned Base GPUI has no splitter primitive. It draws a thin themed separator and grip, with visible keyboard focus. Use horizontal, vertical, or nested two-pane groups. Each group has a stable caller-owned ID and accessible label, first-pane preferred size, independent finite pane limits, two children, and a resize-intent callback. Applications own persistence and collapse state. GPUI `Styled` overrides apply to the outer group.
+`Resizable` is a native GPUI interaction; it keeps caller-owned pane sizes and bounds. It draws a thin themed separator and grip, with visible keyboard focus. Use horizontal, vertical, or nested two-pane groups. Each group has a stable caller-owned ID and accessible label, first-pane preferred size, independent finite pane limits, two children, and a resize-intent callback. Applications own persistence and collapse state. GPUI `Styled` overrides apply to the outer group.
 
 Pointer capture survives movement over pane children. Arrow keys resize by 8 logical pixels, Shift by 32; Home/End reach the allowed limits; Escape ends an active drag. Accessibility Increment, Decrement, and SetValue use the same bounds. Orientation describes the separator itself, not the pane stacking axis.
 

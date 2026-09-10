@@ -1,9 +1,11 @@
 # Fieldset parity
 
-- Upstream: current shadcn/ui [Field](https://ui.shadcn.com/docs/components/field) `FieldSet` and `FieldLegend`.
-- gpuicn: `registry/fieldset/fieldset.rs`.
-- Difference types: platform and accessibility.
+Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
+`registry/fieldset/fieldset.rs`, using GPUI Kit 0.6.1.
 
-shadcn's `FieldSet` and `FieldLegend` map to `fieldset_root` and `fieldset_legend`. The Base GPUI root exposes `Role::Group` and a literal `aria_label`; use the same text for `FieldsetRoot::aria_label(...)` and render the visible legend with `Text::new_inaccessible(...)` to avoid a duplicate announcement.
+A named fieldset groups application-owned fields with a visible legend and description. gpuicn supplies layout and Nova typography; the application owns each field and its validation.
 
-This is not a browser `<fieldset>`/`<legend>` pair, so browser-specific form semantics do not apply. Base GPUI still cascades disabled state to registered descendant controls. Revisit the literal-label workaround when GPUI supports `aria-labelledby` references.
+The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
+exact exit animations and cross-platform screen-reader parity are not implied by
+the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+for the checks completed on this revision.

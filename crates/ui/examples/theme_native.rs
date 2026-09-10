@@ -3,7 +3,7 @@
 use gpuicn::{ThemeMode, UiTheme};
 
 fn main() {
-    gpui_platform::headless().run(|cx| {
+    gpui_kit::platform::headless().run(|cx| {
         UiTheme::set(cx, UiTheme::neutral_light());
         assert_eq!(UiTheme::read(cx).mode, ThemeMode::Light);
         UiTheme::switch(cx, ThemeMode::Dark);

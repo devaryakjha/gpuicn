@@ -1,207 +1,175 @@
-//! The narrow shadcn Nova Dialog visual port.
-//!
-//! Visual source: shadcn/ui 4.19.0 `dialog.tsx` and `style-nova.css` at
-//! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`. Interaction, dismissal, and the
-//! Popup/Close focus cycle come from the pinned Base GPUI Dialog primitives.
-
+//! Nova modal surfaces using Kit's dialog host and caller-owned handles.
 #[path = "modal_focus.rs"]
 pub(crate) mod modal_focus;
-
-pub use base_gpui::dialog::{
-    DialogBackdrop, DialogClose, DialogDescription, DialogPopup, DialogPortal, DialogRoot,
-    DialogTitle, DialogTrigger, DialogViewport,
-};
-use gpui::{App, Div, ElementId, FontWeight, ParentElement as _, SharedString, Styled, div, px};
-use gpui_icons::{LucideIcon, lucide};
-
 use super::{
-    button::{ButtonSize, ButtonVariant, style_button},
+    button::{Button, ButtonSize, ButtonVariant},
     theme::UiTheme,
 };
+use gpui_icons::{LucideIcon, lucide};
+pub use gpui_kit::base::{Dialog, DialogChangeReason, DialogHandle};
+use gpui_kit::{
+    App, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _,
+    SharedString, Stateful, StatefulInteractiveElement as _, Styled, Window, div, px,
+};
 
-/// Creates the Dialog state root with a caller-owned stable ID.
-/// An internal handle reconciles controlled focus. If replacing `.handle(...)`,
-/// drive open/close transitions through the supplied handle.
-pub fn dialog_root(id: impl Into<ElementId>) -> DialogRoot<()> {
+/// Keep the host mounted while closed so it can restore focus after dismissal.
+pub fn dialog(
+    id: impl Into<ElementId>,
+    handle: &DialogHandle,
+    popup: impl IntoElement,
+    window: &mut Window,
+    cx: &mut App,
+) -> Dialog {
     let id = id.into();
-    let handle = base_gpui::dialog::DialogHandle::new();
-    DialogRoot::new()
+    let focus = modal_focus::prepare(id.clone(), handle.is_open(), window, cx);
+    let scope = modal_focus::ModalFocus::new(id.clone());
+    let popup = scope
+        .trap(div(), true)
         .id(id.clone())
-        .handle(handle.clone())
-        .child_any(modal_focus::RootFocus::new(id, handle))
-}
-
-/// Creates a styled Dialog trigger with a caller-owned stable ID.
-pub fn dialog_trigger(id: impl Into<ElementId>, cx: &App) -> DialogTrigger<()> {
-    let theme = UiTheme::read(cx).clone();
-    DialogTrigger::new()
-        .id(id)
-        .style_with_state(move |state, base| {
-            style_button(
-                base,
-                state.disabled,
-                ButtonVariant::Outline,
-                ButtonSize::Default,
-                &theme,
-            )
+        .track_focus(&focus)
+        .w_full()
+        .max_w(UiTheme::read(cx).space(96.))
+        .on_key_down(|event, window, cx| {
+            if event.keystroke.key == "escape" {
+                window.dispatch_action(Box::new(gpui_kit::base::actions::Cancel), cx);
+                cx.stop_propagation();
+            }
         })
+        .child(scope.boundary(false))
+        .child(scope.boundary(true))
+        .child(modal_viewport((id.clone(), "viewport"), popup, window, cx));
+    Dialog::new(cx)
+        .handle(handle.clone())
+        .close_on_escape(false)
+        .flex()
+        .items_center()
+        .justify_center()
+        .p(UiTheme::read(cx).space(4.))
+        .backdrop(dialog_backdrop(cx))
+        .popup(popup)
+        // Enter in an arbitrary child must not dismiss an unfinished form.
+        .on_ok(|_, _, _| false)
+}
+/// Keeps a modal's full content reachable even in a short window.
+pub(crate) fn modal_viewport(
+    id: impl Into<ElementId>,
+    popup: impl IntoElement,
+    window: &Window,
+    cx: &App,
+) -> Stateful<Div> {
+    div()
+        .id(id)
+        .max_h((window.viewport_size().height - UiTheme::read(cx).space(8.)).max(px(0.)))
+        .overflow_y_scroll()
+        .child(popup)
 }
 
-/// Creates the in-canvas Dialog portal.
-pub fn dialog_portal() -> DialogPortal<()> {
-    DialogPortal::new()
+/// A keyboard-accessible button opening the caller's handle.
+pub fn dialog_trigger(id: impl Into<ElementId>, handle: &DialogHandle, _cx: &App) -> Button {
+    let handle = handle.clone();
+    Button::new(id)
+        .variant(ButtonVariant::Outline)
+        .on_click(move |_, window, cx| handle.open(window, cx))
 }
-
-/// Creates the dismissible, full-window Dialog backdrop.
-pub fn dialog_backdrop(cx: &App) -> DialogBackdrop<()> {
-    DialogBackdrop::new()
+/// Full-window modal backdrop.
+pub fn dialog_backdrop(cx: &App) -> Div {
+    div()
         .absolute()
         .inset_0()
         .bg(UiTheme::read(cx).colors.overlay)
+        .occlude()
 }
-
-/// Creates the centered Dialog viewport with the pinned 16px page gutter.
-pub fn dialog_viewport(cx: &App) -> DialogViewport<()> {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    DialogViewport::new()
-        .absolute()
-        .inset_0()
-        .flex()
-        .flex_col()
-        .items_stretch()
-        .justify_center()
-        .p(spacing * 4_f32)
-}
-
-/// Creates Nova's stacked Dialog header.
+/// Stacked dialog heading content.
 pub fn dialog_header(cx: &App) -> Div {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    div().flex().flex_col().gap(spacing * 2_f32)
+    div().flex().flex_col().gap(UiTheme::read(cx).space(2.))
 }
-
-/// Creates Nova's inset Dialog footer surface.
+/// Inset action footer.
 pub fn dialog_footer(cx: &App) -> Div {
-    let theme = UiTheme::read(cx);
-    let spacing = theme.spacing.unit;
+    let t = UiTheme::read(cx);
     div()
-        .mx(spacing * -4_f32)
-        .mb(spacing * -4_f32)
+        .mx(-t.space(4.))
+        .mb(-t.space(4.))
         .flex()
         .justify_end()
-        .gap(spacing * 2_f32)
-        .rounded_b(theme.radius.xl)
+        .gap(t.space(2.))
+        .rounded_b(t.radius.xl)
         .border_t_1()
-        .border_color(theme.colors.border)
-        .bg(theme.colors.muted.opacity(0.50))
-        .p(spacing * 4_f32)
+        .border_color(t.colors.border)
+        .bg(t.colors.muted.opacity(0.5))
+        .p(t.space(4.))
 }
-
-/// Creates a styled Dialog popup with a caller-owned stable ID and name.
+/// Named popup surface with modal Tab traversal, including caller-owned inputs.
 pub fn dialog_popup(
     id: impl Into<ElementId>,
-    aria_label: impl Into<SharedString>,
+    label: impl Into<SharedString>,
     cx: &App,
-) -> DialogPopup<()> {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
+) -> Stateful<Div> {
+    let t = UiTheme::read(cx);
     let id = id.into();
-    let focus = modal_focus::ModalFocus::new(id.clone());
-    DialogPopup::new()
+    div()
         .id(id)
-        .aria_label(aria_label)
-        .child_any(focus.boundary(false))
-        .child_any(focus.boundary(true))
-        .style_with_state(move |state, base| {
-            let base = focus.trap(
-                base,
-                state.modal_mode.traps_focus() && !state.nested_dialog_open,
-            );
-            base.w_full()
-                .min_w(px(0.))
-                .mx_auto()
-                .max_w(spacing * 96_f32)
-                .max_h(spacing * 100_f32)
-                .overflow_hidden()
-                .flex()
-                .flex_col()
-                .gap(spacing * 4_f32)
-                .rounded(theme.radius.xl)
-                .border_1()
-                .border_color(theme.colors.foreground.opacity(0.10))
-                .p(spacing * 4_f32)
-                .bg(theme.colors.popover)
-                .text_color(theme.colors.popover_foreground)
-                .font_family(theme.fonts.body.clone())
-                .text_size(px(14.0) * text_scale)
-        })
+        .aria_label(label)
+        .occlude()
+        .w_full()
+        .min_w(px(0.))
+        .max_w(t.space(96.))
+        .max_h(t.space(100.))
+        .overflow_y_scroll()
+        .flex()
+        .flex_col()
+        .gap(t.space(4.))
+        .rounded(t.radius.xl)
+        .border_1()
+        .border_color(t.colors.foreground.opacity(0.1))
+        .p(t.space(4.))
+        .bg(t.colors.popover)
+        .text_color(t.colors.popover_foreground)
+        .font_family(t.fonts.body.clone())
+        .text_size(t.text(14.))
 }
-
-/// Creates a styled Dialog title with a caller-owned stable ID.
-pub fn dialog_title(id: impl Into<ElementId>, cx: &App) -> DialogTitle<()> {
-    let theme = UiTheme::read(cx).clone();
-    let text_scale = theme.text_scale;
-    DialogTitle::new()
+/// Medium-weight dialog title.
+pub fn dialog_title(id: impl Into<ElementId>, cx: &App) -> Stateful<Div> {
+    let t = UiTheme::read(cx);
+    div()
         .id(id)
-        .font_family(theme.fonts.heading)
+        .role(gpui_kit::Role::Heading)
+        .aria_level(2)
+        .font_family(t.fonts.heading.clone())
         .font_weight(FontWeight::MEDIUM)
-        .text_size(px(16.0) * text_scale)
-        .line_height(px(16.0) * text_scale)
-        .text_color(theme.colors.popover_foreground)
+        .text_size(t.text(16.))
+        .line_height(t.text(16.))
+        .text_color(t.colors.popover_foreground)
 }
-
-/// Creates a styled Dialog description with a caller-owned stable ID.
-pub fn dialog_description(id: impl Into<ElementId>, cx: &App) -> DialogDescription<()> {
-    let theme = UiTheme::read(cx).clone();
-    let text_scale = theme.text_scale;
-    DialogDescription::new()
+/// Muted dialog description.
+pub fn dialog_description(id: impl Into<ElementId>, cx: &App) -> Stateful<Div> {
+    let t = UiTheme::read(cx);
+    div()
         .id(id)
-        .font_family(theme.fonts.body)
-        .text_size(px(14.0) * text_scale)
-        .text_color(theme.colors.muted_foreground)
+        .font_family(t.fonts.body.clone())
+        .text_size(t.text(14.))
+        .text_color(t.colors.muted_foreground)
 }
-
-/// Creates the styled, icon-only Dialog close control.
-pub fn dialog_close(id: impl Into<ElementId>, cx: &App) -> DialogClose<()> {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    let icon_color = theme.colors.popover_foreground;
-    DialogClose::new()
-        .id(id)
+/// Icon-only close control; Kit routes Cancel through the host's veto callback.
+pub fn dialog_close(id: impl Into<ElementId>, cx: &App) -> Button {
+    let t = UiTheme::read(cx);
+    Button::new(id)
         .aria_label("Close")
+        .variant(ButtonVariant::Ghost)
+        .size(ButtonSize::IconSm)
         .absolute()
-        .top(spacing * 2_f32)
-        .right(spacing * 2_f32)
-        .style_with_state(move |state, base| {
-            style_button(
-                base,
-                state.disabled,
-                ButtonVariant::Ghost,
-                ButtonSize::IconSm,
-                &theme,
-            )
+        .top(t.space(2.))
+        .right(t.space(2.))
+        .on_click(|_, window, cx| {
+            window.dispatch_action(Box::new(gpui_kit::base::actions::Cancel), cx)
         })
         .child(
             lucide(LucideIcon::X)
-                .size(spacing * 4_f32)
-                .text_color(icon_color),
+                .size(t.space(4.))
+                .text_color(t.colors.popover_foreground),
         )
 }
-
-/// Creates a primary Dialog action that dismisses the Dialog after activation.
-pub fn dialog_action(id: impl Into<ElementId>, cx: &App) -> DialogClose<()> {
-    let theme = UiTheme::read(cx).clone();
-    DialogClose::new()
-        .id(id)
-        .style_with_state(move |state, base| {
-            style_button(
-                base,
-                state.disabled,
-                ButtonVariant::Default,
-                ButtonSize::Default,
-                &theme,
-            )
-        })
+/// Create form actions with `Button`; close the handle after successful validation.
+pub fn dialog_action(id: impl Into<ElementId>, handle: &DialogHandle, _cx: &App) -> Button {
+    let handle = handle.clone();
+    Button::new(id).on_click(move |_, window, cx| handle.close(window, cx))
 }

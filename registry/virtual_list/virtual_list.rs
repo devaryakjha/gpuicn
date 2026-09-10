@@ -1,12 +1,12 @@
 //! Virtualized native rows with stable identity, selection and keyboard navigation.
 //!
-//! GPUI owns measurement and scrolling; Base GPUI owns the scrollbar. Keep this
+//! GPUI owns measurement and scrolling; GPUI Kit owns the scrollbar. Keep this
 //! state in your view. Replace metadata only when data changes, not on every render.
 //! Domain data, loading, filtering and actions remain in the application.
 
 use super::theme::UiTheme;
-use gpui::accesskit::Role;
-use gpui::{
+use gpui_kit::accesskit::Role;
+use gpui_kit::{
     AnyElement, App, ElementId, FontWeight, InteractiveElement as _, IntoElement, ListOffset,
     Modifiers, MouseButton, ParentElement as _, Pixels, RenderOnce, SharedString,
     StatefulInteractiveElement as _, Styled, UniformListScrollHandle, Window, div, point,
@@ -509,7 +509,7 @@ pub struct VirtualList {
     on_event: Option<EventHandler>,
     height: Option<Pixels>,
     empty: Option<AnyElement>,
-    style: gpui::StyleRefinement,
+    style: gpui_kit::StyleRefinement,
 }
 impl VirtualList {
     /// Compose a list from retained state and a visible-row renderer.
@@ -553,7 +553,7 @@ impl VirtualList {
     }
 }
 impl Styled for VirtualList {
-    fn style(&mut self) -> &mut gpui::StyleRefinement {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
     }
 }
@@ -747,8 +747,8 @@ impl RenderOnce for VirtualList {
                             .child(content);
                         if !row.item.disabled {
                             for action in [
-                                gpui::accesskit::Action::Click,
-                                gpui::accesskit::Action::Focus,
+                                gpui_kit::accesskit::Action::Click,
+                                gpui_kit::accesskit::Action::Focus,
                             ] {
                                 let state = state.clone();
                                 let id = row.item.id.clone();
@@ -762,7 +762,7 @@ impl RenderOnce for VirtualList {
                                     if !valid {
                                         return;
                                     }
-                                    let event = if action == gpui::accesskit::Action::Focus {
+                                    let event = if action == gpui_kit::accesskit::Action::Focus {
                                         state.data.borrow_mut().focused = Some(id.clone());
                                         VirtualListEvent::FocusChanged
                                     } else {
@@ -803,7 +803,9 @@ impl RenderOnce for VirtualList {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui::{AppContext as _, Context, Render, TestAppContext, VisualTestContext, point, size};
+    use gpui_kit::{
+        AppContext as _, Context, Render, TestAppContext, VisualTestContext, point, size,
+    };
 
     fn items(ids: &[u64]) -> Vec<ListItem> {
         ids.iter()
@@ -940,7 +942,7 @@ mod tests {
             state.replace_items(items(&[11, 12])).unwrap();
             assert!(!state.select(&id(0), ListSelectionGesture::Replace));
             assert!(!state.selected().contains(&id(11)));
-            // Let Base GPUI's scrollbar idle timer release its runtime handle.
+            // Let GPUI Kit's scrollbar idle timer release its runtime handle.
             cx.run_until_parked();
             cx.update_window(window.into(), |_, window, _| window.remove_window())
                 .unwrap();

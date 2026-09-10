@@ -27,9 +27,15 @@ dependencies = ["menu"]
 [components.context_menu]
 dependencies = ["menu"]
 [components.autocomplete]
-dependencies = ["combobox"]
+dependencies = ["select"]
+[components.combobox]
+dependencies = ["select"]
+[components.select]
+dependencies = ["input"]
+[components.navigation_menu]
+dependencies = ["menubar"]
 [components.sidebar]
-description = "Shadcn-styled navigation composed from Base GPUI buttons and scroll areas."
+description = "Shadcn-styled navigation composed from GPUI Kit buttons and scroll areas."
 dependencies = ["scroll_area", "tooltip", "button", "dialog", "input", "menu"]
 [components.resizable]
 description = "Controlled shadcn-styled native GPUI resizable panes."

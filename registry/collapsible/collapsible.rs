@@ -1,72 +1,60 @@
-//! The shadcn Nova Collapsible visual port.
-//!
-//! Visual source: shadcn/ui 4.19.0 `collapsible.tsx` and `style-nova.css` at
-//! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`. Interaction and disclosure
-//! state come from the pinned Base GPUI Collapsible primitives.
-
-pub use base_gpui::collapsible::{CollapsiblePanel, CollapsibleRoot, CollapsibleTrigger};
-use gpui::{App, FontWeight, InteractiveElement as _, Styled, prelude::FluentBuilder as _, px};
-
+//! Nova presentation for GPUI Kit's controlled collapsible region.
 use super::theme::UiTheme;
+use gpui_kit::base::Button;
+pub use gpui_kit::base::Collapsible;
+use gpui_kit::{
+    App, Div, ElementId, InteractiveElement as _, StatefulInteractiveElement as _, Styled, Window,
+    div,
+};
 
-/// Creates a Collapsible root that keeps its caller-owned layout.
-pub fn collapsible(cx: &App) -> CollapsibleRoot {
-    let theme = UiTheme::read(cx).clone();
-    CollapsibleRoot::new()
+/// Creates a controlled region that reveals and removes its content with theme motion.
+pub fn collapsible(
+    id: impl Into<ElementId>,
+    open: bool,
+    window: &mut Window,
+    cx: &mut App,
+) -> Collapsible {
+    let id = id.into();
+    let presence = super::theme::presence(id.clone(), open, window, cx);
+    let visible = presence.should_render() && (open || presence.progress > 0.);
+    let mut region = Collapsible::new().open(visible);
+    if visible {
+        region = region.reveal(id, presence.progress);
+    }
+    region
         .flex()
         .flex_col()
-        .font_family(theme.fonts.body)
+        .font_family(UiTheme::read(cx).fonts.body.clone())
 }
-
-/// Creates a Nova Collapsible trigger. Add its visible content as children.
-pub fn collapsible_trigger(cx: &App) -> CollapsibleTrigger {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
-    let focus_ring = theme.focus_ring();
-    CollapsibleTrigger::new()
-        .flex()
-        .items_center()
-        .justify_center()
-        .px(spacing * 2.5_f32)
-        .py(spacing * 1.5_f32)
-        .style_with_state(move |state, base| {
-            let colors = theme.colors;
-            let focus_ring = focus_ring.clone();
-            base.rounded(theme.radius.lg)
+/// Creates an accessible trigger. Update the caller's open state in its click handler.
+pub fn collapsible_trigger(id: impl Into<ElementId>, open: bool, cx: &App) -> Button {
+    let theme = UiTheme::read(cx);
+    let colors = theme.colors;
+    let ring = theme.focus_ring();
+    Button::new(id)
+        .aria_expanded(open)
+        .px(theme.space(2.5))
+        .py(theme.space(1.5))
+        .rounded(theme.radius.lg)
+        .text_size(theme.text(14.))
+        .text_color(colors.foreground)
+        .cursor_pointer()
+        .hover(move |s| s.bg(colors.muted))
+        .focus_visible(move |s| {
+            s.bg(colors.background)
                 .border_1()
-                .border_color(colors.background.opacity(0.0))
-                .font_family(theme.fonts.body.clone())
-                .font_weight(FontWeight::MEDIUM)
-                .text_size(px(14.0) * text_scale)
-                .text_color(colors.foreground)
-                .when(!state.disabled, |base| {
-                    base.cursor_pointer()
-                        .hover(move |style| style.bg(colors.muted))
-                })
-                .when(state.disabled, |base| {
-                    base.opacity(0.50).cursor_not_allowed()
-                })
-                .focus_visible(move |style| {
-                    style
-                        .bg(colors.background)
-                        .border_color(colors.ring)
-                        .shadow(focus_ring.clone())
-                })
+                .border_color(colors.ring)
+                .shadow(ring.clone())
         })
 }
-
-/// Creates a Collapsible content panel with the standard Nova text treatment.
-pub fn collapsible_content(cx: &App) -> CollapsiblePanel {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
-    CollapsiblePanel::new()
-        .pt(spacing * 2_f32)
-        .style_with_state(move |_state, base| {
-            base.overflow_hidden()
-                .font_family(theme.fonts.body.clone())
-                .text_size(px(14.0) * text_scale)
-                .text_color(theme.colors.foreground)
-        })
+/// Creates the disclosure content's text treatment.
+pub fn collapsible_content(cx: &App) -> Div {
+    let theme = UiTheme::read(cx);
+    div()
+        .w_full()
+        .pt(theme.space(2.))
+        .overflow_hidden()
+        .font_family(theme.fonts.body.clone())
+        .text_size(theme.text(14.))
+        .text_color(theme.colors.foreground)
 }

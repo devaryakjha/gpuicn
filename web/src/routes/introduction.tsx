@@ -15,7 +15,7 @@ function ComponentsIndex() {
   return (
     <DocsLayout>
       <PageHeader
-        eyebrow="Base GPUI"
+        eyebrow="GPUI Kit"
         title="Introduction"
         description="Editable shadcn visual ports backed by native GPUI behavior. Add the source you need, then own it in your application."
       />

@@ -1,237 +1,195 @@
-//! shadcn-style field composition backed by Base GPUI Field primitives.
-//!
-//! Visual source: shadcn/ui Field (`new-york-v4/ui/field.tsx`). Base GPUI
-//! retains field registration, validation, label focus, and form integration.
+//! Nova field layout with explicit input state, label focus and validation messages.
 
-use base_gpui::field::{
-    FieldDescription, FieldError, FieldItem, FieldLabel, FieldRoot, FieldValidity,
+use super::{
+    input::{Input, InputState},
+    theme::UiTheme,
 };
-use gpui::{App, Div, ElementId, FontWeight, Styled, prelude::FluentBuilder as _, px};
-
-use super::{input::Input, theme::UiTheme};
-
-pub use base_gpui::field::{
-    FieldErrorMatch, FieldValidationMode, FieldValidationResult, FieldValidityData,
-    FieldValidityKey, FieldValidityState, FieldValue,
+use gpui_kit::{
+    App, Div, ElementId, Entity, Focusable as _, FontWeight, InteractiveElement as _, IntoElement,
+    MouseButton, ParentElement as _, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, Styled, Window, div, prelude::FluentBuilder as _, px,
 };
 
-/// shadcn's field layout choice.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+/// The placement of a field label relative to its editor.
 pub enum FieldOrientation {
-    /// Stack the label, control, and supporting text.
     #[default]
+    /// Place the label above the editor.
     Vertical,
-    /// Put the label and control on one row.
+    /// Place the label beside the editor.
     Horizontal,
-    /// Use the vertical layout until a future GPUI container-query API exists.
-    Responsive,
 }
 
-/// Creates a styled Field root with Base GPUI validation and form wiring.
-pub fn field_root(id: impl Into<ElementId>, orientation: FieldOrientation, cx: &App) -> FieldRoot {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
-    FieldRoot::new()
-        .id(id)
-        .style_with_state(move |state, base| {
-            let base = base
-                .flex()
-                .w_full()
-                .gap(spacing * 2_f32)
-                .font_family(theme.fonts.body.clone())
-                .text_size(px(14.0) * text_scale)
-                .text_color(if state.invalid {
-                    theme.colors.destructive
-                } else {
-                    theme.colors.foreground
-                })
-                .when(state.disabled, |base| base.opacity(0.50));
-
-            match orientation {
-                FieldOrientation::Vertical | FieldOrientation::Responsive => base.flex_col(),
-                FieldOrientation::Horizontal => base.flex_row().items_center(),
-            }
-        })
+#[derive(IntoElement)]
+/// A labeled Kit input with application-owned validation feedback.
+pub struct Field {
+    id: ElementId,
+    state: Entity<InputState>,
+    label: SharedString,
+    description: Option<SharedString>,
+    error: Option<SharedString>,
+    required: bool,
+    disabled: bool,
+    orientation: FieldOrientation,
+    style: gpui_kit::StyleRefinement,
 }
-
-/// Creates the text control used by a Field.
-pub fn field_control(id: impl Into<ElementId>, _cx: &App) -> Input {
-    Input::new(id)
+impl Field {
+    /// Creates a field around the caller's retained editing state.
+    pub fn new(id: impl Into<ElementId>, state: &Entity<InputState>) -> Self {
+        Self {
+            id: id.into(),
+            state: state.clone(),
+            label: SharedString::default(),
+            description: None,
+            error: None,
+            required: false,
+            disabled: false,
+            orientation: FieldOrientation::Vertical,
+            style: Default::default(),
+        }
+    }
+    /// Sets the visible label.
+    pub fn label(mut self, value: impl Into<SharedString>) -> Self {
+        self.label = value.into();
+        self
+    }
+    /// Sets supporting text below the editor.
+    pub fn description(mut self, value: impl Into<SharedString>) -> Self {
+        self.description = Some(value.into());
+        self
+    }
+    /// Shows validation feedback and marks the editor invalid.
+    pub fn error(mut self, value: impl Into<SharedString>) -> Self {
+        self.error = Some(value.into());
+        self
+    }
+    /// Marks the field as required in its visible and accessible label.
+    pub fn required(mut self, value: bool) -> Self {
+        self.required = value;
+        self
+    }
+    /// Disables interaction and applies the disabled appearance.
+    pub fn disabled(mut self, value: bool) -> Self {
+        self.disabled = value;
+        self
+    }
+    /// Places the label above or beside the editor.
+    pub fn orientation(mut self, value: FieldOrientation) -> Self {
+        self.orientation = value;
+        self
+    }
 }
-
-/// Creates a label that focuses its registered Field control on pointer press.
-pub fn field_label(cx: &App) -> FieldLabel {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
-    FieldLabel::new().style_with_state(move |state, base| {
-        base.flex()
-            .gap(spacing * 2_f32)
-            .font_family(theme.fonts.body.clone())
+impl Styled for Field {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
+        &mut self.style
+    }
+}
+impl RenderOnce for Field {
+    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let t = UiTheme::read(cx).clone();
+        let focus = self.state.focus_handle(cx);
+        let label = if self.required {
+            format!("{} (required)", self.label).into()
+        } else {
+            self.label.clone()
+        };
+        let label_view = div()
+            .id((self.id.clone(), "label"))
+            .flex()
+            .items_center()
+            .gap(t.space(1.))
             .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0) * text_scale)
-            .line_height(px(20.0) * text_scale)
-            .text_color(theme.colors.foreground)
-            .when(state.disabled, |base| base.opacity(0.50))
-    })
+            .text_size(t.text(14.))
+            .line_height(t.text(20.))
+            .child(self.label)
+            .when(self.required, |label| label.child(" *"))
+            .when(!self.disabled, |label| {
+                label
+                    .cursor_pointer()
+                    .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                        focus.focus(window, cx)
+                    })
+            });
+        let description = self.error.clone().or(self.description.clone());
+        let input = Input::new(&self.state)
+            .aria_label(label)
+            .disabled(self.disabled)
+            .invalid(self.error.is_some());
+        let root = div()
+            .id(self.id)
+            .role(Role::Group)
+            .w_full()
+            .flex()
+            .gap(t.space(2.))
+            .font_family(t.fonts.body.clone())
+            .text_color(t.colors.foreground)
+            .when(self.orientation == FieldOrientation::Vertical, |root| {
+                root.flex_col()
+            })
+            .when(self.orientation == FieldOrientation::Horizontal, |root| {
+                root.items_center()
+            })
+            .child(label_view)
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .flex()
+                    .flex_col()
+                    .gap(t.space(1.5))
+                    .child(input)
+                    .when_some(description, |root, description| {
+                        root.child(
+                            div()
+                                .id("description")
+                                .when(self.error.is_some(), |description| {
+                                    description.role(Role::Alert)
+                                })
+                                .text_size(t.text(14.))
+                                .line_height(t.text(20.))
+                                .text_color(if self.error.is_some() {
+                                    t.colors.destructive
+                                } else {
+                                    t.colors.muted_foreground
+                                })
+                                .child(description),
+                        )
+                    }),
+            );
+        super::theme::apply_style(root, &self.style)
+    }
 }
 
-/// Creates muted help text for a Field.
-pub fn field_description(cx: &App) -> FieldDescription {
-    let theme = UiTheme::read(cx).clone();
-    let text_scale = theme.text_scale;
-    FieldDescription::new().style_with_state(move |state, base| {
-        base.font_family(theme.fonts.body.clone())
-            .text_size(px(14.0) * text_scale)
-            .line_height(px(20.0) * text_scale)
-            .text_color(theme.colors.muted_foreground)
-            .when(state.disabled, |base| base.opacity(0.50))
-    })
-}
-
-/// Creates a destructive validation message. It only renders when an error exists.
-pub fn field_error(cx: &App) -> FieldError {
-    let theme = UiTheme::read(cx).clone();
-    let text_scale = theme.text_scale;
-    FieldError::new().style_with_state(move |_state, base| {
-        base.font_family(theme.fonts.body.clone())
-            .text_size(px(14.0) * text_scale)
-            .line_height(px(20.0) * text_scale)
-            .text_color(theme.colors.destructive)
-    })
-}
-
-/// Creates a field item for grouped controls such as checkboxes and radios.
-pub fn field_item(cx: &App) -> FieldItem {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
-    FieldItem::new().style_with_state(move |state, base| {
-        base.flex()
-            .flex_col()
-            .gap(spacing * 1.5_f32)
-            .font_family(theme.fonts.body.clone())
-            .text_size(px(14.0) * text_scale)
-            .when(state.disabled, |base| base.opacity(0.50))
-    })
-}
-
-/// Creates a Field group, the shadcn visual counterpart to a plain GPUI Div.
+/// Stacks related fields with Nova spacing.
 pub fn field_group(cx: &App) -> Div {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    gpui::div().flex().flex_col().w_full().gap(spacing * 7_f32)
+    div()
+        .flex()
+        .flex_col()
+        .w_full()
+        .gap(UiTheme::read(cx).space(7.))
 }
-
-/// Creates the flex column used beside a checkbox, radio, or switch.
+/// Stacks a field editor and supporting content.
 pub fn field_content(cx: &App) -> Div {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    gpui::div()
+    div()
         .flex()
         .flex_col()
         .flex_1()
-        .gap(spacing * 1.5_f32)
+        .gap(UiTheme::read(cx).space(1.5))
 }
-
-/// Creates label-styled text for `field_content` when it is not interactive.
+/// Creates a themed field heading.
 pub fn field_title(cx: &App) -> Div {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
-    gpui::div()
+    let t = UiTheme::read(cx);
+    div()
         .flex()
         .items_center()
-        .gap(spacing * 2_f32)
-        .font_family(theme.fonts.body)
+        .gap(t.space(2.))
+        .font_family(t.fonts.body.clone())
         .font_weight(FontWeight::MEDIUM)
-        .text_size(px(14.0) * text_scale)
-        .line_height(px(20.0) * text_scale)
-        .text_color(theme.colors.foreground)
+        .text_size(t.text(14.))
+        .line_height(t.text(20.))
+        .text_color(t.colors.foreground)
 }
-
-/// Creates a visual break between Field group sections.
+/// Creates a horizontal divider between field sections.
 pub fn field_separator(cx: &App) -> Div {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    gpui::div()
-        .w_full()
-        .h(px(1.0))
-        .bg(theme.colors.border)
-        .my(spacing * 1_f32)
-}
-
-/// Exposes Base GPUI validity state for custom indicators.
-pub fn field_validity() -> FieldValidity {
-    FieldValidity::new()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use gpui::{
-        AppContext as _, Bounds, Context, IntoElement, ParentElement as _, Pixels, Render,
-        TestAppContext, Window,
-    };
-    use std::{cell::RefCell, rc::Rc};
-
-    struct View {
-        bounds: Rc<RefCell<Vec<Bounds<Pixels>>>>,
-        value: &'static str,
-        inherited_line_height: f32,
-    }
-    impl Render for View {
-        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-            let bounds = self.bounds.clone();
-            gpui::div()
-                .w(px(240.))
-                .h(px(32.))
-                .line_height(px(self.inherited_line_height))
-                .child(
-                    field_control("alignment", cx)
-                        .value(self.value)
-                        .placeholder("Ada Lovelace")
-                        .style_with_state(move |_, base| {
-                            let bounds = bounds.clone();
-                            base.on_children_prepainted(move |children, _, _| {
-                                *bounds.borrow_mut() = children.to_vec()
-                            })
-                        }),
-                )
-        }
-    }
-    #[test]
-    fn field_text_is_vertically_centered() {
-        for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark()] {
-            for value in ["", "Ada Lovelace"] {
-                for inherited_line_height in [12., 40.] {
-                    let mut cx = TestAppContext::single();
-                    cx.update(|cx| UiTheme::set(cx, theme.clone()));
-                    let bounds = Rc::new(RefCell::new(Vec::new()));
-                    let captured = bounds.clone();
-                    let window = cx.add_window(move |_, _| View {
-                        bounds: captured,
-                        value,
-                        inherited_line_height,
-                    });
-                    cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx))
-                        .unwrap();
-                    let bounds = bounds.borrow();
-                    assert_eq!(bounds.len(), 1);
-                    assert_eq!(
-                        bounds[0].center().y,
-                        px(16.),
-                        "value={value:?}, inherited line height={inherited_line_height}: {:?}",
-                        bounds[0]
-                    );
-                    assert_eq!(
-                        bounds[0].size.height,
-                        px(20.),
-                        "text and caret must ignore inherited line height"
-                    );
-                }
-            }
-        }
-    }
+    div().w_full().h(px(1.)).bg(UiTheme::read(cx).colors.border)
 }

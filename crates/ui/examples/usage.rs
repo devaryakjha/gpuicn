@@ -8,109 +8,78 @@ fn main() {}
 
 mod accordion {
     use crate::ui::accordion::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use gpui_kit::{App, IntoElement, ParentElement, Window};
 
-    fn example(cx: &App) -> impl IntoElement {
-        accordion(cx).id("faq").child(
-            accordion_item("shipping", cx)
-                .id("faq.shipping")
-                .child(
-                    accordion_header().child(
-                        accordion_trigger(cx)
-                            .id("faq.shipping.trigger")
-                            .aria_label("When will it arrive?")
-                            .child("When will it arrive?"),
-                    ),
-                )
-                .child(accordion_content(cx).child("Within three working days.")),
+    fn example(open: bool, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        accordion("faq", cx).child(
+            accordion_item(cx)
+                .open(open)
+                .header(accordion_header(
+                    accordion_trigger("shipping", open, false, cx).child("When will it arrive?"),
+                ))
+                .panel(accordion_content(
+                    "shipping-content",
+                    open,
+                    "Within three working days.",
+                    window,
+                    cx,
+                )),
         )
     }
 }
 
 mod alert_dialog {
     use crate::ui::alert_dialog::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use crate::ui::dialog::*;
+    use gpui_kit::{App, IntoElement, ParentElement, Window};
 
-    fn example(cx: &App) -> impl IntoElement {
-        alert_dialog_root("discard")
-            .child(
-                alert_dialog_trigger("discard.trigger", cx)
-                    .aria_label("Discard changes")
-                    .child("Discard changes"),
-            )
-            .child(
-                alert_dialog_portal()
-                    .child(alert_dialog_backdrop(cx))
-                    .child(
-                        alert_dialog_viewport(cx).child(
-                            alert_dialog_popup("discard.popup", "Discard changes?", cx)
-                                .child(
-                                    alert_dialog_title("discard.title", cx)
-                                        .child("Discard changes?"),
-                                )
-                                .child(
-                                    alert_dialog_description("discard.description", cx)
-                                        .child("Your unsaved edits will be lost."),
-                                )
-                                .child(
-                                    alert_dialog_cancel("discard.cancel", cx)
-                                        .aria_label("Keep editing")
-                                        .child("Keep editing"),
-                                )
-                                .child(
-                                    alert_dialog_action("discard.confirm", cx)
-                                        .aria_label("Discard")
-                                        .child("Discard"),
-                                ),
-                        ),
-                    ),
-            )
+    fn example(handle: &DialogHandle, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let popup = dialog_popup("profile.popup", "Edit profile", cx)
+            .child(dialog_title("profile.title", cx).child("Edit profile"))
+            .child(dialog_action("profile.save", handle, cx).label("Save"));
+        gpui_kit::div()
+            .child(dialog_trigger("profile.open", handle, cx).label("Edit profile"))
+            .child(alert_dialog("profile", handle, popup, window, cx))
     }
 }
 
 mod autocomplete {
     use crate::ui::autocomplete::*;
-    use gpui::{App, IntoElement};
+    use crate::ui::select::{SelectItem, SelectState};
+    use gpui_kit::{App, IntoElement, Window};
 
-    fn example(cx: &App) -> impl IntoElement {
-        autocomplete_root::<&str>("search")
-            .child(
-                autocomplete_input("search.input", cx)
-                    .aria_label("Search components")
-                    .placeholder("Search…"),
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("fruit", cx, |window, cx| {
+            SelectState::new(
+                [
+                    SelectItem::new("apple", "Apple"),
+                    SelectItem::new("pear", "Pear"),
+                ],
+                window,
+                cx,
             )
-            .child(
-                autocomplete_portal().child(
-                    autocomplete_positioner(cx).child(
-                        autocomplete_popup(cx).child(
-                            autocomplete_list(cx).child(
-                                autocomplete_item("search.button", cx)
-                                    .value("button")
-                                    .label("Button")
-                                    .child_any("Button"),
-                            ),
-                        ),
-                    ),
-                ),
-            )
+        });
+        autocomplete(&state)
+            .aria_label("Fruit")
+            .placeholder("Choose a fruit…")
     }
 }
 
 mod avatar {
     use crate::ui::avatar::Avatar;
-    use gpui::{IntoElement, ParentElement};
+    use gpui_kit::IntoElement;
 
     fn example() -> impl IntoElement {
         Avatar::new("profile.avatar")
             .image("https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png")
             .aria_label("Arya")
-            .child("AJ")
+            .fallback("AJ")
     }
 }
 
 mod button {
     use crate::ui::button::Button;
-    use gpui::IntoElement;
+    use gpui_kit::IntoElement;
 
     fn example() -> impl IntoElement {
         Button::new("open-docs")
@@ -120,293 +89,202 @@ mod button {
 }
 
 mod checkbox {
-    use crate::ui::checkbox::Checkbox;
-    use gpui::{IntoElement, ParentElement, Styled, div, px};
+    use crate::ui::checkbox::*;
+    use gpui_kit::IntoElement;
 
-    fn example() -> impl IntoElement {
-        div()
-            .flex()
-            .items_center()
-            .gap(px(8.))
-            .child(Checkbox::new("terms").aria_label("Accept terms"))
-            .child("Accept terms")
+    fn example(checked: bool) -> impl IntoElement {
+        Checkbox::new("terms")
+            .checked(checked)
+            .aria_label("Accept terms")
+            .on_change(|checked, _, _, _| println!("Accepted: {checked}"))
     }
 }
 
 mod checkbox_group {
-    use crate::ui::checkbox_group::{CheckboxGroup, CheckboxGroupItem};
-    use gpui::IntoElement;
+    use crate::ui::checkbox_group::*;
+    use gpui_kit::{App, IntoElement, Window};
 
-    fn example() -> impl IntoElement {
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let value = window.use_keyed_state("notifications", cx, |_, _| {
+            vec![gpui_kit::SharedString::from("email")]
+        });
         CheckboxGroup::new("notifications")
             .aria_label("Notifications")
-            .default_value(["updates"])
-            .all_values(["updates", "digest"])
-            .item(
-                CheckboxGroupItem::new("notifications.updates", "updates")
-                    .label("Product updates")
-                    .aria_label("Product updates"),
-            )
-            .item(
-                CheckboxGroupItem::new("notifications.digest", "digest")
-                    .label("Weekly digest")
-                    .aria_label("Weekly digest"),
-            )
+            .value(value.read(cx).clone())
+            .item(CheckboxGroupItem::new("email", "email").label("Email"))
+            .item(CheckboxGroupItem::new("push", "push").label("Push"))
+            .on_change(move |next, _, cx| {
+                value.update(cx, |value, cx| {
+                    *value = next;
+                    cx.notify();
+                })
+            })
     }
 }
 
 mod collapsible {
     use crate::ui::collapsible::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use gpui_kit::{App, IntoElement, ParentElement, Window};
 
-    fn example(cx: &App) -> impl IntoElement {
-        collapsible(cx)
-            .id("details")
-            .child(
-                collapsible_trigger(cx)
-                    .id("details.trigger")
-                    .aria_label("Show details")
-                    .child("Show details"),
-            )
-            .child(collapsible_content(cx).child("Your order has shipped."))
+    fn example(open: bool, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        collapsible("projects-region", open, window, cx)
+            .child(collapsible_trigger("projects", open, cx).child("Recent projects"))
+            .content(collapsible_content(cx).child("Design system"))
     }
 }
 
 mod combobox {
     use crate::ui::combobox::*;
-    use gpui::{App, IntoElement};
+    use crate::ui::select::{SelectItem, SelectState};
+    use gpui_kit::{App, IntoElement, Window};
 
-    fn example(cx: &App) -> impl IntoElement {
-        combobox_root::<&str>("fruit")
-            .child(
-                combobox_input("fruit.input", cx)
-                    .aria_label("Fruit")
-                    .placeholder("Choose a fruit…"),
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("fruit", cx, |window, cx| {
+            SelectState::new(
+                [
+                    SelectItem::new("apple", "Apple"),
+                    SelectItem::new("pear", "Pear"),
+                ],
+                window,
+                cx,
             )
-            .child(
-                combobox_portal().child(
-                    combobox_positioner(cx).child(
-                        combobox_popup(cx).child(
-                            combobox_list(cx).child(
-                                combobox_item("fruit.apple", cx)
-                                    .value("apple")
-                                    .label("Apple")
-                                    .child_any("Apple"),
-                            ),
-                        ),
-                    ),
-                ),
-            )
+        });
+        combobox(&state)
+            .aria_label("Fruit")
+            .placeholder("Choose a fruit…")
     }
 }
 
 mod context_menu {
     use crate::ui::context_menu::*;
-    use gpui::{App, IntoElement, ParentElement, Styled, px};
+    use crate::ui::menu::*;
+    use gpui_kit::{Entity, IntoElement, ParentElement};
 
-    fn example(cx: &App) -> impl IntoElement {
-        context_menu_root::<()>("file-menu")
-            .child(
-                context_menu_trigger("file-menu.trigger")
-                    .p(px(24.))
-                    .child("Right-click here"),
-            )
-            .child(
-                context_menu_portal().child(
-                    context_menu_positioner(cx).child(
-                        context_menu_popup("file-menu.popup", cx).child(
-                            context_menu_item("file-menu.copy", cx)
-                                .on_click(|_, cx| {
-                                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(
-                                        "Copied from gpuicn".into(),
-                                    ))
-                                })
-                                .label("Copy")
-                                .child("Copy"),
-                        ),
-                    ),
-                ),
-            )
+    fn example(state: &Entity<MenuState>) -> impl IntoElement {
+        context_menu(
+            state,
+            "File actions",
+            gpui_kit::div().child("Right-click here"),
+        )
     }
 }
 
 mod dialog {
     use crate::ui::dialog::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use gpui_kit::{App, IntoElement, ParentElement, Window};
 
-    fn example(cx: &App) -> impl IntoElement {
-        dialog_root("welcome")
-            .child(
-                dialog_trigger("welcome.trigger", cx)
-                    .aria_label("Open dialog")
-                    .child("Open dialog"),
-            )
-            .child(
-                dialog_portal().child(dialog_backdrop(cx)).child(
-                    dialog_viewport(cx).child(
-                        dialog_popup("welcome.popup", "Welcome", cx)
-                            .child(dialog_title("welcome.title", cx).child("Welcome"))
-                            .child(
-                                dialog_description("welcome.description", cx)
-                                    .child("Your workspace is ready."),
-                            )
-                            .child(dialog_action("welcome.done", cx).child("Done")),
-                    ),
-                ),
-            )
+    fn example(handle: &DialogHandle, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let popup = dialog_popup("profile.popup", "Edit profile", cx)
+            .child(dialog_title("profile.title", cx).child("Edit profile"))
+            .child(dialog_action("profile.save", handle, cx).label("Save"));
+        gpui_kit::div()
+            .child(dialog_trigger("profile.open", handle, cx).label("Edit profile"))
+            .child(dialog("profile", handle, popup, window, cx))
     }
 }
 
 mod drawer {
     use crate::ui::drawer::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use gpui_kit::{App, IntoElement, ParentElement};
 
-    fn example(cx: &App) -> impl IntoElement {
-        drawer_root("details")
-            .child(
-                drawer_trigger("details.trigger", cx)
-                    .aria_label("Show details")
-                    .child("Show details"),
-            )
-            .child(
-                drawer_portal().child(drawer_backdrop(cx)).child(
-                    drawer_viewport().child(
-                        drawer_popup("details.popup", "Order details", cx)
-                            .child(drawer_title("details.title", cx).child("Order details"))
+    fn example(handle: &DrawerHandle, cx: &App) -> impl IntoElement {
+        Drawer::new("profile", handle)
+            .direction(DrawerSide::Bottom)
+            .show_swipe_handle(true)
+            .child(drawer_trigger("profile.open", handle).label("Edit profile"))
+            .content(
+                DrawerContent::new("profile.content", "Edit profile")
+                    .child(
+                        drawer_header(DrawerSide::Bottom, cx)
+                            .child(drawer_title("profile.title", cx).child("Edit profile"))
                             .child(
-                                drawer_description("details.description", cx)
-                                    .child("Your order has shipped."),
-                            )
-                            .child(drawer_close("details.close", cx).child("Close")),
+                                drawer_description("profile.description", cx)
+                                    .child("Make changes to your profile."),
+                            ),
+                    )
+                    .child(drawer_body("profile.body", cx).child("Your profile fields go here."))
+                    .child(
+                        drawer_footer(cx)
+                            .child(drawer_close("profile.cancel", handle).label("Done")),
                     ),
-                ),
             )
     }
 }
 
 mod field {
-    use crate::ui::field::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use crate::ui::{field::*, input::InputState};
+    use gpui_kit::{Entity, IntoElement};
 
-    fn example(cx: &App) -> impl IntoElement {
-        field_root("username", FieldOrientation::Vertical, cx)
-            .name("username")
-            .child(field_label(cx).text("Username"))
-            .child(field_control("username.input", cx).placeholder("ada"))
-            .child(field_description(cx).child("Visible on your profile."))
+    fn example(name: &Entity<InputState>) -> impl IntoElement {
+        Field::new("name", name)
+            .label("Full name")
+            .required(true)
+            .description("Use the name on your account.")
     }
 }
 
 mod fieldset {
-    use crate::ui::{field::*, fieldset::*};
-    use gpui::{App, IntoElement, ParentElement};
+    use crate::ui::{field::Field, fieldset::*, input::InputState};
+    use gpui_kit::Entity;
+    use gpui_kit::{App, IntoElement, ParentElement, StatefulInteractiveElement};
 
-    fn example(cx: &App) -> impl IntoElement {
+    fn example(name: &Entity<InputState>, cx: &App) -> impl IntoElement {
         fieldset_root("shipping", cx)
             .aria_label("Shipping address")
             .child(fieldset_legend(FieldsetLegendVariant::Legend, cx).child("Shipping address"))
-            .child_any(
-                field_root("shipping.city", FieldOrientation::Vertical, cx)
-                    .name("city")
-                    .child(field_label(cx).text("City"))
-                    .child(field_control("shipping.city.input", cx).placeholder("Bengaluru")),
-            )
+            .child(Field::new("name", name).label("Full name"))
     }
 }
 
 mod form {
-    use crate::ui::{button::Button, field::*, form::*};
-    use gpui::{App, IntoElement, ParentElement};
+    use crate::ui::{Button, field::Field, form::*, input::InputState};
+    use gpui_kit::Entity;
+    use gpui_kit::{App, IntoElement, ParentElement, StatefulInteractiveElement};
 
-    fn example(cx: &App) -> impl IntoElement {
+    fn example(email: &Entity<InputState>, cx: &App) -> impl IntoElement {
+        // Validate in the owning view and share its submit handler with InputEvent::PressEnter.
         form("subscribe", cx)
-            .child(
-                field_root("email", FieldOrientation::Vertical, cx)
-                    .name("email")
-                    .child(field_label(cx).text("Email"))
-                    .child(field_control("email.input", cx).required(true))
-                    .child(field_error(cx).child("Enter your email address.")),
-            )
-            .child(
-                Button::new("subscribe.submit")
-                    .label("Subscribe")
-                    .on_click(|_, window, cx| {
-                        window.dispatch_action(Box::new(FormSubmitAction), cx)
-                    }),
-            )
+            .aria_label("Subscribe")
+            .child(Field::new("email", email).label("Email").required(true))
+            .child(Button::new("subscribe.submit").label("Subscribe"))
     }
 }
 
 mod input {
-    use crate::ui::input::Input;
-    use gpui::IntoElement;
+    use crate::ui::input::*;
+    use gpui_kit::{App, IntoElement, Window};
 
-    fn example() -> impl IntoElement {
-        Input::new("email")
-            .aria_label("Email address")
-            .placeholder("you@example.com")
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("email", cx, |window, cx| {
+            InputState::new(window, cx).placeholder("you@example.com")
+        });
+        // Subscribe to InputEvent on state in the owning view to handle changes and Enter.
+        Input::new(&state).aria_label("Email address")
     }
 }
 
 mod menu {
     use crate::ui::menu::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use gpui_kit::{Entity, IntoElement};
 
-    fn example(cx: &App) -> impl IntoElement {
-        menu_root::<()>("account")
-            .child(
-                menu_trigger("account.trigger", cx)
-                    .aria_label("Account")
-                    .child("Account"),
-            )
-            .child(
-                menu_portal().child(
-                    menu_positioner(cx).child(
-                        menu_popup("account.popup", cx).child(
-                            menu_item("account.profile", cx)
-                                .on_click(|_, cx| cx.open_url("https://github.com/devaryakjha"))
-                                .label("Profile")
-                                .child("Profile"),
-                        ),
-                    ),
-                ),
-            )
+    fn example(state: &Entity<MenuState>) -> impl IntoElement {
+        Menu::new(state, "Actions")
     }
 }
 
 mod menubar {
-    use crate::ui::{menu::menu_positioner, menubar::*};
-    use gpui::{App, IntoElement, ParentElement};
+    use crate::ui::menu::*;
+    use crate::ui::menubar::*;
+    use gpui_kit::{Entity, IntoElement};
 
-    fn example(cx: &App) -> impl IntoElement {
-        menubar("app-menu", cx)
-            .aria_label("Application menu")
-            .child(
-                menubar_menu::<()>("help")
-                    .child(
-                        menubar_trigger("help.trigger", cx)
-                            .aria_label("Help")
-                            .child("Help"),
-                    )
-                    .child(
-                        menubar_portal().child(
-                            menu_positioner(cx).child(
-                                menubar_content("help.popup", cx).child(
-                                    menubar_item("help.docs", cx)
-                                        .on_click(|_, cx| cx.open_url("https://ui.imajha.com"))
-                                        .label("Documentation")
-                                        .child("Documentation"),
-                                ),
-                            ),
-                        ),
-                    ),
-            )
+    fn example(state: &Entity<MenuState>) -> impl IntoElement {
+        Menubar::new("app-menu", "Application").menu(state, "File")
     }
 }
 
 mod meter {
     use crate::ui::meter::Meter;
-    use gpui::IntoElement;
+    use gpui_kit::IntoElement;
 
     fn example() -> impl IntoElement {
         Meter::new("storage").value(68.).aria_label("Storage used")
@@ -414,112 +292,70 @@ mod meter {
 }
 
 mod navigation_menu {
+    use crate::ui::menu::*;
     use crate::ui::navigation_menu::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use gpui_kit::{Entity, IntoElement};
 
-    fn example(cx: &App) -> impl IntoElement {
-        navigation_menu::<&str>(cx)
-            .id("navigation")
-            .aria_label("Main navigation")
-            .child(
-                navigation_menu_list().child(
-                    navigation_menu_item()
-                        .value("docs")
-                        .child(
-                            navigation_menu_trigger(cx)
-                                .aria_label("Docs")
-                                .child_any("Docs"),
-                        )
-                        .child(
-                            navigation_menu_content(cx).child(
-                                navigation_menu_link::<&str>(cx)
-                                    .aria_label("Getting started")
-                                    .on_activate(|_, cx| {
-                                        cx.open_url("https://ui.imajha.com/installation")
-                                    })
-                                    .child("Getting started"),
-                            ),
-                        ),
-                ),
-            )
-            .child(
-                navigation_menu_portal().child(
-                    navigation_menu_positioner(cx)
-                        .child(navigation_menu_popup(cx).child(navigation_menu_viewport(cx))),
-                ),
-            )
+    fn example(state: &Entity<MenuState>) -> impl IntoElement {
+        navigation_menu("docs", "Documentation").menu(state, "Getting started")
     }
 }
 
 mod number_field {
-    use crate::ui::number_field::NumberField;
-    use gpui::IntoElement;
+    use crate::ui::{input::InputState, number_field::*};
+    use gpui_kit::{App, IntoElement, Window};
 
-    fn example() -> impl IntoElement {
-        NumberField::new("quantity")
-            .aria_label("Quantity")
-            .default_value(1.)
-            .range(Some(1.), Some(10.))
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("quantity", cx, |window, cx| {
+            InputState::new(window, cx)
+                .default_value("3")
+                .min(0.)
+                .max(20.)
+                .step(1.)
+        });
+        NumberField::new(&state).aria_label("Quantity")
     }
 }
 
 mod otp_field {
-    use crate::ui::otp_field::OtpField;
-    use gpui::IntoElement;
+    use crate::ui::otp_field::*;
+    use gpui_kit::{App, IntoElement, Window};
 
-    fn example() -> impl IntoElement {
-        OtpField::new("verification", 6).aria_label("Verification code")
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("code", cx, |window, cx| OtpState::new(6, window, cx));
+        OtpField::new(&state).aria_label("Verification code")
     }
 }
 
 mod popover {
     use crate::ui::popover::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use gpui_kit::{App, IntoElement, ParentElement};
 
     fn example(cx: &App) -> impl IntoElement {
-        popover_root("help")
-            .child(
-                popover_trigger("help.trigger", cx)
-                    .aria_label("Help")
-                    .child("Help"),
-            )
-            .child(
-                popover_portal().child(
-                    popover_positioner(cx).child(
-                        popover_popup("help.popup", "Help", cx)
-                            .child(popover_title(cx).child("Need a hand?"))
-                            .child(
-                                popover_description(cx)
-                                    .child("Contact support from your account settings."),
-                            ),
-                    ),
-                ),
-            )
+        popover("details")
+            .trigger(popover_trigger("details.open", cx).child("Details"))
+            .content(|_, _, cx| {
+                popover_popup("details.popup", "Details", cx).child("Account details")
+            })
     }
 }
 
 mod preview_card {
-    use crate::ui::preview_card::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use crate::ui::{Button, preview_card::*};
+    use gpui_kit::{IntoElement, ParentElement};
 
-    fn example(cx: &App) -> impl IntoElement {
-        preview_card_root("profile")
-            .child(
-                preview_card_trigger("profile.trigger")
-                    .aria_label("@ada")
-                    .child("@ada"),
-            )
-            .child(
-                preview_card_portal().child(preview_card_positioner(cx).child(
-                    preview_card_popup("profile.popup", cx).child_any("Ada — software engineer"),
-                )),
-            )
+    fn example() -> impl IntoElement {
+        preview_card("profile")
+            .trigger(Button::new("profile.link").label("@gpuicn"))
+            .content(|_, _, cx| {
+                preview_card_popup("profile.popup", cx).child("Native GPUI components")
+            })
     }
 }
 
 mod progress {
     use crate::ui::progress::Progress;
-    use gpui::IntoElement;
+    use gpui_kit::IntoElement;
 
     fn example() -> impl IntoElement {
         Progress::new("upload").value(64.).label("Uploading…")
@@ -527,82 +363,64 @@ mod progress {
 }
 
 mod radio_group {
-    use crate::ui::radio_group::{RadioGroup, RadioItem};
-    use gpui::IntoElement;
+    use crate::ui::radio_group::*;
+    use gpui_kit::{App, IntoElement, Window};
 
-    fn example() -> impl IntoElement {
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let value = window.use_keyed_state("density", cx, |_, _| {
+            gpui_kit::SharedString::from("compact")
+        });
         RadioGroup::new("density")
             .aria_label("Density")
-            .default_value("compact")
-            .item(RadioItem::new("density.compact", "compact").label("Compact"))
-            .item(RadioItem::new("density.comfortable", "comfortable").label("Comfortable"))
+            .value(value.read(cx).clone())
+            .item(RadioItem::new("compact", "compact").label("Compact"))
+            .item(RadioItem::new("comfortable", "comfortable").label("Comfortable"))
+            .on_change(move |next, _, cx| {
+                value.update(cx, |value, cx| {
+                    *value = next;
+                    cx.notify();
+                })
+            })
     }
 }
 
 mod scroll_area {
     use crate::ui::scroll_area::*;
-    use gpui::{App, IntoElement, ParentElement, Styled, div, px};
+    use gpui_kit::{IntoElement, ParentElement, Styled};
 
-    fn example(cx: &App) -> impl IntoElement {
-        scroll_area(cx)
-            .id("releases")
-            .h(px(160.))
-            .child(
-                scroll_area_viewport(cx)
-                    .id("releases.viewport")
-                    .aria_label("Releases")
-                    .child(scroll_area_content(cx).children(
-                        (1..=20).map(|version| div().child(format!("Version {version}"))),
-                    )),
-            )
-            .child(
-                scroll_area_scrollbar(ScrollAreaOrientation::Vertical, cx)
-                    .id("releases.scrollbar")
-                    .child(scroll_area_thumb(cx)),
-            )
+    fn example() -> impl IntoElement {
+        ScrollArea::new("tags")
+            .aria_label("Tags")
+            .h(gpui_kit::px(200.))
+            .children((0..50).map(|i| gpui_kit::div().child(format!("Tag {i}"))))
     }
 }
 
 mod select {
     use crate::ui::select::*;
-    use gpui::{App, IntoElement};
+    use crate::ui::select::{SelectItem, SelectState};
+    use gpui_kit::{App, IntoElement, Window};
 
-    fn example(cx: &App) -> impl IntoElement {
-        select_root::<&str>("theme")
-            .default_value(Some("system"))
-            .item_to_string_value(|value| (*value).into())
-            .child(
-                select_trigger("theme.trigger", cx)
-                    .aria_label("Theme")
-                    .child(select_value(cx)),
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("fruit", cx, |window, cx| {
+            SelectState::new(
+                [
+                    SelectItem::new("apple", "Apple"),
+                    SelectItem::new("pear", "Pear"),
+                ],
+                window,
+                cx,
             )
-            .child(
-                select_portal().child(
-                    select_positioner(cx).child(
-                        select_popup(cx).child(
-                            select_list(cx)
-                                .child(
-                                    select_item("theme.system", cx)
-                                        .value("system")
-                                        .label("System")
-                                        .child(select_item_text().text("System")),
-                                )
-                                .child(
-                                    select_item("theme.dark", cx)
-                                        .value("dark")
-                                        .label("Dark")
-                                        .child(select_item_text().text("Dark")),
-                                ),
-                        ),
-                    ),
-                ),
-            )
+        });
+        Select::new(&state)
+            .aria_label("Fruit")
+            .placeholder("Choose a fruit…")
     }
 }
 
 mod separator {
     use crate::ui::separator::Separator;
-    use gpui::IntoElement;
+    use gpui_kit::IntoElement;
 
     fn example() -> impl IntoElement {
         Separator::new("section-divider")
@@ -610,164 +428,156 @@ mod separator {
 }
 
 mod slider {
-    use crate::ui::slider::Slider;
-    use gpui::IntoElement;
+    use crate::ui::slider::*;
+    use gpui_kit::{App, IntoElement, Window};
 
-    fn example() -> impl IntoElement {
-        Slider::new("volume")
-            .aria_label("Volume")
-            .default_value(50.)
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("volume", cx, |_, _cx| {
+            SliderState::new().min(0.).max(100.).default_value(50.)
+        });
+        Slider::new(&state).aria_label("Volume")
     }
 }
 
 mod switch {
-    use crate::ui::switch::Switch;
-    use gpui::{IntoElement, ParentElement, Styled, div, px};
+    use crate::ui::switch::*;
+    use gpui_kit::IntoElement;
 
-    fn example() -> impl IntoElement {
-        div()
-            .flex()
-            .items_center()
-            .gap(px(8.))
-            .child(
-                Switch::new("notifications")
-                    .aria_label("Notifications")
-                    .default_checked(true),
-            )
-            .child("Notifications")
+    fn example(checked: bool) -> impl IntoElement {
+        Switch::new("airplane")
+            .checked(checked)
+            .aria_label("Airplane mode")
+            .on_change(|checked, _, _, _| println!("Airplane mode: {checked}"))
     }
 }
 
 mod tabs {
     use crate::ui::tabs::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use gpui_kit::{App, IntoElement, ParentElement, Window};
 
-    fn example(cx: &App) -> impl IntoElement {
-        tabs(cx)
-            .id("settings")
-            .default_value(Some("account"))
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let selected = window.use_keyed_state("settings", cx, |_, _| {
+            gpui_kit::SharedString::from("account")
+        });
+        let value = selected.read(cx).clone();
+        gpui_kit::div()
             .child(
-                tabs_list(cx)
-                    .child(
-                        tabs_trigger(TabsVariant::Default, cx)
-                            .id("settings.account")
-                            .aria_label("Account")
-                            .value("account")
-                            .child("Account"),
-                    )
-                    .child(
-                        tabs_trigger(TabsVariant::Default, cx)
-                            .id("settings.password")
-                            .aria_label("Password")
-                            .value("password")
-                            .child("Password"),
-                    ),
+                Tabs::new("settings")
+                    .selected(value.clone())
+                    .item(Tab::new("account", "account", "Account"))
+                    .item(Tab::new("password", "password", "Password"))
+                    .on_change(move |value, _, cx| {
+                        selected.update(cx, |selected, cx| {
+                            *selected = value;
+                            cx.notify();
+                        })
+                    }),
             )
-            .child(tabs_content(cx).value("account").child("Account settings"))
             .child(
-                tabs_content(cx)
-                    .value("password")
-                    .child("Password settings"),
+                tabs_content("settings.panel", value.clone(), cx).child(if value == "account" {
+                    "Account settings"
+                } else {
+                    "Password settings"
+                }),
             )
     }
 }
 
 mod toast {
-    use crate::ui::{button::Button, toast::*};
-    use gpui::{App, IntoElement};
+    use crate::ui::{Button, toast::*};
+    use gpui_kit::{App, IntoElement, ParentElement, Window};
 
-    fn example(cx: &App) -> impl IntoElement {
-        let manager = create_toast_manager::<()>();
-        let notifications = manager.clone();
-        toast_provider("notifications")
-            .manager(manager)
-            .child_any(Button::new("save").label("Save").on_click(move |_, _, cx| {
-                notifications.add(
-                    ToastOptions::new()
-                        .title("Saved")
-                        .description("Your changes are saved."),
-                    cx,
-                );
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("notifications", cx, |_, cx| ToastState::new(cx));
+        let notify = state.clone();
+        gpui_kit::div()
+            .child(Button::new("save").label("Save").on_click(move |_, _, cx| {
+                notify.update(cx, |state, cx| {
+                    state.push(
+                        "saved",
+                        "Saved",
+                        "Your changes were saved.",
+                        Some(std::time::Duration::from_secs(5)),
+                        cx,
+                    )
+                });
             }))
-            .child(toast_portal().child(toast_viewport("notifications.viewport", cx)))
+            .child(state)
     }
 }
 
 mod toggle {
-    use crate::ui::toggle::Toggle;
-    use gpui::{IntoElement, ParentElement};
+    use crate::ui::toggle::*;
+    use gpui_kit::{IntoElement, ParentElement};
 
-    fn example() -> impl IntoElement {
-        Toggle::new("bold").aria_label("Bold").child("B")
+    fn example(pressed: bool) -> impl IntoElement {
+        Toggle::new("bold")
+            .aria_label("Bold")
+            .pressed(pressed)
+            .child("B")
+            .on_change(|pressed, _, _, _| println!("Bold: {pressed}"))
     }
 }
 
 mod toggle_group {
-    use crate::ui::toggle_group::{ToggleGroup, ToggleGroupItem};
-    use gpui::{IntoElement, ParentElement};
+    use crate::ui::toggle_group::*;
+    use gpui_kit::{App, IntoElement, ParentElement, Window};
 
-    fn example() -> impl IntoElement {
-        ToggleGroup::new("alignment")
-            .aria_label("Text alignment")
-            .default_value(["left"])
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let value =
+            window.use_keyed_state("styles", cx, |_, _| Vec::<gpui_kit::SharedString>::new());
+        ToggleGroup::new("styles")
+            .aria_label("Text styles")
+            .multiple(true)
+            .value(value.read(cx).clone())
             .item(
-                ToggleGroupItem::new("alignment.left", "left")
-                    .aria_label("Align left")
-                    .child("Left"),
+                ToggleGroupItem::new("bold", "bold")
+                    .aria_label("Bold")
+                    .child("B"),
             )
             .item(
-                ToggleGroupItem::new("alignment.center", "center")
-                    .aria_label("Align center")
-                    .child("Center"),
+                ToggleGroupItem::new("italic", "italic")
+                    .aria_label("Italic")
+                    .child("I"),
             )
+            .on_change(move |next, _, cx| {
+                value.update(cx, |value, cx| {
+                    *value = next;
+                    cx.notify();
+                })
+            })
     }
 }
 
 mod toolbar {
     use crate::ui::toolbar::*;
-    use gpui::{App, IntoElement, ParentElement};
+    use gpui_kit::{App, IntoElement, ParentElement};
 
     fn example(cx: &App) -> impl IntoElement {
-        toolbar(cx)
-            .id("formatting")
-            .aria_label("Formatting")
-            .child(
-                toolbar_button(cx)
-                    .id("formatting.bold")
-                    .aria_label("Bold")
-                    .child("B"),
-            )
-            .child(
-                toolbar_button(cx)
-                    .id("formatting.italic")
-                    .aria_label("Italic")
-                    .child("I"),
-            )
+        Toolbar::new("formatting", "Formatting", cx)
+            .button(ToolbarButton::new("bold", "Bold", cx).child("B"))
+            .button(ToolbarButton::new("italic", "Italic", cx).child("I"))
     }
 }
 
 mod tooltip {
-    use crate::ui::{button::Button, tooltip::*};
-    use gpui::{App, IntoElement, ParentElement};
+    use crate::ui::tooltip::*;
+    use gpui_kit::{App, IntoElement, Window};
 
-    fn example(cx: &App) -> impl IntoElement {
-        tooltip_provider("tooltips").child(
-            tooltip_root("save-hint")
-                .child(
-                    tooltip_trigger("save-hint.trigger").child(Button::new("save").label("Save")),
-                )
-                .child(
-                    tooltip_portal().child(tooltip_positioner(cx).child(
-                        tooltip_popup("save-hint.popup", cx).child_any("Save your changes"),
-                    )),
-                ),
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        tooltip(
+            "save-tooltip",
+            "Save changes",
+            gpui_kit::base::Button::new("save").accessibility_label("Save"),
+            window,
+            cx,
         )
     }
 }
 
 mod resizable {
     use crate::ui::resizable::{PaneLimits, Resizable};
-    use gpui::{IntoElement, Pixels, div, px};
+    use gpui_kit::{IntoElement, Pixels, div, px};
 
     fn example() -> impl IntoElement {
         // In a Render implementation, pass caller-owned size and a cx.listener
@@ -787,7 +597,7 @@ mod resizable {
 
 mod sidebar {
     use crate::ui::sidebar::{Sidebar, SidebarItem, sidebar_group_label};
-    use gpui::{App, IntoElement, ParentElement};
+    use gpui_kit::{App, IntoElement, ParentElement};
 
     fn example(cx: &App) -> impl IntoElement {
         Sidebar::new("navigation", "Workspace navigation")
@@ -801,7 +611,7 @@ mod sidebar {
 
 mod virtual_list {
     use crate::ui::virtual_list::{ListItem, ListSelectionMode, VirtualList, VirtualListState};
-    use gpui::{IntoElement, ParentElement, div};
+    use gpui_kit::{IntoElement, ParentElement, div};
 
     // Store this once as `list: VirtualListState` in your view, not in render.
     fn create_list() -> VirtualListState {

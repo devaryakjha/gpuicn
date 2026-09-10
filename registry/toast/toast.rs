@@ -1,158 +1,172 @@
-//! The shadcn Nova Toast visual port.
-//!
-//! Base GPUI owns queueing, auto-dismiss, pause/resume, stacking and swipe dismissal.
-
-pub use base_gpui::toast::{
-    ToastAction, ToastClose, ToastContent, ToastDescription, ToastOptions, ToastPortal,
-    ToastProvider, ToastRoot, ToastTitle, ToastViewport, create_toast_manager,
-};
-use gpui::{App, ElementId, FontWeight, Styled, px};
-use gpui_icons::{LucideIcon, lucide};
-
+//! Nova notifications using Kit's toast queue, timers and measured stack.
 use super::{
-    button::{ButtonSize, ButtonVariant, style_button},
+    button::{Button, ButtonSize, ButtonVariant},
     theme::UiTheme,
 };
+use gpui_icons::{LucideIcon, lucide};
+use gpui_kit::base::{
+    Toast, ToastManager, ToastMotion, ToastOptions, ToastStack, ToastStackState,
+    ToastTransitionStatus,
+};
+use gpui_kit::{
+    Anchor, Context, ElementId, FocusHandle, FontWeight, InteractiveElement as _, IntoElement,
+    ParentElement as _, Render, SharedString, Styled, Task, Window, div, px,
+};
+use std::time::Duration;
+use web_time::Instant;
 
-/// Creates a Toast provider with a caller-owned stable ID.
-pub fn toast_provider(id: impl Into<ElementId>) -> ToastProvider<()> {
-    ToastProvider::new().id(id)
+struct Notice {
+    title: SharedString,
+    description: SharedString,
 }
-
-/// Creates the Toast portal.
-pub fn toast_portal() -> ToastPortal<()> {
-    ToastPortal::new()
+/// Own this entity in the application and mount it once above the page content.
+pub struct ToastState {
+    manager: ToastManager<SharedString, Notice>,
+    stack: ToastStackState,
+    focus: FocusHandle,
+    timer: Option<Task<()>>,
 }
-
-/// Creates a Toast viewport with the standard title, description, and close button.
-/// Mount it once inside a provider. Override `content_builder` for custom content.
-pub fn toast_viewport(id: impl Into<ElementId>, cx: &App) -> ToastViewport<()> {
-    let theme = UiTheme::read(cx).clone();
-    let spacing = theme.spacing.unit;
-    ToastViewport::new()
-        .id(id)
-        .absolute()
-        .left(spacing * 4_f32)
-        .right(spacing * 4_f32)
-        .bottom(spacing * 4_f32)
-        .max_w(spacing * 96_f32)
-        .flex()
-        .flex_col()
-        .gap(spacing * 3_f32)
-        .content_builder(move |_| {
-            root_from_theme(&theme).child(
-                content_from_theme(&theme)
-                    .child(title_from_theme(&theme))
-                    .child(description_from_theme(&theme))
-                    .child(close_from_theme(&theme)),
-            )
-        })
+impl ToastState {
+    /// Creates an empty notification queue and its focus handle.
+    pub fn new(cx: &mut Context<Self>) -> Self {
+        Self {
+            manager: ToastManager::new(ToastMotion::sonner()),
+            stack: Default::default(),
+            focus: cx.focus_handle(),
+            timer: None,
+        }
+    }
+    /// Replaces an existing ID or adds a new notification. `None` keeps it until dismissed.
+    pub fn push(
+        &mut self,
+        id: impl Into<SharedString>,
+        title: impl Into<SharedString>,
+        description: impl Into<SharedString>,
+        timeout: Option<Duration>,
+        cx: &mut Context<Self>,
+    ) {
+        let empty = self.manager.is_empty();
+        self.manager.push(
+            id.into(),
+            Notice {
+                title: title.into(),
+                description: description.into(),
+            },
+            ToastOptions { timeout },
+            Instant::now(),
+        );
+        if empty {
+            self.timer = Some(cx.spawn(async move |this, cx| {
+                loop {
+                    cx.background_executor()
+                        .timer(Duration::from_millis(50))
+                        .await;
+                    let active = this
+                        .update(cx, |state, cx| {
+                            if state
+                                .manager
+                                .advance(Instant::now(), state.stack.is_expanded())
+                                .changed
+                            {
+                                cx.notify();
+                            }
+                            !state.manager.is_empty()
+                        })
+                        .unwrap_or(false);
+                    if !active {
+                        break;
+                    }
+                }
+            }));
+        }
+        cx.notify();
+    }
+    /// Removes the notification with this ID.
+    pub fn dismiss(&mut self, id: &SharedString, cx: &mut Context<Self>) {
+        if self.manager.dismiss(id, Instant::now()) {
+            cx.notify();
+        }
+    }
+    /// Returns whether the notification queue is empty.
+    pub fn is_empty(&self) -> bool {
+        self.manager.is_empty()
+    }
 }
-
-/// Creates the stacked Nova Toast surface.
-pub fn toast_root(cx: &App) -> ToastRoot<()> {
-    root_from_theme(UiTheme::read(cx))
-}
-
-fn root_from_theme(theme: &UiTheme) -> ToastRoot<()> {
-    let theme = theme.clone();
-    ToastRoot::new().style_with_state(move |_state, base| {
-        base.w_full()
-            .rounded(theme.radius.two_xl)
-            .border_1()
-            .border_color(theme.colors.border)
-            .bg(theme.colors.popover)
-            .text_color(theme.colors.popover_foreground)
-            .font_family(theme.fonts.body.clone())
-    })
-}
-
-/// Creates the padded Toast content row.
-pub fn toast_content(cx: &App) -> ToastContent<()> {
-    content_from_theme(UiTheme::read(cx))
-}
-
-fn content_from_theme(theme: &UiTheme) -> ToastContent<()> {
-    let theme = theme.clone();
-    let spacing = theme.spacing.unit;
-    ToastContent::new().style_with_state(move |_state, base| {
-        base.flex()
-            .relative()
-            .flex_col()
-            .items_start()
-            .gap(spacing * 1_f32)
-            .overflow_hidden()
-            .p(spacing * 4_f32)
-            .pr(spacing * 12_f32)
-            .font_family(theme.fonts.body.clone())
-    })
-}
-
-/// Creates a medium-weight Toast title.
-pub fn toast_title(cx: &App) -> ToastTitle<()> {
-    title_from_theme(UiTheme::read(cx))
-}
-
-fn title_from_theme(theme: &UiTheme) -> ToastTitle<()> {
-    let theme = theme.clone();
-    let text_scale = theme.text_scale;
-    ToastTitle::new().style_with_state(move |_state, base| {
-        base.font_family(theme.fonts.body.clone())
-            .font_weight(FontWeight::MEDIUM)
-            .text_size(px(14.0) * text_scale)
-            .text_color(theme.colors.popover_foreground)
-    })
-}
-
-/// Creates a muted Toast description.
-pub fn toast_description(cx: &App) -> ToastDescription<()> {
-    description_from_theme(UiTheme::read(cx))
-}
-
-fn description_from_theme(theme: &UiTheme) -> ToastDescription<()> {
-    let theme = theme.clone();
-    let text_scale = theme.text_scale;
-    ToastDescription::new().style_with_state(move |_state, base| {
-        base.font_family(theme.fonts.body.clone())
-            .text_size(px(14.0) * text_scale)
-            .text_color(theme.colors.muted_foreground)
-    })
-}
-
-/// Creates the compact outline Toast action.
-pub fn toast_action(cx: &App) -> ToastAction<()> {
-    let theme = UiTheme::read(cx).clone();
-    ToastAction::new().style_with_state(move |_state, base| {
-        style_button(base, false, ButtonVariant::Outline, ButtonSize::Sm, &theme)
-    })
-}
-
-/// Creates the compact icon-only Toast close button.
-pub fn toast_close(cx: &App) -> ToastClose<()> {
-    close_from_theme(UiTheme::read(cx))
-}
-
-fn close_from_theme(theme: &UiTheme) -> ToastClose<()> {
-    let theme = theme.clone();
-    let spacing = theme.spacing.unit;
-    let icon_color = theme.colors.muted_foreground;
-    ToastClose::new()
-        .aria_label("Close toast")
-        .absolute()
-        .top(spacing * 2_f32)
-        .right(spacing * 2_f32)
-        .style_with_state(move |_state, base| {
-            style_button(
-                base,
-                false,
-                ButtonVariant::Ghost,
-                ButtonSize::IconSm,
-                &theme,
-            )
-        })
-        .child_any(
-            lucide(LucideIcon::X)
-                .size(spacing * 4_f32)
-                .text_color(icon_color),
+impl Render for ToastState {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = UiTheme::read(cx).clone();
+        let colors = theme.colors;
+        let viewport = window.viewport_size();
+        let mut stack = ToastStack::new("toasts", self.stack.clone())
+            .placement(Anchor::BottomLeft)
+            .focus_handle(self.focus.clone())
+            .absolute()
+            .left(theme.space(4.))
+            .bottom(theme.space(4.))
+            .w((viewport.width - theme.space(8.)).min(theme.space(96.)));
+        for (id, notice, phase) in self.manager.visible(3) {
+            let dismiss = id.clone();
+            let state = cx.entity().downgrade();
+            let close = Button::new(ElementId::from((ElementId::from(id.clone()), "close")))
+                .aria_label("Close notification")
+                .variant(ButtonVariant::Ghost)
+                .size(ButtonSize::IconSm)
+                .absolute()
+                .top(theme.space(2.))
+                .right(theme.space(2.))
+                .on_click(move |_, _, cx| {
+                    state
+                        .update(cx, |state, cx| state.dismiss(&dismiss, cx))
+                        .ok();
+                })
+                .child(
+                    lucide(LucideIcon::X)
+                        .size(theme.space(4.))
+                        .text_color(colors.muted_foreground),
+                );
+            let presence = super::theme::presence(
+                ElementId::from((ElementId::from(id.clone()), "presence")),
+                phase != ToastTransitionStatus::Ending,
+                window,
+                cx,
+            );
+            let toast = Toast::new(id.clone())
+                .transition_status(phase)
+                .relative()
+                .occlude()
+                .w_full()
+                .rounded(theme.radius.two_xl)
+                .border_1()
+                .border_color(colors.border)
+                .bg(colors.popover)
+                .text_color(colors.popover_foreground)
+                .font_family(theme.fonts.body.clone())
+                .p(theme.space(4.))
+                .pr(theme.space(12.))
+                .flex()
+                .flex_col()
+                .gap(theme.space(1.))
+                .opacity(presence.progress)
+                .child(
+                    div()
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_size(theme.text(14.))
+                        .child(notice.title.clone()),
+                )
+                .child(
+                    div()
+                        .text_size(theme.text(14.))
+                        .text_color(colors.muted_foreground)
+                        .child(notice.description.clone()),
+                )
+                .child(close);
+            stack = stack.item(id.clone(), toast);
+        }
+        gpui_kit::deferred(
+            gpui_kit::anchored()
+                .position(gpui_kit::point(px(0.), px(0.)))
+                .child(div().w(viewport.width).h(viewport.height).child(stack)),
         )
+        .with_priority(20)
+    }
 }
