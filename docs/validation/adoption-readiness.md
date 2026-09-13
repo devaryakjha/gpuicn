@@ -9,7 +9,7 @@ pins to the new release tag before publishing the changed catalog.
 
 | Path | Observed result | Limit |
 | --- | --- | --- |
-| CI at `261de2a` | 47 workspace tests, Clippy, 19 installed-source tests, both registry installers, WASM build and web checks passed in [run 34769477162](https://github.com/devaryakjha/gpuicn/actions/runs/34769477162). | Later consumer/docs follow-ups need their own CI result. |
+| CI at `261de2a` | 47 workspace tests, Clippy, 19 installed-source tests, both registry installers, WASM build and web checks passed in [run 34769477162](https://github.com/devaryakjha/gpuicn/actions/runs/34769477162). | The consumer and all copied Usage snippets also passed at `8199229` in [run 34771604318](https://github.com/devaryakjha/gpuicn/actions/runs/34771604318). See PR checks for the final selector frame fix. |
 | Installation | The rendered first command has real newlines and ran in a temporary app. The tagged public CLI installed and completed init/add-button. Font, license and starter URLs returned successfully. | Clipboard API readback was unavailable. Public beta.3 retains the earlier component defects. |
 | Source updates | Starting with beta.3 Button source, adding Select and updating without overwrite preserved an app edit. Dry run wrote nothing. Explicit overwrite replaced the source; the saved customization was reapplied. | File handling against the local destination registry, not app behavior after a new public release. |
 | Mixed-form WASM | The CI-built form displayed error borders and messages on text, choice and number controls. Entering valid values, selecting Pear by keyboard and incrementing quantity allowed submission and cleared errors. The closed selector showed a keyboard-focus border. Light/dark switching retained the values. | Verified against the CI artifact at `261de2a`; this does not establish native screen-reader parity. |
@@ -21,10 +21,16 @@ contains setup and run commands. The original installation starter remains the
 default binary. Its controls expose custom palettes, independent compact spacing
 and larger text, long content and disabled fields for the remaining review.
 
+The final browser pass exposed a saved-text font panic that native CI did not
+catch. Searchable editors now wait for their first rendered frame before syncing
+saved text. In the CI WASM artifact at `79c1b86`, Combobox showed Pear and
+Autocomplete showed the unlisted dragonfruit value on initial load. Clearing the
+Combobox and pressing Enter selected Apple; Autocomplete accepted lychee with
+Enter. The next commit only updates the test frame tick and a source comment.
+The focused regression tests retain their value, record-change and reset checks.
+
 ## Remaining acceptance
 
-- Verify the final initial Combobox/Autocomplete values in the CI-built browser
-  preview and record the final CI commit.
 - Complete native pointer/focus appearance and the full palette, density,
   typography, long-content and narrow-window matrix. The native control tool
   stalled about 17 minutes during launch despite a 30-second timeout, later
