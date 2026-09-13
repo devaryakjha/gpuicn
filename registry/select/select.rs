@@ -598,7 +598,7 @@ impl RenderOnce for Select {
             if mode_changed {
                 state.normalize_value();
                 if state.mode != Mode::Select && !state.editor_ready {
-                    // Kit resolves the editor font during its first paint, before text updates.
+                    // Kit resolves the inherited editor font during first paint; sync after it.
                     cx.on_next_frame(window, |state, window, cx| {
                         state.editor_ready = true;
                         state.sync_editor(window, cx);

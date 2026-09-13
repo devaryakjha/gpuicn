@@ -56,6 +56,7 @@ fn picker<'a>(
         window.activate_window();
         window.draw(cx).clear(cx);
     });
+    cx.update(|window, cx| window.simulate_next_frame(cx));
     cx.run_until_parked();
     cx.update(|window, cx| window.draw(cx).clear(cx));
     (view, cx)
