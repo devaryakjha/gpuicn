@@ -3,7 +3,12 @@
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
 `registry/field/field.rs`, using GPUI Kit 0.6.1.
 
-Field takes the same retained InputState used by the editor. It supplies a clickable visible label, description, required marker, error text, and vertical or horizontal layout. Validation and values belong to the application; there is no hidden form registry.
+`Field::new` keeps the existing retained InputState API. `Field::from_control`
+composes the same label, required marker, description, disabled state and error
+treatment around Input, Select, Combobox, Autocomplete and NumberField. Each
+control supplies its real focus target and receives the same accessible name,
+disabled state and invalid state. Validation and values remain application-owned;
+there is no hidden form registry.
 
 The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
 exact exit animations and cross-platform screen-reader parity are not implied by

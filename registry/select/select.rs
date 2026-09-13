@@ -1,5 +1,6 @@
 //! Nova selection controls with Kit editor state, semantics and popup positioning.
 use super::{
+    field::FieldControl,
     input::{Input, InputEvent, InputState},
     theme::{UiTheme, apply_style},
 };
@@ -9,8 +10,8 @@ use gpui_kit::base::{
     actions::{SelectDown, SelectUp},
 };
 use gpui_kit::{
-    App, AppContext as _, Context, ElementId, Entity, EventEmitter, FocusHandle, Focusable,
-    InteractiveElement as _, IntoElement, ParentElement as _, Render, RenderOnce, Role,
+    AnyElement, App, AppContext as _, Context, ElementId, Entity, EventEmitter, FocusHandle,
+    Focusable, InteractiveElement as _, IntoElement, ParentElement as _, Render, RenderOnce, Role,
     ScrollHandle, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled,
     Subscription, Window, div, prelude::FluentBuilder as _,
 };
@@ -55,7 +56,6 @@ pub(crate) enum Mode {
 /// Own the state and subscribe to `SelectEvent::Change` for committed values.
 pub struct SelectState {
     items: Vec<SelectItem>,
-    syncing_value: Option<SharedString>,
     value: Option<SharedString>,
     input: Entity<InputState>,
     focus: FocusHandle,
@@ -64,7 +64,9 @@ pub struct SelectState {
     highlighted: Option<usize>,
     scroll: ScrollHandle,
     mode: Mode,
+    presented: bool,
     disabled: bool,
+    invalid: bool,
     label: SharedString,
     placeholder: SharedString,
     style: StyleRefinement,
@@ -80,9 +82,6 @@ impl SelectState {
         let input = cx.new(|cx| InputState::new(window, cx));
         let subscription = cx.subscribe_in(&input, window, |this, _, event, _, cx| match event {
             InputEvent::Change if !this.disabled => {
-                if this.syncing_value.take().as_ref() == Some(&this.input.read(cx).value()) {
-                    return;
-                }
                 this.open = true;
                 this.highlighted = this
                     .visible(cx)
@@ -98,7 +97,6 @@ impl SelectState {
         });
         Self {
             items: items.into_iter().collect(),
-            syncing_value: None,
             value: None,
             input,
             focus: cx.focus_handle(),
@@ -107,7 +105,9 @@ impl SelectState {
             highlighted: None,
             scroll: ScrollHandle::new(),
             mode: Mode::Select,
+            presented: false,
             disabled: false,
+            invalid: false,
             label: "Selection".into(),
             placeholder: "Select…".into(),
             style: Default::default(),
@@ -133,24 +133,42 @@ impl SelectState {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let text = value
+        self.value = value;
+        self.normalize_value();
+        self.sync_editor(window, cx);
+        cx.notify();
+    }
+    fn normalize_value(&mut self) {
+        if self.presented
+            && self.mode != Mode::Autocomplete
+            && self
+                .value
+                .as_ref()
+                .is_some_and(|value| !self.items.iter().any(|item| &item.value == value))
+        {
+            self.value = None;
+        }
+    }
+    fn sync_editor(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // Plain selects have no rendered editor or initialized editor font.
+        if self.mode == Mode::Select {
+            return;
+        }
+        let text = self
+            .value
             .as_ref()
             .and_then(|value| self.items.iter().find(|item| &item.value == value))
             .map(|item| item.label.clone())
             .or_else(|| {
                 (self.mode == Mode::Autocomplete)
-                    .then(|| value.clone())
+                    .then(|| self.value.clone())
                     .flatten()
-            });
-        self.value = text.as_ref().and(value);
-        let text = text.unwrap_or_default();
-        // Plain selects have no rendered editor or initialized editor font.
-        if self.mode != Mode::Select {
-            self.syncing_value = Some(text.clone());
+            })
+            .unwrap_or_default();
+        if self.input.read(cx).value() != text {
             self.input
                 .update(cx, |input, cx| input.set_value(text, window, cx));
         }
-        cx.notify();
     }
     fn visible(&self, cx: &App) -> Vec<usize> {
         let query = if self.mode == Mode::Select {
@@ -252,7 +270,7 @@ mod tests {
     fn choosing_an_option_without_a_rendered_editor(cx: &mut gpui_kit::TestAppContext) {
         let window = cx.add_empty_window();
         window.update(|window, cx| {
-            crate::init(cx);
+            super::super::theme::init(cx);
             let state =
                 cx.new(|cx| SelectState::new([SelectItem::new("pear", "Pear")], window, cx));
             state.update(cx, |state, cx| state.choose(0, window, cx));
@@ -271,11 +289,17 @@ impl Focusable for SelectState {
     }
 }
 impl Render for SelectState {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
         let id = ElementId::from(("select", cx.entity_id()));
         let editing = self.mode != Mode::Select;
+        let focused = self.focus_handle(cx).is_focused(window) && !self.disabled;
+        let accessibility_label = if self.invalid {
+            format!("{} (invalid value)", self.label).into()
+        } else {
+            self.label.clone()
+        };
         let state = cx.entity();
         let open_state = state.clone();
         let measured = state.clone();
@@ -308,13 +332,25 @@ impl Render for SelectState {
                 .w_full()
                 .rounded(theme.radius.lg)
                 .border_1()
-                .border_color(colors.input)
+                .border_color(if self.invalid {
+                    colors.destructive
+                } else {
+                    colors.input
+                })
+                .when(focused, |d| {
+                    d.border_color(if self.invalid {
+                        colors.destructive
+                    } else {
+                        colors.ring
+                    })
+                })
                 .bg(colors.background)
                 .pr(theme.space(1.))
                 .child(
                     Input::new(&self.input)
                         .aria_label(self.label.clone())
                         .disabled(self.disabled)
+                        .invalid(self.invalid)
                         .bordered(false),
                 )
                 .child(clear)
@@ -336,7 +372,18 @@ impl Render for SelectState {
                 .h(theme.space(8.))
                 .rounded(theme.radius.lg)
                 .border_1()
-                .border_color(colors.input)
+                .border_color(if self.invalid {
+                    colors.destructive
+                } else {
+                    colors.input
+                })
+                .when(focused, |d| {
+                    d.border_color(if self.invalid {
+                        colors.destructive
+                    } else {
+                        colors.ring
+                    })
+                })
                 .px(theme.space(2.5))
                 .bg(colors.background)
                 .text_color(if self.value.is_some() {
@@ -432,7 +479,7 @@ impl Render for SelectState {
             .key_context(if editing { "Combobox" } else { "Select" })
             .open(self.open)
             .disabled(self.disabled)
-            .accessibility_label(self.label.clone())
+            .accessibility_label(accessibility_label)
             .accessibility_value(
                 self.value
                     .as_ref()
@@ -498,6 +545,7 @@ pub struct Select {
     label: SharedString,
     placeholder: SharedString,
     disabled: bool,
+    invalid: bool,
     style: StyleRefinement,
 }
 impl Select {
@@ -509,6 +557,7 @@ impl Select {
             label: "Selection".into(),
             placeholder: "Select…".into(),
             disabled: false,
+            invalid: false,
             style: Default::default(),
         }
     }
@@ -527,6 +576,11 @@ impl Select {
         self.disabled = disabled;
         self
     }
+    /// Applies validation error colors and announces invalidity in the accessible name.
+    pub fn invalid(mut self, invalid: bool) -> Self {
+        self.invalid = invalid;
+        self
+    }
 }
 impl Styled for Select {
     fn style(&mut self) -> &mut StyleRefinement {
@@ -536,8 +590,15 @@ impl Styled for Select {
 impl RenderOnce for Select {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         self.state.update(cx, |state, cx| {
+            let mode_changed = !state.presented || state.mode != self.mode;
             state.mode = self.mode;
+            state.presented = true;
+            if mode_changed {
+                state.normalize_value();
+                state.sync_editor(window, cx);
+            }
             state.disabled = self.disabled;
+            state.invalid = self.invalid;
             state.label = self.label;
             state.placeholder = self.placeholder;
             state.style = self.style;
@@ -548,5 +609,23 @@ impl RenderOnce for Select {
             }
         });
         self.state
+    }
+}
+
+impl FieldControl for Select {
+    fn field_focus_handle(&self, cx: &App) -> FocusHandle {
+        let state = self.state.read(cx);
+        if self.mode == Mode::Select {
+            state.focus.clone()
+        } else {
+            state.input.read(cx).focus_handle(cx)
+        }
+    }
+
+    fn into_field_control(self, label: SharedString, disabled: bool, invalid: bool) -> AnyElement {
+        self.aria_label(label)
+            .disabled(disabled)
+            .invalid(invalid)
+            .into_any_element()
     }
 }

@@ -5,10 +5,31 @@ use super::{
     theme::UiTheme,
 };
 use gpui_kit::{
-    App, Div, ElementId, Entity, Focusable as _, FontWeight, InteractiveElement as _, IntoElement,
-    MouseButton, ParentElement as _, RenderOnce, Role, SharedString,
+    AnyElement, App, Div, ElementId, Entity, FocusHandle, FontWeight, InteractiveElement as _,
+    IntoElement, MouseButton, ParentElement as _, RenderOnce, Role, SharedString,
     StatefulInteractiveElement as _, Styled, Window, div, prelude::FluentBuilder as _, px,
 };
+
+/// A control that can receive a field's shared name, disabled and invalid state.
+pub trait FieldControl: 'static {
+    /// Returns the control's real keyboard focus target.
+    fn field_focus_handle(&self, cx: &App) -> FocusHandle;
+    /// Applies the field state and erases the rendered control type.
+    fn into_field_control(self, label: SharedString, disabled: bool, invalid: bool) -> AnyElement;
+}
+
+impl FieldControl for Input {
+    fn field_focus_handle(&self, cx: &App) -> FocusHandle {
+        Input::field_focus_handle(self, cx)
+    }
+
+    fn into_field_control(self, label: SharedString, disabled: bool, invalid: bool) -> AnyElement {
+        self.aria_label(label)
+            .disabled(disabled)
+            .invalid(invalid)
+            .into_any_element()
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 /// The placement of a field label relative to its editor.
@@ -21,10 +42,10 @@ pub enum FieldOrientation {
 }
 
 #[derive(IntoElement)]
-/// A labeled Kit input with application-owned validation feedback.
-pub struct Field {
+/// A labeled control with application-owned validation feedback.
+pub struct Field<C: FieldControl = Input> {
     id: ElementId,
-    state: Entity<InputState>,
+    control: C,
     label: SharedString,
     description: Option<SharedString>,
     error: Option<SharedString>,
@@ -33,12 +54,18 @@ pub struct Field {
     orientation: FieldOrientation,
     style: gpui_kit::StyleRefinement,
 }
-impl Field {
+impl Field<Input> {
     /// Creates a field around the caller's retained editing state.
     pub fn new(id: impl Into<ElementId>, state: &Entity<InputState>) -> Self {
+        Field::from_control(id, Input::new(state))
+    }
+}
+impl<C: FieldControl> Field<C> {
+    /// Creates a field around any supported text, choice or number control.
+    pub fn from_control(id: impl Into<ElementId>, control: C) -> Self {
         Self {
             id: id.into(),
-            state: state.clone(),
+            control,
             label: SharedString::default(),
             description: None,
             error: None,
@@ -48,7 +75,7 @@ impl Field {
             style: Default::default(),
         }
     }
-    /// Sets the visible label.
+    /// Sets the visible label and the control's accessible name.
     pub fn label(mut self, value: impl Into<SharedString>) -> Self {
         self.label = value.into();
         self
@@ -79,15 +106,15 @@ impl Field {
         self
     }
 }
-impl Styled for Field {
+impl<C: FieldControl> Styled for Field<C> {
     fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
     }
 }
-impl RenderOnce for Field {
+impl<C: FieldControl> RenderOnce for Field<C> {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let t = UiTheme::read(cx).clone();
-        let focus = self.state.focus_handle(cx);
+        let focus = self.control.field_focus_handle(cx);
         let label = if self.required {
             format!("{} (required)", self.label).into()
         } else {
@@ -111,10 +138,9 @@ impl RenderOnce for Field {
                     })
             });
         let description = self.error.clone().or(self.description.clone());
-        let input = Input::new(&self.state)
-            .aria_label(label)
-            .disabled(self.disabled)
-            .invalid(self.error.is_some());
+        let control = self
+            .control
+            .into_field_control(label, self.disabled, self.error.is_some());
         let root = div()
             .id(self.id)
             .role(Role::Group)
@@ -137,7 +163,7 @@ impl RenderOnce for Field {
                     .flex()
                     .flex_col()
                     .gap(t.space(1.5))
-                    .child(input)
+                    .child(control)
                     .when_some(description, |root, description| {
                         root.child(
                             div()

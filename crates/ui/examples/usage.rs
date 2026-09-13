@@ -237,7 +237,14 @@ mod fieldset {
 }
 
 mod form {
-    use crate::ui::{Button, field::Field, form::*, input::InputState};
+    use crate::ui::{
+        Button,
+        field::Field,
+        form::*,
+        input::InputState,
+        number_field::NumberField,
+        select::{Select, SelectState},
+    };
     use gpui_kit::Entity;
     use gpui_kit::{App, IntoElement, ParentElement, StatefulInteractiveElement};
 
@@ -247,6 +254,28 @@ mod form {
             .aria_label("Subscribe")
             .child(Field::new("email", email).label("Email").required(true))
             .child(Button::new("subscribe.submit").label("Subscribe"))
+    }
+
+    fn mixed_example(
+        email: &Entity<InputState>,
+        fruit: &Entity<SelectState>,
+        quantity: &Entity<InputState>,
+        cx: &App,
+    ) -> impl IntoElement {
+        form("order", cx)
+            .aria_label("Fruit order")
+            .child(Field::new("email", email).label("Email").required(true))
+            .child(
+                Field::from_control("fruit", Select::new(fruit))
+                    .label("Fruit")
+                    .required(true),
+            )
+            .child(
+                Field::from_control("quantity", NumberField::new(quantity))
+                    .label("Quantity")
+                    .required(true),
+            )
+            .child(Button::new("order.submit").label("Place order"))
     }
 }
 

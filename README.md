@@ -18,6 +18,10 @@ controls, text editing, motion, and popup hosts. gpuicn supplies Nova styling an
 application components. See the [migration notes](docs/validation/gpui-kit-migration.md)
 for the new APIs and verification status.
 
+The current beta supports GPUI Kit 0.6.1 and its pinned `gpui-pre` 0.3.4
+runtime. Import GPUI types through `gpui_kit`; apps on another GPUI revision
+must migrate before installing gpuicn source.
+
 The project follows the shadcn/ui source distribution model. It brings shadcn's
 visual language and themes to idiomatic GPUI APIs. It does not copy React APIs.
 
@@ -44,12 +48,13 @@ Installed source stays editable.
 
 ## Install editable Rust source
 
-The native CLI is an unpublished local preview. Build it from this checkout:
+The native CLI is not published to crates.io. Install the current published beta
+from its Git tag and use the matching registry snapshot:
 
 ```sh
-cargo install --path crates/cli --locked
-# From your app directory; replace the path with this checkout:
-gpuicn --registry /path/to/gpuicn/site/pages/r init
+cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.3 --locked
+# From your app directory:
+gpuicn --registry https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/site/pages/r init
 gpuicn add button sidebar
 ```
 
@@ -59,7 +64,16 @@ unless you pass `--overwrite`. See [setup and updates](docs/registry.md) for
 Cargo dependencies and [theming](docs/theming.md) for colors, density, type,
 radius, per-instance styles, and motion.
 
-The [running TODO](TODO.md) tracks this local pass and later desktop batches.
+The tag and registry URL above pin the current published beta; they do not
+include later fixes until a new release is tagged. To update, move both pins to
+the same release, commit your app-specific edits, and use
+`gpuicn add button sidebar --dry-run --overwrite` to list files before replacing
+them. Review the resulting source diff after the actual overwrite.
+
+[GitHub issue #58](https://github.com/devaryakjha/gpuicn/issues/58) tracks the
+current adoption-readiness work. [TODO.md](TODO.md) preserves earlier local pass
+records and desktop batches.
+
 Launch the local workspace example app:
 
 ```sh

@@ -6,7 +6,10 @@ includes a complete working starter.
 
 ## One-time setup
 
-Use Rust 1.97.1 or newer. Keep the dependency pins below together.
+Use Rust 1.97.1 or newer. gpuicn v0.5.0-beta.3 supports GPUI Kit 0.6.1
+on its pinned `gpui-pre` 0.3.4 runtime. Keep the dependency pins below
+together. Apps using another GPUI revision must migrate to this runtime before
+installing the components.
 
 Create a Rust app with `cargo new my-app`, then add these dependencies:
 
@@ -17,24 +20,28 @@ gpui_platform = { package = "gpui-pre-platform", version = "=0.3.4", features = 
 gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "01ac07dd83e97f9d6a3526466413732fbdfc2975" }
 
 gpui-kit = { version = "=0.6.1", default-features = false }
+
+[dev-dependencies]
+gpui-kit = { version = "=0.6.1", default-features = false, features = ["test-support"] }
 ```
 
-Import GPUI types through `gpui_kit`. No compatibility crate or Cargo patch is required.
+Import GPUI types through `gpui_kit` so the application and installed components
+share the same GPUI types. No compatibility crate or Cargo patch is required.
 
 ## Install the native CLI
 
-The new CLI is a local preview and is not published to crates.io yet. From this
-checkout, build and install it with Rust alone:
+The CLI is not published to crates.io yet. Install the current published beta
+from its Git tag:
 
 ```sh
-cargo install --path crates/cli --locked
+cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.3 --locked
 ```
 
-From your app directory, initialize a config pointing to this checkout's built
-registry (replace `/path/to/gpuicn` with its location):
+From your app directory, initialize a config pointing to the registry from that
+same release:
 
 ```sh
-gpuicn --registry /path/to/gpuicn/site/pages/r init
+gpuicn --registry https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/site/pages/r init
 gpuicn list
 gpuicn add button
 ```
@@ -45,9 +52,13 @@ registry snapshot if you need reproducible installs.
 
 ```toml
 version = 1
-registry = "/path/to/gpuicn/site/pages/r"
+registry = "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/site/pages/r"
 output = "src/ui"
 ```
+
+This URL is a reproducible snapshot of the current published beta. It does not
+include fixes made after the tag. Use a later release tag when those fixes are
+published.
 
 The installer copies Button and its shared theme and adds declarations to
 `src/ui/mod.rs`, preserving caller code. Add `mod ui;` to your crate root.
@@ -63,11 +74,18 @@ gpuicn add button --dry-run --overwrite
 gpuicn add button --overwrite
 ```
 
-Existing edited files are kept by default. Use version control to review a dry
-run and diff before opting into replacement. Downloads and source validation
-finish before writes begin. Each file is replaced atomically, with `mod.rs`
-last; an I/O failure while committing files can still leave a partial batch.
-The CLI does not edit Cargo dependencies, application setup, or fonts.
+Existing edited files are kept by default. A dry run with `--overwrite` lists
+the files that would be replaced without changing them. Downloads and source
+validation finish before writes begin. Each file is replaced atomically, with
+`mod.rs` last; an I/O failure while committing files can still leave a partial
+batch. The CLI does not edit Cargo dependencies, application setup, or fonts.
+
+To adopt a newer gpuicn release, reinstall the CLI from its new tag with
+`--force` and update the registry URL to that same tag. First commit your current
+app-specific edits to a branch. A dry run with `--overwrite` reports which files
+would be replaced; it does not show their content diff. Repeat without
+`--dry-run`, then inspect `git diff -- src/ui` and reapply the app-specific edits
+you still need.
 
 ## Build a registry
 
@@ -101,10 +119,11 @@ Download the fonts and their license:
 
 ```sh
 mkdir -p assets/fonts
-for file in Geist-Regular.ttf Geist-Medium.ttf GeistMono-Regular.ttf OFL.txt; do
-  curl -fL "https://ui.imajha.com/fonts/$file" -o "assets/fonts/$file"
+for file in Geist-Regular.ttf Geist-Medium.ttf GeistMono-Regular.ttf; do
+  curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/site/assets/fonts/$file" -o "assets/fonts/$file"
 done
-curl -fL https://ui.imajha.com/examples/hello.rs -o src/main.rs
+curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt
+curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/fixtures/registry-install/src/main.rs" -o src/main.rs
 cargo run
 ```
 

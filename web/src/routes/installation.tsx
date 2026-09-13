@@ -12,6 +12,10 @@ export const Route = createFileRoute("/installation")({
   component: InstallationPage,
 })
 
+const release = "v0.5.0-beta.3"
+const releaseSource = `https://raw.githubusercontent.com/devaryakjha/gpuicn/${release}`
+const registry = `${releaseSource}/site/pages/r`
+
 function InstallationPage() {
   return (
     <DocsLayout>
@@ -27,14 +31,17 @@ function InstallationPage() {
             1. Create a Rust app
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
-            Use Rust 1.97.1 or newer and the native build tools for your platform.
-            Keep these dependency revisions together: GPUI types must come from
-            the same revision across your app, GPUI Kit, and the icon library.
+            Use Rust 1.97.1 or newer and the native build tools for your
+            platform. This release supports GPUI Kit 0.6.1 on its pinned
+            gpui-pre 0.3.4 runtime. Import GPUI types through gpui_kit so your
+            app and the components use the same types. Apps on another GPUI
+            revision must migrate to this runtime before installing the
+            components.
           </p>
           <CodeBlock
             language="bash"
             className="mt-4"
-            value="cargo new my-app\ncd my-app"
+            value={"cargo new my-app\ncd my-app"}
           />
           <p className="mt-4 text-sm text-muted-foreground">
             Add these dependencies to Cargo.toml:
@@ -51,16 +58,34 @@ function InstallationPage() {
             2. Configure the source installer
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
-            The native CLI is a local preview, not yet published to crates.io.
-            Install it from a gpuicn checkout with Rust alone. No Node.js is required.
+            The native CLI is distributed as source and is not yet published to
+            crates.io. Install the current published beta directly from its Git
+            tag. No Node.js or gpuicn checkout is required.
           </p>
-          <CodeBlock language="bash" className="mt-4" value="cargo install --path /path/to/gpuicn/crates/cli --locked" />
+          <CodeBlock
+            language="bash"
+            className="mt-4"
+            value={`cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag ${release} --locked`}
+          />
           <p className="mt-4 text-sm leading-6 text-muted-foreground">
-            From your app root, create gpuicn.toml. Replace the path with your
-            checkout; you can also use an HTTP(S) registry snapshot.
+            From your app root, create gpuicn.toml against the same release
+            snapshot. This pins the CLI and component source to one release;
+            keep the dependency versions above together with it.
           </p>
-          <CodeBlock language="bash" className="mt-3" value="gpuicn --registry /path/to/gpuicn/site/pages/r init" />
-          <CodeBlock language="toml" className="mt-3" value={'version = 1\nregistry = "/path/to/gpuicn/site/pages/r"\noutput = "src/ui"'} />
+          <CodeBlock
+            language="bash"
+            className="mt-3"
+            value={`gpuicn --registry ${registry} init`}
+          />
+          <CodeBlock
+            language="toml"
+            className="mt-3"
+            value={`version = 1\nregistry = "${registry}"\noutput = "src/ui"`}
+          />
+          <p className="mt-4 text-sm leading-6 text-muted-foreground">
+            {release} is the current published beta. Fixes made after that tag
+            are not included in this snapshot.
+          </p>
         </section>
 
         <section>
@@ -76,12 +101,32 @@ function InstallationPage() {
             This installs Button and its shared theme, and maintains{" "}
             <code className="text-sm">src/ui/mod.rs</code>:
           </p>
-          <CodeBlock className="mt-4" value="pub mod button;\npub mod theme;" />
+          <CodeBlock
+            className="mt-4"
+            value={"pub mod button;\npub mod theme;"}
+          />
           <p className="mt-3 leading-7 text-muted-foreground">
-            Add mod ui; to your crate root. Existing edits are kept by default. Your installed files
-            belong to your app. Review local edits before using the installer’s
+            Add mod ui; to your crate root. Existing edits are kept by default.
+            Your installed files belong to your app. Review local edits before
+            using the installer’s
             <code className="text-sm"> --overwrite</code> option.
           </p>
+          <p className="mt-3 leading-7 text-muted-foreground">
+            To update, install the CLI with{" "}
+            <code className="text-sm">--force</code>
+            and change the registry URL to the same newer release. Commit your
+            current app-specific edits first. A dry run reports which files
+            would change; after opting into{" "}
+            <code className="text-sm">--overwrite</code>, review the resulting
+            source diff and reapply the edits you still need.
+          </p>
+          <CodeBlock
+            className="mt-4"
+            language="bash"
+            value={
+              "gpuicn add button --dry-run --overwrite\ngpuicn add button --overwrite\ngit diff -- src/ui"
+            }
+          />
         </section>
 
         <section>
@@ -96,9 +141,7 @@ function InstallationPage() {
           <CodeBlock
             className="mt-4"
             language="bash"
-            value={
-              'mkdir -p assets/fonts\nfor file in Geist-Regular.ttf Geist-Medium.ttf GeistMono-Regular.ttf OFL.txt; do\n  curl -fL "https://ui.imajha.com/fonts/$file" -o "assets/fonts/$file"\ndone'
-            }
+            value={`mkdir -p assets/fonts\nfor file in Geist-Regular.ttf Geist-Medium.ttf GeistMono-Regular.ttf; do\n  curl -fL "${releaseSource}/site/assets/fonts/$file" -o "assets/fonts/$file"\ndone\ncurl -fL "${releaseSource}/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt`}
           />
         </section>
 
@@ -108,8 +151,9 @@ function InstallationPage() {
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
             Replace <code className="text-sm">src/main.rs</code> with this
-            starter. It calls ui::theme::init(cx) to enable component actions and
-            keyboard navigation, loads the fonts, and renders a working counter button.
+            starter. It calls ui::theme::init(cx) to enable component actions
+            and keyboard navigation, loads the fonts, and renders a working
+            counter button.
           </p>
           <CodeBlock className="mt-4" value={setup.starter} />
           <a
