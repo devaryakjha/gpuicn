@@ -65,6 +65,7 @@ pub struct SelectState {
     scroll: ScrollHandle,
     mode: Mode,
     presented: bool,
+    editor_ready: bool,
     disabled: bool,
     invalid: bool,
     label: SharedString,
@@ -106,6 +107,7 @@ impl SelectState {
             scroll: ScrollHandle::new(),
             mode: Mode::Select,
             presented: false,
+            editor_ready: false,
             disabled: false,
             invalid: false,
             label: "Selection".into(),
@@ -151,7 +153,7 @@ impl SelectState {
     }
     fn sync_editor(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         // Plain selects have no rendered editor or initialized editor font.
-        if self.mode == Mode::Select {
+        if self.mode == Mode::Select || !self.editor_ready {
             return;
         }
         let text = self
@@ -595,7 +597,16 @@ impl RenderOnce for Select {
             state.presented = true;
             if mode_changed {
                 state.normalize_value();
-                state.sync_editor(window, cx);
+                if state.mode != Mode::Select && !state.editor_ready {
+                    // Kit resolves the editor font during its first paint, before text updates.
+                    cx.on_next_frame(window, |state, window, cx| {
+                        state.editor_ready = true;
+                        state.sync_editor(window, cx);
+                        cx.notify();
+                    });
+                } else {
+                    state.sync_editor(window, cx);
+                }
             }
             state.disabled = self.disabled;
             state.invalid = self.invalid;
