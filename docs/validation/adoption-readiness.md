@@ -1,32 +1,40 @@
 # Source adoption readiness — 13 September 2026
 
-Track remaining work in [issue #58](https://github.com/devaryakjha/gpuicn/issues/58).
-These results describe local work based on v0.5.0-beta.3. They do not establish
-that the public release includes the fixes or that the full adoption goal is met.
+[PR #59](https://github.com/devaryakjha/gpuicn/pull/59) contains the code changes.
+[Issue #58](https://github.com/devaryakjha/gpuicn/issues/58) tracks qualification.
+The public v0.5.0-beta.3 release does not contain these fixes. Update the install
+pins to the new release tag before publishing the changed catalog.
 
-## Completed checks
+## Evidence
 
-| Path | Evidence | Limit |
+| Path | Observed result | Limit |
 | --- | --- | --- |
-| Installed sources | A fresh consumer compiled and passed 19 copied-source tests after fixing sibling theme initialization. CI now runs these tests. | This consumer check preceded the final selector cleanup. |
-| Selector values | Two regression checks cover initial listed Combobox values, unlisted Autocomplete text, later values and reset. | Runtime tests do not prove native or WASM appearance. |
-| Integrated workspace | 46 tests passed; Clippy with warnings denied passed. | Results precede the mixed-field work. Reuse them for unchanged code. |
-| Installation guide | The rendered first command contains real newlines and ran successfully in a temporary directory. The tagged public CLI installed and completed init/add-button. Font, license and starter URLs returned successfully. | Clipboard API readback was unavailable. Public beta.3 still contains the earlier component defects. |
-| Source updates | Using the published CLI, a temporary beta.3 Button installation retained an app edit when adding Select and when updating without overwrite. Dry run changed no files. Explicit overwrite replaced the source; the saved app edit could then be reapplied. | The destination was the local registry, not a new public release. This verifies file handling, not application behavior after a version change. |
-| Native probe | An already-built consumer displayed the saved Combobox label and unlisted Autocomplete text. Next-record and Reset actions changed the editor values together. | This binary precedes the final selector cleanup. Native automation could invoke accessible actions but did not reliably target the window for keyboard/mouse input; focus remains unverified. |
-| Mixed fields | Field now applies a common required name, disabled state and validation state to text, choice and number controls. The form preview validates all three. A serial incremental compile check passed for the library, tests, Usage examples and showcase in 3.5 seconds. | The new field regression compiled but was not run. The changed native/WASM interface still needs review. |
-| Mixed-field installation | Installing Select and NumberField from the regenerated registry copied byte-identical source and only their Field, Input and Theme dependencies. | This file-level check did not compile a fresh consumer again. |
+| CI at `261de2a` | 47 workspace tests, Clippy, 19 installed-source tests, both registry installers, WASM build and web checks passed in [run 34769477162](https://github.com/devaryakjha/gpuicn/actions/runs/34769477162). | Later consumer/docs follow-ups need their own CI result. |
+| Installation | The rendered first command has real newlines and ran in a temporary app. The tagged public CLI installed and completed init/add-button. Font, license and starter URLs returned successfully. | Clipboard API readback was unavailable. Public beta.3 retains the earlier component defects. |
+| Source updates | Starting with beta.3 Button source, adding Select and updating without overwrite preserved an app edit. Dry run wrote nothing. Explicit overwrite replaced the source; the saved customization was reapplied. | File handling against the local destination registry, not app behavior after a new public release. |
+| Mixed-form WASM | The CI-built form displayed error borders and messages on text, choice and number controls. Entering valid values, selecting Pear by keyboard and incrementing quantity allowed submission and cleared errors. The closed selector showed a keyboard-focus border. Light/dark switching retained the values. | Verified against the CI artifact at `261de2a`; this does not establish native screen-reader parity. |
+| Native consumer | A standalone copied-source binary built with one compiler job in 5.7 seconds. Native input and region selection retained edited values across navigation. Filtering Billing, editing its name, saving by keyboard and reopening showed the saved name. Escape dismissed the dialog; restored focus reopened it with Return. Sidebar selection changed projects and Right changed the split width from 280 to 288. | Session-owned data. The final toolbar grouping, accessible receipt and stepper-name follow-ups were not visually rechecked. |
+| Usage installs | All 40 snippets use flat installed module imports. Generated commands include Usage-only dependencies. CI compiles the same snippets against copied sources, not library re-exports. | Generator checks import/module closure; Rust compilation remains the syntax/type check. |
 
-## Next evidence
+The consumer is at `fixtures/registry-install/src/bin/readiness.rs`; its README
+contains setup and run commands. The original installation starter remains the
+default binary. Its controls expose custom palettes, independent compact spacing
+and larger text, long content and disabled fields for the remaining review.
 
-- Verify initial values, reset, selection and visible keyboard focus in native
-  and WASM interfaces built from the final source.
-- Exercise the new mixed form's labels, required/error feedback and disabled
-  behavior in the real interface, then cover saving and switching records.
-- Complete the consumer journeys and theme/content matrix in issue #58.
-- Record native keyboard, VoiceOver, IME and performance evidence separately
-  from Windows/Linux support and a docs-only trial with another developer.
+## Remaining acceptance
 
-Further local Rust compilation is limited to one job at a time after the
-laptop overheated during parallel builds. Do not rerun broad suites for changes
-that the completed checks already cover.
+- Verify the final initial Combobox/Autocomplete values in the CI-built browser
+  preview and record the final CI commit.
+- Complete native pointer/focus appearance and the full palette, density,
+  typography, long-content and narrow-window matrix. The native control tool
+  stalled about 17 minutes during launch despite a 30-second timeout, later
+  returned stale screenshots, and could not target pointer coordinates. Keyboard
+  and accessibility-tree observations above are narrower evidence.
+- Have the independent tester complete [the trial](adoption-trial.md), including
+  native VoiceOver, OS IME and runtime performance observations. The user will
+  arrange the tester; no outside acceptance result is claimed.
+- Windows and Linux native behavior are not qualified by the macOS or WASM checks.
+
+Local Rust compilation uses one job at a time after the laptop overheated during
+parallel builds. Broad verification runs in GitHub CI; do not repeat unchanged
+local suites.

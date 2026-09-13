@@ -91,21 +91,29 @@ impl RenderOnce for NumberField {
             .decrement_button({
                 let t = t.clone();
                 move |button| {
-                    button.size(t.space(8.)).cursor_pointer().child(
-                        lucide(LucideIcon::Minus)
-                            .size(t.space(3.5))
-                            .text_color(t.colors.foreground),
-                    )
+                    button
+                        .accessibility_label("Decrease value")
+                        .size(t.space(8.))
+                        .cursor_pointer()
+                        .child(
+                            lucide(LucideIcon::Minus)
+                                .size(t.space(3.5))
+                                .text_color(t.colors.foreground),
+                        )
                 }
             })
             .increment_button({
                 let t = t.clone();
                 move |button| {
-                    button.size(t.space(8.)).cursor_pointer().child(
-                        lucide(LucideIcon::Plus)
-                            .size(t.space(3.5))
-                            .text_color(t.colors.foreground),
-                    )
+                    button
+                        .accessibility_label("Increase value")
+                        .size(t.space(8.))
+                        .cursor_pointer()
+                        .child(
+                            lucide(LucideIcon::Plus)
+                                .size(t.space(3.5))
+                                .text_color(t.colors.foreground),
+                        )
                 }
             })
             .input(input);

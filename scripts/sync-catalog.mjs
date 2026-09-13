@@ -9,6 +9,12 @@ const read = (path) => readFileSync(`${root}${path}`, "utf8");
 const showcase = read("site/src/main.rs");
 const usageExamples = read("crates/ui/examples/usage.rs");
 const registry = JSON.parse(read("registry.json"));
+const componentByModule = new Map(registry.items.map((item) => [item.name.replaceAll("-", "_"), item]));
+const moduleName = (file) => file.path.split("/").at(-1).replace(".rs", "");
+const installedUsage = usageExamples.replace("use gpuicn as ui;", '#[path = "../ui/mod.rs"]\nmod ui;');
+assert.notEqual(installedUsage, usageExamples, "Missing Usage crate-alias anchor");
+mkdirSync(`${root}fixtures/registry-install/src/bin`, { recursive: true });
+writeFileSync(`${root}fixtures/registry-install/src/bin/generated-usage.rs`, installedUsage);
 const destination = `${root}web/src/generated/components`;
 mkdirSync(destination, { recursive: true });
 writeFileSync(`${root}web/src/generated/setup.json`, JSON.stringify({
@@ -28,6 +34,22 @@ for (const item of registry.items.filter((item) => item.name !== "theme")) {
   assert(preview, `Missing compiled preview for ${item.name}`);
   const usage = usageExamples.match(new RegExp(`^mod ${module} \\{\\n([\\s\\S]*?)^\\}`, "m"))?.[1].replace(/^    /gm, "").trim();
   assert(usage?.includes("fn example("), `Missing compile-checked usage for ${item.name}`);
+  const usageModules = [...usage.matchAll(/^use crate::ui::([^;]+);$/gm)].map((match) => {
+    const importedModule = match[1].match(/^([a-z][a-z0-9_]*)::/)?.[1];
+    assert(importedModule, `${item.name} Usage must import from an installed module, not crate::ui root`);
+    assert(componentByModule.has(importedModule), `${item.name} Usage imports unknown module ${importedModule}`);
+    return importedModule;
+  });
+  const includedModules = new Set(item.files.map(moduleName));
+  const extraComponents = [...new Set(usageModules.filter((name) => !includedModules.has(name)))]
+    .map((name) => componentByModule.get(name).name)
+    .filter((name, _, names) => !names.some((other) =>
+      other !== name && componentByModule.get(other.replaceAll("-", "_")).files.some((file) => moduleName(file) === name.replaceAll("-", "_"))
+    ));
+  const installComponents = [item.name, ...extraComponents];
+  const installFiles = installComponents.flatMap((name) => componentByModule.get(name.replaceAll("-", "_")).files);
+  const installedModules = new Set(installFiles.map(moduleName));
+  assert(usageModules.every((name) => installedModules.has(name)), `${item.name} install command does not cover its Usage imports`);
 
   const api = [...source.matchAll(/(?:^\s*\/\/\/[^\n]*\n)*(?:^\s*#\[[^\n]*\]\n)*^\s*pub (?:const )?fn [\s\S]*?\{/gm)]
     .map(([entry]) => {
@@ -51,7 +73,7 @@ for (const item of registry.items.filter((item) => item.name !== "theme")) {
       [name, sidebarExample(name === "docs" || name === "mail" ? name : "application")])
   ) : undefined;
 
-  const helperModules = new Set(item.files.flatMap((file) =>
+  const helperModules = new Set(installFiles.flatMap((file) =>
     [...read(file.path).matchAll(/#\[path = "([^"/]+)\.rs"\]/g)].map((match) => match[1])
   ));
   writeFileSync(`${destination}/${item.name}.json`, `${JSON.stringify({
@@ -59,10 +81,11 @@ for (const item of registry.items.filter((item) => item.name !== "theme")) {
     examples,
     usage,
     usageCall: `example(${usage.match(/fn example\(([^)]*)\)/)?.[1].split(",").map((arg) => arg.trim().split(":")[0]).filter(Boolean).join(", ") ?? ""})`,
+    installComponents,
     source,
     api,
     parity,
-    modules: item.files.filter((file) => file.path.endsWith(".rs") && !helperModules.has(file.path.split("/").at(-1).replace(".rs", ""))).map((file) => file.path.split("/").at(-1).replace(".rs", "")),
+    modules: [...new Set(installFiles.filter((file) => file.path.endsWith(".rs") && !helperModules.has(moduleName(file))).map(moduleName))],
   }, null, 2)}\n`);
 }
 

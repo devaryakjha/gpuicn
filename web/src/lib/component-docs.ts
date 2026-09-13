@@ -3,6 +3,7 @@ export type ComponentDocs = {
   examples?: Record<string, string>
   usage: string
   usageCall: string
+  installComponents: string[]
   source: string
   api: { signature: string; description: string }[]
   parityHtml: string

@@ -4,6 +4,7 @@ version = "0.0.0"
 edition = "2024"
 rust-version = "1.97.1"
 publish = false
+default-run = "registry-install-fixture"
 
 [dependencies]
 web-time = "1.1"

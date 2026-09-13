@@ -29,3 +29,12 @@ The trial passes when the developer completes all three journeys from the docs,
 the app builds and behaves as described, and no maintainer intervention hides a
 missing step. File concrete failures in issue #58 and attach the evidence; do
 not turn a pre-release result into a released-product claim.
+
+For native acceptance, repeat the form and overlay journey with VoiceOver and
+an OS input method that uses composition. Record focus order, announced names,
+required/error feedback, composition/commit/cancel behavior and focus restoration.
+Use the consumer's independent palette, spacing, text-size and long-content
+controls, resize to a narrow window, and record clipping or lost actions. Record
+runtime responsiveness during typing, filtering and resizing on the actual
+machine; a build time or successful launch is not a performance result. Report
+Windows/Linux separately rather than inferring native support from WASM.

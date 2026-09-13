@@ -592,7 +592,7 @@ impl Showcase {
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let state = window.use_keyed_state("autocomplete_preview", cx, |window, cx| {
-            SelectState::new(
+            let mut state = SelectState::new(
                 [
                     SelectItem::new("apple", "Apple"),
                     SelectItem::new("banana", "Banana"),
@@ -601,7 +601,9 @@ impl Showcase {
                 ],
                 window,
                 cx,
-            )
+            );
+            state.set_value(Some("dragonfruit".into()), window, cx);
+            state
         });
         gpuicn::autocomplete::autocomplete(&state)
             .aria_label("Fruit")
@@ -880,7 +882,7 @@ impl Showcase {
 
     fn combobox_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let state = window.use_keyed_state("combobox_preview", cx, |window, cx| {
-            SelectState::new(
+            let mut state = SelectState::new(
                 [
                     SelectItem::new("apple", "Apple"),
                     SelectItem::new("banana", "Banana"),
@@ -889,7 +891,9 @@ impl Showcase {
                 ],
                 window,
                 cx,
-            )
+            );
+            state.set_value(Some("pear".into()), window, cx);
+            state
         });
         gpuicn::combobox::combobox(&state)
             .aria_label("Fruit")
