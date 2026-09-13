@@ -4,7 +4,7 @@ use super::theme::{ThemeMode, UiTheme};
 pub use gpui_kit::base::input::{InputEvent, InputState};
 use gpui_kit::base::{InputBase, input::InputEditorStyle};
 use gpui_kit::{
-    AccessibleAction, App, ElementId, Entity, EntityInputHandler as _, Focusable as _,
+    AccessibleAction, App, ElementId, Entity, EntityInputHandler as _, FocusHandle, Focusable as _,
     InteractiveElement as _, IntoElement, MouseButton, ParentElement as _, RenderOnce,
     SharedString, StatefulInteractiveElement as _, Styled, Window, prelude::FluentBuilder as _,
 };
@@ -57,6 +57,9 @@ impl Input {
     pub fn bordered(mut self, value: bool) -> Self {
         self.bordered = value;
         self
+    }
+    pub(crate) fn field_focus_handle(&self, cx: &App) -> FocusHandle {
+        self.state.read(cx).focus_handle(cx)
     }
 }
 impl Styled for Input {

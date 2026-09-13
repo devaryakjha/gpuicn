@@ -84,6 +84,11 @@
           "target": "~/src/ui/input.rs"
         },
         {
+          "path": "registry/field/field.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/field.rs"
+        },
+        {
           "path": "registry/select/select.rs",
           "type": "registry:file",
           "target": "~/src/ui/select.rs"
@@ -200,6 +205,11 @@
           "path": "registry/input/input.rs",
           "type": "registry:file",
           "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/field/field.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/field.rs"
         },
         {
           "path": "registry/select/select.rs",
@@ -498,6 +508,11 @@
           "target": "~/src/ui/input.rs"
         },
         {
+          "path": "registry/field/field.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/field.rs"
+        },
+        {
           "path": "registry/number_field/number_field.rs",
           "type": "registry:file",
           "target": "~/src/ui/number_field.rs"
@@ -650,6 +665,11 @@
           "path": "registry/input/input.rs",
           "type": "registry:file",
           "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/field/field.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/field.rs"
         },
         {
           "path": "registry/select/select.rs",

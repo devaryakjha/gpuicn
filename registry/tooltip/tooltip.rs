@@ -165,7 +165,7 @@ mod tests {
                     .child(Button::new("after").child("After"))
             }
         }
-        cx.update(crate::init);
+        cx.update(super::super::theme::init);
         let (_, visual) = cx.add_window_view(|_, _| Probe);
         visual.update(|window, cx| {
             window.activate_window();

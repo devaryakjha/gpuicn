@@ -4,6 +4,7 @@
 /fixtures/registry-install/gpuicn.toml
 /fixtures/registry-install/src/ui/*.rs
 !/fixtures/registry-install/src/ui/mod.rs
+/fixtures/registry-install/src/bin/generated-usage.rs
 /web/src/generated/
 /web/public/examples/
 /web/public/fonts/

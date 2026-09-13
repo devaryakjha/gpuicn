@@ -951,7 +951,7 @@ mod sidebar_tests {
                 )
             }
         }
-        cx.update(crate::init);
+        cx.update(super::super::theme::init);
         for collapsed in [false, true] {
             let (_, visual) = cx.add_window_view(move |_, cx| Probe {
                 state: cx.new(|cx| MenuState::new(vec![], cx)),

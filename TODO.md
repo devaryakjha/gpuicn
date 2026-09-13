@@ -1,6 +1,8 @@
 # gpuicn — active product pass
 
-Updated 8 September 2026. This is the running checklist for Arya's current local pass. New requests go here before implementation. Checked means verified; started work stays unchecked. No commit, push, release, or deployment until Arya tests and authorizes it.
+> Current adoption-readiness work is tracked in [GitHub issue #58](https://github.com/devaryakjha/gpuicn/issues/58). The checklists below are preserved as historical records of earlier local passes.
+
+Updated 8 September 2026. This records Arya's local pass at that date. Checked means verified; started work stays unchecked. No commit, push, release, or deployment until Arya tests and authorizes it.
 
 ## Product contract
 

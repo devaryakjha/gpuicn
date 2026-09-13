@@ -29,7 +29,8 @@ jobs:
           node scripts/sync-catalog.mjs
           cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
           cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml add --all
-          cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked --features gpui_platform/runtime_shaders
+          cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
+          cargo test --manifest-path fixtures/registry-install/Cargo.toml --bin registry-install-fixture --locked --features gpui_platform/runtime_shaders
       - name: Verify stock registry install
         run: |
           git diff --exit-code -- registry.json site/pages/r
@@ -44,7 +45,7 @@ jobs:
           perl -0pi -e 's/Nova modal surfaces[^\n]+/Changed by the overwrite gate/' fixtures/registry-install/src/ui/dialog.rs
           npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
           cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
-      - run: cargo check --manifest-path fixtures/registry-install/Cargo.toml --locked --features gpui_platform/runtime_shaders
+      - run: cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
 
   wasm:
     runs-on: ubuntu-latest
@@ -67,6 +68,13 @@ jobs:
         env:
           CARGO_UNSTABLE_BUILD_STD: std,panic_abort
         run: trunk build --release --public-url /demo/ --dist ../web/public/demo
+      - name: Upload WASM preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-preview
+          path: web/public/demo
+          if-no-files-found: error
+          retention-days: 7
       - name: Check TanStack catalog
         working-directory: web
         run: |

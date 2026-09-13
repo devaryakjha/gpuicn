@@ -1,7 +1,7 @@
 //! Small, compile-checked examples for the documentation's Usage sections.
 #![allow(dead_code)]
 
-// Installed components live at crate::ui; alias the library to check those imports.
+// Compile these examples against the library and the generated copied-source fixture.
 use gpuicn as ui;
 
 fn main() {}
@@ -212,7 +212,8 @@ mod drawer {
 }
 
 mod field {
-    use crate::ui::{field::*, input::InputState};
+    use crate::ui::field::*;
+    use crate::ui::input::InputState;
     use gpui_kit::{Entity, IntoElement};
 
     fn example(name: &Entity<InputState>) -> impl IntoElement {
@@ -224,7 +225,9 @@ mod field {
 }
 
 mod fieldset {
-    use crate::ui::{field::Field, fieldset::*, input::InputState};
+    use crate::ui::field::Field;
+    use crate::ui::fieldset::*;
+    use crate::ui::input::InputState;
     use gpui_kit::Entity;
     use gpui_kit::{App, IntoElement, ParentElement, StatefulInteractiveElement};
 
@@ -237,7 +240,12 @@ mod fieldset {
 }
 
 mod form {
-    use crate::ui::{Button, field::Field, form::*, input::InputState};
+    use crate::ui::button::Button;
+    use crate::ui::field::Field;
+    use crate::ui::form::*;
+    use crate::ui::input::InputState;
+    use crate::ui::number_field::NumberField;
+    use crate::ui::select::{Select, SelectState};
     use gpui_kit::Entity;
     use gpui_kit::{App, IntoElement, ParentElement, StatefulInteractiveElement};
 
@@ -247,6 +255,28 @@ mod form {
             .aria_label("Subscribe")
             .child(Field::new("email", email).label("Email").required(true))
             .child(Button::new("subscribe.submit").label("Subscribe"))
+    }
+
+    fn mixed_example(
+        email: &Entity<InputState>,
+        fruit: &Entity<SelectState>,
+        quantity: &Entity<InputState>,
+        cx: &App,
+    ) -> impl IntoElement {
+        form("order", cx)
+            .aria_label("Fruit order")
+            .child(Field::new("email", email).label("Email").required(true))
+            .child(
+                Field::from_control("fruit", Select::new(fruit))
+                    .label("Fruit")
+                    .required(true),
+            )
+            .child(
+                Field::from_control("quantity", NumberField::new(quantity))
+                    .label("Quantity")
+                    .required(true),
+            )
+            .child(Button::new("order.submit").label("Place order"))
     }
 }
 
@@ -302,7 +332,8 @@ mod navigation_menu {
 }
 
 mod number_field {
-    use crate::ui::{input::InputState, number_field::*};
+    use crate::ui::input::InputState;
+    use crate::ui::number_field::*;
     use gpui_kit::{App, IntoElement, Window};
 
     fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
@@ -341,7 +372,8 @@ mod popover {
 }
 
 mod preview_card {
-    use crate::ui::{Button, preview_card::*};
+    use crate::ui::button::Button;
+    use crate::ui::preview_card::*;
     use gpui_kit::{IntoElement, ParentElement};
 
     fn example() -> impl IntoElement {
@@ -484,7 +516,8 @@ mod tabs {
 }
 
 mod toast {
-    use crate::ui::{Button, toast::*};
+    use crate::ui::button::Button;
+    use crate::ui::toast::*;
     use gpui_kit::{App, IntoElement, ParentElement, Window};
 
     fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {

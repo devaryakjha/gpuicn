@@ -196,7 +196,11 @@ export function ComponentPage({
       </div>
 
       <ComponentExample component={component} source={source} examples={docs.examples} />
-      <InstallationTabs slug={component.slug} modules={docs.modules} />
+      <InstallationTabs
+        slug={component.slug}
+        components={docs.installComponents}
+        modules={docs.modules}
+      />
 
       <section id="usage" className="scroll-mt-20 pt-10">
         <h2 className="font-heading text-2xl font-semibold tracking-tight">
@@ -492,12 +496,14 @@ function PreviewFrame({
 
 export function InstallationTabs({
   slug,
+  components = [slug],
   modules = ["theme", rustModule(slug)],
 }: {
   slug: string
+  components?: string[]
   modules?: string[]
 }) {
-  const command = `gpuicn add ${slug}`
+  const command = `gpuicn add ${components.join(" ")}`
   const manual = `// src/ui/mod.rs\n${modules.map((module) => `pub mod ${module};`).join("\n")}\n\n// src/main.rs\nmod ui;`
 
   return (
