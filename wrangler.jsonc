@@ -3,7 +3,10 @@
   "name": "gpuicn-site",
   "compatibility_date": "2026-08-27",
   "workers_dev": false,
-  "routes": [{ "pattern": "ui.imajha.com", "custom_domain": true }],
+  "routes": [
+    { "pattern": "ui.imajha.com", "custom_domain": true },
+    { "pattern": "ui.jha.sh", "custom_domain": true }
+  ],
   "assets": {
     "directory": "./web/dist",
     "html_handling": "force-trailing-slash",
