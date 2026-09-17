@@ -12,9 +12,40 @@ use gpuicn::{
 
 gpui_kit::actions!(workspace, [Quit, OpenGallery]);
 
+fn workspace_data_path(
+    override_path: Option<std::path::PathBuf>,
+    home: &std::path::Path,
+    xdg_data_home: Option<&std::path::Path>,
+    linux: bool,
+    path_exists: impl Fn(&std::path::Path) -> bool,
+) -> std::path::PathBuf {
+    if let Some(path) = override_path {
+        return path;
+    }
+    let legacy = home.join("Library/Application Support/gpuicn Workspace/workspace.json");
+    if !linux {
+        return legacy;
+    }
+    let data_home = xdg_data_home
+        .filter(|path| path.is_absolute())
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| home.join(".local/share"));
+    let preferred = data_home.join("gpuicn-workspace/workspace.json");
+    if !path_exists(&preferred) && path_exists(&legacy) {
+        legacy
+    } else {
+        preferred
+    }
+}
+
 pub(super) fn launch(cx: &mut App) {
     UiTheme::set(cx, workspace_theme(UiTheme::read(cx).mode));
-    cx.bind_keys([gpui_kit::KeyBinding::new("cmd-q", Quit, None)]);
+    let quit_key = if cfg!(target_os = "linux") {
+        "ctrl-q"
+    } else {
+        "cmd-q"
+    };
+    cx.bind_keys([gpui_kit::KeyBinding::new(quit_key, Quit, None)]);
     cx.set_menus([gpui_kit::Menu::new("gpuicn Workspace").items([
         gpui_kit::MenuItem::action("Component Gallery", OpenGallery),
         gpui_kit::MenuItem::action("Quit gpuicn Workspace", Quit),
@@ -28,8 +59,15 @@ pub(super) fn launch(cx: &mut App) {
     let path = std::env::var_os("GPUICN_WORKSPACE_DATA")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {
-            std::path::PathBuf::from(std::env::var_os("HOME").expect("home directory"))
-                .join("Library/Application Support/gpuicn Workspace/workspace.json")
+            let home = std::path::PathBuf::from(std::env::var_os("HOME").expect("home directory"));
+            let xdg_data_home = std::env::var_os("XDG_DATA_HOME").map(std::path::PathBuf::from);
+            workspace_data_path(
+                None,
+                &home,
+                xdg_data_home.as_deref(),
+                cfg!(target_os = "linux"),
+                std::path::Path::exists,
+            )
         });
     let (store, data, error) = Store::open(path);
     let bounds = Bounds::centered(None, size(px(1240.), px(800.)), cx);
@@ -154,7 +192,7 @@ impl Workspace {
             title_draft: String::new(),
             note_draft: String::new(),
             error,
-            notice: "Saved on this Mac".into(),
+            notice: "Saved on this computer".into(),
             last_deleted: None,
             pending: None,
             input_epoch: 0,
@@ -807,7 +845,7 @@ impl Workspace {
                     )))
                 .child(div().px(px(24.)).py(px(16.)).flex().items_center().gap(px(8.)).border_t_1().border_color(c.border)
                     .child(icon(if changed { LucideIcon::Circle } else { LucideIcon::Check }, 13., c.muted_foreground))
-                    .child(div().text_size(px(11.)).text_color(c.muted_foreground).child(if changed || self.unsaved { "Unsaved changes" } else { "Saved on this Mac" })));
+                    .child(div().text_size(px(11.)).text_color(c.muted_foreground).child(if changed || self.unsaved { "Unsaved changes" } else { "Saved on this computer" })));
         } else {
             content = content
                 .items_center()
@@ -866,7 +904,7 @@ impl Workspace {
             .child(div().text_size(px(24.)).font_weight(FontWeight::MEDIUM).child("Every idea starts somewhere."))
             .child(div().max_w(px(440.)).text_size(px(13.)).line_height(px(22.)).text_color(c.muted_foreground).child("Keep the thinking close to the work. Leave yourself an update, collect an idea, or note what comes next."))
             .child(div().flex().items_center().gap(px(6.)).text_size(px(11.)).text_color(c.muted_foreground)
-                .child(icon(LucideIcon::LockKeyhole, 12., c.muted_foreground)).child("Only you · Stored on this Mac")));
+                .child(icon(LucideIcon::LockKeyhole, 12., c.muted_foreground)).child("Only you · Stored locally")));
         if !messages.is_empty() {
             feed = feed.child(
                 div()
@@ -1268,7 +1306,7 @@ impl Render for Workspace {
                         div()
                             .text_size(px(11.))
                             .text_color(c.muted_foreground)
-                            .child("On your Mac"),
+                            .child("On this computer"),
                     ),
             )
             .child(
@@ -1423,7 +1461,7 @@ impl Render for Workspace {
                                 .size(ButtonSize::Sm)
                                 .label("Retry save")
                                 .on_click(cx.listener(|this, _, _, cx| {
-                                    this.persist("Saved on this Mac", cx)
+                                    this.persist("Saved on this computer", cx)
                                 })),
                         )
                     })
@@ -1548,6 +1586,80 @@ impl Render for Workspace {
 mod tests {
     use super::*;
     use gpui_kit::{Modifiers, TestAppContext, VisualTestContext};
+
+    #[test]
+    fn linux_data_path_prefers_absolute_xdg_home() {
+        let path = workspace_data_path(
+            None,
+            std::path::Path::new("/home/arya"),
+            Some(std::path::Path::new("/data/arya")),
+            true,
+            |_| false,
+        );
+        assert_eq!(
+            path,
+            std::path::Path::new("/data/arya/gpuicn-workspace/workspace.json")
+        );
+    }
+
+    #[test]
+    fn linux_data_path_ignores_relative_xdg_home() {
+        let path = workspace_data_path(
+            None,
+            std::path::Path::new("/home/arya"),
+            Some(std::path::Path::new("relative")),
+            true,
+            |_| false,
+        );
+        assert_eq!(
+            path,
+            std::path::Path::new("/home/arya/.local/share/gpuicn-workspace/workspace.json")
+        );
+    }
+
+    #[test]
+    fn workspace_data_path_preserves_explicit_override() {
+        let path = workspace_data_path(
+            Some("relative/custom.json".into()),
+            std::path::Path::new("/home/arya"),
+            None,
+            true,
+            |_| false,
+        );
+        assert_eq!(path, std::path::Path::new("relative/custom.json"));
+    }
+
+    #[test]
+    fn linux_data_path_reuses_existing_legacy_data() {
+        let legacy = std::path::Path::new(
+            "/home/arya/Library/Application Support/gpuicn Workspace/workspace.json",
+        );
+        let path = workspace_data_path(
+            None,
+            std::path::Path::new("/home/arya"),
+            None,
+            true,
+            |path| path == legacy,
+        );
+        assert_eq!(path, legacy);
+    }
+
+    #[test]
+    fn non_linux_data_path_keeps_existing_location() {
+        let path = workspace_data_path(
+            None,
+            std::path::Path::new("/Users/arya"),
+            Some(std::path::Path::new("/ignored")),
+            false,
+            |_| false,
+        );
+        assert_eq!(
+            path,
+            std::path::Path::new(
+                "/Users/arya/Library/Application Support/gpuicn Workspace/workspace.json"
+            )
+        );
+    }
 
     #[gpui_kit::test]
     fn cmd_q_from_focused_dirty_input_opens_save_confirmation(cx: &mut TestAppContext) {

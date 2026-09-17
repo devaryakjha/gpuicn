@@ -84,11 +84,34 @@ function ShowcasePage() {
           </details>
         </> : <p className="mt-6 text-sm text-muted-foreground">{loading ? "Checking download…" : "The macOS download is being prepared. You can run the workspace from source below."}</p>}
       </div>
-      <p className="mt-6 text-sm leading-6 text-muted-foreground">Local chat is a project message log on this Mac. It does not connect to other people or generate replies.</p>
+      <section className="mt-6 rounded-xl border p-6 sm:p-8" aria-labelledby="linux-download">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 id="linux-download" className="text-xl font-semibold tracking-tight">Linux</h2>
+          <span className="rounded-full border px-2.5 py-1 text-xs font-medium">Experimental · needs testing</span>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          Optimized native builds for x86-64 (Intel/AMD) and ARM64 (AArch64). Built against Ubuntu 24.04 libraries, with X11 and Wayland support enabled. Requires glibc 2.39 or newer and a working Vulkan driver.
+        </p>
+        <a href="https://github.com/devaryakjha/gpuicn/releases/download/linux-preview-2026-09-17/gpuicn-workspace-linux-x86_64.tar.gz" className={buttonVariants({ size: "lg", className: "mt-6" })}>
+          <ArrowDownToLineIcon /> Download for Linux x86-64
+        </a>
+        <a href="https://github.com/devaryakjha/gpuicn/releases/download/linux-preview-2026-09-17/gpuicn-workspace-linux-aarch64.tar.gz" className={buttonVariants({ size: "lg", variant: "outline", className: "mt-3 sm:ml-3" })}>
+          <ArrowDownToLineIcon /> Download for Linux ARM64
+        </a>
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+          The x86-64 build has had limited Ubuntu startup checks; ARM64 has not been runtime-tested. Hardware-accelerated performance, Wayland sessions and other distributions still need testing.
+        </p>
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">Extract the archive, then run the app from its folder:</p>
+        <pre className="mt-3 overflow-x-auto rounded-lg border bg-muted/30 p-4 text-sm"><code>./gpuicn-workspace</code></pre>
+        <a className="mt-4 inline-block text-sm underline underline-offset-4" href="https://github.com/devaryakjha/gpuicn/releases/tag/linux-preview-2026-09-17">Build details, dependencies and SHA-256 checksum</a>
+      </section>
+      <p className="mt-6 text-sm leading-6 text-muted-foreground">Local chat is a project message log on your computer. It does not connect to other people or generate replies.</p>
       <section className="mt-10 space-y-3">
         <h2 className="text-xl font-semibold tracking-tight">Run from source</h2>
-        <p className="text-sm leading-6 text-muted-foreground">From the gpuicn checkout, launch the workspace:</p>
+        <p className="text-sm leading-6 text-muted-foreground">From the gpuicn checkout, launch the workspace on macOS:</p>
         <pre className="overflow-x-auto rounded-lg border bg-muted/30 p-4 text-sm"><code>cargo run --release -p gpuicn-showcase --features gpui_platform/runtime_shaders</code></pre>
+        <p className="text-sm leading-6 text-muted-foreground">On Linux, with the system build dependencies installed:</p>
+        <pre className="overflow-x-auto rounded-lg border bg-muted/30 p-4 text-sm"><code>cargo run --release -p gpuicn-showcase --features gpui_platform/x11,gpui_platform/wayland</code></pre>
       </section>
     </DocsLayout>
   )

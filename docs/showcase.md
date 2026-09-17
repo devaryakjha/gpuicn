@@ -15,7 +15,12 @@ Neutral theme. Menu examples show which action ran and omit unbound shortcuts.
 ## Editing and persistence
 
 Task creation, saved edits, completion, priority, deletion/undo and sent messages
-persist to `~/Library/Application Support/gpuicn Workspace/workspace.json`.
+persist to `~/Library/Application Support/gpuicn Workspace/workspace.json` on
+macOS. Linux uses `$XDG_DATA_HOME/gpuicn-workspace/workspace.json`, or
+`~/.local/share/gpuicn-workspace/workspace.json` when XDG_DATA_HOME is unset or
+relative. Existing Linux trial data in the older `~/Library` location remains in
+use when no file exists at the new location. `GPUICN_WORKSPACE_DATA` overrides
+the file path on both platforms.
 The first run supplies sample tasks; messages start empty. Chat is an on-device
 project log with no server or remote participants. Message drafts stay separate
 per project during the session.
@@ -55,6 +60,40 @@ The packaging script embeds fonts and the app icon, verifies the code signature,
 and writes the ZIP, checksum and manifest under `web/public/downloads/`.
 The `/showcase` page downloads that archive. The build architecture matches its
 host; local build validation covers Apple silicon.
+
+### Experimental Linux build
+
+Build and package the native x86_64 app on Ubuntu 24.04:
+
+```sh
+python3 scripts/package-showcase-linux.py
+# Repackage an existing target/release/showcase:
+python3 scripts/package-showcase-linux.py --skip-build
+# Cross-build ARM64 after installing its Rust target, linker and system libraries:
+python3 scripts/package-showcase-linux.py --target aarch64-unknown-linux-gnu
+```
+
+The script builds the release app with X11 and Wayland support, strips the
+executable, and writes an architecture-specific `.tar.gz`, checksum and manifest
+under `target/linux-dist/`. Linux needs separate x86_64 and ARM64 downloads;
+these are not universal binaries. Both target Ubuntu 24.04 and glibc 2.39 and
+need `libxcb1`, `libxkbcommon0`, `libxkbcommon-x11-0`, `libfontconfig1`,
+`libwayland-client0`, `libwayland-cursor0`, `libvulkan1` and a working Vulkan
+driver at runtime. Treat them as experimental until tested across real Linux desktops.
+The remote software-rendered x86_64 check does not qualify graphics performance
+or broad distribution compatibility, and the ARM64 runtime is untested.
+
+On an x86_64 Linux build host, the included Docker recipe supplies ARM64 system
+libraries without changing the host's package architectures:
+
+```sh
+rustup target add aarch64-unknown-linux-gnu
+docker build -t gpuicn-linux-arm64-build - < scripts/linux-arm64.Dockerfile
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v "$PWD:/source" -v "$HOME/.cargo:/cargo" -v "$HOME/.rustup:/rustup" \
+  -e CARGO_TARGET_DIR=/source/target/arm64 gpuicn-linux-arm64-build \
+  python3 scripts/package-showcase-linux.py --target aarch64-unknown-linux-gnu
+```
 
 ## Distribution and verification
 
