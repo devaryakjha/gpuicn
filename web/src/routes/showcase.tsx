@@ -1,7 +1,8 @@
 import * as React from "react"
 import { createFileRoute } from "@tanstack/react-router"
-import { ArrowDownToLineIcon } from "lucide-react"
-import { DocsLayout, PageHeader } from "@/components/docs"
+import { Menu } from "@base-ui/react/menu"
+import { ArrowDownToLineIcon, ChevronDownIcon } from "lucide-react"
+import { DocsLayout } from "@/components/docs"
 import { buttonVariants } from "@/components/ui/button"
 
 export const Route = createFileRoute("/showcase")({ component: ShowcasePage })
@@ -43,8 +44,46 @@ function ShowcasePage() {
 
   return (
     <DocsLayout>
-      <PageHeader eyebrow="Desktop app" title="A small workspace. A real native app."
-        description="Plan projects, manage tasks, and keep a local conversation for each project. An example of gpuicn components working together in an app you can use." />
+      <header>
+        <div className="flex items-center gap-4">
+          <img src="/brand/gpuicn-panels.png" alt="" className="size-14 shrink-0 sm:size-16" />
+          <div>
+            <p className="mb-1 text-xs text-muted-foreground">Example app · Beta</p>
+            <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">gpuicn Workspace</h1>
+          </div>
+        </div>
+        <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground">
+          A native example app built with gpuicn. Organize projects, tasks and notes, all saved on your computer.
+        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          {download ? <a href={download.url} download className={buttonVariants({ size: "lg", variant: "outline", className: "h-10 w-full px-4 sm:w-auto" })}>
+            <ArrowDownToLineIcon /> Download for macOS
+          </a> : <span className="text-sm text-muted-foreground">{loading ? "Checking macOS download…" : "macOS download unavailable"}</span>}
+          <Menu.Root>
+            <Menu.Trigger className={buttonVariants({ size: "lg", variant: "outline", className: "h-10 w-full px-4 sm:w-auto" })}>
+              <ArrowDownToLineIcon /> Download for Linux <ChevronDownIcon />
+            </Menu.Trigger>
+            <Menu.Portal>
+              <Menu.Positioner sideOffset={8} align="start" className="z-50">
+                <Menu.Popup className="w-72 max-w-[calc(100vw-2rem)] rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg outline-none">
+                  <Menu.LinkItem closeOnClick href="https://github.com/devaryakjha/gpuicn/releases/download/linux-preview-2026-09-17/gpuicn-workspace-linux-x86_64.tar.gz" className="block rounded-md px-3 py-2.5 outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground">
+                    <span className="block text-sm font-medium">x86-64 · Intel / AMD</span>
+                    <span className="block text-xs leading-5 text-muted-foreground">Limited Ubuntu 24.04 startup checks</span>
+                  </Menu.LinkItem>
+                  <Menu.LinkItem closeOnClick href="https://github.com/devaryakjha/gpuicn/releases/download/linux-preview-2026-09-17/gpuicn-workspace-linux-aarch64.tar.gz" className="block rounded-md px-3 py-2.5 outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground">
+                    <span className="block text-sm font-medium">ARM64</span>
+                    <span className="block text-xs leading-5 text-muted-foreground">Built, not runtime-tested</span>
+                  </Menu.LinkItem>
+                </Menu.Popup>
+              </Menu.Positioner>
+            </Menu.Portal>
+          </Menu.Root>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+          macOS 12+{download && ` · ${download.architecture === "arm64" ? "Apple silicon" : "Intel"}`}<span className="mx-2" aria-hidden="true">/</span>Linux preview · needs testing
+        </p>
+        {download && !download.notarized && <p className="mt-3 text-sm text-muted-foreground">The macOS build is not notarized. macOS may block it from opening.</p>}
+      </header>
       <figure className="mt-8">
         <div className="mb-4 flex gap-2" aria-label="Native app previews">
           {([ ["light", "Tasks"], ["chat", "Local chat"], ["dark", "Dark appearance"] ] as const).map(([value, label]) => (
@@ -60,59 +99,37 @@ function ShowcasePage() {
         </a>
         <figcaption className="mt-3 text-xs text-muted-foreground">Captured in the native macOS app. Open the image to see it at full size.</figcaption>
       </figure>
-      <div className="mt-10 rounded-xl border p-6 sm:p-8">
-        <div className="flex items-center gap-3">
-          <img src="/brand/gpuicn-panels.png" alt="" className="size-12" />
-          <h2 className="text-xl font-semibold tracking-tight">gpuicn Workspace beta for macOS</h2>
+      <section className="mt-8 grid gap-6 border-t pt-6 sm:grid-cols-2 sm:gap-10">
+        <div>
+          <h2 className="text-sm font-medium">A local workspace</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">No account needed. Projects, tasks and messages stay on your computer. Local chat is a project message log; it does not connect to other people or generate replies.</p>
         </div>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Create and edit tasks, mark them complete, and post project messages. Your workspace saves on your Mac. No account or development tools needed.
-        </p>
-        {download ? <>
-          <a href={download.url} download className={buttonVariants({ size: "lg", className: "mt-6" })}>
-            <ArrowDownToLineIcon /> Download for {download.architecture === "arm64" ? "Apple silicon" : "Intel Mac"}
-          </a>
-          <p className="mt-3 text-xs text-muted-foreground">v{download.version} · macOS 12 or later · ZIP · {(download.bytes / 1024 / 1024).toFixed(1)} MB</p>
-          {!download.notarized && <p className="mt-5 text-sm leading-6">
-            Developer preview. This build is not notarized by Apple, so macOS may block it from opening.
-            A signed public build is still pending.
-          </p>}
-          <p className="mt-5 text-sm leading-6 text-muted-foreground">Unzip the download, move gpuicn Workspace to Applications, and open it.</p>
-          <details className="mt-5 text-xs text-muted-foreground">
-            <summary className="cursor-pointer">Verify download checksum</summary>
-            <code className="mt-2 block break-all">SHA-256: {download.sha256}</code>
-          </details>
-        </> : <p className="mt-6 text-sm text-muted-foreground">{loading ? "Checking download…" : "The macOS download is being prepared. You can run the workspace from source below."}</p>}
-      </div>
-      <section className="mt-6 rounded-xl border p-6 sm:p-8" aria-labelledby="linux-download">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 id="linux-download" className="text-xl font-semibold tracking-tight">Linux</h2>
-          <span className="rounded-full border px-2.5 py-1 text-xs font-medium">Experimental · needs testing</span>
+        <div>
+          <h2 className="text-sm font-medium">Linux is experimental</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">Requires glibc 2.39+ and a working Vulkan driver. x86-64 has had limited Ubuntu 24.04 startup checks; ARM64 has not been runtime-tested. Graphics performance, Wayland and other distributions still need testing.</p>
         </div>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Optimized native builds for x86-64 (Intel/AMD) and ARM64 (AArch64). Built against Ubuntu 24.04 libraries, with X11 and Wayland support enabled. Requires glibc 2.39 or newer and a working Vulkan driver.
-        </p>
-        <a href="https://github.com/devaryakjha/gpuicn/releases/download/linux-preview-2026-09-17/gpuicn-workspace-linux-x86_64.tar.gz" className={buttonVariants({ size: "lg", className: "mt-6" })}>
-          <ArrowDownToLineIcon /> Download for Linux x86-64
-        </a>
-        <a href="https://github.com/devaryakjha/gpuicn/releases/download/linux-preview-2026-09-17/gpuicn-workspace-linux-aarch64.tar.gz" className={buttonVariants({ size: "lg", variant: "outline", className: "mt-3 sm:ml-3" })}>
-          <ArrowDownToLineIcon /> Download for Linux ARM64
-        </a>
-        <p className="mt-4 text-sm leading-6 text-muted-foreground">
-          The x86-64 build has had limited Ubuntu startup checks; ARM64 has not been runtime-tested. Hardware-accelerated performance, Wayland sessions and other distributions still need testing.
-        </p>
-        <p className="mt-4 text-sm leading-6 text-muted-foreground">Extract the archive, then run the app from its folder:</p>
-        <pre className="mt-3 overflow-x-auto rounded-lg border bg-muted/30 p-4 text-sm"><code>./gpuicn-workspace</code></pre>
-        <a className="mt-4 inline-block text-sm underline underline-offset-4" href="https://github.com/devaryakjha/gpuicn/releases/tag/linux-preview-2026-09-17">Build details, dependencies and SHA-256 checksum</a>
       </section>
-      <p className="mt-6 text-sm leading-6 text-muted-foreground">Local chat is a project message log on your computer. It does not connect to other people or generate replies.</p>
-      <section className="mt-10 space-y-3">
-        <h2 className="text-xl font-semibold tracking-tight">Run from source</h2>
+      <details className="mt-8 border-y py-4 text-sm">
+        <summary className="cursor-pointer font-medium focus-visible:outline-ring">Installation and checksums</summary>
+        <div className="mt-4 space-y-3 leading-6 text-muted-foreground">
+          <p>On macOS, unzip the download, move gpuicn Workspace to Applications, and open it.</p>
+          {download && <>
+            <p className="text-xs">macOS v{download.version} · ZIP · {(download.bytes / 1024 / 1024).toFixed(1)} MB</p>
+            <code className="block break-all text-xs">SHA-256: {download.sha256}</code>
+          </>}
+          <p>On Linux, extract the archive and run <code>./gpuicn-workspace</code> from its folder.</p>
+          <a className="inline-block underline underline-offset-4" href="https://github.com/devaryakjha/gpuicn/releases/tag/linux-preview-2026-09-17">Linux build details, dependencies and checksums</a>
+        </div>
+      </details>
+      <details className="border-b py-4 text-sm">
+        <summary className="cursor-pointer font-medium focus-visible:outline-ring">Run from source</summary>
+        <div className="mt-4 space-y-3">
         <p className="text-sm leading-6 text-muted-foreground">From the gpuicn checkout, launch the workspace on macOS:</p>
         <pre className="overflow-x-auto rounded-lg border bg-muted/30 p-4 text-sm"><code>cargo run --release -p gpuicn-showcase --features gpui_platform/runtime_shaders</code></pre>
         <p className="text-sm leading-6 text-muted-foreground">On Linux, with the system build dependencies installed:</p>
         <pre className="overflow-x-auto rounded-lg border bg-muted/30 p-4 text-sm"><code>cargo run --release -p gpuicn-showcase --features gpui_platform/x11,gpui_platform/wayland</code></pre>
-      </section>
+        </div>
+      </details>
     </DocsLayout>
   )
 }
