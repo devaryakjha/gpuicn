@@ -137,6 +137,24 @@
       ]
     },
     {
+      "name": "carousel",
+      "type": "registry:item",
+      "title": "Carousel",
+      "description": "Native snapping carousel with pointer, trackpad and keyboard navigation.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/carousel/carousel.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/carousel.rs"
+        }
+      ]
+    },
+    {
       "name": "checkbox",
       "type": "registry:item",
       "title": "Checkbox",
@@ -313,6 +331,24 @@
       ]
     },
     {
+      "name": "empty",
+      "type": "registry:item",
+      "title": "Empty",
+      "description": "Composable empty-state media, copy and action layout.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/empty/empty.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/empty.rs"
+        }
+      ]
+    },
+    {
       "name": "field",
       "type": "registry:item",
       "title": "Field",
@@ -386,6 +422,39 @@
           "path": "registry/input/input.rs",
           "type": "registry:file",
           "target": "~/src/ui/input.rs"
+        }
+      ]
+    },
+    {
+      "name": "input-group",
+      "type": "registry:item",
+      "title": "Input Group",
+      "description": "Inputs, textareas, addons and actions sharing one accessible frame.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/field/field.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/field.rs"
+        },
+        {
+          "path": "registry/input_group/input_group.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input_group.rs"
         }
       ]
     },
@@ -800,6 +869,29 @@
           "path": "registry/tabs/tabs.rs",
           "type": "registry:file",
           "target": "~/src/ui/tabs.rs"
+        }
+      ]
+    },
+    {
+      "name": "textarea",
+      "type": "registry:item",
+      "title": "Textarea",
+      "description": "Nova-styled multi-line text editor with retained native editing state.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/textarea/textarea.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/textarea.rs"
         }
       ]
     },

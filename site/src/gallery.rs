@@ -32,6 +32,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "Displays a button or a component that looks like a button.",
     ),
     (
+        "carousel",
+        "Carousel",
+        "Cycles through content with buttons, pagination, keyboard controls, and pointer gestures.",
+    ),
+    (
         "checkbox",
         "Checkbox",
         "A control that toggles between checked and unchecked.",
@@ -67,6 +72,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "A panel that slides from an edge of the window.",
     ),
     (
+        "empty",
+        "Empty",
+        "Explains an empty state and offers a clear next action.",
+    ),
+    (
         "menu",
         "Dropdown Menu",
         "Displays a menu of actions from a trigger.",
@@ -95,6 +105,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "input",
         "Input",
         "A styled text input backed by native GPUI editing.",
+    ),
+    (
+        "input-group",
+        "Input Group",
+        "Combines an input or textarea with inline addons and actions.",
     ),
     (
         "otp-field",
@@ -167,6 +182,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "tabs",
         "Tabs",
         "Shows one panel from a set of layered sections.",
+    ),
+    (
+        "textarea",
+        "Textarea",
+        "A styled multi-line editor backed by native GPUI editing.",
     ),
     (
         "toast",

@@ -1,7 +1,7 @@
 //! Nova field layout with explicit input state, label focus and validation messages.
 
 use super::{
-    input::{Input, InputState},
+    input::{Input, InputState, Textarea},
     theme::UiTheme,
 };
 use gpui_kit::{
@@ -21,6 +21,19 @@ pub trait FieldControl: 'static {
 impl FieldControl for Input {
     fn field_focus_handle(&self, cx: &App) -> FocusHandle {
         Input::field_focus_handle(self, cx)
+    }
+
+    fn into_field_control(self, label: SharedString, disabled: bool, invalid: bool) -> AnyElement {
+        self.aria_label(label)
+            .disabled(disabled)
+            .invalid(invalid)
+            .into_any_element()
+    }
+}
+
+impl FieldControl for Textarea {
+    fn field_focus_handle(&self, cx: &App) -> FocusHandle {
+        Textarea::field_focus_handle(self, cx)
     }
 
     fn into_field_control(self, label: SharedString, disabled: bool, invalid: bool) -> AnyElement {
