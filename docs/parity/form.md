@@ -1,7 +1,7 @@
 # Form parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/form/form.rs`, using GPUI Kit 0.6.1.
+`registry/form/form.rs`, using GPUI Kit 0.6.4.
 
 The form helper supplies a named semantic group and layout. The application owns retained input states, validation errors and submission. Subscribe to InputEvent::PressEnter and use the same submit handler as the submit button. There is no implicit serialization or validation context.
 

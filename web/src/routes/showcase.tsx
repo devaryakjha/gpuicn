@@ -66,11 +66,11 @@ function ShowcasePage() {
             <Menu.Portal>
               <Menu.Positioner sideOffset={8} align="start" className="z-50">
                 <Menu.Popup className="w-72 max-w-[calc(100vw-2rem)] rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg outline-none">
-                  <Menu.LinkItem closeOnClick href="https://github.com/devaryakjha/gpuicn/releases/download/linux-preview-2026-09-17/gpuicn-workspace-linux-x86_64.tar.gz" className="block rounded-md px-3 py-2.5 outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground">
+                  <Menu.LinkItem closeOnClick href="https://github.com/devaryakjha/gpuicn/releases/download/v0.5.0-beta.4/gpuicn-workspace-linux-x86_64.tar.gz" className="block rounded-md px-3 py-2.5 outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground">
                     <span className="block text-sm font-medium">x86-64 · Intel / AMD</span>
                     <span className="block text-xs leading-5 text-muted-foreground">Limited Ubuntu 24.04 startup checks</span>
                   </Menu.LinkItem>
-                  <Menu.LinkItem closeOnClick href="https://github.com/devaryakjha/gpuicn/releases/download/linux-preview-2026-09-17/gpuicn-workspace-linux-aarch64.tar.gz" className="block rounded-md px-3 py-2.5 outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground">
+                  <Menu.LinkItem closeOnClick href="https://github.com/devaryakjha/gpuicn/releases/download/v0.5.0-beta.4/gpuicn-workspace-linux-aarch64.tar.gz" className="block rounded-md px-3 py-2.5 outline-none data-highlighted:bg-accent data-highlighted:text-accent-foreground">
                     <span className="block text-sm font-medium">ARM64</span>
                     <span className="block text-xs leading-5 text-muted-foreground">Built, not runtime-tested</span>
                   </Menu.LinkItem>
@@ -118,7 +118,7 @@ function ShowcasePage() {
             <code className="block break-all text-xs">SHA-256: {download.sha256}</code>
           </>}
           <p>On Linux, extract the archive and run <code>./gpuicn-workspace</code> from its folder.</p>
-          <a className="inline-block underline underline-offset-4" href="https://github.com/devaryakjha/gpuicn/releases/tag/linux-preview-2026-09-17">Linux build details, dependencies and checksums</a>
+          <a className="inline-block underline underline-offset-4" href="https://github.com/devaryakjha/gpuicn/releases/tag/v0.5.0-beta.4">Linux build details, dependencies and checksums</a>
         </div>
       </details>
       <details className="border-b py-4 text-sm">

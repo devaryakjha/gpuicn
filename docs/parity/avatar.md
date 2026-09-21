@@ -1,7 +1,7 @@
 # Avatar parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/avatar/avatar.rs`, using GPUI Kit 0.6.1.
+`registry/avatar/avatar.rs`, using GPUI Kit 0.6.4.
 
 Kit Avatar owns image loading and fallback presentation. The application supplies an image URL, fallback text, accessible label and size; gpuicn applies the Nova shape and colors.
 

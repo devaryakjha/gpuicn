@@ -1,7 +1,7 @@
 # Checkbox Group parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/checkbox_group/checkbox_group.rs`, using GPUI Kit 0.6.1.
+`registry/checkbox_group/checkbox_group.rs`, using GPUI Kit 0.6.4.
 
 The application owns the selected values and handles on_change. Each item has a stable ID, value, visible label and disabled flag. The group composes Kit checkbox controls under a named group.
 

@@ -1,7 +1,7 @@
 # Toolbar parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/toolbar/toolbar.rs`, using GPUI Kit 0.6.1.
+`registry/toolbar/toolbar.rs`, using GPUI Kit 0.6.4.
 
 Toolbar composes Kit buttons and retained Kit InputState editors. One enabled item participates in Tab order; arrows and Home/End move between controls. Editing keys remain in a focused input. The application owns actions and editor subscriptions.
 

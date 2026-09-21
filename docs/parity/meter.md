@@ -1,7 +1,7 @@
 # Meter parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/meter/meter.rs`, using GPUI Kit 0.6.1.
+`registry/meter/meter.rs`, using GPUI Kit 0.6.4.
 
 Kit supplies the meter primitive and bounded value presentation. gpuicn applies the Nova track and fill. The application supplies the accessible name and value.
 

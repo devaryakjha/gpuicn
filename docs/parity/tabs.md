@@ -1,7 +1,7 @@
 # Tabs parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/tabs/tabs.rs`, using GPUI Kit 0.6.1.
+`registry/tabs/tabs.rs`, using GPUI Kit 0.6.4.
 
 The application passes the selected value and renders its matching panel. The tab list keeps one Tab stop; arrows and Home/End select enabled tabs. Kit tab primitives supply roles and control interaction. Nova supports filled and line variants.
 

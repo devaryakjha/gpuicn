@@ -1,7 +1,7 @@
 # Toggle Group parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/toggle_group/toggle_group.rs`, using GPUI Kit 0.6.1.
+`registry/toggle_group/toggle_group.rs`, using GPUI Kit 0.6.4.
 
 The application owns selected values and handles on_change. The group supports single or multiple selection and roving keyboard focus that skips disabled items. Kit toggle primitives supply each control.
 

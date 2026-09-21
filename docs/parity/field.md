@@ -1,7 +1,7 @@
 # Field parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/field/field.rs`, using GPUI Kit 0.6.1.
+`registry/field/field.rs`, using GPUI Kit 0.6.4.
 
 `Field::new` keeps the existing retained InputState API. `Field::from_control`
 composes the same label, required marker, description, disabled state and error

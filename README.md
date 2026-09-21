@@ -18,7 +18,7 @@ controls, text editing, motion, and popup hosts. gpuicn supplies Nova styling an
 application components. See the [migration notes](docs/validation/gpui-kit-migration.md)
 for the new APIs and verification status.
 
-The current beta supports GPUI Kit 0.6.1 and its pinned `gpui-pre` 0.3.4
+The current beta supports GPUI Kit 0.6.4 and its pinned `gpui-pre` 0.3.5
 runtime. Import GPUI types through `gpui_kit`; apps on another GPUI revision
 must migrate before installing gpuicn source.
 
@@ -52,9 +52,9 @@ The native CLI is not published to crates.io. Install the current published beta
 from its Git tag and use the matching registry snapshot:
 
 ```sh
-cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.3 --locked
+cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.4 --locked
 # From your app directory:
-gpuicn --registry https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/site/pages/r init
+gpuicn --registry https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/site/pages/r init
 gpuicn add button sidebar
 ```
 

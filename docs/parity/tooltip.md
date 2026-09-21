@@ -1,7 +1,7 @@
 # Tooltip parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/tooltip/tooltip.rs`, using GPUI Kit 0.6.1.
+`registry/tooltip/tooltip.rs`, using GPUI Kit 0.6.4.
 
 `tooltip` attaches a Nova surface to one Kit button and shows it on pointer hover or keyboard focus. Escape dismisses it. Kit supplies the delayed overlay and viewport-aware placement. `text_tooltip` remains available for GPUI's pointer-only `.tooltip(...)` attachment.
 

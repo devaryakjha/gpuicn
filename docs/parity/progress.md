@@ -1,7 +1,7 @@
 # Progress parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/progress/progress.rs`, using GPUI Kit 0.6.1.
+`registry/progress/progress.rs`, using GPUI Kit 0.6.4.
 
 Kit supplies determinate or indeterminate progress semantics. gpuicn applies the Nova track and fill. The application supplies progress and its accessible label.
 

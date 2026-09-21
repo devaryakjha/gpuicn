@@ -1,7 +1,7 @@
 # Autocomplete parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/autocomplete/autocomplete.rs`, using GPUI Kit 0.6.1.
+`registry/autocomplete/autocomplete.rs`, using GPUI Kit 0.6.4.
 
 A retained SelectState owns a Kit InputState, query, highlighted option and selection. Typing filters the choices; arrows skip disabled options, Enter commits and Escape closes. This API selects one value and permits free text. Multiple values and chips are outside this API.
 

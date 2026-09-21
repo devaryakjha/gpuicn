@@ -26,6 +26,5 @@ larger text, long content and disabled settings fields. Resize the window below
 for the current review session. The catalog sync copies the bundled Geist fonts;
 `init` only creates the installer config. Skip `init` if that config already exists.
 
-This provides a review surface for the current local registry branch. The
-public `v0.5.0-beta.3` registry does not contain the readiness fixes until a new
-release is published.
+This provides a review surface for the current registry. The readiness fixes
+ship in `v0.5.0-beta.4`; the earlier `v0.5.0-beta.3` registry does not include them.

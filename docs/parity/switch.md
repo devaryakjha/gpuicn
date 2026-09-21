@@ -1,7 +1,7 @@
 # Switch parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/switch/switch.rs`, using GPUI Kit 0.6.1.
+`registry/switch/switch.rs`, using GPUI Kit 0.6.4.
 
 The application passes checked state and handles on_change. Kit supplies the switch primitive; gpuicn applies the Nova track, animated thumb, focus border and disabled appearance. Reduced motion snaps the transition.
 

@@ -1,7 +1,7 @@
 # Toast parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/toast/toast.rs`, using GPUI Kit 0.6.1.
+`registry/toast/toast.rs`, using GPUI Kit 0.6.4.
 
 A retained ToastState owns Kit notification entries and expiry tasks. The application pushes or dismisses notifications by ID. gpuicn renders Nova titles, descriptions and dismissal controls; a timeout is optional.
 

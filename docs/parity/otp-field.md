@@ -1,7 +1,7 @@
 # Otp Field parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/otp_field/otp_field.rs`, using GPUI Kit 0.6.1.
+`registry/otp_field/otp_field.rs`, using GPUI Kit 0.6.4.
 
 OtpField takes a retained Kit OtpState configured with a slot count. Kit owns digit input, selection, deletion and paste distribution; gpuicn draws the Nova slots. The application reads the state and subscribes to its events.
 

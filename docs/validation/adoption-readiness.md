@@ -2,8 +2,8 @@
 
 [PR #59](https://github.com/devaryakjha/gpuicn/pull/59) contains the code changes.
 [Issue #58](https://github.com/devaryakjha/gpuicn/issues/58) tracks qualification.
-The public v0.5.0-beta.3 release does not contain these fixes. Update the install
-pins to the new release tag before publishing the changed catalog.
+These fixes ship in v0.5.0-beta.4. The evidence below records the original
+September 13 checks; see the beta.4 release notes for upgrade validation.
 
 ## Evidence
 

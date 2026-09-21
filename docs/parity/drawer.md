@@ -1,7 +1,7 @@
 # Drawer parity
 
 Reference: [shadcn/ui Drawer](https://ui.shadcn.com/docs/components/base/drawer),
-checked 2026-09-10. Nova presentation, implemented with GPUI Kit 0.6.1.
+checked 2026-09-10. Nova presentation, implemented with GPUI Kit 0.6.4.
 
 `Drawer` is the root; `drawer_trigger` and `drawer_close` act on its handle.
 Pass `DrawerContent` through `.content(...)`. Compose its children with

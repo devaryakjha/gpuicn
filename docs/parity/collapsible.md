@@ -1,7 +1,7 @@
 # Collapsible parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/collapsible/collapsible.rs`, using GPUI Kit 0.6.1.
+`registry/collapsible/collapsible.rs`, using GPUI Kit 0.6.4.
 
 The application passes open state and handles the trigger click. Kit supplies the disclosure host and trigger; gpuicn adds Nova spacing and typography.
 

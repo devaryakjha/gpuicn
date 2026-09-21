@@ -121,3 +121,15 @@ completed native/browser journeys, and remaining limits. NumberField and toolbar
 inputs now expose native editor roles, names and values.
 Both now use the shared editor for undo/redo and word editing while retaining
 numeric rules and toolbar focus behavior; see their parity notes.
+
+To build macOS releases without compiling on your laptop, run **Build release
+downloads** on the release commit. Download `showcase-macos-arm64`, put its
+`showcase` executable at `target/release/showcase` in a clean checkout of that
+same commit, restore its executable bit, and run `scripts/package-showcase.py
+--skip-build` with the signing settings above. Confirm the workflow's commit
+matches the checkout before signing.
+
+The same workflow packages Linux x86-64 and ARM64 archives on Ubuntu 24.04
+runners. Download their archive, checksum and manifest artifacts and attach
+them to the matching release. These build jobs do not qualify desktop runtime
+behavior; keep the experimental labels until native testing supports changing them.
