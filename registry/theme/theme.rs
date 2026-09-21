@@ -28,9 +28,14 @@ pub fn init(cx: &mut App) {
     if cx.has_global::<Initialized>() {
         return;
     }
+    seed_component_fonts(cx);
+    gpui_kit::init(cx);
     cx.set_global(Initialized);
     if !cx.has_global::<UiTheme>() {
         UiTheme::set(cx, UiTheme::neutral_light());
+    } else {
+        let theme = UiTheme::read(cx).clone();
+        sync_component_theme(cx, theme);
     }
     cx.bind_keys([
         gpui_kit::KeyBinding::new("tab", FocusNext, None),
@@ -38,8 +43,7 @@ pub fn init(cx: &mut App) {
     ]);
     cx.on_action(|_: &FocusNext, cx| advance_focus(false, cx));
     cx.on_action(|_: &FocusPrevious, cx| advance_focus(true, cx));
-    // Later scoped bindings take precedence over window-wide defaults.
-    gpui_kit::base::init(cx);
+    // Scoped component bindings take precedence over these window-wide defaults.
     #[cfg(target_family = "wasm")]
     {
         // Browser previews also accept macOS editing shortcuts.
@@ -63,6 +67,25 @@ pub fn init(cx: &mut App) {
             KeyBinding::new("alt-shift-right", SelectToNextWordEnd, Some("Input")),
         ]);
     }
+}
+
+fn seed_component_fonts(cx: &mut App) {
+    use gpui_kit::component::Theme;
+
+    if cx.has_global::<Theme>() {
+        return;
+    }
+    let fonts = if cx.has_global::<UiTheme>() {
+        UiTheme::read(cx).fonts.clone()
+    } else {
+        UiTheme::neutral_light().fonts
+    };
+    let component = Theme {
+        font_family: fonts.body,
+        mono_font_family: fonts.mono,
+        ..Theme::default()
+    };
+    cx.set_global(component);
 }
 
 fn advance_focus(reverse: bool, cx: &mut App) {
@@ -364,6 +387,7 @@ impl UiTheme {
     pub fn set(cx: &mut App, theme: Self) {
         assert!(f32::from(theme.spacing.unit).is_finite() && theme.spacing.unit > px(0.));
         assert!(theme.text_scale.is_finite() && theme.text_scale > 0.);
+        sync_component_theme(cx, theme.clone());
         cx.set_global(theme);
         cx.refresh_windows();
     }
@@ -438,6 +462,54 @@ impl UiTheme {
             },
         }
     }
+}
+
+fn sync_component_theme(cx: &mut App, theme: UiTheme) {
+    use gpui_kit::component::{Theme, ThemeTokens};
+
+    if !cx.has_global::<Theme>() {
+        return;
+    }
+
+    let colors = theme.colors;
+    let component = Theme::global_mut(cx);
+    component.mode = match theme.mode {
+        ThemeMode::Light => gpui_kit::component::ThemeMode::Light,
+        ThemeMode::Dark => gpui_kit::component::ThemeMode::Dark,
+    };
+    component.font_family = theme.fonts.body;
+    component.mono_font_family = theme.fonts.mono;
+    component.radius = theme.radius.md;
+    component.radius_lg = theme.radius.lg;
+    component.background = colors.background.into();
+    component.foreground = colors.foreground.into();
+    component.popover = colors.popover.into();
+    component.popover_foreground = colors.popover_foreground.into();
+    component.primary = colors.primary.into();
+    component.primary_foreground = colors.primary_foreground.into();
+    component.secondary = colors.secondary.into();
+    component.secondary_foreground = colors.secondary_foreground.into();
+    component.muted = colors.muted.into();
+    component.muted_foreground = colors.muted_foreground.into();
+    component.accent = colors.accent.into();
+    component.accent_foreground = colors.accent_foreground.into();
+    component.danger = colors.destructive.into();
+    component.border = colors.border.into();
+    component.input = colors.input.into();
+    component.ring = colors.ring.into();
+    component.overlay = colors.overlay.into();
+    component.chart_1 = colors.chart_1.into();
+    component.chart_2 = colors.chart_2.into();
+    component.chart_3 = colors.chart_3.into();
+    component.chart_4 = colors.chart_4.into();
+    component.chart_5 = colors.chart_5.into();
+    component.button = colors.background.into();
+    component.button_foreground = colors.foreground.into();
+    component.button_hover = colors.accent.into();
+    component.button_active = colors.muted.into();
+    component.tokens = ThemeTokens::from(&component.colors);
+
+    Theme::sync_base(cx);
 }
 
 fn neutral_light_colors() -> UiColors {
@@ -598,6 +670,46 @@ mod tests {
         assert_eq!(theme.shadows.sm.len(), 2);
         assert_eq!(theme.shadows.md.len(), 2);
         assert_eq!(theme.shadows.lg.len(), 2);
+    }
+
+    #[gpui_kit::test]
+    fn keeps_component_state_tokens_in_sync_with_ui_theme(cx: &mut gpui_kit::TestAppContext) {
+        cx.update(|cx| {
+            init(cx);
+            let component = gpui_kit::component::Theme::global(cx);
+            assert_eq!(component.mode, gpui_kit::component::ThemeMode::Light);
+            assert_eq!(
+                component.button_hover,
+                UiTheme::read(cx).colors.accent.into()
+            );
+
+            UiTheme::switch(cx, ThemeMode::Dark);
+            let component = gpui_kit::component::Theme::global(cx);
+            assert_eq!(component.mode, gpui_kit::component::ThemeMode::Dark);
+            assert_eq!(component.ring, UiTheme::read(cx).colors.ring.into());
+
+            let mut custom = UiTheme::read(cx).clone();
+            custom.colors.accent = srgb(0x22, 0x66, 0xaa);
+            custom.fonts.body = "Custom Sans".into();
+            custom.radius = UiRadius::new(px(12.));
+            let expected_accent = custom.colors.accent;
+            UiTheme::set(cx, custom);
+
+            let component = gpui_kit::component::Theme::global(cx);
+            assert_eq!(component.button_hover, expected_accent.into());
+            assert_eq!(component.font_family, "Custom Sans");
+            assert_eq!(component.radius, px(9.6));
+            assert_eq!(
+                component.tokens.button_hover.background,
+                expected_accent.into()
+            );
+
+            init(cx);
+            assert_eq!(
+                gpui_kit::component::Theme::global(cx).button_hover,
+                expected_accent.into()
+            );
+        });
     }
 }
 

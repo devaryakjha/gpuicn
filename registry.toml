@@ -8,6 +8,17 @@ description = "The app-owned shadcn Neutral theme and shared native motion token
 dependencies = ["input"]
 [components.input]
 description = "Nova-styled native text input with accessible labels, IME and standard editing shortcuts."
+[components.textarea]
+description = "Nova-styled multi-line text editor with retained native editing state."
+dependencies = ["input"]
+[components.input_group]
+title = "Input Group"
+description = "Inputs, textareas, addons and actions sharing one accessible frame."
+dependencies = ["input", "button", "field"]
+[components.carousel]
+description = "Native snapping carousel with pointer, trackpad and keyboard navigation."
+[components.empty]
+description = "Composable empty-state media, copy and action layout."
 [components.otp_field]
 title = "OTP Field"
 [components.alert_dialog]

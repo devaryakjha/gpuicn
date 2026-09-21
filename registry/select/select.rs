@@ -81,21 +81,19 @@ impl SelectState {
         cx: &mut Context<Self>,
     ) -> Self {
         let input = cx.new(|cx| InputState::new(window, cx));
-        let subscription = cx.subscribe_in(&input, window, |this, _, event, _, cx| match event {
-            InputEvent::Change if !this.disabled => {
-                this.open = true;
-                this.highlighted = this
-                    .visible(cx)
-                    .into_iter()
-                    .find(|&i| !this.items[i].disabled);
-                cx.notify();
-            }
-            InputEvent::Blur => {
-                this.open = false;
-                cx.notify();
-            }
-            _ => {}
-        });
+        let subscription =
+            cx.subscribe_in(&input, window, |this, _, event, window, cx| match event {
+                InputEvent::Change if !this.disabled => {
+                    this.open = true;
+                    this.highlighted = this
+                        .visible(cx)
+                        .into_iter()
+                        .find(|&i| !this.items[i].disabled);
+                    cx.notify();
+                }
+                InputEvent::Blur => this.set_open(false, window, cx),
+                _ => {}
+            });
         Self {
             items: items.into_iter().collect(),
             value: None,
@@ -184,12 +182,19 @@ impl SelectState {
             .filter_map(|(i, item)| item.label.to_lowercase().contains(&query).then_some(i))
             .collect()
     }
-    fn set_open(&mut self, open: bool, cx: &mut Context<Self>) {
-        if self.disabled {
+    fn set_open(&mut self, open: bool, window: &mut Window, cx: &mut Context<Self>) {
+        if self.disabled && open {
+            return;
+        }
+        if self.open == open {
             return;
         }
         self.open = open;
         if open {
+            if self.mode != Mode::Select {
+                self.input
+                    .update(cx, |input, cx| input.set_value("", window, cx));
+            }
             let visible = self.visible(cx);
             self.highlighted = visible
                 .iter()
@@ -198,15 +203,17 @@ impl SelectState {
                     !self.items[i].disabled && Some(&self.items[i].value) == self.value.as_ref()
                 })
                 .or_else(|| visible.into_iter().find(|&i| !self.items[i].disabled));
+        } else {
+            self.sync_editor(window, cx);
         }
         cx.notify();
     }
-    fn navigate(&mut self, direction: isize, cx: &mut Context<Self>) {
+    fn navigate(&mut self, direction: isize, window: &mut Window, cx: &mut Context<Self>) {
         if self.disabled {
             return;
         }
         if !self.open {
-            self.set_open(true, cx);
+            self.set_open(true, window, cx);
             return;
         }
         let visible = self.visible(cx);
@@ -244,7 +251,7 @@ impl SelectState {
     }
     fn confirm(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if !self.open {
-            self.set_open(true, cx);
+            self.set_open(true, window, cx);
             return;
         }
         if let Some(index) = self.highlighted {
@@ -258,7 +265,7 @@ impl SelectState {
     }
     fn clear(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.set_value(None, window, cx);
-        self.set_open(true, cx);
+        self.set_open(true, window, cx);
         self.input.read(cx).focus_handle(cx).focus(window, cx);
         cx.emit(SelectEvent::Change(None));
     }
@@ -278,6 +285,42 @@ mod tests {
             state.update(cx, |state, cx| state.choose(0, window, cx));
             assert_eq!(state.read(cx).value().map(|v| v.as_ref()), Some("pear"));
             assert!(state.read(cx).input.read(cx).value().is_empty());
+        });
+    }
+
+    #[gpui_kit::test]
+    fn reopening_combobox_starts_with_all_options(cx: &mut gpui_kit::TestAppContext) {
+        let window = cx.add_empty_window();
+        window.update(|window, cx| {
+            super::super::theme::init(cx);
+            let state = cx.new(|cx| {
+                SelectState::new(
+                    [
+                        SelectItem::new("apple", "Apple"),
+                        SelectItem::new("pear", "Pear"),
+                    ],
+                    window,
+                    cx,
+                )
+            });
+            state.update(cx, |state, cx| {
+                state.mode = Mode::Combobox;
+                state.editor_ready = true;
+                state.set_value(Some("pear".into()), window, cx);
+                assert_eq!(state.input.read(cx).value().as_ref(), "Pear");
+
+                state.set_open(true, window, cx);
+                assert_eq!(state.visible(cx), vec![0, 1]);
+                state
+                    .input
+                    .update(cx, |input, cx| input.set_value("app", window, cx));
+                assert_eq!(state.visible(cx), vec![0]);
+
+                state.set_open(false, window, cx);
+                assert_eq!(state.input.read(cx).value().as_ref(), "Pear");
+                state.set_open(true, window, cx);
+                assert_eq!(state.visible(cx), vec![0, 1]);
+            });
         });
     }
 }
@@ -322,7 +365,7 @@ impl Render for SelectState {
                 .disabled(self.disabled)
                 .accessibility_label("Show options")
                 .size(theme.space(6.))
-                .on_click(cx.listener(|this, _, _, cx| this.set_open(!this.open, cx)))
+                .on_click(cx.listener(|this, _, window, cx| this.set_open(!this.open, window, cx)))
                 .child(
                     lucide(LucideIcon::ChevronDown)
                         .size(theme.space(4.))
@@ -397,7 +440,7 @@ impl Render for SelectState {
                     d.cursor_pointer()
                         .on_click(cx.listener(|this, _, window, cx| {
                             this.focus.focus(window, cx);
-                            this.set_open(!this.open, cx);
+                            this.set_open(!this.open, window, cx);
                         }))
                 })
                 .child(text)
@@ -425,9 +468,8 @@ impl Render for SelectState {
                 .text_color(colors.popover_foreground)
                 .p(theme.space(1.))
                 .shadow(theme.shadows.md.clone())
-                .on_mouse_down_out(cx.listener(|this, _, _, cx| {
-                    this.open = false;
-                    cx.notify();
+                .on_mouse_down_out(cx.listener(|this, _, window, cx| {
+                    this.set_open(false, window, cx);
                 }));
             let visible = self.visible(cx);
             if visible.is_empty() {
@@ -490,8 +532,8 @@ impl Render for SelectState {
                     .unwrap_or_default(),
             )
             .when(!editing, |s| s.focus_handle(&self.focus))
-            .on_open_change(move |open, _, cx| {
-                open_state.update(cx, |state, cx| state.set_open(open, cx))
+            .on_open_change(move |open, window, cx| {
+                open_state.update(cx, |state, cx| state.set_open(open, window, cx))
             })
             .on_confirm(move |window, cx| {
                 state.update(cx, |this, cx| this.confirm(window, cx));
@@ -513,26 +555,26 @@ impl Render for SelectState {
                         }
                     })
                 })
-                .capture_action(cx.listener(|this, _: &SelectUp, _, cx| {
-                    this.navigate(-1, cx);
+                .capture_action(cx.listener(|this, _: &SelectUp, window, cx| {
+                    this.navigate(-1, window, cx);
                     cx.stop_propagation();
                 }))
-                .capture_action(cx.listener(|this, _: &SelectDown, _, cx| {
-                    this.navigate(1, cx);
+                .capture_action(cx.listener(|this, _: &SelectDown, window, cx| {
+                    this.navigate(1, window, cx);
                     cx.stop_propagation();
                 }))
-                .on_key_down(
-                    cx.listener(move |this, event: &gpui_kit::KeyDownEvent, _, cx| {
+                .on_key_down(cx.listener(
+                    move |this, event: &gpui_kit::KeyDownEvent, window, cx| {
                         if !editing && !event.keystroke.modifiers.modified() {
                             match event.keystroke.key.as_str() {
-                                "home" => this.navigate(-2, cx),
-                                "end" => this.navigate(2, cx),
+                                "home" => this.navigate(-2, window, cx),
+                                "end" => this.navigate(2, window, cx),
                                 _ => return,
                             }
                             cx.stop_propagation();
                         }
-                    }),
-                )
+                    },
+                ))
                 .child(root),
             &self.style,
         )

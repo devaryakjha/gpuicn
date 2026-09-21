@@ -15,6 +15,7 @@ use gpuicn::{
     accordion::*,
     alert_dialog::*,
     avatar::{Avatar, AvatarSize},
+    carousel::*,
     checkbox_group::*,
     collapsible::*,
     dialog::*,
@@ -22,10 +23,12 @@ use gpuicn::{
         Drawer, DrawerContent, DrawerSide, drawer_body, drawer_close, drawer_description,
         drawer_footer, drawer_header, drawer_title, drawer_trigger,
     },
+    empty::*,
     field::*,
     fieldset::*,
     form::form,
     input::{Input, InputEvent, InputState},
+    input_group::*,
     menu::{Menu, MenuItem, MenuState},
     menubar::Menubar,
     meter::Meter,
@@ -42,6 +45,7 @@ use gpuicn::{
     slider::Slider,
     switch::Switch,
     tabs::*,
+    textarea::*,
     toast::ToastState,
     toggle::{Toggle, ToggleVariant},
     toggle_group::*,
@@ -190,6 +194,7 @@ enum Demo {
     AlertDialog,
     Autocomplete,
     Avatar,
+    Carousel,
     #[default]
     Button,
     Checkbox,
@@ -199,10 +204,12 @@ enum Demo {
     ContextMenu,
     Dialog,
     Drawer,
+    Empty,
     Field,
     Fieldset,
     Form,
     Input,
+    InputGroup,
     Menu,
     Menubar,
     Meter,
@@ -222,6 +229,7 @@ enum Demo {
     Slider,
     Switch,
     Tabs,
+    Textarea,
     Toast,
     Toggle,
     ToggleGroup,
@@ -237,6 +245,7 @@ impl Demo {
             "alert-dialog" => Some(Self::AlertDialog),
             "autocomplete" => Some(Self::Autocomplete),
             "avatar" => Some(Self::Avatar),
+            "carousel" => Some(Self::Carousel),
             "button" => Some(Self::Button),
             "checkbox" => Some(Self::Checkbox),
             "checkbox-group" => Some(Self::CheckboxGroup),
@@ -245,10 +254,12 @@ impl Demo {
             "context-menu" => Some(Self::ContextMenu),
             "dialog" => Some(Self::Dialog),
             "drawer" => Some(Self::Drawer),
+            "empty" => Some(Self::Empty),
             "field" => Some(Self::Field),
             "fieldset" => Some(Self::Fieldset),
             "form" => Some(Self::Form),
             "input" => Some(Self::Input),
+            "input-group" => Some(Self::InputGroup),
             "menu" => Some(Self::Menu),
             "menubar" => Some(Self::Menubar),
             "meter" => Some(Self::Meter),
@@ -268,6 +279,7 @@ impl Demo {
             "slider" => Some(Self::Slider),
             "switch" => Some(Self::Switch),
             "tabs" => Some(Self::Tabs),
+            "textarea" => Some(Self::Textarea),
             "toast" => Some(Self::Toast),
             "toggle" => Some(Self::Toggle),
             "toggle-group" => Some(Self::ToggleGroup),
@@ -408,6 +420,7 @@ impl Showcase {
             Demo::AlertDialog => self.alert_dialog_preview(window, cx).into_any_element(),
             Demo::Autocomplete => self.autocomplete_preview(window, cx).into_any_element(),
             Demo::Avatar => self.avatar_preview(cx).into_any_element(),
+            Demo::Carousel => self.carousel_preview(window, cx).into_any_element(),
             Demo::Button => self.button_preview(cx).into_any_element(),
             Demo::Checkbox => self.checkbox_preview(cx).into_any_element(),
             Demo::CheckboxGroup => self.checkbox_group_preview(window, cx).into_any_element(),
@@ -416,10 +429,12 @@ impl Showcase {
             Demo::ContextMenu => self.context_menu_preview(window, cx).into_any_element(),
             Demo::Dialog => self.dialog_preview(window, cx).into_any_element(),
             Demo::Drawer => self.drawer_preview(window, cx).into_any_element(),
+            Demo::Empty => self.empty_preview().into_any_element(),
             Demo::Field => self.field_preview(window, cx).into_any_element(),
             Demo::Fieldset => self.fieldset_preview(window, cx).into_any_element(),
             Demo::Form => self.form_preview(window, cx).into_any_element(),
             Demo::Input => self.input_preview(window, cx).into_any_element(),
+            Demo::InputGroup => self.input_group_preview(window, cx).into_any_element(),
             Demo::Menu => self.menu_preview(window, cx).into_any_element(),
             Demo::Menubar => self.menubar_preview(window, cx).into_any_element(),
             Demo::Meter => self.meter_preview().into_any_element(),
@@ -439,6 +454,7 @@ impl Showcase {
             Demo::Slider => self.slider_preview(window, cx).into_any_element(),
             Demo::Switch => self.switch_preview(cx).into_any_element(),
             Demo::Tabs => self.tabs_preview(window, cx).into_any_element(),
+            Demo::Textarea => self.textarea_preview(window, cx).into_any_element(),
             Demo::Toast => self.toast_preview(window, cx).into_any_element(),
             Demo::Toggle => self.toggle_preview(cx).into_any_element(),
             Demo::ToggleGroup => self.toggle_group_preview(window, cx).into_any_element(),
@@ -731,6 +747,104 @@ impl Showcase {
                             }),
                         ),
                     ),
+            )
+    }
+
+    fn carousel_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let horizontal = window.use_keyed_state("carousel.horizontal", cx, |_, _| {
+            CarouselState::new(3).with_looping(true)
+        });
+        let vertical = window.use_keyed_state("carousel.vertical", cx, |_, _| {
+            CarouselState::new(3).with_axis(gpui_kit::Axis::Vertical)
+        });
+        let theme = UiTheme::read(cx).clone();
+        let colors = [
+            theme.colors.chart_1,
+            theme.colors.chart_2,
+            theme.colors.chart_3,
+        ];
+        let card = move |index: usize| {
+            div()
+                .size_full()
+                .flex()
+                .items_center()
+                .justify_center()
+                .rounded(theme.radius.xl)
+                .border_1()
+                .border_color(theme.colors.border)
+                .bg(colors[index].opacity(0.16))
+                .font_weight(gpui_kit::FontWeight::MEDIUM)
+                .text_size(theme.text(24.))
+                .child(format!("Slide {}", index + 1))
+        };
+        let vertical_theme = UiTheme::read(cx).clone();
+        let vertical_colors = [
+            vertical_theme.colors.chart_3,
+            vertical_theme.colors.chart_4,
+            vertical_theme.colors.chart_5,
+        ];
+        let vertical_card = move |index: usize| {
+            div()
+                .size_full()
+                .flex()
+                .items_center()
+                .justify_center()
+                .rounded(vertical_theme.radius.xl)
+                .border_1()
+                .border_color(vertical_theme.colors.border)
+                .bg(vertical_colors[index].opacity(0.16))
+                .font_weight(gpui_kit::FontWeight::MEDIUM)
+                .child(format!("{} / 3", index + 1))
+        };
+
+        div()
+            .flex()
+            .items_center()
+            .gap(px(72.))
+            .child(
+                Carousel::new("carousel.horizontal", &horizontal)
+                    .aria_label("Featured components")
+                    .w(px(300.))
+                    .child(
+                        CarouselContent::new(&horizontal)
+                            .h(px(180.))
+                            .children((0..3).map(|index| {
+                                CarouselItem::new(
+                                    ("carousel.horizontal.slide", index),
+                                    index,
+                                    &horizontal,
+                                )
+                                .child(card(index))
+                            })),
+                    )
+                    .child(CarouselPrevious::new(&horizontal))
+                    .child(CarouselNext::new(&horizontal))
+                    .child(CarouselPagination::new().children((0..3).map(|index| {
+                        CarouselPaginationItem::new(
+                            ("carousel.horizontal.page", index),
+                            index,
+                            &horizontal,
+                        )
+                    }))),
+            )
+            .child(
+                Carousel::new("carousel.vertical", &vertical)
+                    .aria_label("Vertical component tour")
+                    .w(px(160.))
+                    .child(
+                        CarouselContent::new(&vertical)
+                            .h(px(180.))
+                            .children((0..3).map(|index| {
+                                CarouselItem::new(
+                                    ("carousel.vertical.slide", index),
+                                    index,
+                                    &vertical,
+                                )
+                                .child(vertical_card(index))
+                            })),
+                    )
+                    .child(CarouselPrevious::new(&vertical))
+                    .child(CarouselNext::new(&vertical)),
             )
     }
 
@@ -1101,6 +1215,27 @@ impl Showcase {
             )
     }
 
+    fn empty_preview(&self) -> impl IntoElement {
+        Empty::new()
+            .w(px(420.))
+            .h(px(320.))
+            .border_1()
+            .header(
+                EmptyHeader::new()
+                    .media(
+                        EmptyMedia::new()
+                            .with_variant(EmptyMediaVariant::Icon)
+                            .child(lucide(LucideIcon::FolderPlus)),
+                    )
+                    .title(EmptyTitle::new().child("No projects yet"))
+                    .description(
+                        EmptyDescription::new()
+                            .child("Create a project to start organizing your work."),
+                    ),
+            )
+            .content(EmptyContent::new().child(Button::new("empty.create").label("Create project")))
+    }
+
     fn field_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let username = demo_input("field.username", "", "e.g. ada", window, cx);
         let email = demo_input("field.email", "", "you@example.com", window, cx);
@@ -1260,6 +1395,74 @@ impl Showcase {
                 Input::new(&disabled)
                     .aria_label("Disabled email")
                     .disabled(true),
+            )
+    }
+
+    fn textarea_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let bio = window.use_keyed_state("textarea.bio", cx, |window, cx| {
+            TextareaState::new(window, cx)
+                .rows(5)
+                .placeholder("Tell us about your work")
+        });
+
+        div().w(px(420.)).child(
+            Field::from_control("textarea.bio.field", textarea(&bio))
+                .label("Bio")
+                .description("A short introduction for your profile."),
+        )
+    }
+
+    fn input_group_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let url = demo_input("input-group.url", "", "example.com", window, cx);
+        let search = demo_input("input-group.search", "", "Search", window, cx);
+        let message = window.use_keyed_state("input-group.message", cx, |window, cx| {
+            TextareaState::new(window, cx)
+                .rows(4)
+                .placeholder("Write a message")
+        });
+
+        div()
+            .w(px(420.))
+            .flex()
+            .flex_col()
+            .gap(px(12.))
+            .child(
+                InputGroup::new("url-group", InputGroupInput::new(&url))
+                    .aria_label("Website address")
+                    .addon(
+                        InputGroupAddon::new("scheme")
+                            .child(InputGroupText::new().child("https://")),
+                    )
+                    .addon(
+                        InputGroupAddon::new("url-action")
+                            .align(InputGroupAddonAlignment::InlineEnd)
+                            .button(InputGroupButton::new("copy-url").label("Copy")),
+                    ),
+            )
+            .child(
+                InputGroup::new("search-group", InputGroupInput::new(&search))
+                    .aria_label("Search")
+                    .disabled(true)
+                    .addon(
+                        InputGroupAddon::new("search-status")
+                            .align(InputGroupAddonAlignment::InlineEnd)
+                            .child(InputGroupText::new().child("⌘ K")),
+                    ),
+            )
+            .child(
+                InputGroup::new("message-group", InputGroupTextarea::new(&message))
+                    .aria_label("Message")
+                    .addon(
+                        InputGroupAddon::new("message-header")
+                            .align(InputGroupAddonAlignment::BlockStart)
+                            .child(InputGroupText::new().child("Message")),
+                    )
+                    .addon(
+                        InputGroupAddon::new("message-toolbar")
+                            .align(InputGroupAddonAlignment::BlockEnd)
+                            .child(InputGroupText::new().child("Markdown supported"))
+                            .button(InputGroupButton::new("send-message").label("Send")),
+                    ),
             )
     }
 

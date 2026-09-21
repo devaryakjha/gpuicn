@@ -663,3 +663,98 @@ mod virtual_list {
         })
     }
 }
+
+mod carousel {
+    use crate::ui::carousel::*;
+    use gpui_kit::{App, IntoElement, ParentElement, Styled, Window, px};
+
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("featured", cx, |_, _| {
+            CarouselState::new(3).with_looping(true)
+        });
+        let slides = ["Build native", "Keep the source", "Share one theme"];
+
+        Carousel::new("featured", &state)
+            .aria_label("gpuicn highlights")
+            .w(px(320.))
+            .child(CarouselContent::new(&state).h(px(180.)).children(
+                slides.into_iter().enumerate().map(|(index, label)| {
+                    CarouselItem::new(("featured.slide", index), index, &state).child(
+                        gpui_kit::div()
+                            .size_full()
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(label),
+                    )
+                }),
+            ))
+            .child(CarouselPrevious::new(&state))
+            .child(CarouselNext::new(&state))
+            .child(CarouselPagination::new().children(
+                (0..3).map(|index| {
+                    CarouselPaginationItem::new(("featured.page", index), index, &state)
+                }),
+            ))
+    }
+}
+
+mod empty {
+    use crate::ui::empty::*;
+    use gpui_kit::{IntoElement, ParentElement};
+
+    fn example() -> impl IntoElement {
+        Empty::new()
+            .header(
+                EmptyHeader::new()
+                    .media(
+                        EmptyMedia::new()
+                            .with_variant(EmptyMediaVariant::Icon)
+                            .child("+"),
+                    )
+                    .title(EmptyTitle::new().child("No projects yet"))
+                    .description(
+                        EmptyDescription::new()
+                            .child("Create a project to start organizing your work."),
+                    ),
+            )
+            .content(EmptyContent::new().child("Your projects will appear here."))
+    }
+}
+
+mod input_group {
+    use crate::ui::input::InputState;
+    use crate::ui::input_group::{
+        InputGroup, InputGroupAddon, InputGroupAddonAlignment, InputGroupButton, InputGroupInput,
+        InputGroupText,
+    };
+    use gpui_kit::{App, IntoElement, ParentElement as _, Window};
+
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let url = window.use_keyed_state("input-group.url", cx, |window, cx| {
+            InputState::new(window, cx).placeholder("example.com")
+        });
+        InputGroup::new("url", InputGroupInput::new(&url))
+            .aria_label("Website address")
+            .addon(InputGroupAddon::new("scheme").child(InputGroupText::new().child("https://")))
+            .addon(
+                InputGroupAddon::new("copy")
+                    .align(InputGroupAddonAlignment::InlineEnd)
+                    .button(InputGroupButton::new("copy-url").label("Copy")),
+            )
+    }
+}
+
+mod textarea {
+    use crate::ui::textarea::*;
+    use gpui_kit::{App, IntoElement, Window};
+
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("message", cx, |window, cx| {
+            TextareaState::new(window, cx)
+                .rows(4)
+                .placeholder("Write a message")
+        });
+        textarea(&state).aria_label("Message")
+    }
+}

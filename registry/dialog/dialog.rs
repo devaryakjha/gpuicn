@@ -8,9 +8,109 @@ use super::{
 use gpui_icons::{LucideIcon, lucide};
 pub use gpui_kit::base::{Dialog, DialogChangeReason, DialogHandle};
 use gpui_kit::{
-    App, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _,
-    SharedString, Stateful, StatefulInteractiveElement as _, Styled, Window, div, px,
+    AnyElement, App, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement,
+    ParentElement, SharedString, Stateful, StatefulInteractiveElement as _, Styled, Window, div,
+    px,
 };
+
+#[derive(Clone, Copy)]
+pub(crate) enum DialogControlAction {
+    Cancel,
+    Confirm,
+}
+
+/// A styled dialog button that routes its action through its own dialog tree.
+#[derive(IntoElement)]
+pub struct DialogControl {
+    button: Button,
+    action: DialogControlAction,
+    anchor_key: &'static str,
+    anchor_id: ElementId,
+}
+
+impl DialogControl {
+    pub(crate) fn new(
+        id: impl Into<ElementId>,
+        action: DialogControlAction,
+        anchor_key: &'static str,
+    ) -> Self {
+        let id = id.into();
+        Self {
+            button: Button::new(id.clone()),
+            action,
+            anchor_key,
+            anchor_id: id,
+        }
+    }
+
+    /// Sets the visual variant.
+    pub fn variant(mut self, variant: ButtonVariant) -> Self {
+        self.button = self.button.variant(variant);
+        self
+    }
+
+    /// Sets the visual size.
+    pub fn size(mut self, size: ButtonSize) -> Self {
+        self.button = self.button.size(size);
+        self
+    }
+
+    /// Prevents activation and removes the button from tab order.
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.button = self.button.disabled(disabled);
+        self
+    }
+
+    /// Sets the accessible name for icon or custom content.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.button = self.button.aria_label(label);
+        self
+    }
+
+    /// Adds visible text and uses it as the accessible name.
+    pub fn label(mut self, label: impl Into<SharedString>) -> Self {
+        self.button = self.button.label(label);
+        self
+    }
+}
+
+impl ParentElement for DialogControl {
+    fn extend(&mut self, elements: impl IntoIterator<Item = AnyElement>) {
+        self.button.extend(elements);
+    }
+}
+
+impl Styled for DialogControl {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
+        self.button.style()
+    }
+}
+
+impl gpui_kit::RenderOnce for DialogControl {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let anchor = window
+            .use_keyed_state((self.anchor_id, self.anchor_key), cx, |_, cx| {
+                cx.focus_handle()
+            })
+            .read(cx)
+            .clone();
+        let dispatch_from = anchor.clone();
+        let action = self.action;
+
+        self.button
+            .child(div().absolute().size_0().track_focus(&anchor))
+            .on_click(move |_, window, cx| match action {
+                DialogControlAction::Cancel => {
+                    dispatch_from.dispatch_action(&gpui_kit::base::actions::Cancel, window, cx)
+                }
+                DialogControlAction::Confirm => dispatch_from.dispatch_action(
+                    &gpui_kit::base::actions::Confirm { secondary: false },
+                    window,
+                    cx,
+                ),
+            })
+    }
+}
 
 /// Keep the host mounted while closed so it can restore focus after dismissal.
 pub fn dialog(
@@ -149,27 +249,191 @@ pub fn dialog_description(id: impl Into<ElementId>, cx: &App) -> Stateful<Div> {
         .text_size(t.text(14.))
         .text_color(t.colors.muted_foreground)
 }
-/// Icon-only close control; Kit routes Cancel through the host's veto callback.
-pub fn dialog_close(id: impl Into<ElementId>, cx: &App) -> Button {
+/// Icon-only close control; Kit routes Cancel through the owning dialog's veto callback.
+pub fn dialog_close(id: impl Into<ElementId>, cx: &App) -> DialogControl {
     let t = UiTheme::read(cx);
-    Button::new(id)
-        .aria_label("Close")
-        .variant(ButtonVariant::Ghost)
-        .size(ButtonSize::IconSm)
-        .absolute()
-        .top(t.space(2.))
-        .right(t.space(2.))
-        .on_click(|_, window, cx| {
-            window.dispatch_action(Box::new(gpui_kit::base::actions::Cancel), cx)
-        })
-        .child(
-            lucide(LucideIcon::X)
-                .size(t.space(4.))
-                .text_color(t.colors.popover_foreground),
-        )
+    DialogControl::new(
+        id,
+        DialogControlAction::Cancel,
+        "gpuicn-dialog-close-anchor",
+    )
+    .aria_label("Close")
+    .variant(ButtonVariant::Ghost)
+    .size(ButtonSize::IconSm)
+    .absolute()
+    .top(t.space(2.))
+    .right(t.space(2.))
+    .child(
+        lucide(LucideIcon::X)
+            .size(t.space(4.))
+            .text_color(t.colors.popover_foreground),
+    )
 }
 /// Create form actions with `Button`; close the handle after successful validation.
 pub fn dialog_action(id: impl Into<ElementId>, handle: &DialogHandle, _cx: &App) -> Button {
     let handle = handle.clone();
     Button::new(id).on_click(move |_, window, cx| handle.close(window, cx))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{cell::Cell, rc::Rc};
+
+    use gpui_kit::{Context, FocusHandle, Render, TestAppContext, point};
+
+    use super::*;
+
+    struct DialogControlHarness {
+        dialog_focus: FocusHandle,
+        retained_focus: FocusHandle,
+        handle: DialogHandle,
+        cancel_count: Rc<Cell<usize>>,
+    }
+
+    impl Render for DialogControlHarness {
+        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            let cancel_count = self.cancel_count.clone();
+            div()
+                .child(div().absolute().size_0().track_focus(&self.retained_focus))
+                .child(
+                    Dialog::new(cx)
+                        .handle(self.handle.clone())
+                        .focus_handle(self.dialog_focus.clone())
+                        .on_cancel(move |_, _, _| {
+                            cancel_count.set(cancel_count.get() + 1);
+                            true
+                        })
+                        .popup(
+                            DialogControl::new(
+                                "cancel",
+                                DialogControlAction::Cancel,
+                                "dialog-control-test-anchor",
+                            )
+                            .size_full()
+                            .label("Cancel"),
+                        ),
+                )
+        }
+    }
+
+    #[gpui_kit::test]
+    fn dialog_control_routes_from_its_own_anchor(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let handle = DialogHandle::new(true);
+        let cancel_count = Rc::new(Cell::new(0));
+        let (view, cx) = cx.add_window_view({
+            let handle = handle.clone();
+            let cancel_count = cancel_count.clone();
+            move |_, cx| DialogControlHarness {
+                dialog_focus: cx.focus_handle(),
+                retained_focus: cx.focus_handle(),
+                handle,
+                cancel_count,
+            }
+        });
+        cx.update(|window, cx| {
+            let retained_focus = view.read(cx).retained_focus.clone();
+            retained_focus.focus(window, cx);
+            window.draw(cx).clear(cx);
+        });
+
+        cx.simulate_click(point(px(20.), px(20.)), Default::default());
+        cx.run_until_parked();
+
+        assert_eq!(cancel_count.get(), 1);
+        assert!(!handle.is_open());
+    }
+
+    struct TwoDialogControlHarness {
+        first_focus: FocusHandle,
+        second_focus: FocusHandle,
+        first_handle: DialogHandle,
+        second_handle: DialogHandle,
+        first_count: Rc<Cell<usize>>,
+        second_count: Rc<Cell<usize>>,
+    }
+
+    impl Render for TwoDialogControlHarness {
+        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            let first_count = self.first_count.clone();
+            let second_count = self.second_count.clone();
+            div()
+                .child(
+                    Dialog::new(cx)
+                        .handle(self.first_handle.clone())
+                        .focus_handle(self.first_focus.clone())
+                        .on_cancel(move |_, _, _| {
+                            first_count.set(first_count.get() + 1);
+                            true
+                        })
+                        .popup(
+                            DialogControl::new(
+                                "first-cancel",
+                                DialogControlAction::Cancel,
+                                "shared-dialog-control-anchor",
+                            )
+                            .absolute()
+                            .left_0()
+                            .top_0()
+                            .w(px(40.))
+                            .h(px(40.))
+                            .label("First"),
+                        ),
+                )
+                .child(
+                    Dialog::new(cx)
+                        .handle(self.second_handle.clone())
+                        .focus_handle(self.second_focus.clone())
+                        .on_cancel(move |_, _, _| {
+                            second_count.set(second_count.get() + 1);
+                            true
+                        })
+                        .popup(
+                            DialogControl::new(
+                                "second-cancel",
+                                DialogControlAction::Cancel,
+                                "shared-dialog-control-anchor",
+                            )
+                            .absolute()
+                            .left(px(60.))
+                            .top_0()
+                            .w(px(40.))
+                            .h(px(40.))
+                            .label("Second"),
+                        ),
+                )
+        }
+    }
+
+    #[gpui_kit::test]
+    fn dialog_controls_keep_distinct_anchors_in_one_window(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let first_handle = DialogHandle::new(true);
+        let second_handle = DialogHandle::new(true);
+        let first_count = Rc::new(Cell::new(0));
+        let second_count = Rc::new(Cell::new(0));
+        let (_, cx) = cx.add_window_view({
+            let first_handle = first_handle.clone();
+            let second_handle = second_handle.clone();
+            let first_count = first_count.clone();
+            let second_count = second_count.clone();
+            move |_, cx| TwoDialogControlHarness {
+                first_focus: cx.focus_handle(),
+                second_focus: cx.focus_handle(),
+                first_handle,
+                second_handle,
+                first_count,
+                second_count,
+            }
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+
+        cx.simulate_click(point(px(80.), px(20.)), Default::default());
+        cx.run_until_parked();
+
+        assert_eq!(first_count.get(), 0);
+        assert_eq!(second_count.get(), 1);
+        assert!(first_handle.is_open());
+        assert!(!second_handle.is_open());
+    }
 }

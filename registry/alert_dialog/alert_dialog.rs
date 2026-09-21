@@ -1,7 +1,10 @@
 //! Nova confirmation dialog using Kit's non-dismissible alert host.
 use super::{
-    button::{Button, ButtonVariant},
-    dialog::{DialogHandle, dialog_backdrop, modal_focus, modal_viewport},
+    button::ButtonVariant,
+    dialog::{
+        DialogControl, DialogControlAction, DialogHandle, dialog_backdrop, modal_focus,
+        modal_viewport,
+    },
     theme::UiTheme,
 };
 pub use gpui_kit::base::AlertDialog;
@@ -45,19 +48,19 @@ pub fn alert_dialog(
         )
 }
 /// Explicit confirm button; the host's callback may veto dismissal.
-pub fn alert_dialog_action(id: impl Into<ElementId>) -> Button {
-    Button::new(id).on_click(|_, window, cx| {
-        window.dispatch_action(
-            Box::new(gpui_kit::base::actions::Confirm { secondary: false }),
-            cx,
-        )
-    })
+pub fn alert_dialog_action(id: impl Into<ElementId>) -> DialogControl {
+    DialogControl::new(
+        id,
+        DialogControlAction::Confirm,
+        "gpuicn-alert-dialog-action-anchor",
+    )
 }
 /// Cancel button with keyboard and focus behavior from Kit.
-pub fn alert_dialog_cancel(id: impl Into<ElementId>) -> Button {
-    Button::new(id)
-        .variant(ButtonVariant::Outline)
-        .on_click(|_, window, cx| {
-            window.dispatch_action(Box::new(gpui_kit::base::actions::Cancel), cx)
-        })
+pub fn alert_dialog_cancel(id: impl Into<ElementId>) -> DialogControl {
+    DialogControl::new(
+        id,
+        DialogControlAction::Cancel,
+        "gpuicn-alert-dialog-cancel-anchor",
+    )
+    .variant(ButtonVariant::Outline)
 }

@@ -32,6 +32,12 @@ export const components: CatalogComponent[] = [
     description: "Displays a button or a component that looks like a button.",
   },
   {
+    slug: "carousel",
+    name: "Carousel",
+    description:
+      "Cycles through content with buttons, pagination, keyboard controls, and pointer gestures.",
+  },
+  {
     slug: "checkbox",
     name: "Checkbox",
     description: "A control that toggles between checked and unchecked.",
@@ -67,6 +73,11 @@ export const components: CatalogComponent[] = [
     description: "A panel that slides from an edge of the window.",
   },
   {
+    slug: "empty",
+    name: "Empty",
+    description: "Explains an empty state and offers a clear next action.",
+  },
+  {
     slug: "field",
     name: "Field",
     description: "Composes a control with its label, description, and errors.",
@@ -85,6 +96,12 @@ export const components: CatalogComponent[] = [
     slug: "input",
     name: "Input",
     description: "A styled text input backed by native GPUI editing.",
+  },
+  {
+    slug: "input-group",
+    name: "Input Group",
+    description:
+      "Combines an input or textarea with inline addons and actions.",
   },
   {
     slug: "menu",
@@ -159,7 +176,8 @@ export const components: CatalogComponent[] = [
   {
     slug: "sidebar",
     name: "Sidebar",
-    description: "Application navigation with responsive layouts, icon rails, nested menus, and mobile sheets.",
+    description:
+      "Application navigation with responsive layouts, icon rails, nested menus, and mobile sheets.",
   },
   {
     slug: "slider",
@@ -175,6 +193,11 @@ export const components: CatalogComponent[] = [
     slug: "tabs",
     name: "Tabs",
     description: "Shows one panel from a set of layered sections.",
+  },
+  {
+    slug: "textarea",
+    name: "Textarea",
+    description: "A styled multi-line editor backed by native GPUI editing.",
   },
   {
     slug: "toast",
@@ -204,7 +227,8 @@ export const components: CatalogComponent[] = [
   {
     slug: "virtual-list",
     name: "Virtual List",
-    description: "Large lists with stable selection, keyboard navigation, and fast fixed-height rows.",
+    description:
+      "Large lists with stable selection, keyboard navigation, and fast fixed-height rows.",
   },
 ]
 
@@ -223,7 +247,12 @@ export function findComponent(slug: string) {
 
 export function previewHeight(slug: string) {
   if (slug === "drawer") return 560
-  if (["form", "sidebar", "virtual-list"].includes(slug)) return 520
+  if (
+    ["carousel", "form", "input-group", "sidebar", "virtual-list"].includes(
+      slug
+    )
+  )
+    return 520
   if (
     [
       "alert-dialog",

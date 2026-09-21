@@ -15,6 +15,8 @@ pub mod autocomplete;
 pub mod avatar;
 #[path = "../../../registry/button/button.rs"]
 pub mod button;
+#[path = "../../../registry/carousel/carousel.rs"]
+pub mod carousel;
 #[path = "../../../registry/checkbox/checkbox.rs"]
 pub mod checkbox;
 #[path = "../../../registry/checkbox_group/checkbox_group.rs"]
@@ -29,6 +31,8 @@ pub mod context_menu;
 pub mod dialog;
 #[path = "../../../registry/drawer/drawer.rs"]
 pub mod drawer;
+#[path = "../../../registry/empty/empty.rs"]
+pub mod empty;
 #[path = "../../../registry/field/field.rs"]
 pub mod field;
 #[path = "../../../registry/fieldset/fieldset.rs"]
@@ -37,6 +41,8 @@ pub mod fieldset;
 pub mod form;
 #[path = "../../../registry/input/input.rs"]
 pub mod input;
+#[path = "../../../registry/input_group/input_group.rs"]
+pub mod input_group;
 #[path = "../../../registry/menu/menu.rs"]
 pub mod menu;
 #[path = "../../../registry/menubar/menubar.rs"]
@@ -69,6 +75,8 @@ pub mod slider;
 pub mod switch;
 #[path = "../../../registry/tabs/tabs.rs"]
 pub mod tabs;
+#[path = "../../../registry/textarea/textarea.rs"]
+pub mod textarea;
 #[path = "../../../registry/theme/theme.rs"]
 pub mod theme;
 #[path = "../../../registry/toast/toast.rs"]
