@@ -1,7 +1,7 @@
 # Alert Dialog parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/alert_dialog/alert_dialog.rs`, using GPUI Kit 0.6.1.
+`registry/alert_dialog/alert_dialog.rs`, using GPUI Kit 0.6.4.
 
 A retained Kit DialogHandle owns visibility. Explicit confirm and cancel buttons route actions through the alert host, which can veto confirmation. Tab traversal stays within the popup and closing restores focus. Enter activates the focused button; the host does not convert every Enter press into confirmation.
 

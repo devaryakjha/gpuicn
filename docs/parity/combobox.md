@@ -1,7 +1,7 @@
 # Combobox parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/combobox/combobox.rs`, using GPUI Kit 0.6.1.
+`registry/combobox/combobox.rs`, using GPUI Kit 0.6.4.
 
 A retained SelectState owns a Kit text editor and one selected option. The query filters choices. Arrow keys skip disabled options, Enter commits and Escape closes and restores focus. Multiple selection and chips are outside this API.
 

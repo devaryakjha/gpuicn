@@ -1,0 +1,28 @@
+name: Build macOS release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_BUILD_JOBS: "2"
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.97.1
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked -p gpuicn-showcase --features gpui_platform/runtime_shaders
+      - uses: actions/upload-artifact@v4
+        with:
+          name: showcase-macos-arm64
+          path: target/release/showcase
+          if-no-files-found: error
+          retention-days: 7

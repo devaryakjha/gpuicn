@@ -1,7 +1,7 @@
 # Toggle parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/toggle/toggle.rs`, using GPUI Kit 0.6.1.
+`registry/toggle/toggle.rs`, using GPUI Kit 0.6.4.
 
 The application passes pressed state and handles on_change. Kit supplies the toggle primitive; gpuicn adds Nova default/outline variants and focus and disabled styles.
 

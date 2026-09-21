@@ -1,7 +1,7 @@
 # Separator parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/separator/separator.rs`, using GPUI Kit 0.6.1.
+`registry/separator/separator.rs`, using GPUI Kit 0.6.4.
 
 Kit supplies separator semantics. gpuicn applies a one-pixel Nova border color in horizontal or vertical orientation.
 

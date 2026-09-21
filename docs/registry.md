@@ -6,8 +6,8 @@ includes a complete working starter.
 
 ## One-time setup
 
-Use Rust 1.97.1 or newer. gpuicn v0.5.0-beta.3 supports GPUI Kit 0.6.1
-on its pinned `gpui-pre` 0.3.4 runtime. Keep the dependency pins below
+Use Rust 1.97.1 or newer. gpuicn v0.5.0-beta.4 supports GPUI Kit 0.6.4
+on its pinned `gpui-pre` 0.3.5 runtime. Keep the dependency pins below
 together. Apps using another GPUI revision must migrate to this runtime before
 installing the components.
 
@@ -16,13 +16,13 @@ Create a Rust app with `cargo new my-app`, then add these dependencies:
 ```toml
 [dependencies]
 web-time = "1.1"
-gpui_platform = { package = "gpui-pre-platform", version = "=0.3.4", features = ["font-kit"] }
-gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "01ac07dd83e97f9d6a3526466413732fbdfc2975" }
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.5", features = ["font-kit"] }
+gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "39e74ddd9c2384bb58cc077befbf8c07e545aea0" }
 
-gpui-kit = { version = "=0.6.1", default-features = false }
+gpui-kit = { version = "=0.6.4", default-features = false }
 
 [dev-dependencies]
-gpui-kit = { version = "=0.6.1", default-features = false, features = ["test-support"] }
+gpui-kit = { version = "=0.6.4", default-features = false, features = ["test-support"] }
 ```
 
 Import GPUI types through `gpui_kit` so the application and installed components
@@ -34,14 +34,14 @@ The CLI is not published to crates.io yet. Install the current published beta
 from its Git tag:
 
 ```sh
-cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.3 --locked
+cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.4 --locked
 ```
 
 From your app directory, initialize a config pointing to the registry from that
 same release:
 
 ```sh
-gpuicn --registry https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/site/pages/r init
+gpuicn --registry https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/site/pages/r init
 gpuicn list
 gpuicn add button
 ```
@@ -52,7 +52,7 @@ registry snapshot if you need reproducible installs.
 
 ```toml
 version = 1
-registry = "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/site/pages/r"
+registry = "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/site/pages/r"
 output = "src/ui"
 ```
 
@@ -120,10 +120,10 @@ Download the fonts and their license:
 ```sh
 mkdir -p assets/fonts
 for file in Geist-Regular.ttf Geist-Medium.ttf GeistMono-Regular.ttf; do
-  curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/site/assets/fonts/$file" -o "assets/fonts/$file"
+  curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/site/assets/fonts/$file" -o "assets/fonts/$file"
 done
-curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt
-curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.3/fixtures/registry-install/src/main.rs" -o src/main.rs
+curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt
+curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/fixtures/registry-install/src/main.rs" -o src/main.rs
 cargo run
 ```
 

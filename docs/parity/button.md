@@ -1,7 +1,7 @@
 # Button parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/button/button.rs`, using GPUI Kit 0.6.1.
+`registry/button/button.rs`, using GPUI Kit 0.6.4.
 
 Kit Button supplies pointer, native keyboard and accessibility activation. gpuicn applies Nova variants and sizes. Disabled controls cannot activate. Enter and Space use native key down and key up behavior.
 
