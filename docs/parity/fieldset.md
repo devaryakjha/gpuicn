@@ -7,5 +7,5 @@ A named fieldset groups application-owned fields with a visible legend and descr
 
 The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
 exact exit animations and cross-platform screen-reader parity are not implied by
-the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+the native component. See [migration qualification](../internal/validation/gpui-kit-migration.md)
 for the checks completed on this revision.

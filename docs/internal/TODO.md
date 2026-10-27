@@ -58,7 +58,7 @@ Updated 8 September 2026. This records Arya's local pass at that date. Checked m
 - [x] Repeat after theme/motion changes; record hardware/profile/data, raw measurements, frame distributions, and memory.
 - [x] Verify native mouse/keyboard interactions separately from headless tests and WASM checks.
 - [x] Run focused regression, workspace checks, source/registry consistency, fresh consumer check, and docs-site build.
-- [x] Review the local change set; record platform/upstream limits and user-test steps in [validation](docs/validation/desktop-pass-2026-09-08.md).
+- [x] Review the local change set; record platform/upstream limits and user-test steps in [validation](validation/desktop-pass-2026-09-08.md).
 - [ ] Arya's local acceptance before any publishing.
 
 ## Sidebar depth pass — local implementation complete
@@ -73,7 +73,7 @@ Arya requested first-class shadcn-like Sidebar support and several advanced, wor
 - [x] Verify native/browser interactions and narrow layouts; render-check custom tokens and open states. Full arbitrary-font and long-label visual qualification remains application work.
 - [x] Check source distribution, regression tests, performance, and the full Sidebar change set; leave a concrete local review.
 
-Evidence and platform limits: `docs/validation/sidebar.md`. Browser iframe Shift-Tab containment and full platform accessibility qualification remain open.
+Evidence and platform limits: `docs/internal/validation/sidebar.md`. Browser iframe Shift-Tab containment and full platform accessibility qualification remain open.
 
 ## Remaining qualification
 
@@ -84,7 +84,7 @@ Evidence and platform limits: `docs/validation/sidebar.md`. Browser iframe Shift
 
 ## Later desktop batches
 
-The detailed dependencies and acceptance gates remain in [desktop-components.md](docs/plans/desktop-components.md):
+The detailed dependencies and acceptance gates remain in [desktop-components.md](plans/desktop-components.md):
 
 - [ ] Virtualized list rendering and selection (T05/T06), including stable IDs and refresh behavior.
 - [ ] Virtualized tree (T07).
@@ -142,4 +142,4 @@ Further component work is paused while the native gallery is reviewed. macOS fir
 - [x] Native/browser interaction replay, final modal focus verification, and refreshed website screenshots; see the audit record for coverage.
 - [x] NumberField and Toolbar share native Input undo/redo and word editing; preserve numeric rules, roving focus and disabled guards.
 
-See `docs/validation/showcase.md` for observed behavior and verification limits.
+See `docs/internal/validation/showcase.md` for observed behavior and verification limits.

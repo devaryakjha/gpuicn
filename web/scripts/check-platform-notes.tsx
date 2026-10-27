@@ -15,7 +15,7 @@ for (const name of files) {
     assert.ok(html.includes(renderToStaticMarkup(<code>{code}</code>)), `${name}: ${code}`)
   }
   if (docs.parity.includes("[migration qualification]")) {
-    assert.match(html, /<a href="https:\/\/github\.com\/devaryakjha\/gpuicn\/blob\/main\/docs\/validation\/gpui-kit-migration\.md">migration qualification<\/a>/, name)
+    assert.match(html, /<a href="https:\/\/github\.com\/devaryakjha\/gpuicn\/blob\/main\/docs\/internal\/validation\/gpui-kit-migration\.md">migration qualification<\/a>/, name)
   }
   if (name === "sidebar.json") {
     assert.match(html, /<table>[\s\S]*<th>Capability<\/th>[\s\S]*<td>Shared open state<\/td>/)

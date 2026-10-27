@@ -28,4 +28,4 @@ _Avoid_: Style
 
 A sidebar is a navigation composition; a splitter is an interactive boundary that resizes adjacent panes. They can be used together or separately. Lists, trees, diff views and graph views may belong in gpuicn; Git execution, parsing, patch generation, graph layout algorithms, provider APIs and persistence do not.
 
-The local expansion plan is in `docs/plans/desktop-components.md`. New components require native interaction and performance evidence, followed by user testing before publication.
+The local expansion plan is in `docs/internal/plans/desktop-components.md`. New components require native interaction and performance evidence, followed by user testing before publication.

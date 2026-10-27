@@ -36,4 +36,4 @@ short-drag settling, vertical/horizontal swipes, Escape and backdrop dismissal.
 Swipe handling is grip-only, leaving body text selection and scrolling intact.
 Snap points, nested stacking, non-modal drawers and velocity-based flings are not
 part of this API. Mobile OS gesture behavior and screen-reader parity remain
-unqualified. See [migration qualification](../validation/gpui-kit-migration.md).
+unqualified. See [migration qualification](../internal/validation/gpui-kit-migration.md).

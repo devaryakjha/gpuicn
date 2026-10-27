@@ -11,40 +11,16 @@
   </p>
 </div>
 
-gpuicn is an open-source library of Rust components for native GPUI apps.
-Install the source in your app, then keep ownership of its styling and behavior.
-Applications use [GPUI Kit](https://github.com/longbridge/gpui-kit) for native
-controls, text editing, motion, and popup hosts. gpuicn supplies Nova styling and
-application components. See the [migration notes](docs/validation/gpui-kit-migration.md)
-for the new APIs and verification status.
-
-The current beta supports GPUI Kit 0.6.4 and its pinned `gpui-pre` 0.3.5
-runtime. Import GPUI types through `gpui_kit`; apps on another GPUI revision
-must migrate before installing gpuicn source.
-
-The project follows the shadcn/ui source distribution model. It brings shadcn's
-visual language and themes to idiomatic GPUI APIs. It does not copy React APIs.
-
-<p align="center">
-  <img src="docs/images/catalog-hero.png" alt="gpuicn catalog landing page" width="100%">
-</p>
-
-<p align="center">
-  <img src="docs/images/catalog-components.png" alt="gpuicn component catalog" width="100%">
-</p>
+gpuicn gives native [GPUI](https://www.gpui.rs/) apps 45 polished, shadcn-styled
+components, from Button and Dialog to Sidebar, Resizable and Virtual List. Like
+shadcn/ui, it copies the Rust source into your app, so you own every line and
+can change any of it. Behavior comes from [GPUI Kit](https://github.com/longbridge/gpui-kit);
+gpuicn adds the Nova styling, a themeable token system and larger desktop
+components.
 
 > [!WARNING]
-> gpuicn is in beta. APIs and styling can change. Pin dependency revisions and review updates before replacing installed source.
-
-The registry covers 45 component families, including Sidebar, Resizable, and Virtual List,
-with shadcn Neutral Nova defaults. The catalog uses real GPUI/WASM previews.
-Installed source stays editable.
-
-- [Catalog](https://ui.imajha.com/)
-- [Registry setup](docs/registry.md)
-- [Source pins](release-pins.toml)
-- [Desktop expansion plan and local review gates](docs/plans/desktop-components.md)
-- [Full Lucide icon library](https://github.com/devaryakjha/gpui-icons)
+> gpuicn is in beta. APIs and styling can change between releases; `gpuicn diff`
+> shows exactly what an update would change in your copy.
 
 ## Quick start
 
@@ -55,94 +31,76 @@ cd my-app && cargo run
 gpuicn add sidebar dialog
 ```
 
-No Node.js is required. In an existing app, run `gpuicn init` instead of
-`gpuicn new`. Both use the registry, dependency pins and fonts from the release
-the CLI was built from, keep anything you already have, and only write a
-starter `src/main.rs` over the `cargo new` default. Installing the CLI also
-adds `cargo gpuicn` as an alias.
-The CLI copies shared modules and maintains `mod.rs`. Existing edits are kept
-unless you pass `--overwrite`. See [setup and updates](docs/registry.md) and
-[theming](docs/theming.md) for colors, density, type, radius, per-instance
-styles, and motion.
+That's the whole setup. No Node.js is involved. In an existing app, run
+`gpuicn init` from its root instead of `gpuicn new`; it keeps everything you
+already have. Installing the CLI also adds `cargo gpuicn` as an alias.
 
 > [!NOTE]
 > `gpuicn new` and the automatic `init` setup ship in the next CLI release. The
-> v0.5.0-beta.4 CLI only writes `gpuicn.toml`; follow [manual setup](docs/registry.md#manual-setup)
-> with it.
+> v0.5.0-beta.4 CLI only writes `gpuicn.toml`; follow
+> [manual setup](docs/registry.md#manual-setup) with it.
 
-To update, reinstall the CLI from the newer tag, point `gpuicn.toml` at the same
-tag, and commit your app-specific edits. `gpuicn status` and `gpuicn diff` show
-what the release changes; `gpuicn add <component> --overwrite` applies it.
+Then use components like any other Rust code in your crate:
 
-[GitHub issue #58](https://github.com/devaryakjha/gpuicn/issues/58) tracks the
-current adoption-readiness work. [TODO.md](TODO.md) preserves earlier local pass
-records and desktop batches.
+```rust
+use ui::button::Button;
 
-Launch the local workspace example app:
+Button::new("save")
+    .label("Save")
+    .on_click(cx.listener(|this, _, _, cx| this.save(cx)))
+```
+
+<p align="center">
+  <img src="docs/images/catalog-components.png" alt="gpuicn component catalog" width="100%">
+</p>
+
+## Everyday commands
+
+| Command | What it does |
+| --- | --- |
+| `gpuicn list` | Every component in the registry |
+| `gpuicn add <name>…` | Copy components and the shared files they need; your edits are kept |
+| `gpuicn status` | Which installed components differ from the registry |
+| `gpuicn diff [name…]` | The exact change an update would make |
+| `gpuicn add <name> --overwrite` | Replace your copy with the registry version |
+| `gpuicn remove <name>…` | Delete a component, keeping files others still use |
+
+## Learn more
+
+- [Catalog](https://ui.imajha.com/): live GPUI/WASM previews, usage and API for every component
+- [Install and update](docs/registry.md): what `init` does, manual setup, upgrading
+- [Theming](docs/theming.md): colors, density, type, radius, motion, and importing shadcn themes
+- [Changelog](CHANGELOG.md) and [release notes](docs/releases/)
+- [gpui-icons](https://github.com/devaryakjha/gpui-icons): the full Lucide icon set the components use
+
+## Requirements and platform scope
+
+Rust 1.97 or newer. gpuicn v0.5.0-beta.4 targets GPUI Kit 0.6.4 and its pinned
+`gpui-pre` 0.3.5 runtime; import GPUI types through `gpui_kit`. Apps on another
+GPUI revision must migrate first. macOS native builds need Xcode's Metal toolchain;
+Linux needs the usual GPUI system libraries (fontconfig, xkbcommon, Wayland/X11).
+
+The browser catalog renders the same Rust components through WebGPU and WASM.
+The WASM canvas does not expose a browser accessibility tree. Differences from
+shadcn and platform limits are documented per component in `docs/parity/` and
+in the catalog.
+
+## Example app
 
 ```sh
 cargo run --release -p gpuicn-showcase --features gpui_platform/runtime_shaders
 ```
 
-The app combines projects, tasks and local chat with saved state. The component
-gallery is available with `-- --catalog`. Build a macOS app and website download with
-`python3 scripts/package-showcase.py`. See [showcase packaging](docs/showcase.md)
-for signing, validation, and distribution limits.
-
-## Catalog development
-
-The TanStack/shadcn website lives in `web/`. The Rust crate in `site/` builds
-the embedded GPUI/WASM previews.
-
-Use Rust 1.97.1 for native development, the pinned WASM nightly, Trunk 0.21.14,
-and Bun. On macOS, native builds require Xcode's Metal toolchain.
-
-```sh
-rustup toolchain install nightly-2026-08-17 --component rust-src --target wasm32-unknown-unknown
-cd site
-RUSTUP_TOOLCHAIN=nightly-2026-08-17 CARGO_UNSTABLE_BUILD_STD=std,panic_abort trunk build --release --dist ../web/public/demo --public-url /demo/
-cd ../web
-bun install
-bun run dev
-```
-
-The site generates its code examples and API reference from the same Rust source
-used by the previews. It also includes a searchable gallery of all 1,818 Lucide
-icons, backed by the standalone `gpui-icons` library.
-
-## Verify changes
-
-```sh
-cargo test -p gpuicn --lib --locked
-cargo clippy -p gpuicn --lib --tests --locked -- -D warnings
-cargo check -p gpuicn-showcase --locked
-cargo check -p gpuicn --example usage --locked
-cd web
-bun run build
-bun run lint
-```
-
-CI builds the registry with Rust and checks native installation. It also installs
-every registry item with the stock shadcn CLI. CI compares the installed source
-byte for byte, tests overwrite behavior, and compiles the app.
-
-## Platform scope
-
-The components use GPUI Kit's native state and input behavior. The browser
-catalog renders the same Rust components through WebGPU and WASM. It needs a
-WebGPU-capable browser. Source and installation instructions remain available
-when a preview cannot start.
-
-The WASM canvas does not expose a browser accessibility tree. Relationship
-attributes, nested overlays, motion, and other differences are documented per
-component under `docs/parity/` and in the catalog. These are platform limits,
-not claims of complete browser or shadcn behavioral parity.
+gpuicn Workspace combines projects, tasks and local chat with saved state; pass
+`-- --catalog` for the component gallery. See [showcase packaging](docs/showcase.md).
 
 ## Contributing
 
-Open an [issue](https://github.com/devaryakjha/gpuicn/issues) for a bug, parity
-gap, or component request. Focused pull requests are welcome. Include the
-checks that support the change.
+Bug reports, parity gaps and component requests are welcome as
+[issues](https://github.com/devaryakjha/gpuicn/issues). See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, the checks to run,
+and how to add a component. Project planning and validation records live in
+[docs/internal](docs/internal/).
 
 ## License
 

@@ -14,4 +14,4 @@ Variable-height rows remain an explicit T05 gap. The pinned GPUI `list` implemen
 
 A bounded height is required, usually a `flex_1().min_h_0()` parent inside a sized column. Use `empty(...)` for caller-owned loading, empty or error content; the list performs no I/O. `scroll_area_scrollbar_for` exposes the same scrollbar for other GPUI scroll targets.
 
-Qualification is local and starts on macOS. Native 100,000-row measurements and actual pointer/keyboard checks belong in `docs/validation/virtual-list.md`; automated rendering alone does not establish full screen-reader, Windows or Linux support. This component remains unreleased.
+Qualification is local and starts on macOS. Native 100,000-row measurements and actual pointer/keyboard checks belong in `docs/internal/validation/virtual-list.md`; automated rendering alone does not establish full screen-reader, Windows or Linux support. This component remains unreleased.
