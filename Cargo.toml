@@ -5,14 +5,14 @@ resolver = "3"
 [workspace.package]
 version = "0.5.0-beta.4"
 edition = "2024"
-rust-version = "1.97.1"
+rust-version = "1.97"
 license = "MIT"
 repository = "https://github.com/devaryakjha/gpuicn"
 
 [workspace.dependencies]
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.5", features = ["font-kit"] }
 gpui-kit = { version = "=0.6.4", default-features = false, features = ["component"] }
-gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "39e74ddd9c2384bb58cc077befbf8c07e545aea0" }
+gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "68fb16d498307723de484e81ce3660e2ff431d31" }
 
 [profile.dev]
 debug = 1

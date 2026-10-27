@@ -48,11 +48,12 @@ jobs:
       - run: cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
 
   linux:
-    # Linux build coverage plus a fresh-app `gpuicn init` the way a new user runs it.
+    # Linux coverage on the minimum supported Rust, plus a fresh-app `gpuicn init`
+    # the way a new user runs it.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: dtolnay/rust-toolchain@1.97.0
       - uses: Swatinem/rust-cache@v2
       - name: Install GPUI build dependencies
         run: |

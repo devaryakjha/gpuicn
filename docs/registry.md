@@ -7,7 +7,7 @@ shows the same starter.
 
 ## Quick start
 
-Use Rust 1.97.1 or newer. Install the CLI, create an app, and run it:
+Use Rust 1.97 or newer. Install the CLI, create an app, and run it:
 
 ```sh
 cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.4 --locked
@@ -44,7 +44,7 @@ must migrate to this runtime before installing the components.
 [dependencies]
 web-time = "1.1"
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.5", features = ["font-kit"] }
-gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "39e74ddd9c2384bb58cc077befbf8c07e545aea0" }
+gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "68fb16d498307723de484e81ce3660e2ff431d31" }
 gpui-kit = { version = "=0.6.4", default-features = false, features = ["component"] }
 
 [dev-dependencies]
