@@ -7,6 +7,7 @@ license.workspace = true
 repository.workspace = true
 description = "Install editable gpuicn Rust components without Node.js."
 publish = false
+default-run = "gpuicn"
 
 [[bin]]
 name = "gpuicn"
