@@ -60,7 +60,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libfontconfig1-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
       - run: cargo test -p gpuicn-cli --locked
-      - run: cargo check -p gpuicn --locked
+      - run: cargo test -p gpuicn --locked
       - name: Set up and check a new app
         run: |
           cargo build -p gpuicn-cli --locked
