@@ -34,7 +34,7 @@ stable caller IDs, link handlers belong to the app, and toolbar sizing uses them
 The drawer follow-up adds shadcn-style content parts, responsive edge layouts,
 a scrollable body with fixed header/footer, reversible Kit presence transitions
 and captured grip dragging. Reduced-motion and focus restoration follow the
-visual lifecycle. See [Drawer parity](../parity/drawer.md) for the exact API scope.
+visual lifecycle. See [Drawer parity](../../parity/drawer.md) for the exact API scope.
 
 The component audit follow-up fixes Select's WASM font panic by skipping writes to
 its unused hidden editor, and consumes Enter after a selection commits. SVG menu
@@ -95,6 +95,6 @@ their original revisions and are not evidence for this migration.
 
 The icon release is already published, and PR #55 is merged. PR #56 contains
 the sidebar spacing fix and beta.2 release preparation. The PR checks record
-remote validation for each head. See the [beta.2 release notes](../releases/v0.5.0-beta.2.md)
+remote validation for each head. See the [beta.2 release notes](../../releases/v0.5.0-beta.2.md)
 for the release scope; the earlier compatibility implementation's green run
 does not apply.

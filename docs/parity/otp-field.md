@@ -7,5 +7,5 @@ OtpField takes a retained Kit OtpState configured with a slot count. Kit owns di
 
 The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
 exact exit animations and cross-platform screen-reader parity are not implied by
-the native component. See [migration qualification](../validation/gpui-kit-migration.md)
+the native component. See [migration qualification](../internal/validation/gpui-kit-migration.md)
 for the checks completed on this revision.

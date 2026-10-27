@@ -7,10 +7,16 @@ license.workspace = true
 repository.workspace = true
 description = "Install editable gpuicn Rust components without Node.js."
 publish = false
+default-run = "gpuicn"
 
 [[bin]]
 name = "gpuicn"
 path = "src/main.rs"
+
+# Lets `cargo gpuicn …` work after installing.
+[[bin]]
+name = "cargo-gpuicn"
+path = "src/bin/cargo-gpuicn.rs"
 
 [dependencies]
 anyhow = "1.0.104"

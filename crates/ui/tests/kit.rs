@@ -32,8 +32,15 @@ impl Render for EditorToolbar {
             .child(Input::new(&self.after).aria_label("After"))
     }
 }
+// GPUI Kit binds platform editing shortcuts: Command on macOS, Control elsewhere.
+#[cfg(target_os = "macos")]
+const SHORTCUTS: [&str; 4] = ["cmd-z", "cmd-shift-z", "alt-left", "cmd-left"];
+#[cfg(not(target_os = "macos"))]
+const SHORTCUTS: [&str; 4] = ["ctrl-z", "ctrl-y", "ctrl-left", "home"];
+
 #[gpui_kit::test]
 fn toolbar_keeps_editing_and_one_tab_stop(cx: &mut TestAppContext) {
+    let [undo, redo, previous_word, home] = SHORTCUTS;
     cx.update(gpuicn::init);
     let (view, cx) = cx.add_window_view(|window, cx| EditorToolbar {
         input: cx.new(|cx| InputState::new(window, cx).default_value("hello café")),
@@ -55,9 +62,9 @@ fn toolbar_keeps_editing_and_one_tab_stop(cx: &mut TestAppContext) {
     });
     cx.simulate_input("alpha beta");
     cx.update(|_, cx| assert_eq!(view.read(cx).input.read(cx).value().as_ref(), "alpha beta"));
-    cx.simulate_keystrokes("cmd-z cmd-z");
+    cx.simulate_keystrokes(&format!("{undo} {undo}"));
     cx.update(|_, cx| assert_eq!(view.read(cx).input.read(cx).value().as_ref(), "hello café"));
-    cx.simulate_keystrokes("cmd-shift-z cmd-shift-z alt-left");
+    cx.simulate_keystrokes(&format!("{redo} {redo} {previous_word}"));
     cx.update(|window, cx| {
         assert!(
             view.read(cx)
@@ -67,7 +74,7 @@ fn toolbar_keeps_editing_and_one_tab_stop(cx: &mut TestAppContext) {
                 .is_focused(window)
         )
     });
-    cx.simulate_keystrokes("cmd-left left");
+    cx.simulate_keystrokes(&format!("{home} left"));
     cx.update(|window, cx| {
         assert!(
             !view

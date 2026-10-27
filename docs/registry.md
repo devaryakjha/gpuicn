@@ -7,18 +7,19 @@ shows the same starter.
 
 ## Quick start
 
-Use Rust 1.97.1 or newer. Install the CLI, create an app, and run it:
+Use Rust 1.97 or newer. Install the CLI, create an app, and run it:
 
 ```sh
 cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.4 --locked
-cargo new my-app && cd my-app
-gpuicn init
-cargo run
+gpuicn new my-app
+cd my-app && cargo run
 gpuicn add sidebar dialog
 ```
 
-`gpuicn init` works from the release the CLI was built from, so the registry,
-Cargo pins and fonts always match `gpuicn --version`. It:
+`gpuicn new` runs `cargo new` and then `gpuicn init` in the new directory. In an
+existing app, run `gpuicn init` from its root. `init` works from the release the
+CLI was built from, so the registry, Cargo pins and fonts always match
+`gpuicn --version`. It:
 
 - writes `gpuicn.toml` pointing at that release's registry snapshot;
 - adds the dependencies below to `Cargo.toml`, keeping any you already declare
@@ -30,7 +31,7 @@ Cargo pins and fonts always match `gpuicn --version`. It:
 Running `init` again is safe: it keeps existing files and fills in what is
 missing. Use `gpuicn init --config-only` to create only `gpuicn.toml`.
 
-> The automatic setup ships in the CLI release after v0.5.0-beta.4. With the
+> `gpuicn new` and the automatic setup ship in the CLI release after v0.5.0-beta.4. With the
 > v0.5.0-beta.4 CLI, `init` only writes `gpuicn.toml`; follow
 > [Manual setup](#manual-setup) for the rest.
 
@@ -44,7 +45,7 @@ must migrate to this runtime before installing the components.
 [dependencies]
 web-time = "1.1"
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.5", features = ["font-kit"] }
-gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "39e74ddd9c2384bb58cc077befbf8c07e545aea0" }
+gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "68fb16d498307723de484e81ce3660e2ff431d31" }
 gpui-kit = { version = "=0.6.4", default-features = false, features = ["component"] }
 
 [dev-dependencies]

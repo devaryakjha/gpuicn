@@ -14,5 +14,5 @@ submission. Input and Textarea paste hooks remain available inside the group.
 The Rust source and Usage example define the supported API. Browser DOM/CSS
 behavior, arbitrary nested addon controls and cross-platform screen-reader
 parity are not implied by the native component. See
-[migration qualification](../validation/gpui-kit-migration.md) for the checks
+[migration qualification](../internal/validation/gpui-kit-migration.md) for the checks
 completed on this revision.

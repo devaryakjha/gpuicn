@@ -2,14 +2,14 @@
 name = "registry-install-fixture"
 version = "0.0.0"
 edition = "2024"
-rust-version = "1.97.1"
+rust-version = "1.97"
 publish = false
 default-run = "registry-install-fixture"
 
 [dependencies]
 web-time = "1.1"
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.5", features = ["font-kit"] }
-gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "39e74ddd9c2384bb58cc077befbf8c07e545aea0" }
+gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "68fb16d498307723de484e81ce3660e2ff431d31" }
 
 gpui-kit = { version = "=0.6.4", default-features = false, features = ["component"] }
 

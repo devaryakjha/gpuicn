@@ -1,6 +1,6 @@
 # Local desktop and distribution pass — 8 September 2026
 
-This is a local review build on `codex/v0.3-component-fidelity`. No release, commit, push, or deployment belongs to this pass. The running scope and remaining work are in [TODO.md](../../TODO.md).
+This is a local review build on `codex/v0.3-component-fidelity`. No release, commit, push, or deployment belongs to this pass. The running scope and remaining work are in [TODO.md](../TODO.md).
 
 ## Changes ready to review
 
@@ -49,9 +49,9 @@ cargo run -p gpuicn --release --example desktop --features native-fixture,gpui_p
 
 Type into the input, resize either separator with mouse and keyboard, collapse and restore repeatedly, switch themes and personalization, then open/dismiss the dialog. Try the reduced-motion toggle. Narrow the window: pane minima remain intact and the group scrolls. The local catalog is at `http://127.0.0.1:8790` while its dev server is running.
 
-The CLI is unpublished. Use `cargo install --path crates/cli --locked` from this checkout; [registry setup](../registry.md) shows a local registry and upgrade workflow. Each installed file is atomic, but a filesystem error while committing a batch can leave some files updated. Inspect the diff before overwriting local edits.
+The CLI is unpublished. Use `cargo install --path crates/cli --locked` from this checkout; [registry setup](../../registry.md) shows a local registry and upgrade workflow. Each installed file is atomic, but a filesystem error while committing a batch can leave some files updated. Inspect the diff before overwriting local edits.
 
-Full dialog/toast/disclosure exit animation waits on Base GPUI presence support. Applications must wire the OS reduced-motion preference. Base composition helper callbacks replace their default skin; use tokens or edit installed source for small changes. See [theming](../theming.md). Full native catalog/VoiceOver review, Windows/Linux checks, exact MSRV CI, and Arya's acceptance remain open. Later list/tree/diff/graph/conflict batches remain in the plan.
+Full dialog/toast/disclosure exit animation waits on Base GPUI presence support. Applications must wire the OS reduced-motion preference. Base composition helper callbacks replace their default skin; use tokens or edit installed source for small changes. See [theming](../../theming.md). Full native catalog/VoiceOver review, Windows/Linux checks, exact MSRV CI, and Arya's acceptance remain open. Later list/tree/diff/graph/conflict batches remain in the plan.
 
 ## Follow-up: WASM motion clock
 
