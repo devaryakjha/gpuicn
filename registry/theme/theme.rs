@@ -395,8 +395,11 @@ impl UiTheme {
     /// Reads the installed theme.
     ///
     /// Panics when the application has not installed a theme.
+    #[track_caller]
     pub fn read(cx: &App) -> &Self {
-        cx.global::<Self>()
+        cx.try_global::<Self>().expect(
+            "gpuicn theme is not installed: call `ui::theme::init(cx)` once at application startup",
+        )
     }
 
     /// Selects the pinned palette, preserving non-color tokens or initializing defaults.

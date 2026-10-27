@@ -1,24 +1,50 @@
 # Install from the registry
 
-The registry copies editable Rust files into `src/ui`. It never edits
-`Cargo.toml`. The [installation guide](https://ui.imajha.com/installation)
-includes a complete working starter.
+The registry copies editable Rust files into `src/ui`. The `gpuicn` CLI also
+prepares a new app: it adds the pinned Cargo dependencies, downloads the Geist
+fonts, and writes a starter window. The [installation guide](https://ui.imajha.com/installation)
+shows the same starter.
 
-## One-time setup
+## Quick start
 
-Use Rust 1.97.1 or newer. gpuicn v0.5.0-beta.4 supports GPUI Kit 0.6.4
-on its pinned `gpui-pre` 0.3.5 runtime. Keep the dependency pins below
-together. Apps using another GPUI revision must migrate to this runtime before
-installing the components.
+Use Rust 1.97 or newer. Install the CLI, create an app, and run it:
 
-Create a Rust app with `cargo new my-app`, then add these dependencies:
+```sh
+cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.4 --locked
+cargo new my-app && cd my-app
+gpuicn init
+cargo run
+gpuicn add sidebar dialog
+```
+
+`gpuicn init` works from the release the CLI was built from, so the registry,
+Cargo pins and fonts always match `gpuicn --version`. It:
+
+- writes `gpuicn.toml` pointing at that release's registry snapshot;
+- adds the dependencies below to `Cargo.toml`, keeping any you already declare
+  and warning when yours differ;
+- downloads Geist and its license into `assets/fonts/`, checking each font's SHA-256;
+- installs Button and the theme, then writes a starter `src/main.rs`, but only
+  when `src/main.rs` is missing or still the `cargo new` default.
+
+Running `init` again is safe: it keeps existing files and fills in what is
+missing. Use `gpuicn init --config-only` to create only `gpuicn.toml`.
+
+> The automatic setup ships in the CLI release after v0.5.0-beta.4. With the
+> v0.5.0-beta.4 CLI, `init` only writes `gpuicn.toml`; follow
+> [Manual setup](#manual-setup) for the rest.
+
+## Manual setup
+
+gpuicn v0.5.0-beta.4 supports GPUI Kit 0.6.4 on its pinned `gpui-pre` 0.3.5
+runtime. Keep these dependency pins together. Apps using another GPUI revision
+must migrate to this runtime before installing the components.
 
 ```toml
 [dependencies]
 web-time = "1.1"
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.5", features = ["font-kit"] }
 gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "39e74ddd9c2384bb58cc077befbf8c07e545aea0" }
-
 gpui-kit = { version = "=0.6.4", default-features = false, features = ["component"] }
 
 [dev-dependencies]
@@ -28,27 +54,16 @@ gpui-kit = { version = "=0.6.4", default-features = false, features = ["componen
 Import GPUI types through `gpui_kit` so the application and installed components
 share the same GPUI types. No compatibility crate or Cargo patch is required.
 
-## Install the native CLI
-
-The CLI is not published to crates.io yet. Install the current published beta
-from its Git tag:
+Initialize a config pointing to the registry from the same release as your CLI:
 
 ```sh
-cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.4 --locked
-```
-
-From your app directory, initialize a config pointing to the registry from that
-same release:
-
-```sh
-gpuicn --registry https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/site/pages/r init
+gpuicn --registry https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/site/pages/r init --config-only
 gpuicn list
 gpuicn add button
 ```
 
 `gpuicn.toml` contains only the registry and destination. Paths resolve beside
-this config; an HTTP(S) URL can replace the local registry directory. Pin a
-registry snapshot if you need reproducible installs.
+this config; an HTTP(S) URL or a local directory can serve as the registry.
 
 ```toml
 version = 1
@@ -56,14 +71,12 @@ registry = "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/s
 output = "src/ui"
 ```
 
-This URL is a reproducible snapshot of the current published beta. It does not
-include fixes made after the tag. Use a later release tag when those fixes are
-published.
-
 The installer copies Button and its shared theme and adds declarations to
-`src/ui/mod.rs`, preserving caller code. Add `mod ui;` to your crate root.
-No Node.js, npm, `components.json`, or `tsconfig.json` is needed. The copied Rust
-files have no CLI runtime dependency; you can edit, move, or copy them yourself.
+`src/ui/mod.rs`, preserving caller code. Add `mod ui;` to your crate root and
+call `ui::theme::init(cx)` once at startup; components panic with that
+instruction if the theme is missing. No Node.js, npm, `components.json`, or
+`tsconfig.json` is needed. The copied Rust files have no CLI runtime
+dependency; you can edit, move, or copy them yourself.
 
 ## Add and update
 
@@ -74,11 +87,15 @@ gpuicn add button --dry-run --overwrite
 gpuicn add button --overwrite
 ```
 
+Component names accept `alert-dialog` or `alert_dialog`; an unknown name lists
+the closest matches. After adding, the CLI warns when `Cargo.toml` lacks a
+dependency the new source uses.
+
 Existing edited files are kept by default. A dry run with `--overwrite` lists
 the files that would be replaced without changing them. Downloads and source
 validation finish before writes begin. Each file is replaced atomically, with
 `mod.rs` last; an I/O failure while committing files can still leave a partial
-batch. The CLI does not edit Cargo dependencies, application setup, or fonts.
+batch. `add` never edits Cargo.toml or your application code.
 
 To adopt a newer gpuicn release, reinstall the CLI from its new tag with
 `--force` and update the registry URL to that same tag. First commit your current
@@ -113,9 +130,10 @@ This legacy route needs Node.js and the `components.json` / `tsconfig.json`
 examples in `fixtures/registry-install/`. Declare installed modules yourself
 when using it. The native CLI maintains module declarations for you.
 
-## Run a window
+## Run a window manually
 
-Download the fonts and their license:
+`gpuicn init` does this for you. To set it up by hand, download the fonts,
+their license and the starter:
 
 ```sh
 mkdir -p assets/fonts
