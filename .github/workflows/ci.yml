@@ -64,8 +64,7 @@ jobs:
       - name: Set up and check a new app
         run: |
           cargo build -p gpuicn-cli --locked
-          cargo new "$RUNNER_TEMP/my-app"
-          target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" --registry "$PWD/site/pages/r" init
+          target/debug/gpuicn --registry "$PWD/site/pages/r" new "$RUNNER_TEMP/my-app"
           target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" add alert_dialog select
           cargo check --manifest-path "$RUNNER_TEMP/my-app/Cargo.toml" --features gpui_platform/runtime_shaders
 

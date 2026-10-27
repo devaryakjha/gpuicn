@@ -50,29 +50,29 @@ Installed source stays editable.
 
 ```sh
 cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.4 --locked
-cargo new my-app && cd my-app
-gpuicn init        # Cargo pins, Geist fonts, theme, Button and a starter window
-cargo run
+gpuicn new my-app  # cargo new + pinned deps, Geist fonts, theme, Button and a starter window
+cd my-app && cargo run
 gpuicn add sidebar dialog
 ```
 
-No Node.js is required. `gpuicn init` uses the registry, dependency pins and
-fonts from the release the CLI was built from, keeps anything you already
-have, and only writes a starter `src/main.rs` over the `cargo new` default.
+No Node.js is required. In an existing app, run `gpuicn init` instead of
+`gpuicn new`. Both use the registry, dependency pins and fonts from the release
+the CLI was built from, keep anything you already have, and only write a
+starter `src/main.rs` over the `cargo new` default. Installing the CLI also
+adds `cargo gpuicn` as an alias.
 The CLI copies shared modules and maintains `mod.rs`. Existing edits are kept
 unless you pass `--overwrite`. See [setup and updates](docs/registry.md) and
 [theming](docs/theming.md) for colors, density, type, radius, per-instance
 styles, and motion.
 
 > [!NOTE]
-> The automatic `init` setup ships in the next CLI release. The v0.5.0-beta.4
-> CLI only writes `gpuicn.toml`; follow [manual setup](docs/registry.md#manual-setup)
+> `gpuicn new` and the automatic `init` setup ship in the next CLI release. The
+> v0.5.0-beta.4 CLI only writes `gpuicn.toml`; follow [manual setup](docs/registry.md#manual-setup)
 > with it.
 
-To update, reinstall the CLI from the newer tag, commit your app-specific
-edits, and use `gpuicn add button sidebar --dry-run --overwrite` to list files
-before replacing them. Review the resulting source diff after the actual
-overwrite.
+To update, reinstall the CLI from the newer tag, point `gpuicn.toml` at the same
+tag, and commit your app-specific edits. `gpuicn status` and `gpuicn diff` show
+what the release changes; `gpuicn add <component> --overwrite` applies it.
 
 [GitHub issue #58](https://github.com/devaryakjha/gpuicn/issues/58) tracks the
 current adoption-readiness work. [TODO.md](TODO.md) preserves earlier local pass

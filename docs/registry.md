@@ -11,14 +11,15 @@ Use Rust 1.97 or newer. Install the CLI, create an app, and run it:
 
 ```sh
 cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.4 --locked
-cargo new my-app && cd my-app
-gpuicn init
-cargo run
+gpuicn new my-app
+cd my-app && cargo run
 gpuicn add sidebar dialog
 ```
 
-`gpuicn init` works from the release the CLI was built from, so the registry,
-Cargo pins and fonts always match `gpuicn --version`. It:
+`gpuicn new` runs `cargo new` and then `gpuicn init` in the new directory. In an
+existing app, run `gpuicn init` from its root. `init` works from the release the
+CLI was built from, so the registry, Cargo pins and fonts always match
+`gpuicn --version`. It:
 
 - writes `gpuicn.toml` pointing at that release's registry snapshot;
 - adds the dependencies below to `Cargo.toml`, keeping any you already declare
@@ -30,7 +31,7 @@ Cargo pins and fonts always match `gpuicn --version`. It:
 Running `init` again is safe: it keeps existing files and fills in what is
 missing. Use `gpuicn init --config-only` to create only `gpuicn.toml`.
 
-> The automatic setup ships in the CLI release after v0.5.0-beta.4. With the
+> `gpuicn new` and the automatic setup ship in the CLI release after v0.5.0-beta.4. With the
 > v0.5.0-beta.4 CLI, `init` only writes `gpuicn.toml`; follow
 > [Manual setup](#manual-setup) for the rest.
 
