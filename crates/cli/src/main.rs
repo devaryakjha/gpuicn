@@ -71,6 +71,24 @@ enum Command {
     },
     /// List the components available in the configured registry.
     List,
+    /// Show which installed components differ from the registry.
+    Status,
+    /// Show what `add --overwrite` would change, as a unified diff.
+    Diff {
+        /// Components to compare; defaults to every installed component.
+        components: Vec<String>,
+    },
+    /// Delete components' own source files and their mod.rs declarations.
+    /// Files shared with other installed components are kept.
+    Remove {
+        components: Vec<String>,
+        /// Also delete files you have edited.
+        #[arg(long)]
+        force: bool,
+        /// Report changes without deleting files.
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Copy components and their shared source files. Existing edits are kept by default.
     Add {
         components: Vec<String>,
@@ -208,6 +226,21 @@ fn run(cli: Cli) -> Result<()> {
                         println!("{}\t{}", item.name, item.description);
                     }
                 }
+                Command::Status => status(&source, &root.join(config.output))?,
+                Command::Diff { components } => {
+                    diff(&source, &root.join(config.output), &components)?
+                }
+                Command::Remove {
+                    components,
+                    force,
+                    dry_run,
+                } => remove(
+                    &source,
+                    &root.join(config.output),
+                    &components,
+                    force,
+                    dry_run,
+                )?,
                 Command::Add {
                     mut components,
                     all,
@@ -801,6 +834,190 @@ fn report_missing_dependencies(root: &Path, required: &BTreeSet<&str>) -> Result
     Ok(())
 }
 
+/// Registry components whose own module exists in the output directory.
+fn installed_components(source: &Source, output: &Path) -> Result<Vec<String>> {
+    let mut installed = Vec::new();
+    for item in source.index()?.items {
+        if current_file(&output.join(format!("{}.rs", item.name.replace('-', "_"))))?.is_some() {
+            installed.push(item.name);
+        }
+    }
+    Ok(installed)
+}
+
+/// Normalized names, defaulting to every installed component.
+fn targets(source: &Source, output: &Path, components: &[String]) -> Result<Vec<String>> {
+    if components.is_empty() {
+        let installed = installed_components(source, output)?;
+        ensure!(
+            !installed.is_empty(),
+            "no gpuicn components are installed in {}",
+            output.display()
+        );
+        return Ok(installed);
+    }
+    Ok(components.iter().map(|name| normalize(name)).collect())
+}
+
+fn status(source: &Source, output: &Path) -> Result<()> {
+    let installed = installed_components(source, output)?;
+    if installed.is_empty() {
+        println!(
+            "No gpuicn components are installed in {}. Run `gpuicn add button`.",
+            output.display()
+        );
+        return Ok(());
+    }
+    let width = installed.iter().map(String::len).max().unwrap_or(0);
+    let mut changed = false;
+    for name in &installed {
+        let mut modified = Vec::new();
+        let mut missing = Vec::new();
+        for (module, content) in collect_files(source, std::slice::from_ref(name))? {
+            match current_file(&output.join(format!("{module}.rs")))? {
+                Some(local) if local == content.as_bytes() => {}
+                Some(_) => modified.push(format!("{module}.rs")),
+                None => missing.push(format!("{module}.rs")),
+            }
+        }
+        let mut notes = Vec::new();
+        if !modified.is_empty() {
+            notes.push(format!("differs: {}", modified.join(", ")));
+        }
+        if !missing.is_empty() {
+            notes.push(format!("missing: {}", missing.join(", ")));
+        }
+        changed |= !notes.is_empty();
+        println!(
+            "{name:width$}  {}",
+            if notes.is_empty() {
+                "matches registry".to_owned()
+            } else {
+                notes.join("; ")
+            }
+        );
+    }
+    if changed {
+        println!(
+            "\n`gpuicn diff <component>` shows the changes; `gpuicn add <component> --overwrite` replaces local files."
+        );
+    }
+    Ok(())
+}
+
+fn diff(source: &Source, output: &Path, components: &[String]) -> Result<()> {
+    let components = targets(source, output, components)?;
+    let mut same = true;
+    for (module, content) in collect_files(source, &components)? {
+        let path = output.join(format!("{module}.rs"));
+        let local = current_file(&path)?.unwrap_or_default();
+        if local == content.as_bytes() {
+            continue;
+        }
+        same = false;
+        let local = String::from_utf8_lossy(&local);
+        let display = path.display().to_string();
+        print!(
+            "{}",
+            similar::TextDiff::from_lines(local.as_ref(), content.as_str())
+                .unified_diff()
+                .context_radius(3)
+                .header(
+                    &format!("{display} (local)"),
+                    &format!("{display} (registry)")
+                )
+        );
+    }
+    if same {
+        println!("Installed source matches the registry.");
+    }
+    Ok(())
+}
+
+fn remove(
+    source: &Source,
+    output: &Path,
+    components: &[String],
+    force: bool,
+    dry_run: bool,
+) -> Result<()> {
+    ensure!(!components.is_empty(), "name a component to remove");
+    let components: Vec<_> = components.iter().map(|name| normalize(name)).collect();
+    let installed = installed_components(source, output)?;
+    for name in &components {
+        ensure!(
+            installed.contains(name),
+            "{name} is not installed in {}",
+            output.display()
+        );
+    }
+    let remaining: Vec<_> = installed
+        .into_iter()
+        .filter(|name| !components.contains(name))
+        .collect();
+    let keep = if remaining.is_empty() {
+        BTreeMap::new()
+    } else {
+        collect_files(source, &remaining)?
+    };
+    let mut doomed = Vec::new();
+    let mut edited = Vec::new();
+    for (module, content) in collect_files(source, &components)? {
+        if keep.contains_key(&module) {
+            continue;
+        }
+        let path = output.join(format!("{module}.rs"));
+        if let Some(local) = current_file(&path)? {
+            if local != content.as_bytes() {
+                edited.push(path.display().to_string());
+            }
+            doomed.push((module, path));
+        }
+    }
+    ensure!(
+        force || edited.is_empty(),
+        "these files have local edits; nothing was removed (--force deletes them anyway):\n  {}",
+        edited.join("\n  ")
+    );
+    let mod_path = output.join("mod.rs");
+    let existing_mod = String::from_utf8(current_file(&mod_path)?.unwrap_or_default())?;
+    let declarations: BTreeSet<_> = doomed
+        .iter()
+        .map(|(module, _)| format!("pub mod {module};"))
+        .collect();
+    let updated_mod: String = existing_mod
+        .split_inclusive('\n')
+        .filter(|line| !declarations.contains(line.trim()))
+        .collect();
+    for (_, path) in &doomed {
+        println!(
+            "{} {}",
+            if dry_run { "Would remove" } else { "Remove" },
+            path.display()
+        );
+    }
+    if updated_mod != existing_mod {
+        println!(
+            "{} {}",
+            if dry_run { "Would write" } else { "Write" },
+            mod_path.display()
+        );
+    }
+    if dry_run {
+        return Ok(());
+    }
+    // Drop declarations first so a failed delete never leaves mod.rs naming a missing file.
+    if updated_mod != existing_mod {
+        let mut file = NamedTempFile::new_in(output)?;
+        file.write_all(updated_mod.as_bytes())?;
+        file.persist(&mod_path).map_err(|error| error.error)?;
+    }
+    for (_, path) in doomed {
+        fs::remove_file(path)?;
+    }
+    Ok(())
+}
+
 fn dependencies(
     name: &str,
     manifest: &Manifest,
@@ -1135,6 +1352,82 @@ mod tests {
                 "{file}"
             );
         }
+        Ok(())
+    }
+    #[test]
+    fn remove_keeps_shared_and_edited_files() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let registry = temp.path().join("r");
+        fs::create_dir(&registry)?;
+        let file = |module: &str| SourceFile {
+            path: format!("registry/{module}/{module}.rs"),
+            kind: "registry:file".into(),
+            target: String::new(),
+            content: Some(format!("pub struct {module};\n")),
+        };
+        let item = |name: &str, modules: &[&str]| Item {
+            schema: None,
+            name: name.into(),
+            kind: "registry:item".into(),
+            title: name.into(),
+            description: String::new(),
+            files: modules.iter().map(|module| file(module)).collect(),
+        };
+        let items = vec![
+            item("theme", &["theme"]),
+            item("button", &["theme", "button"]),
+            item("menu", &["theme", "button", "menu"]),
+        ];
+        for item in &items {
+            json_file(&registry.join(format!("{}.json", item.name)), item)?;
+        }
+        json_file(
+            &registry.join("registry.json"),
+            &Registry {
+                schema: String::new(),
+                name: "test".into(),
+                homepage: String::new(),
+                items,
+            },
+        )?;
+        let source = Source::new("r", temp.path())?;
+        let output = temp.path().join("ui");
+        install(
+            &output,
+            collect_files(&source, &["menu".into()])?,
+            false,
+            false,
+        )?;
+        fs::write(
+            output.join("mod.rs"),
+            format!("// mine\n{}", fs::read_to_string(output.join("mod.rs"))?),
+        )?;
+        assert_eq!(
+            installed_components(&source, &output)?,
+            ["theme", "button", "menu"]
+        );
+
+        fs::write(output.join("menu.rs"), "// edited\n")?;
+        assert!(remove(&source, &output, &["menu".into()], false, false).is_err());
+        assert!(output.join("menu.rs").exists());
+        remove(&source, &output, &["menu".into()], true, true)?;
+        assert!(output.join("menu.rs").exists());
+        remove(&source, &output, &["menu".into()], true, false)?;
+        assert!(!output.join("menu.rs").exists());
+        assert!(output.join("button.rs").exists() && output.join("theme.rs").exists());
+        assert_eq!(
+            fs::read_to_string(output.join("mod.rs"))?,
+            "// mine\npub mod button;\npub mod theme;\n"
+        );
+        assert!(remove(&source, &output, &["menu".into()], false, false).is_err());
+        remove(
+            &source,
+            &output,
+            &["button".into(), "theme".into()],
+            false,
+            false,
+        )?;
+        assert_eq!(fs::read_to_string(output.join("mod.rs"))?, "// mine\n");
         Ok(())
     }
     #[test]

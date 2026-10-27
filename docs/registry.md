@@ -97,12 +97,25 @@ validation finish before writes begin. Each file is replaced atomically, with
 `mod.rs` last; an I/O failure while committing files can still leave a partial
 batch. `add` never edits Cargo.toml or your application code.
 
+## Track, update and remove
+
+```sh
+gpuicn status            # which installed components differ from the registry
+gpuicn diff dialog       # unified diff of what `add dialog --overwrite` would change
+gpuicn remove carousel   # delete its own files and mod.rs lines
+```
+
+`status` and `diff` cover every installed component when you name none; a
+component counts as installed when its own module, such as `src/ui/dialog.rs`,
+exists. `remove` keeps files that another installed component still uses and
+refuses to delete files you have edited unless you pass `--force`; use
+`--dry-run` to preview.
+
 To adopt a newer gpuicn release, reinstall the CLI from its new tag with
-`--force` and update the registry URL to that same tag. First commit your current
-app-specific edits to a branch. A dry run with `--overwrite` reports which files
-would be replaced; it does not show their content diff. Repeat without
-`--dry-run`, then inspect `git diff -- src/ui` and reapply the app-specific edits
-you still need.
+`--force` and update the registry URL in `gpuicn.toml` to that same tag. First
+commit your current app-specific edits. `gpuicn diff` then shows exactly what
+the new release changes in your source; replace files with
+`gpuicn add <component> --overwrite` and reapply the edits you still need.
 
 ## Build a registry
 
