@@ -1,6 +1,6 @@
 # Personalize gpuicn
 
-The installed source belongs to your app. Start with the shadcn Nova defaults and change the application theme; no Bonsai model, router, or persistence layer is required.
+The installed source belongs to your app. Start with the shadcn Nova defaults and change the application theme; no app model, router, or persistence layer is required.
 
 ```rust
 use gpui_kit::{px, rgb};
@@ -18,6 +18,26 @@ UiTheme::set(cx, theme);     // repaints open windows, including retained child 
 ```
 
 Colors, fonts, radius, spacing, shadows, overlay color, and motion are app-owned tokens. `theme.space(2.)` means two spacing units; `theme.text(14.)` scales a 14px default text size. One-pixel borders, focus outlines, circular shapes, pointer coordinates, and caller-supplied pane limits retain their physical or semantic meaning. Check contrast and legibility when choosing a palette or dense layout.
+
+## Import a shadcn theme
+
+Any shadcn theme CSS works, including the output of the shadcn theme picker and
+tweakcn. Paste it into your app and build both modes:
+
+```rust
+const THEME_CSS: &str = include_str!("theme.css");
+
+let light = UiTheme::from_shadcn_css(THEME_CSS, ThemeMode::Light)?;
+let dark = UiTheme::from_shadcn_css(THEME_CSS, ThemeMode::Dark)?;
+UiTheme::set(cx, if prefers_dark { dark } else { light });
+```
+
+Light reads `:root`; dark reads `:root` then `.dark`. Colors may be
+`oklch()`, `hsl()`, bare HSL triplets from shadcn v3, `rgb()` or hex, and
+`--radius` sets the radius scale. Variables the CSS omits keep the Neutral
+defaults, and unrelated declarations such as fonts are ignored, so load and
+set any custom fonts yourself. `UiTheme::switch` always restores the Neutral
+palette; keep both imported themes and call `UiTheme::set` to change mode.
 
 `UiTheme::switch` selects the pinned Neutral light/dark palette and preserves non-color customization. For a custom light/dark color pair, select your own palette and call `UiTheme::set`; the library cannot infer a dark palette from custom light colors.
 

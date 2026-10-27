@@ -395,8 +395,61 @@ impl UiTheme {
     /// Reads the installed theme.
     ///
     /// Panics when the application has not installed a theme.
+    #[track_caller]
     pub fn read(cx: &App) -> &Self {
-        cx.global::<Self>()
+        cx.try_global::<Self>().expect(
+            "gpuicn theme is not installed: call `ui::theme::init(cx)` once at application startup",
+        )
+    }
+
+    /// Builds a theme from shadcn theme CSS, such as the output of the shadcn
+    /// theme picker or tweakcn.
+    ///
+    /// Light reads `:root`; dark reads `:root` and then `.dark`, like the
+    /// browser cascade. Recognized `--background`, `--primary`, `--sidebar-*`,
+    /// `--chart-*` and `--radius` declarations replace the Neutral defaults;
+    /// other declarations are ignored. Colors may use `oklch()`, `hsl()`,
+    /// bare HSL triplets, `rgb()` or hex. Build both modes and call
+    /// [`UiTheme::set`] to switch; [`UiTheme::switch`] restores Neutral colors.
+    pub fn from_shadcn_css(css: &str, mode: ThemeMode) -> Result<Self, ThemeCssError> {
+        let blocks = css_blocks(css);
+        let mut theme = match mode {
+            ThemeMode::Light => Self::neutral_light(),
+            ThemeMode::Dark => Self::neutral_dark(),
+        };
+        let mut selectors = vec![":root"];
+        if mode == ThemeMode::Dark {
+            selectors.push(".dark");
+        }
+        for selector in selectors {
+            let declarations = blocks
+                .iter()
+                .filter(|(name, _)| name.split(',').any(|part| part.trim() == selector))
+                .flat_map(|(_, body)| body.split(';'))
+                .collect::<Vec<_>>();
+            if declarations.is_empty() {
+                return Err(ThemeCssError(format!("no `{selector}` block found")));
+            }
+            for declaration in declarations {
+                let Some((name, value)) = declaration.split_once(':') else {
+                    continue;
+                };
+                let (name, value) = (name.trim(), value.trim());
+                let Some(name) = name.strip_prefix("--") else {
+                    continue;
+                };
+                if name == "radius" {
+                    theme.radius = UiRadius::new(css_length(value).ok_or_else(|| {
+                        ThemeCssError(format!("unsupported length `--radius: {value}`"))
+                    })?);
+                } else if let Some(slot) = theme.colors.slot(name) {
+                    *slot = css_color(value).ok_or_else(|| {
+                        ThemeCssError(format!("unsupported color `--{name}: {value}`"))
+                    })?;
+                }
+            }
+        }
+        Ok(theme)
     }
 
     /// Selects the pinned palette, preserving non-color tokens or initializing defaults.
@@ -510,6 +563,224 @@ fn sync_component_theme(cx: &mut App, theme: UiTheme) {
     component.tokens = ThemeTokens::from(&component.colors);
 
     Theme::sync_base(cx);
+}
+
+/// Why [`UiTheme::from_shadcn_css`] could not read a theme.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ThemeCssError(pub String);
+
+impl std::fmt::Display for ThemeCssError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "shadcn theme CSS: {}", self.0)
+    }
+}
+
+impl std::error::Error for ThemeCssError {}
+
+impl UiColors {
+    fn slot(&mut self, variable: &str) -> Option<&mut Rgba> {
+        Some(match variable {
+            "background" => &mut self.background,
+            "foreground" => &mut self.foreground,
+            "card" => &mut self.card,
+            "card-foreground" => &mut self.card_foreground,
+            "popover" => &mut self.popover,
+            "popover-foreground" => &mut self.popover_foreground,
+            "primary" => &mut self.primary,
+            "primary-foreground" => &mut self.primary_foreground,
+            "secondary" => &mut self.secondary,
+            "secondary-foreground" => &mut self.secondary_foreground,
+            "muted" => &mut self.muted,
+            "muted-foreground" => &mut self.muted_foreground,
+            "accent" => &mut self.accent,
+            "accent-foreground" => &mut self.accent_foreground,
+            "destructive" => &mut self.destructive,
+            "border" => &mut self.border,
+            "input" => &mut self.input,
+            "ring" => &mut self.ring,
+            "chart-1" => &mut self.chart_1,
+            "chart-2" => &mut self.chart_2,
+            "chart-3" => &mut self.chart_3,
+            "chart-4" => &mut self.chart_4,
+            "chart-5" => &mut self.chart_5,
+            "sidebar" | "sidebar-background" => &mut self.sidebar,
+            "sidebar-foreground" => &mut self.sidebar_foreground,
+            "sidebar-primary" => &mut self.sidebar_primary,
+            "sidebar-primary-foreground" => &mut self.sidebar_primary_foreground,
+            "sidebar-accent" => &mut self.sidebar_accent,
+            "sidebar-accent-foreground" => &mut self.sidebar_accent_foreground,
+            "sidebar-border" => &mut self.sidebar_border,
+            "sidebar-ring" => &mut self.sidebar_ring,
+            _ => return None,
+        })
+    }
+}
+
+/// Innermost `selector { body }` pairs with comments removed.
+fn css_blocks(css: &str) -> Vec<(String, String)> {
+    let mut text = String::with_capacity(css.len());
+    let mut rest = css;
+    while let Some(start) = rest.find("/*") {
+        text.push_str(&rest[..start]);
+        rest = rest[start + 2..]
+            .split_once("*/")
+            .map_or("", |(_, after)| after);
+    }
+    text.push_str(rest);
+    let mut blocks = Vec::new();
+    let mut selector_start = 0;
+    let mut open = None;
+    for (index, character) in text.char_indices() {
+        match character {
+            '{' => {
+                open = Some((text[selector_start..index].trim().to_owned(), index + 1));
+                selector_start = index + 1;
+            }
+            '}' => {
+                if let Some((selector, body)) = open.take() {
+                    blocks.push((selector, text[body..index].to_owned()));
+                }
+                selector_start = index + 1;
+            }
+            ';' if open.is_none() => selector_start = index + 1,
+            _ => {}
+        }
+    }
+    blocks
+}
+
+fn css_length(value: &str) -> Option<Pixels> {
+    let value = value.trim();
+    let pixels = if let Some(rem) = value.strip_suffix("rem") {
+        rem.trim().parse::<f32>().ok()? * 16.
+    } else if let Some(pixels) = value.strip_suffix("px") {
+        pixels.trim().parse::<f32>().ok()?
+    } else {
+        value.parse::<f32>().ok().filter(|value| *value == 0.)?
+    };
+    (pixels.is_finite() && pixels >= 0.).then(|| px(pixels))
+}
+
+/// A CSS number or percentage; `percent` is the value of `100%`.
+fn css_number(value: &str, percent: f64) -> Option<f64> {
+    let value = value.trim();
+    let number = match value.strip_suffix('%') {
+        Some(value) => value.trim().parse::<f64>().ok()? / 100. * percent,
+        None => value
+            .strip_suffix("deg")
+            .unwrap_or(value)
+            .parse::<f64>()
+            .ok()?,
+    };
+    number.is_finite().then_some(number)
+}
+
+fn css_color(value: &str) -> Option<Rgba> {
+    let value = value.trim().trim_end_matches("!important").trim();
+    if let Some(hex) = value.strip_prefix('#') {
+        return css_hex(hex);
+    }
+    let (function, arguments) = match value.split_once('(') {
+        Some((function, arguments)) => (
+            function.trim().to_ascii_lowercase(),
+            arguments.strip_suffix(')')?,
+        ),
+        // shadcn v3 themes store bare HSL triplets such as `0 0% 100%`.
+        None => ("hsl".to_owned(), value),
+    };
+    let (channels, alpha) = match arguments.split_once('/') {
+        Some((channels, alpha)) => (channels, css_number(alpha, 1.)?),
+        None => (arguments, 1.),
+    };
+    let channels: Vec<_> = channels
+        .split(|character: char| character == ',' || character.is_whitespace())
+        .filter(|part| !part.is_empty())
+        .collect();
+    let (channels, alpha) = match channels.len() {
+        3 => (channels, alpha),
+        4 => (channels[..3].to_vec(), css_number(channels[3], 1.)?),
+        _ => return None,
+    };
+    let color = match function.as_str() {
+        "oklch" => oklch(
+            css_number(channels[0], 1.)?,
+            css_number(channels[1], 0.4)?,
+            css_number(channels[2], 1.)?,
+        ),
+        "hsl" | "hsla" => hsl(
+            css_number(channels[0], 1.)?,
+            css_number(channels[1], 1.)?,
+            css_number(channels[2], 1.)?,
+        ),
+        "rgb" | "rgba" => [
+            css_number(channels[0], 255.)? / 255.,
+            css_number(channels[1], 255.)? / 255.,
+            css_number(channels[2], 255.)? / 255.,
+        ],
+        _ => return None,
+    };
+    Some(Rgba {
+        r: color[0].clamp(0., 1.) as f32,
+        g: color[1].clamp(0., 1.) as f32,
+        b: color[2].clamp(0., 1.) as f32,
+        a: alpha.clamp(0., 1.) as f32,
+    })
+}
+
+fn css_hex(hex: &str) -> Option<Rgba> {
+    if !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return None;
+    }
+    let digits: Vec<u8> = match hex.len() {
+        3 | 4 => hex
+            .chars()
+            .map(|digit| u8::from_str_radix(&format!("{digit}{digit}"), 16).ok())
+            .collect::<Option<_>>()?,
+        6 | 8 => (0..hex.len())
+            .step_by(2)
+            .map(|index| u8::from_str_radix(&hex[index..index + 2], 16).ok())
+            .collect::<Option<_>>()?,
+        _ => return None,
+    };
+    Some(Rgba {
+        r: digits[0] as f32 / 255.,
+        g: digits[1] as f32 / 255.,
+        b: digits[2] as f32 / 255.,
+        a: digits.get(3).map_or(1., |alpha| *alpha as f32 / 255.),
+    })
+}
+
+/// OKLCH to gamma-encoded sRGB, matching the pinned Neutral conversion when chroma is 0.
+fn oklch(lightness: f64, chroma: f64, hue: f64) -> [f64; 3] {
+    let (a, b) = (
+        chroma * hue.to_radians().cos(),
+        chroma * hue.to_radians().sin(),
+    );
+    let l = (lightness + 0.396_337_777_4 * a + 0.215_803_757_3 * b).powi(3);
+    let m = (lightness - 0.105_561_345_8 * a - 0.063_854_172_8 * b).powi(3);
+    let s = (lightness - 0.089_484_177_5 * a - 1.291_485_548 * b).powi(3);
+    [
+        4.076_741_662_1 * l - 3.307_711_591_3 * m + 0.230_969_929_2 * s,
+        -1.268_438_004_6 * l + 2.609_757_401_1 * m - 0.341_319_396_5 * s,
+        -0.004_196_086_3 * l - 0.703_418_614_7 * m + 1.707_614_701 * s,
+    ]
+    .map(srgb_channel)
+}
+
+fn hsl(hue: f64, saturation: f64, lightness: f64) -> [f64; 3] {
+    let hue = hue.rem_euclid(360.) / 60.;
+    let chroma = (1. - (2. * lightness - 1.).abs()) * saturation;
+    let x = chroma * (1. - (hue % 2. - 1.).abs());
+    let (r, g, b) = match hue as u32 {
+        0 => (chroma, x, 0.),
+        1 => (x, chroma, 0.),
+        2 => (0., chroma, x),
+        3 => (0., x, chroma),
+        4 => (x, 0., chroma),
+        _ => (chroma, 0., x),
+    };
+    let base = lightness - chroma / 2.;
+    [r + base, g + base, b + base]
 }
 
 fn neutral_light_colors() -> UiColors {
@@ -648,6 +919,78 @@ mod tests {
         assert_eq!(
             neutral_dark_colors().sidebar_primary,
             srgb(0x14, 0x47, 0xe6)
+        );
+    }
+
+    fn close(left: Rgba, right: Rgba) -> bool {
+        [
+            (left.r, right.r),
+            (left.g, right.g),
+            (left.b, right.b),
+            (left.a, right.a),
+        ]
+        .iter()
+        .all(|(left, right)| (left - right).abs() < 1.5 / 255.)
+    }
+
+    #[test]
+    fn imports_shadcn_theme_css() {
+        let css = r#"
+            @layer base {
+              :root {
+                --radius: 0.5rem; /* 8px */
+                --background: oklch(1 0 0);
+                --foreground: oklch(0.145 0 0);
+                --primary: #2563eb;
+                --ring: rgb(37 99 235 / 50%);
+                --sidebar-background: 0 0% 98%;
+                --font-sans: Inter, sans-serif;
+              }
+              .dark {
+                --background: oklch(0.145 0 0);
+                --border: oklch(1 0 0 / 10%);
+                --sidebar-primary: oklch(0.488 0.243 264.376);
+                --chart-1: hsl(220 70% 50%);
+              }
+            }
+        "#;
+        let light = UiTheme::from_shadcn_css(css, ThemeMode::Light).unwrap();
+        assert_eq!(light.mode, ThemeMode::Light);
+        assert_eq!(light.radius.lg, px(8.));
+        assert!(close(light.colors.background, neutral(1.0)));
+        assert!(close(light.colors.foreground, neutral(0.145)));
+        assert_eq!(light.colors.primary, srgb(0x25, 0x63, 0xeb));
+        assert!(close(
+            light.colors.ring,
+            Rgba {
+                a: 0.5,
+                ..srgb(37, 99, 235)
+            }
+        ));
+        assert!(close(light.colors.sidebar, neutral(0.985)));
+        // Variables the CSS leaves out keep the Neutral defaults.
+        assert_eq!(light.colors.muted, neutral_light_colors().muted);
+
+        let dark = UiTheme::from_shadcn_css(css, ThemeMode::Dark).unwrap();
+        assert_eq!(dark.mode, ThemeMode::Dark);
+        assert!(close(dark.colors.background, neutral(0.145)));
+        // `.dark` inherits `:root` values it does not override.
+        assert_eq!(dark.colors.primary, srgb(0x25, 0x63, 0xeb));
+        assert!(close(dark.colors.border, neutral_alpha(1.0, 0.10)));
+        assert!(close(dark.colors.sidebar_primary, srgb(0x14, 0x47, 0xe6)));
+        assert!(close(dark.colors.chart_1, srgb(0x26, 0x63, 0xd9)));
+
+        assert!(UiTheme::from_shadcn_css(":root { --primary: blue; }", ThemeMode::Light).is_err());
+        assert!(UiTheme::from_shadcn_css(":root { --radius: 1em; }", ThemeMode::Light).is_err());
+        assert!(UiTheme::from_shadcn_css(":root { }", ThemeMode::Dark).is_err());
+        assert_eq!(
+            css_hex("fff8"),
+            Some(Rgba {
+                r: 1.,
+                g: 1.,
+                b: 1.,
+                a: 0x88 as f32 / 255.
+            })
         );
     }
 

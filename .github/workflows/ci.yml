@@ -47,6 +47,27 @@ jobs:
           cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
       - run: cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
 
+  linux:
+    # Linux build coverage plus a fresh-app `gpuicn init` the way a new user runs it.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: Swatinem/rust-cache@v2
+      - name: Install GPUI build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfontconfig1-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
+      - run: cargo test -p gpuicn-cli --locked
+      - run: cargo check -p gpuicn --locked
+      - name: Set up and check a new app
+        run: |
+          cargo build -p gpuicn-cli --locked
+          cargo new "$RUNNER_TEMP/my-app"
+          target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" --registry "$PWD/site/pages/r" init
+          target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" add alert_dialog select
+          cargo check --manifest-path "$RUNNER_TEMP/my-app/Cargo.toml" --features gpui_platform/runtime_shaders
+
   wasm:
     runs-on: ubuntu-latest
     steps:
