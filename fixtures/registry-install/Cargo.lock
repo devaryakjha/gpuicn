@@ -1506,7 +1506,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2461,7 +2461,8 @@ dependencies = [
 [[package]]
 name = "gpui-icons"
 version = "0.5.0"
-source = "git+https://github.com/devaryakjha/gpui-icons?rev=e4b410f06acfc1471c1003d29d812b9bb061d1c8#e4b410f06acfc1471c1003d29d812b9bb061d1c8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9852cf78e447fd2fffd51cb27b605d17daf075e951690742d55d3c106b3fcfb2"
 dependencies = [
  "gpui-pre",
 ]
@@ -3271,7 +3272,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.62.2",
+ "windows-core 0.58.0",
 ]
 
 [[package]]
@@ -5301,7 +5302,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5843,7 +5844,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -6642,7 +6643,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

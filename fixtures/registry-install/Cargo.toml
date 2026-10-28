@@ -17,7 +17,3 @@ gpui-kit = { version = "=0.8.1", default-features = false, features = ["componen
 gpui-kit = { version = "=0.8.1", default-features = false, features = ["component", "test-support"] }
 
 [workspace]
-
-# Temporary until gpui-icons 0.5.0 is on crates.io.
-[patch.crates-io]
-gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "e4b410f06acfc1471c1003d29d812b9bb061d1c8" }
