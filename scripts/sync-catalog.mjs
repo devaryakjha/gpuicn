@@ -22,14 +22,14 @@ writeFileSync(`${root}web/src/generated/setup.json`, JSON.stringify({
   config: read("fixtures/registry-install/components.json").trim(),
   aliases: read("fixtures/registry-install/tsconfig.json").trim(),
   starter: read("fixtures/registry-install/src/main.rs").replace("#![allow(dead_code)]\n\n", "").trim(),
-  theme: read("registry/theme/theme.rs"),
+  theme: read("crates/ui/registry/theme/theme.rs"),
 }, null, 2));
 
 // Read rustfmt's method boundaries, not Rust expressions. Cargo checks these
 // same methods; the assertions below fail if their layout or coverage changes.
 for (const item of registry.items.filter((item) => item.name !== "theme")) {
   const module = item.name.replaceAll("-", "_");
-  const source = read(`registry/${module}/${module}.rs`);
+  const source = read(`crates/ui/registry/${module}/${module}.rs`);
   const preview = showcase.match(new RegExp(`^    fn ${module}_preview\\([\\s\\S]*?^    \\}`, "m"))?.[0];
   assert(preview, `Missing compiled preview for ${item.name}`);
   const usage = usageExamples.match(new RegExp(`^mod ${module} \\{\\n([\\s\\S]*?)^\\}`, "m"))?.[1].replace(/^    /gm, "").trim();
@@ -74,7 +74,7 @@ for (const item of registry.items.filter((item) => item.name !== "theme")) {
   ) : undefined;
 
   const helperModules = new Set(installFiles.flatMap((file) =>
-    [...read(file.path).matchAll(/#\[path = "([^"/]+)\.rs"\]/g)].map((match) => match[1])
+    [...read(`crates/ui/${file.path}`).matchAll(/#\[path = "([^"/]+)\.rs"\]/g)].map((match) => match[1])
   ));
   writeFileSync(`${destination}/${item.name}.json`, `${JSON.stringify({
     preview: preview.replace(/^    /gm, ""),

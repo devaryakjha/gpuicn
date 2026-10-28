@@ -1,7 +1,7 @@
 # Input Group parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/input_group/input_group.rs`, using GPUI Kit 0.6.4 editing states through
+`crates/ui/registry/input_group/input_group.rs`, using GPUI Kit 0.6.4 editing states through
 gpuicn's `Input` and `Textarea`.
 
 Input Group provides one shared frame for a single-line input or textarea, with

@@ -1,6 +1,7 @@
 //! Nova modal surfaces using Kit's dialog host and caller-owned handles.
 #[path = "modal_focus.rs"]
-pub(crate) mod modal_focus;
+#[doc(hidden)]
+pub mod modal_focus;
 use super::{
     button::{Button, ButtonSize, ButtonVariant},
     theme::UiTheme,
@@ -14,7 +15,8 @@ use gpui_kit::{
 };
 
 #[derive(Clone, Copy)]
-pub(crate) enum DialogControlAction {
+#[doc(hidden)]
+pub enum DialogControlAction {
     Cancel,
     Confirm,
 }
@@ -29,7 +31,8 @@ pub struct DialogControl {
 }
 
 impl DialogControl {
-    pub(crate) fn new(
+    #[doc(hidden)]
+    pub fn new(
         id: impl Into<ElementId>,
         action: DialogControlAction,
         anchor_key: &'static str,
@@ -151,7 +154,8 @@ pub fn dialog(
         .on_ok(|_, _, _| false)
 }
 /// Keeps a modal's full content reachable even in a short window.
-pub(crate) fn modal_viewport(
+#[doc(hidden)]
+pub fn modal_viewport(
     id: impl Into<ElementId>,
     popup: impl IntoElement,
     window: &Window,

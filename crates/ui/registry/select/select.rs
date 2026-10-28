@@ -48,7 +48,8 @@ pub enum SelectEvent {
     Change(Option<SharedString>),
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Mode {
+#[doc(hidden)]
+pub enum Mode {
     Select,
     Combobox,
     Autocomplete,
@@ -585,7 +586,8 @@ impl Render for SelectState {
 /// A single-choice popup backed by retained selector state.
 pub struct Select {
     state: Entity<SelectState>,
-    pub(crate) mode: Mode,
+    #[doc(hidden)]
+    pub mode: Mode,
     label: SharedString,
     placeholder: SharedString,
     disabled: bool,

@@ -195,7 +195,8 @@ impl MenuState {
         }
         cx.notify();
     }
-    pub(crate) fn submenu_key(&self, right: bool) -> bool {
+    #[doc(hidden)]
+    pub fn submenu_key(&self, right: bool) -> bool {
         if !right {
             return !self.path.is_empty();
         }

@@ -14,7 +14,8 @@ pub struct Menubar {
     label: SharedString,
     items: Vec<(Entity<MenuState>, SharedString)>,
     style: StyleRefinement,
-    pub(crate) role: Role,
+    #[doc(hidden)]
+    pub role: Role,
 }
 impl Menubar {
     /// Creates a `Menubar` with a stable caller-owned ID.

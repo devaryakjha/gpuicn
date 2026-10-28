@@ -39,17 +39,17 @@ jobs:
             [[ "$item" == */registry.json ]] || items+=("$item")
           done
           npx -y shadcn@4.19.0 add "${items[@]}" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
-          for source in registry/*/*.rs; do
+          for source in crates/ui/registry/*/*.rs; do
             cmp "$source" "fixtures/registry-install/src/ui/$(basename "$source")"
           done
           perl -0pi -e 's/Nova modal surfaces[^\n]+/Changed by the overwrite gate/' fixtures/registry-install/src/ui/dialog.rs
           npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
-          cmp registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
+          cmp crates/ui/registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
       - run: cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
 
   linux:
-    # Linux coverage on the minimum supported Rust, plus a fresh-app `gpuicn init`
-    # the way a new user runs it.
+    # Linux coverage on the minimum supported Rust, plus fresh apps in both modes
+    # the way a new user sets them up.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,12 +61,24 @@ jobs:
           sudo apt-get install -y libfontconfig1-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
       - run: cargo test -p gpuicn-cli --locked
       - run: cargo test -p gpuicn --locked
+      # Crate mode depends on the published crate, so its component source must package.
+      - run: cargo package -p gpuicn --list --locked
       - name: Set up and check a new app
         run: |
           cargo build -p gpuicn-cli --locked
           target/debug/gpuicn --registry "$PWD/site/pages/r" new "$RUNNER_TEMP/my-app"
           target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" add alert_dialog select
-          cargo check --manifest-path "$RUNNER_TEMP/my-app/Cargo.toml" --features gpui_platform/runtime_shaders
+          # Both throwaway apps share one GPUI build.
+          CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/my-app/Cargo.toml" --features gpui_platform/runtime_shaders
+      - name: Set up a crate-mode app and eject every component
+        run: |
+          # An ejected file reaches the crate through `super::`, so nothing it names may be crate-private.
+          if grep -rnE "pub\((crate|super)\)" crates/ui/registry; then exit 1; fi
+          target/debug/gpuicn --registry "$PWD/site/pages/r" new --crate "$RUNNER_TEMP/crate-app"
+          cargo add --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" gpuicn --path "$PWD/crates/ui"
+          CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" --features gpui_platform/runtime_shaders
+          target/debug/gpuicn --config "$RUNNER_TEMP/crate-app/gpuicn.toml" eject --all
+          CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" --features gpui_platform/runtime_shaders
 
   wasm:
     runs-on: ubuntu-latest

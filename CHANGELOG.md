@@ -14,6 +14,11 @@ Notable changes to gpuicn. Detailed notes for each beta are in
   window over the `cargo new` default. `--config-only` keeps the old behavior.
 - `gpuicn status`, `gpuicn diff` and `gpuicn remove` for managing installed source.
 - A `cargo gpuicn` alias is installed with the CLI.
+- Crate mode: `gpuicn new --crate` and `gpuicn init --crate` depend on the
+  `gpuicn` crate instead of copying source. `gpuicn eject <component>` copies
+  one component into `src/ui` to edit, and `gpuicn remove` hands it back to the
+  crate. `ui::<component>` paths work the same in both modes.
+- The `gpuicn` crate is ready for crates.io, and gpui-icons is pinned to 0.4.2.
 - `UiTheme::from_shadcn_css` imports shadcn and tweakcn theme CSS.
 - Component names accept `alert_dialog` or `alert-dialog`. Unknown names
   suggest close matches, and `add` warns about missing Cargo dependencies.
@@ -35,6 +40,9 @@ Run `gpuicn diff` to see the new source, then update call sites:
 
 ### Changed
 
+- Component source moved from `registry/` to `crates/ui/registry/` so the
+  `gpuicn` crate can be packaged. Crate-internal helpers are now public but
+  hidden from the docs, because ejected components reach them from outside.
 - The CLI shares the gpuicn version, and its default registry is the snapshot
   for that release tag rather than the live site.
 - Minimum supported Rust is now 1.97 (was 1.97.1), with gpui-icons pinned to a

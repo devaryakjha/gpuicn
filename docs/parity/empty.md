@@ -1,7 +1,7 @@
 # Empty parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/empty/empty.rs`, using GPUI Kit 0.6.4.
+`crates/ui/registry/empty/empty.rs`, using GPUI Kit 0.6.4.
 
 `Empty` provides the Nova empty-state layout. `EmptyHeader` keeps media, title,
 and description in a stable order; `EmptyContent` holds application-owned

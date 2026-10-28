@@ -50,6 +50,21 @@ Button::new("save")
     .on_click(cx.listener(|this, _, _, cx| this.save(cx)))
 ```
 
+### Or use it as a crate
+
+If you'd rather not keep the source in your app, use crate mode. Every component
+comes from the `gpuicn` crate, and you copy out only the ones you want to change:
+
+```sh
+gpuicn new my-app --crate   # or `gpuicn init --crate` in an existing app
+gpuicn eject button         # src/ui/button.rs is now yours; ui::button uses it
+gpuicn remove button        # back to the crate's Button
+```
+
+Your code reads `ui::button::Button` either way, so moving a component between
+the crate and your app never changes a call site. The theme always stays in the
+crate, so every component reads the same theme.
+
 <p align="center">
   <img src="docs/images/catalog-components.png" alt="gpuicn component catalog" width="100%">
 </p>
@@ -64,6 +79,7 @@ Button::new("save")
 | `gpuicn diff [name…]` | The exact change an update would make |
 | `gpuicn add <name> --overwrite` | Replace your copy with the registry version |
 | `gpuicn remove <name>…` | Delete a component, keeping files others still use |
+| `gpuicn eject <name>…` | Crate mode: copy a component out of the crate to edit it |
 
 ## Learn more
 

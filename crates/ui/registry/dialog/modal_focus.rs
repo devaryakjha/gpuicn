@@ -14,7 +14,8 @@ struct FocusState {
     popup: FocusHandle,
     return_to: Option<FocusHandle>,
 }
-pub(crate) fn prepare(id: ElementId, open: bool, window: &mut Window, cx: &mut App) -> FocusHandle {
+#[doc(hidden)]
+pub fn prepare(id: ElementId, open: bool, window: &mut Window, cx: &mut App) -> FocusHandle {
     let state = window.use_keyed_state((id, "modal-focus"), cx, |_, cx| FocusState {
         open: false,
         popup: cx.focus_handle(),
@@ -38,14 +39,16 @@ pub(crate) fn prepare(id: ElementId, open: bool, window: &mut Window, cx: &mut A
 }
 
 #[derive(Clone)]
-pub(crate) struct ModalFocus {
+#[doc(hidden)]
+pub struct ModalFocus {
     id: ElementId,
     enabled: Rc<Cell<bool>>,
     handles: Rc<RefCell<[Option<FocusHandle>; 2]>>,
 }
 
 impl ModalFocus {
-    pub(crate) fn new(id: ElementId) -> Self {
+    #[doc(hidden)]
+    pub fn new(id: ElementId) -> Self {
         Self {
             id,
             enabled: Rc::default(),
@@ -53,14 +56,16 @@ impl ModalFocus {
         }
     }
 
-    pub(crate) fn boundary(&self, end: bool) -> impl IntoElement {
+    #[doc(hidden)]
+    pub fn boundary(&self, end: bool) -> impl IntoElement {
         Boundary {
             scope: self.clone(),
             end,
         }
     }
 
-    pub(crate) fn trap(&self, base: Div, enabled: bool) -> Div {
+    #[doc(hidden)]
+    pub fn trap(&self, base: Div, enabled: bool) -> Div {
         self.enabled.set(enabled);
         if !enabled {
             return base;
