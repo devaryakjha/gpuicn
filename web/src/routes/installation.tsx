@@ -12,7 +12,7 @@ export const Route = createFileRoute("/installation")({
   component: InstallationPage,
 })
 
-const release = "v0.5.0-beta.5"
+const release = "v0.5.0"
 const releaseSource = `https://raw.githubusercontent.com/devaryakjha/gpuicn/${release}`
 const registry = `${releaseSource}/site/pages/r`
 
@@ -32,8 +32,8 @@ function InstallationPage() {
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
             Use Rust 1.97.1 or newer and the native build tools for your
-            platform. This release supports GPUI Kit 0.6.4 on its pinned
-            gpui-pre 0.3.5 runtime. Import GPUI types through gpui_kit so your
+            platform. This release supports GPUI Kit 0.8.1 on its pinned
+            gpui-pre 0.3.10 runtime. Import GPUI types through gpui_kit so your
             app and the components use the same types. Apps on another GPUI
             revision must migrate to this runtime before installing the
             components.
@@ -58,7 +58,7 @@ function InstallationPage() {
             2. Configure the source installer
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
-            Install the native CLI for the current published beta from
+            Install the native CLI for the current published release from
             crates.io. No Node.js or gpuicn checkout is required.
           </p>
           <CodeBlock
@@ -82,7 +82,7 @@ function InstallationPage() {
             value={`version = 1\nregistry = "${registry}"\noutput = "src/ui"`}
           />
           <p className="mt-4 text-sm leading-6 text-muted-foreground">
-            {release} is the current published beta. Fixes made after that tag
+            {release} is the current published release. Fixes made after that tag
             are not included in this snapshot.
           </p>
         </section>

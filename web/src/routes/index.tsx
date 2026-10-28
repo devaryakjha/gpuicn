@@ -16,7 +16,7 @@ const featured = ["button", "input", "slider", "checkbox"].map((slug) =>
 
 function LandingPage() {
   React.useEffect(() => {
-    document.title = "gpuicn — Native GPUI components · Beta"
+    document.title = "gpuicn — Native GPUI components"
   }, [])
 
   return (
@@ -28,7 +28,7 @@ function LandingPage() {
           className="mb-7 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           <span className="rounded-md border px-1.5 py-0.5 text-[10px] font-medium tracking-wide uppercase">
-            Beta
+            Experimental
           </span>
           A growing library for GPUI
           <ArrowRightIcon className="size-3.5" />

@@ -3185,7 +3185,10 @@ mod audit_tests {
     #[test]
     fn list_context_action_preserves_range_selection() {
         use gpui_kit::{Modifiers, MouseButton, VisualTestContext, point};
-        let mut cx = TestAppContext::single();
+        // Declared first so it is dropped after `cx`: GPUI Kit 0.8 deadlocks when
+        // an app is dropped after its test scheduler.
+        let dispatcher = gpui_kit::TestDispatcher::new(0);
+        let mut cx = TestAppContext::build(dispatcher.clone(), None);
         cx.update(|cx| {
             gpuicn::init(cx);
             UiTheme::set(cx, UiTheme::neutral_light());
@@ -3239,7 +3242,10 @@ mod audit_tests {
             ("mail", point(px(110.), px(66.))),
             ("docs", point(px(90.), px(70.))),
         ] {
-            let mut cx = TestAppContext::single();
+            // Declared first so it is dropped after `cx`: GPUI Kit 0.8 deadlocks when
+            // an app is dropped after its test scheduler.
+            let dispatcher = gpui_kit::TestDispatcher::new(0);
+            let mut cx = TestAppContext::build(dispatcher.clone(), None);
             cx.update(|cx| {
                 gpuicn::init(cx);
                 UiTheme::set(cx, UiTheme::neutral_light());
@@ -3274,7 +3280,10 @@ mod audit_tests {
     #[test]
     fn switch_control_and_label_each_toggle_once() {
         use gpui_kit::{Modifiers, VisualTestContext, point};
-        let mut cx = TestAppContext::single();
+        // Declared first so it is dropped after `cx`: GPUI Kit 0.8 deadlocks when
+        // an app is dropped after its test scheduler.
+        let dispatcher = gpui_kit::TestDispatcher::new(0);
+        let mut cx = TestAppContext::build(dispatcher.clone(), None);
         cx.update(|cx| {
             gpuicn::init(cx);
             UiTheme::set(cx, UiTheme::neutral_light());
@@ -3309,7 +3318,10 @@ mod audit_tests {
         for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark(), custom] {
             for width in [360., 960.] {
                 for example in ["workspace", "docs", "mail", "floating", "mobile", "loading"] {
-                    let mut cx = TestAppContext::single();
+                    // Declared first so it is dropped after `cx`: GPUI Kit 0.8 deadlocks when
+                    // an app is dropped after its test scheduler.
+                    let dispatcher = gpui_kit::TestDispatcher::new(0);
+                    let mut cx = TestAppContext::build(dispatcher.clone(), None);
                     cx.update(|cx| {
                         gpuicn::init(cx);
                         UiTheme::set(cx, theme.clone());
@@ -3394,7 +3406,10 @@ mod audit_tests {
         for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark(), custom] {
             for active in [false, true] {
                 for name in demos {
-                    let mut cx = TestAppContext::single();
+                    // Declared first so it is dropped after `cx`: GPUI Kit 0.8 deadlocks when
+                    // an app is dropped after its test scheduler.
+                    let dispatcher = gpui_kit::TestDispatcher::new(0);
+                    let mut cx = TestAppContext::build(dispatcher.clone(), None);
                     cx.update(|cx| {
                         gpuicn::init(cx);
                         UiTheme::set(cx, theme.clone());

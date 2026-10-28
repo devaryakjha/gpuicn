@@ -1,8 +1,24 @@
 # Changelog
 
-Notable changes to gpuicn. Detailed notes for each beta are in
+Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
+
+## 0.5.0
+
+[Notes](docs/releases/v0.5.0.md)
+
+The first release without a beta suffix. gpuicn is still experimental, and
+APIs can change between minor versions.
+
+### Changed
+
+- GPUI Kit 0.8.1 on its pinned `gpui-pre` 0.3.10 runtime (was 0.6.4 on 0.3.5).
+  Update `gpui-kit`, `gpui_platform` and `gpui-icons` together; `gpuicn init`
+  writes the new pins.
+- gpui-icons 0.5.0 with Lucide 1.63.0: 1,924 icons, up from 1,818. Icons
+  Lucide renamed, such as `LucideIcon::Music`, still compile.
+- The WASM build uses wasm-bindgen 0.2.127.
 
 ## 0.5.0-beta.5
 

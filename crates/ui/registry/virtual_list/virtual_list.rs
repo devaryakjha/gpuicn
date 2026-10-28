@@ -891,7 +891,10 @@ mod tests {
     #[test]
     fn large_list_virtualizes_reveals_and_handles_real_keyboard_and_pointer_input() {
         {
-            let mut cx = TestAppContext::single();
+            // Declared first so it is dropped after `cx`: GPUI Kit 0.8 deadlocks when
+            // an app is dropped after its test scheduler.
+            let dispatcher = gpui_kit::TestDispatcher::new(0);
+            let mut cx = TestAppContext::build(dispatcher.clone(), None);
             cx.update(|cx| UiTheme::set(cx, UiTheme::neutral_light()));
             let state = VirtualListState::new(
                 (0..100_000u64)
