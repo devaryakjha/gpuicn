@@ -1625,7 +1625,7 @@ mod tests {
         let again = merge_cargo_dependencies(&merged.text, DEPENDENCIES)?;
         assert!(again.added.is_empty() && again.kept.is_empty());
 
-        let custom = "[dependencies]\nweb-time = \"1.1.0\"\n\n[dependencies.gpui-kit]\nversion = \"=0.6.4\"\ndefault-features = false\nfeatures = [\"component\"]\n";
+        let custom = "[dependencies]\nweb-time = \"1.1.0\"\n\n[dependencies.gpui-kit]\nversion = \"=0.8.1\"\ndefault-features = false\nfeatures = [\"component\"]\n";
         let merged = merge_cargo_dependencies(custom, DEPENDENCIES)?;
         assert_eq!(merged.kept, [("dependencies".into(), "web-time".into())]);
         assert!(!merged.added.contains(&"gpui-kit".to_owned()));

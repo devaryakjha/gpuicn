@@ -1760,7 +1760,10 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("workspace.json");
         let (store, data, error) = Store::open(path.clone());
-        let mut cx = TestAppContext::single();
+        // Declared first so it is dropped after `cx`: GPUI Kit 0.8 deadlocks when
+        // an app is dropped after its test scheduler.
+        let dispatcher = gpui_kit::TestDispatcher::new(0);
+        let mut cx = TestAppContext::build(dispatcher.clone(), None);
         cx.update(|cx| {
             gpuicn::init(cx);
             UiTheme::set(cx, workspace_theme(ThemeMode::Light));
@@ -1874,7 +1877,7 @@ mod tests {
             .unwrap();
         visual.update(|window, cx| window.draw(cx).clear(cx));
         // Opening the title editor must focus it without a second click.
-        visual.simulate_keystrokes("cmd-a");
+        visual.simulate_keystrokes("secondary-a");
         visual.simulate_input("Edited task");
         cx.run_until_parked();
         window

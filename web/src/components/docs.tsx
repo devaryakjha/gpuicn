@@ -26,10 +26,10 @@ export function BetaNotice() {
   return (
     <aside
       id="beta"
-      aria-label="Beta status"
+      aria-label="Project status"
       className="mt-6 scroll-mt-20 rounded-lg border border-dashed px-4 py-3 text-sm leading-6 text-muted-foreground"
     >
-      <strong className="font-medium text-foreground">In beta.</strong> APIs and
+      <strong className="font-medium text-foreground">Experimental.</strong> APIs and
       styling may change as the library develops. Pin dependency revisions and
       review updates before replacing your installed source.{" "}
       <a

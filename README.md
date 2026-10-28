@@ -19,13 +19,13 @@ gpuicn adds the Nova styling, a themeable token system and larger desktop
 components.
 
 > [!WARNING]
-> gpuicn is in beta. APIs and styling can change between releases; `gpuicn diff`
+> gpuicn is experimental. APIs and styling can change between releases; `gpuicn diff`
 > shows exactly what an update would change in your copy.
 
 ## Quick start
 
 ```sh
-cargo install gpuicn-cli --version 0.5.0-beta.5 --locked
+cargo install gpuicn-cli --version 0.5.0 --locked
 gpuicn new my-app  # cargo new + pinned deps, Geist fonts, theme, Button and a starter window
 cd my-app && cargo run
 gpuicn add sidebar dialog
@@ -86,8 +86,8 @@ crate, so every component reads the same theme.
 
 ## Requirements and platform scope
 
-Rust 1.97 or newer. gpuicn v0.5.0-beta.5 targets GPUI Kit 0.6.4 and its pinned
-`gpui-pre` 0.3.5 runtime; import GPUI types through `gpui_kit`. Apps on another
+Rust 1.98 or newer. gpuicn v0.5.0 targets GPUI Kit 0.8.1 and its pinned
+`gpui-pre` 0.3.10 runtime; import GPUI types through `gpui_kit`. Apps on another
 GPUI revision must migrate first. macOS native builds need Xcode's Metal toolchain;
 Linux needs the usual GPUI system libraries (fontconfig, xkbcommon, Wayland/X11).
 

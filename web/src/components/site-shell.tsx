@@ -91,10 +91,10 @@ function SiteHeader({ onSearch }: { onSearch: () => void }) {
         <Link
           to="/installation"
           hash="beta"
-          aria-label="Beta: what to expect"
+          aria-label="Experimental: what to expect"
           className="shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
         >
-          Beta
+          Experimental
         </Link>
         <nav
           className="hidden items-center gap-1 md:flex"

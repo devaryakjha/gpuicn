@@ -20,8 +20,8 @@ requests are welcome; say which checks you ran.
 
 ## Setup
 
-Use Rust 1.97.1 for development (CI's toolchain); the minimum supported Rust is
-1.97. On macOS, install Xcode's Metal toolchain. On Linux, install GPUI's system
+Use Rust 1.99.1 for development (CI's toolchain); the minimum supported Rust is
+1.98, the first release that builds gpui-pre 0.3.10 on macOS. On macOS, install Xcode's Metal toolchain. On Linux, install GPUI's system
 libraries, for example on Ubuntu:
 
 ```sh

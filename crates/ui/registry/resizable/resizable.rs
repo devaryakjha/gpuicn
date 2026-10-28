@@ -431,7 +431,10 @@ mod interaction_tests {
     }
     #[test]
     fn pointer_and_keyboard_share_bounds_and_release_ends_drag() {
-        let mut cx = TestAppContext::single();
+        // Declared first so it is dropped after `cx`: GPUI Kit 0.8 deadlocks when
+        // an app is dropped after its test scheduler.
+        let dispatcher = gpui_kit::TestDispatcher::new(0);
+        let mut cx = TestAppContext::build(dispatcher.clone(), None);
         cx.update(|cx| UiTheme::set(cx, UiTheme::neutral_light()));
         let window = cx.add_window(|_, _| View {
             size: px(200.),

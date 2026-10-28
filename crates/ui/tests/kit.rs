@@ -727,7 +727,7 @@ fn disclosures_reveal_retain_exiting_content_and_remove_it(cx: &mut TestAppConte
 
 #[gpui_kit::test]
 fn long_dialog_content_can_scroll_to_the_footer(cx: &mut TestAppContext) {
-    use gpui_kit::{ScrollDelta, ScrollWheelEvent, point};
+    use gpui_kit::{ScrollDelta, ScrollEvent, point};
     use gpuicn::dialog::*;
     struct LongDialog;
     impl Render for LongDialog {
@@ -749,7 +749,7 @@ fn long_dialog_content_can_scroll_to_the_footer(cx: &mut TestAppContext) {
     cx.update(|window, cx| window.draw(cx).clear(cx));
     let popup = cx.debug_bounds("long-popup").unwrap();
     assert!(cx.debug_bounds("long-footer").unwrap().bottom() > popup.bottom());
-    cx.simulate_event(ScrollWheelEvent {
+    cx.simulate_event(ScrollEvent {
         position: popup.center(),
         delta: ScrollDelta::Pixels(point(px(0.), px(-1000.))),
         ..Default::default()
