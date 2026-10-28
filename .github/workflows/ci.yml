@@ -27,7 +27,7 @@ jobs:
         run: |
           cargo run -p gpuicn-cli --locked -- build
           node scripts/sync-catalog.mjs
-          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
+          GPUICN_RELEASE="$PWD" cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
           cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml add --all
           cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
           cargo test --manifest-path fixtures/registry-install/Cargo.toml --bin registry-install-fixture --locked --features gpui_platform/runtime_shaders
