@@ -5,8 +5,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Open-code shadcn visual ports for GPUI."
-publish = false
+description = "shadcn components for GPUI, as a crate or as source you own."
+readme = "README.md"
+homepage = "https://ui.imajha.com/"
+keywords = ["gpui", "shadcn", "ui", "components"]
+categories = ["gui"]
 
 [features]
 native-fixture = ["dep:gpui_platform"]

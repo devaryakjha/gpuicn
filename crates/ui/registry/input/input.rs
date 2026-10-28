@@ -90,16 +90,20 @@ impl Textarea {
         self.paste_handler = Some(Rc::new(handler));
         self
     }
-    pub(crate) fn is_disabled(&self) -> bool {
+    #[doc(hidden)]
+    pub fn is_disabled(&self) -> bool {
         self.disabled
     }
-    pub(crate) fn is_read_only(&self) -> bool {
+    #[doc(hidden)]
+    pub fn is_read_only(&self) -> bool {
         self.read_only
     }
-    pub(crate) fn is_invalid(&self) -> bool {
+    #[doc(hidden)]
+    pub fn is_invalid(&self) -> bool {
         self.invalid
     }
-    pub(crate) fn field_focus_handle(&self, cx: &App) -> FocusHandle {
+    #[doc(hidden)]
+    pub fn field_focus_handle(&self, cx: &App) -> FocusHandle {
         self.state.read(cx).focus_handle(cx)
     }
 }
@@ -159,16 +163,20 @@ impl Input {
         self.paste_handler = Some(Rc::new(handler));
         self
     }
-    pub(crate) fn is_disabled(&self) -> bool {
+    #[doc(hidden)]
+    pub fn is_disabled(&self) -> bool {
         self.disabled
     }
-    pub(crate) fn is_read_only(&self) -> bool {
+    #[doc(hidden)]
+    pub fn is_read_only(&self) -> bool {
         self.read_only
     }
-    pub(crate) fn is_invalid(&self) -> bool {
+    #[doc(hidden)]
+    pub fn is_invalid(&self) -> bool {
         self.invalid
     }
-    pub(crate) fn field_focus_handle(&self, cx: &App) -> FocusHandle {
+    #[doc(hidden)]
+    pub fn field_focus_handle(&self, cx: &App) -> FocusHandle {
         self.state.read(cx).focus_handle(cx)
     }
 }

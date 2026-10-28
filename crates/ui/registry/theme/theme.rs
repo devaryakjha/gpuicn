@@ -305,7 +305,8 @@ pub fn transition_value(
 }
 
 /// Shares the theme's disclosure and notification timing with Kit's presence lifecycle.
-pub(crate) fn presence(
+#[doc(hidden)]
+pub fn presence(
     id: impl Into<ElementId>,
     present: bool,
     window: &mut Window,
@@ -857,7 +858,8 @@ fn neutral_dark_colors() -> UiColors {
     }
 }
 
-pub(super) fn neutral(l: f64) -> Rgba {
+#[doc(hidden)]
+pub fn neutral(l: f64) -> Rgba {
     neutral_alpha(l, 1.0)
 }
 
@@ -1057,18 +1059,21 @@ mod tests {
 }
 
 // Refine the actual control after default styling; no extra layout or focus node.
-pub(crate) fn apply_style<T: Styled>(mut element: T, style: &gpui_kit::StyleRefinement) -> T {
+#[doc(hidden)]
+pub fn apply_style<T: Styled>(mut element: T, style: &gpui_kit::StyleRefinement) -> T {
     use gpui_kit::Refineable as _;
     element.style().refine(style);
     element
 }
 
 #[derive(gpui_kit::IntoElement)]
-pub(crate) struct DisclosureIcon {
+#[doc(hidden)]
+pub struct DisclosureIcon {
     icon: gpui_kit::Svg,
     open: bool,
 }
-pub(crate) fn disclosure_icon(icon: gpui_kit::Svg, open: bool) -> DisclosureIcon {
+#[doc(hidden)]
+pub fn disclosure_icon(icon: gpui_kit::Svg, open: bool) -> DisclosureIcon {
     DisclosureIcon { icon, open }
 }
 impl gpui_kit::RenderOnce for DisclosureIcon {
@@ -1148,7 +1153,8 @@ mod motion_tests {
 }
 
 /// Shared focus traversal for the tab, radio and toggle collections.
-pub(crate) struct RovingFocus {
+#[doc(hidden)]
+pub struct RovingFocus {
     pub handles: Vec<Option<gpui_kit::FocusHandle>>,
     active: gpui_kit::Entity<Option<gpui_kit::FocusHandle>>,
 }

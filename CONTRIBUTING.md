@@ -8,9 +8,9 @@ requests are welcome; say which checks you ran.
 
 | Path | What lives there |
 | --- | --- |
-| `registry/<module>/` | Component source. This is what `gpuicn add` copies into apps. |
+| `crates/ui/registry/<module>/` | Component source. `gpuicn add` copies it into apps, and the `gpuicn` crate compiles it for crate mode. Mark cross-module helpers `#[doc(hidden)] pub`, never `pub(crate)`: an ejected component reaches them from outside the crate. |
 | `registry.toml` | Component titles, descriptions and source dependencies. |
-| `crates/ui` | The `gpuicn` crate: compiles the registry via `#[path]` modules, plus tests and examples. |
+| `crates/ui` | The `gpuicn` crate: compiles the registry via `#[path]` modules, plus tests and examples. It is published for crate mode. |
 | `crates/cli` | The `gpuicn` CLI (`init`, `new`, `add`, `status`, `diff`, `remove`, `build`). |
 | `site/` | The GPUI/WASM previews and the gpuicn Workspace example app. |
 | `web/` | The catalog website (TanStack, Bun). |
@@ -52,7 +52,7 @@ node scripts/sync-catalog.mjs               # checks previews, usage, API docs a
 git diff --exit-code -- registry.json site/pages/r
 ```
 
-Any change under `registry/` changes the generated registry; commit the
+Any change under `crates/ui/registry/` changes the generated registry; commit the
 rebuilt `registry.json` and `site/pages/r`. CI also installs every component
 into `fixtures/registry-install` with the native CLI and the stock shadcn CLI,
 compares the copies byte for byte, and builds the WASM catalog.
@@ -61,7 +61,7 @@ compares the copies byte for byte, and builds the WASM catalog.
 
 `scripts/sync-catalog.mjs` fails until every piece below exists.
 
-1. Write `registry/<module>/<module>.rs`. Document every `pub fn`; the catalog
+1. Write `crates/ui/registry/<module>/<module>.rs`. Document every `pub fn`; the catalog
    builds its API reference from these comments. Read colors, spacing, radius
    and motion from `UiTheme`, never hard-coded values, and keep application
    data, routing and persistence caller-owned (see [CONTEXT.md](CONTEXT.md)).

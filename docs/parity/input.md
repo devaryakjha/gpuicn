@@ -1,7 +1,7 @@
 # Input parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/input/input.rs`, using GPUI Kit 0.6.4.
+`crates/ui/registry/input/input.rs`, using GPUI Kit 0.6.4.
 
 Input and Textarea take retained Kit editing states. Kit owns editing, selection,
 history, clipboard and IME handling; gpuicn applies editor colors and the Nova

@@ -24,6 +24,15 @@ const MAX_FONT_BYTES: u64 = 2 * 1024 * 1024;
 const DEPENDENCIES: &str = include_str!("../templates/dependencies.toml");
 /// The installation starter; kept equal to the install fixture by tests.
 const STARTER: &str = include_str!("../templates/main.rs");
+/// Component source inside the repository; the published `gpuicn` crate compiles it too.
+const REGISTRY_SOURCE: &str = "crates/ui/registry";
+/// `src/ui/mod.rs` for crate mode: every component comes from the `gpuicn` crate, and an
+/// ejected module declared below the re-export replaces the crate's copy.
+const CRATE_MOD: &str = "\
+//! gpuicn components, re-exported from the `gpuicn` crate.
+//! `gpuicn eject <component>` copies one here to edit; its `pub mod` replaces the crate's.
+pub use gpuicn::*;
+";
 const CARGO_NEW_MAIN: &str = "fn main() {\n    println!(\"Hello, world!\");\n}\n";
 /// Geist files and their SHA-256 from release-pins.toml.
 const FONTS: [(&str, &str); 3] = [
@@ -71,6 +80,10 @@ enum Command {
         /// Only create gpuicn.toml; leave Cargo.toml, fonts, and src/main.rs alone.
         #[arg(long)]
         config_only: bool,
+        /// Depend on the `gpuicn` crate instead of copying source; `eject` copies a
+        /// component when you want to edit it.
+        #[arg(long = "crate")]
+        crate_mode: bool,
     },
     /// Create a new Cargo app and set it up like `init`, ready for `cargo run`.
     New {
@@ -78,6 +91,9 @@ enum Command {
         path: PathBuf,
         #[arg(long, default_value = "src/ui")]
         output: PathBuf,
+        /// Depend on the `gpuicn` crate instead of copying source.
+        #[arg(long = "crate")]
+        crate_mode: bool,
     },
     /// List the components available in the configured registry.
     List,
@@ -111,7 +127,18 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Build an open, shadcn-compatible source registry from registry.toml and registry/.
+    /// Copy components out of the `gpuicn` crate so you can edit them (crate mode).
+    /// `remove` switches a component back to the crate.
+    Eject {
+        components: Vec<String>,
+        /// Eject every component except the shared theme.
+        #[arg(long)]
+        all: bool,
+        /// Report changes without writing files.
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Build an open, shadcn-compatible source registry from registry.toml and crates/ui/registry/.
     Build {
         #[arg(long, default_value = ".")]
         source: PathBuf,
@@ -126,6 +153,23 @@ struct Config {
     version: u32,
     registry: String,
     output: PathBuf,
+    #[serde(default, skip_serializing_if = "Mode::is_source")]
+    mode: Mode,
+}
+
+/// How an app gets components: copied source, or the `gpuicn` crate plus ejected copies.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum Mode {
+    #[default]
+    Source,
+    Crate,
+}
+
+impl Mode {
+    fn is_source(&self) -> bool {
+        *self == Mode::Source
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -202,8 +246,13 @@ fn run(cli: Cli) -> Result<()> {
         Command::Init {
             output,
             config_only,
-        } => init(&cli.config, cli.registry, output, config_only)?,
-        Command::New { path, output } => {
+            crate_mode,
+        } => init(&cli.config, cli.registry, output, config_only, crate_mode)?,
+        Command::New {
+            path,
+            output,
+            crate_mode,
+        } => {
             ensure!(
                 fs::symlink_metadata(&path).is_err(),
                 "{} already exists",
@@ -216,7 +265,13 @@ fn run(cli: Cli) -> Result<()> {
                 .status()
                 .context("run `cargo new`; is Cargo installed?")?;
             ensure!(status.success(), "`cargo new` failed");
-            init(&path.join("gpuicn.toml"), cli.registry, output, false)?;
+            init(
+                &path.join("gpuicn.toml"),
+                cli.registry,
+                output,
+                false,
+                crate_mode,
+            )?;
             println!("Next: cd {} && cargo run", path.display());
         }
         Command::Build { source, output } => build(&source, &output)?,
@@ -224,33 +279,56 @@ fn run(cli: Cli) -> Result<()> {
             let config = read_config(&cli.config, cli.registry)?;
             let root = config_root(&cli.config)?;
             let source = Source::new(&config.registry, &root)?;
+            let own = config.mode == Mode::Crate;
+            let output = root.join(&config.output);
             match command {
                 Command::List => {
                     for item in source.index()?.items {
                         println!("{}\t{}", item.name, item.description);
                     }
                 }
-                Command::Status => status(&source, &root.join(config.output))?,
-                Command::Diff { components } => {
-                    diff(&source, &root.join(config.output), &components)?
-                }
+                Command::Status => status(&source, &output, own)?,
+                Command::Diff { components } => diff(&source, &output, &components, own)?,
                 Command::Remove {
                     components,
                     force,
                     dry_run,
-                } => remove(
-                    &source,
-                    &root.join(config.output),
-                    &components,
-                    force,
+                } => remove(&source, &output, &components, force, dry_run, own)?,
+                Command::Eject {
+                    mut components,
+                    all,
                     dry_run,
-                )?,
+                } => {
+                    ensure!(
+                        !all || components.is_empty(),
+                        "use component names or --all, not both"
+                    );
+                    if all {
+                        components = source
+                            .index()?
+                            .items
+                            .into_iter()
+                            .map(|item| item.name)
+                            .filter(|name| name != "theme")
+                            .collect();
+                    }
+                    ensure!(
+                        own,
+                        "eject is for crate mode (`gpuicn init --crate`); in source mode installed components are already in {}",
+                        output.display()
+                    );
+                    eject(&source, &root, &output, &components, dry_run)?
+                }
                 Command::Add {
                     mut components,
                     all,
                     overwrite,
                     dry_run,
                 } => {
+                    ensure!(
+                        !own,
+                        "this app uses the gpuicn crate, so every component is already available as `ui::<component>`; `gpuicn eject <component>` copies one to edit"
+                    );
                     ensure!(
                         !all || components.is_empty(),
                         "use component names or --all, not both"
@@ -266,9 +344,9 @@ fn run(cli: Cli) -> Result<()> {
                     ensure!(!components.is_empty(), "name a component or use --all");
                     let components: Vec<_> =
                         components.iter().map(|name| normalize(name)).collect();
-                    let files = collect_files(&source, &components)?;
+                    let files = collect_files(&source, &components, false)?;
                     let required = required_dependencies(&files);
-                    install(&root.join(config.output), files, overwrite, dry_run)?;
+                    install(&output, files, overwrite, dry_run)?;
                     if !dry_run {
                         report_missing_dependencies(&root, &required)?;
                     }
@@ -280,12 +358,23 @@ fn run(cli: Cli) -> Result<()> {
     Ok(())
 }
 
-fn init(path: &Path, registry: Option<String>, output: PathBuf, config_only: bool) -> Result<()> {
+fn init(
+    path: &Path,
+    registry: Option<String>,
+    output: PathBuf,
+    config_only: bool,
+    crate_mode: bool,
+) -> Result<()> {
     if current_file(path)?.is_none() {
         let config = Config {
             version: 1,
             registry: registry.clone().unwrap_or_else(default_registry),
             output,
+            mode: if crate_mode {
+                Mode::Crate
+            } else {
+                Mode::Source
+            },
         };
         let text = toml::to_string_pretty(&config)?;
         OpenOptions::new()
@@ -310,6 +399,11 @@ fn init(path: &Path, registry: Option<String>, output: PathBuf, config_only: boo
         return Ok(());
     }
     let config = read_config(path, registry)?;
+    ensure!(
+        !crate_mode || config.mode == Mode::Crate,
+        "{} already uses source mode; set `mode = \"crate\"` in it to switch",
+        path.display()
+    );
     setup(&config_root(path)?, &config)
 }
 
@@ -492,7 +586,13 @@ fn module_name(path: &str) -> Result<String> {
     Ok(name.to_owned())
 }
 
-fn collect_files(source: &Source, components: &[String]) -> Result<BTreeMap<String, String>> {
+/// Source modules for `components`. With `own`, only each component's own modules
+/// (its root and `#[path]` children), as ejected into a crate-mode app.
+fn collect_files(
+    source: &Source,
+    components: &[String],
+    own: bool,
+) -> Result<BTreeMap<String, String>> {
     let mut files = BTreeMap::new();
     for name in components.iter().collect::<BTreeSet<_>>() {
         let bytes = match source.read(name) {
@@ -512,6 +612,7 @@ fn collect_files(source: &Source, components: &[String]) -> Result<BTreeMap<Stri
             !item.files.is_empty() && item.files.len() <= 256,
             "invalid source-file count for {name}"
         );
+        let mut item_files = BTreeMap::new();
         for file in item.files {
             ensure!(
                 file.kind == "registry:file",
@@ -523,6 +624,20 @@ fn collect_files(source: &Source, components: &[String]) -> Result<BTreeMap<Stri
                 .content
                 .context("registry source has no inline content")?;
             syn::parse_file(&content).with_context(|| format!("parse source module {module}"))?;
+            item_files.insert(module, content);
+        }
+        if own {
+            let mut wanted = vec![name.replace('-', "_")];
+            let mut owned = BTreeMap::new();
+            while let Some(module) = wanted.pop() {
+                if let Some(content) = item_files.remove(&module) {
+                    wanted.extend(path_children(&content)?);
+                    owned.insert(module, content);
+                }
+            }
+            item_files = owned;
+        }
+        for (module, content) in item_files {
             // The destination is always derived locally; remote `target` never controls filesystem writes.
             if let Some(previous) = files.insert(module.clone(), content.clone()) {
                 ensure!(
@@ -570,23 +685,31 @@ fn declarations(existing: &str, modules: impl Iterator<Item = String>) -> Result
 fn root_modules(files: &BTreeMap<String, String>) -> Result<BTreeSet<String>> {
     let mut modules: BTreeSet<_> = files.keys().cloned().collect();
     for content in files.values() {
-        for item in syn::parse_file(content)?.items {
-            if let syn::Item::Mod(module) = item {
-                for attribute in module.attrs {
-                    if let syn::Meta::NameValue(meta) = attribute.meta
-                        && meta.path.is_ident("path")
-                        && let syn::Expr::Lit(syn::ExprLit {
-                            lit: syn::Lit::Str(path),
-                            ..
-                        }) = meta.value
-                    {
-                        modules.remove(&module_name(&path.value())?);
-                    }
+        for child in path_children(content)? {
+            modules.remove(&child);
+        }
+    }
+    Ok(modules)
+}
+/// Modules a source file declares with `#[path = "..."]`, which live beside it.
+fn path_children(content: &str) -> Result<Vec<String>> {
+    let mut children = Vec::new();
+    for item in syn::parse_file(content)?.items {
+        if let syn::Item::Mod(module) = item {
+            for attribute in module.attrs {
+                if let syn::Meta::NameValue(meta) = attribute.meta
+                    && meta.path.is_ident("path")
+                    && let syn::Expr::Lit(syn::ExprLit {
+                        lit: syn::Lit::Str(path),
+                        ..
+                    }) = meta.value
+                {
+                    children.push(module_name(&path.value())?);
                 }
             }
         }
     }
-    Ok(modules)
+    Ok(children)
 }
 fn current_file(path: &Path) -> Result<Option<Vec<u8>>> {
     match fs::symlink_metadata(path) {
@@ -663,10 +786,11 @@ fn install(
 
 /// Prepares an app beside gpuicn.toml: Cargo pins, fonts, and a starter window.
 fn setup(root: &Path, config: &Config) -> Result<()> {
+    let template = dependency_template(config.mode)?;
     let manifest_path = root.join("Cargo.toml");
     match current_file(&manifest_path)? {
         Some(bytes) => {
-            let merged = merge_cargo_dependencies(std::str::from_utf8(&bytes)?)?;
+            let merged = merge_cargo_dependencies(std::str::from_utf8(&bytes)?, &template)?;
             for (table, key) in &merged.kept {
                 println!(
                     "Keep {table}.{key} in Cargo.toml (differs from gpuicn v{}; mismatched GPUI pins may not compile)",
@@ -683,7 +807,7 @@ fn setup(root: &Path, config: &Config) -> Result<()> {
             }
         }
         None => println!(
-            "No Cargo.toml beside gpuicn.toml. Run `cargo new my-app` first, or add:\n\n{DEPENDENCIES}"
+            "No Cargo.toml beside gpuicn.toml. Run `cargo new my-app` first, or add:\n\n{template}"
         ),
     }
 
@@ -728,18 +852,38 @@ fn setup(root: &Path, config: &Config) -> Result<()> {
         None => true,
         Some(text) => text == CARGO_NEW_MAIN.as_bytes(),
     };
+    let next = match config.mode {
+        Mode::Source => "`gpuicn add <component>`",
+        Mode::Crate => "use any `ui::<component>`; `gpuicn eject <component>` copies one to edit",
+    };
+    let output = root.join(&config.output);
+    if config.mode == Mode::Crate {
+        let mod_path = output.join("mod.rs");
+        match current_file(&mod_path)? {
+            None => {
+                write_new(&mod_path, CRATE_MOD.as_bytes())?;
+            }
+            Some(text) if !String::from_utf8_lossy(&text).contains("pub use gpuicn::*;") => {
+                println!(
+                    "Keep {} (add `pub use gpuicn::*;` to use the crate's components)",
+                    mod_path.display()
+                );
+            }
+            Some(_) => {}
+        }
+    }
     if starter {
-        let source = Source::new(&config.registry, root)?;
-        let files = collect_files(&source, &["button".into()])?;
-        install(&root.join(&config.output), files, false, false)?;
+        if config.mode == Mode::Source {
+            let source = Source::new(&config.registry, root)?;
+            let files = collect_files(&source, &["button".into()], false)?;
+            install(&output, files, false, false)?;
+        }
         fs::create_dir_all(main_path.parent().context("src directory")?)?;
         fs::write(&main_path, STARTER)?;
         println!("Write {} (starter window)", main_path.display());
-        println!(
-            "\nReady. Run `cargo run`, then `gpuicn add <component>`; `gpuicn list` shows them all."
-        );
+        println!("\nReady. Run `cargo run`, then {next}; `gpuicn list` shows them all.");
     } else if main.as_deref() == Some(STARTER.as_bytes()) {
-        println!("\nReady. Run `cargo run`, then `gpuicn add <component>`.");
+        println!("\nReady. Run `cargo run`, then {next}.");
     } else {
         let text = String::from_utf8_lossy(main.as_deref().unwrap_or_default());
         println!("\nKeep {} (your code).", main_path.display());
@@ -749,7 +893,7 @@ fn setup(root: &Path, config: &Config) -> Result<()> {
         if !text.contains("theme::init") {
             println!("Call `ui::theme::init(cx)` once at application startup.");
         }
-        println!("Then run `gpuicn add button`; `gpuicn list` shows every component.");
+        println!("Then {next}; `gpuicn list` shows every component.");
     }
     Ok(())
 }
@@ -790,9 +934,19 @@ fn dependency_value(item: &toml_edit::Item) -> Option<toml::Value> {
     }
 }
 
-/// Adds this release's pinned dependencies without replacing any the app already declares.
-fn merge_cargo_dependencies(manifest: &str) -> Result<MergedManifest> {
-    let template: toml_edit::DocumentMut = DEPENDENCIES.parse()?;
+/// This release's Cargo pins; crate mode also depends on the `gpuicn` crate itself.
+fn dependency_template(mode: Mode) -> Result<String> {
+    let mut template: toml_edit::DocumentMut = DEPENDENCIES.parse()?;
+    if mode == Mode::Crate {
+        template["dependencies"]["gpuicn"] =
+            toml_edit::value(concat!("=", env!("CARGO_PKG_VERSION")));
+    }
+    Ok(template.to_string())
+}
+
+/// Adds the template's pinned dependencies without replacing any the app already declares.
+fn merge_cargo_dependencies(manifest: &str, template: &str) -> Result<MergedManifest> {
+    let template: toml_edit::DocumentMut = template.parse()?;
     let mut document: toml_edit::DocumentMut = manifest
         .parse()
         .context("parse Cargo.toml; it was not changed")?;
@@ -896,12 +1050,13 @@ fn targets(source: &Source, output: &Path, components: &[String]) -> Result<Vec<
     Ok(components.iter().map(|name| normalize(name)).collect())
 }
 
-fn status(source: &Source, output: &Path) -> Result<()> {
+fn status(source: &Source, output: &Path, own: bool) -> Result<()> {
     let installed = installed_components(source, output)?;
     if installed.is_empty() {
         println!(
-            "No gpuicn components are installed in {}. Run `gpuicn add button`.",
-            output.display()
+            "No gpuicn components are installed in {}. Run `gpuicn {} button`.",
+            output.display(),
+            if own { "eject" } else { "add" }
         );
         return Ok(());
     }
@@ -910,7 +1065,7 @@ fn status(source: &Source, output: &Path) -> Result<()> {
     for name in &installed {
         let mut modified = Vec::new();
         let mut missing = Vec::new();
-        for (module, content) in collect_files(source, std::slice::from_ref(name))? {
+        for (module, content) in collect_files(source, std::slice::from_ref(name), own)? {
             match current_file(&output.join(format!("{module}.rs")))? {
                 Some(local) if local == content.as_bytes() => {}
                 Some(_) => modified.push(format!("{module}.rs")),
@@ -942,10 +1097,10 @@ fn status(source: &Source, output: &Path) -> Result<()> {
     Ok(())
 }
 
-fn diff(source: &Source, output: &Path, components: &[String]) -> Result<()> {
+fn diff(source: &Source, output: &Path, components: &[String], own: bool) -> Result<()> {
     let components = targets(source, output, components)?;
     let mut same = true;
-    for (module, content) in collect_files(source, &components)? {
+    for (module, content) in collect_files(source, &components, own)? {
         let path = output.join(format!("{module}.rs"));
         let local = current_file(&path)?.unwrap_or_default();
         if local == content.as_bytes() {
@@ -977,6 +1132,7 @@ fn remove(
     components: &[String],
     force: bool,
     dry_run: bool,
+    own: bool,
 ) -> Result<()> {
     ensure!(!components.is_empty(), "name a component to remove");
     let components: Vec<_> = components.iter().map(|name| normalize(name)).collect();
@@ -995,11 +1151,11 @@ fn remove(
     let keep = if remaining.is_empty() {
         BTreeMap::new()
     } else {
-        collect_files(source, &remaining)?
+        collect_files(source, &remaining, own)?
     };
     let mut doomed = Vec::new();
     let mut edited = Vec::new();
-    for (module, content) in collect_files(source, &components)? {
+    for (module, content) in collect_files(source, &components, own)? {
         if keep.contains_key(&module) {
             continue;
         }
@@ -1055,6 +1211,54 @@ fn remove(
     Ok(())
 }
 
+/// Copies components' own modules into a crate-mode app; their shared modules keep
+/// coming from the crate through `pub use gpuicn::*`.
+fn eject(
+    source: &Source,
+    root: &Path,
+    output: &Path,
+    components: &[String],
+    dry_run: bool,
+) -> Result<()> {
+    ensure!(!components.is_empty(), "name a component to eject");
+    let components: Vec<_> = components.iter().map(|name| normalize(name)).collect();
+    ensure!(
+        !components.iter().any(|name| name == "theme"),
+        "theme stays in the crate so every component reads the same theme; customize it with `UiTheme::set` or `UiTheme::from_shadcn_css`"
+    );
+    let files = collect_files(source, &components, true)?;
+    let required = required_dependencies(&files);
+    install(output, files, false, dry_run)?;
+    if dry_run {
+        return Ok(());
+    }
+    report_missing_dependencies(root, &required)?;
+    let index = source.index()?;
+    for name in &components {
+        let module = name.replace('-', "_");
+        let path = format!("registry/{module}/{module}.rs");
+        let dependents: Vec<_> = index
+            .items
+            .iter()
+            .filter(|item| {
+                !components.contains(&item.name) && item.files.iter().any(|file| file.path == path)
+            })
+            .map(|item| item.name.as_str())
+            .collect();
+        println!(
+            "\n`ui::{module}` is now {} and yours to edit; `gpuicn remove {name}` goes back to the crate.",
+            output.join(format!("{module}.rs")).display()
+        );
+        if !dependents.is_empty() {
+            println!(
+                "{} still use the crate's {name}; eject them too if you pass them {name} types.",
+                dependents.join(", ")
+            );
+        }
+    }
+    Ok(())
+}
+
 fn dependencies(
     name: &str,
     manifest: &Manifest,
@@ -1087,7 +1291,8 @@ fn json_file(path: &Path, value: &impl Serialize) -> Result<()> {
 }
 fn build(source: &Path, output: &Path) -> Result<()> {
     let manifest: Manifest = toml::from_str(&fs::read_to_string(source.join("registry.toml"))?)?;
-    let available: BTreeSet<_> = fs::read_dir(source.join("registry"))?
+    let components = source.join(REGISTRY_SOURCE);
+    let available: BTreeSet<_> = fs::read_dir(&components)?
         .map(|entry| {
             let entry = entry?;
             Ok(entry
@@ -1122,7 +1327,7 @@ fn build(source: &Path, output: &Path) -> Result<()> {
         let mut files = Vec::new();
         let mut names = BTreeSet::new();
         for dependency in included {
-            let mut paths = fs::read_dir(source.join("registry").join(&dependency))?
+            let mut paths = fs::read_dir(components.join(&dependency))?
                 .map(|entry| entry.map(|entry| entry.path()))
                 .collect::<std::io::Result<Vec<_>>>()?;
             paths.sort();
@@ -1220,7 +1425,7 @@ mod tests {
         };
         json_file(&registry.join("button.json"), &item)?;
         let source = Source::new("r", root)?;
-        let files = collect_files(&source, &["button".into()])?;
+        let files = collect_files(&source, &["button".into()], false)?;
         let output = root.join("src/ui");
         install(&output, files.clone(), false, true)?;
         assert!(!output.exists());
@@ -1256,7 +1461,7 @@ mod tests {
         ] {
             assert!(module_name(bad).is_err(), "{bad}");
         }
-        assert!(collect_files(&source, &["button".into(), "missing".into()]).is_err());
+        assert!(collect_files(&source, &["button".into(), "missing".into()], false).is_err());
         assert!(!valid_name("../escape"));
         assert!(declarations("not valid Rust", ["button".into()].into_iter()).is_err());
         assert_eq!(
@@ -1269,6 +1474,79 @@ mod tests {
             ]))?,
             BTreeSet::from(["dialog".into()])
         );
+        Ok(())
+    }
+    #[test]
+    fn crate_mode_ejects_own_modules_and_pins_the_crate() -> Result<()> {
+        let temp = tempfile::tempdir()?;
+        let registry = temp.path().join("r");
+        fs::create_dir(&registry)?;
+        let file = |path: &str, content: &str| SourceFile {
+            path: path.into(),
+            kind: "registry:file".into(),
+            target: String::new(),
+            content: Some(content.into()),
+        };
+        let theme = file("registry/theme/theme.rs", "pub struct UiTheme;\n");
+        let dialog = file(
+            "registry/dialog/dialog.rs",
+            "#[path = \"modal_focus.rs\"]\npub mod modal_focus;\n",
+        );
+        let focus = file("registry/dialog/modal_focus.rs", "pub fn prepare() {}\n");
+        let alert = file(
+            "registry/alert_dialog/alert_dialog.rs",
+            "pub fn alert() {}\n",
+        );
+        for (name, files) in [
+            ("dialog", vec![theme.clone(), dialog.clone(), focus.clone()]),
+            ("alert-dialog", vec![theme, dialog, focus, alert]),
+        ] {
+            let item = Item {
+                schema: None,
+                name: name.into(),
+                kind: "registry:item".into(),
+                title: String::new(),
+                description: String::new(),
+                files,
+            };
+            json_file(&registry.join(format!("{name}.json")), &item)?;
+        }
+        let source = Source::new("r", temp.path())?;
+        let modules = |names: &[&str]| -> Result<Vec<String>> {
+            let names: Vec<String> = names.iter().map(|name| name.to_string()).collect();
+            Ok(collect_files(&source, &names, true)?.into_keys().collect())
+        };
+        assert_eq!(modules(&["dialog"])?, ["dialog", "modal_focus"]);
+        assert_eq!(modules(&["alert-dialog"])?, ["alert_dialog"]);
+        assert_eq!(
+            collect_files(&source, &["alert-dialog".into()], false)?.len(),
+            4
+        );
+
+        let pinned: toml::Table = toml::from_str(&dependency_template(Mode::Crate)?)?;
+        assert_eq!(
+            pinned["dependencies"]["gpuicn"].as_str(),
+            Some(concat!("=", env!("CARGO_PKG_VERSION")))
+        );
+        let copied: toml::Table = toml::from_str(&dependency_template(Mode::Source)?)?;
+        assert!(
+            !copied["dependencies"]
+                .as_table()
+                .unwrap()
+                .contains_key("gpuicn")
+        );
+
+        let config = Config {
+            version: 1,
+            registry: "r".into(),
+            output: "src/ui".into(),
+            mode: Mode::Source,
+        };
+        assert!(!toml::to_string(&config)?.contains("mode"));
+        let config: Config = toml::from_str(
+            "version = 1\nregistry = \"r\"\noutput = \"src/ui\"\nmode = \"crate\"\n",
+        )?;
+        assert_eq!(config.mode, Mode::Crate);
         Ok(())
     }
     #[test]
@@ -1308,7 +1586,7 @@ mod tests {
         let source = Source::new("r", temp.path())?;
         let message = format!(
             "{:#}",
-            collect_files(&source, &["alert-dialg".into()])
+            collect_files(&source, &["alert-dialg".into()], false)
                 .err()
                 .unwrap()
         );
@@ -1319,7 +1597,7 @@ mod tests {
     #[test]
     fn cargo_merge_adds_pins_and_keeps_existing_choices() -> Result<()> {
         let fresh = "[package]\nname = \"app\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n[dependencies]\n";
-        let merged = merge_cargo_dependencies(fresh)?;
+        let merged = merge_cargo_dependencies(fresh, DEPENDENCIES)?;
         assert_eq!(
             merged.added,
             [
@@ -1332,15 +1610,15 @@ mod tests {
         );
         assert!(merged.kept.is_empty());
         assert!(merged.text.starts_with("[package]\nname = \"app\""));
-        let again = merge_cargo_dependencies(&merged.text)?;
+        let again = merge_cargo_dependencies(&merged.text, DEPENDENCIES)?;
         assert!(again.added.is_empty() && again.kept.is_empty());
 
         let custom = "[dependencies]\nweb-time = \"1.1.0\"\n\n[dependencies.gpui-kit]\nversion = \"=0.6.4\"\ndefault-features = false\nfeatures = [\"component\"]\n";
-        let merged = merge_cargo_dependencies(custom)?;
+        let merged = merge_cargo_dependencies(custom, DEPENDENCIES)?;
         assert_eq!(merged.kept, [("dependencies".into(), "web-time".into())]);
         assert!(!merged.added.contains(&"gpui-kit".to_owned()));
         assert!(merged.text.contains("web-time = \"1.1.0\""));
-        assert!(merge_cargo_dependencies("not = [valid").is_err());
+        assert!(merge_cargo_dependencies("not = [valid", DEPENDENCIES).is_err());
         Ok(())
     }
     #[test]
@@ -1431,7 +1709,7 @@ mod tests {
         let output = temp.path().join("ui");
         install(
             &output,
-            collect_files(&source, &["menu".into()])?,
+            collect_files(&source, &["menu".into()], false)?,
             false,
             false,
         )?;
@@ -1445,22 +1723,23 @@ mod tests {
         );
 
         fs::write(output.join("menu.rs"), "// edited\n")?;
-        assert!(remove(&source, &output, &["menu".into()], false, false).is_err());
+        assert!(remove(&source, &output, &["menu".into()], false, false, false).is_err());
         assert!(output.join("menu.rs").exists());
-        remove(&source, &output, &["menu".into()], true, true)?;
+        remove(&source, &output, &["menu".into()], true, true, false)?;
         assert!(output.join("menu.rs").exists());
-        remove(&source, &output, &["menu".into()], true, false)?;
+        remove(&source, &output, &["menu".into()], true, false, false)?;
         assert!(!output.join("menu.rs").exists());
         assert!(output.join("button.rs").exists() && output.join("theme.rs").exists());
         assert_eq!(
             fs::read_to_string(output.join("mod.rs"))?,
             "// mine\npub mod button;\npub mod theme;\n"
         );
-        assert!(remove(&source, &output, &["menu".into()], false, false).is_err());
+        assert!(remove(&source, &output, &["menu".into()], false, false, false).is_err());
         remove(
             &source,
             &output,
             &["button".into(), "theme".into()],
+            false,
             false,
             false,
         )?;

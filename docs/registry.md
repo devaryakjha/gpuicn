@@ -35,6 +35,36 @@ missing. Use `gpuicn init --config-only` to create only `gpuicn.toml`.
 > v0.5.0-beta.4 CLI, `init` only writes `gpuicn.toml`; follow
 > [Manual setup](#manual-setup) for the rest.
 
+## Crate mode
+
+`gpuicn new --crate` (or `gpuicn init --crate`) sets up the same app, but takes
+the components from the `gpuicn` crate instead of copying them. It also adds
+`gpuicn` to `Cargo.toml` at the CLI's version, and writes this `src/ui/mod.rs`:
+
+```rust
+pub use gpuicn::*;
+```
+
+Your code uses `ui::button::Button` and the rest, the same paths as in source
+mode. When you want to change a component, eject it:
+
+```sh
+gpuicn eject select          # copies select.rs into src/ui and declares it in mod.rs
+gpuicn status                # ejected components and whether they differ
+gpuicn diff select           # your copy against the release
+gpuicn remove select         # delete your copy; ui::select is the crate's again
+```
+
+An ejected module shadows the crate's module of the same name, so call sites
+stay the same. Its shared code (the theme and any components it builds on)
+still comes from the crate. That is why `theme` can't be ejected: there is one
+theme for every component, and you customize it with `UiTheme::set` or
+`UiTheme::from_shadcn_css`. Other crate components keep using the crate's copy
+of a component you eject. `eject` tells you which ones, so you can eject them
+too when you pass them its types.
+
+`gpuicn add` is for source mode. In crate mode, every component is already there.
+
 ## Manual setup
 
 gpuicn v0.5.0-beta.4 supports GPUI Kit 0.6.4 on its pinned `gpui-pre` 0.3.5
@@ -45,7 +75,7 @@ must migrate to this runtime before installing the components.
 [dependencies]
 web-time = "1.1"
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.5", features = ["font-kit"] }
-gpui-icons = { git = "https://github.com/devaryakjha/gpui-icons", rev = "68fb16d498307723de484e81ce3660e2ff431d31" }
+gpui-icons = { version = "0.4.2", git = "https://github.com/devaryakjha/gpui-icons", rev = "ff42e4ed0e29ee0e2f4a00ab977490e7e46fe230" }
 gpui-kit = { version = "=0.6.4", default-features = false, features = ["component"] }
 
 [dev-dependencies]

@@ -1,7 +1,7 @@
 # Textarea parity
 
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
-`registry/textarea/textarea.rs`, backed by `registry/input/input.rs` and GPUI Kit
+`crates/ui/registry/textarea/textarea.rs`, backed by `crates/ui/registry/input/input.rs` and GPUI Kit
 0.6.4.
 
 Textarea uses caller-owned `TextareaState` and supports the same disabled,

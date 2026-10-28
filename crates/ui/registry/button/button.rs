@@ -212,9 +212,8 @@ impl RenderOnce for Button {
     }
 }
 
-pub(super) fn style_button<
-    T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude::FluentBuilder,
->(
+#[doc(hidden)]
+pub fn style_button<T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude::FluentBuilder>(
     base: T,
     disabled: bool,
     variant: ButtonVariant,
