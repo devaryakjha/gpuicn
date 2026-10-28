@@ -82,5 +82,10 @@ compares the copies byte for byte, and builds the WASM catalog.
    registry, fonts and dependency pins all come from tag `v<version>`.
 2. Update `release-pins.toml`, `crates/cli/templates/dependencies.toml` and the
    fixture together when an upstream pin moves; the CLI tests fail if they drift.
-3. Add the entry to `CHANGELOG.md` and notes in `docs/releases/`.
-4. Merge, then tag `v<version>` on that commit.
+3. Update the `cargo install gpuicn-cli --version` lines in `README.md`,
+   `crates/ui/README.md`, `docs/registry.md` and the `release` constant in
+   `web/src/routes/installation.tsx`.
+4. Add the entry to `CHANGELOG.md` and notes in `docs/releases/`.
+5. Merge, then tag `v<version>` on that commit.
+6. From that commit, publish the library first and then the CLI:
+   `cargo publish -p gpuicn --locked`, then `cargo publish -p gpuicn-cli --locked`.
