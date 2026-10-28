@@ -821,13 +821,8 @@ fn setup(root: &Path, config: &Config) -> Result<()> {
             }
             continue;
         }
-        let client = match &mut client {
-            Some(client) => client,
-            None => client.insert(http_client()?),
-        };
-        let url = format!("{RELEASE}/site/assets/fonts/{file}");
-        let bytes =
-            download(client, &url, MAX_FONT_BYTES).with_context(|| format!("fetch {url}"))?;
+        let url = release_location(&format!("site/assets/fonts/{file}"));
+        let bytes = release_file(&mut client, &url, MAX_FONT_BYTES)?;
         ensure!(
             hex_sha256(&bytes) == sha256,
             "{url} does not match its pinned SHA-256"
@@ -836,13 +831,8 @@ fn setup(root: &Path, config: &Config) -> Result<()> {
     }
     let license = fonts.join("OFL.txt");
     if current_file(&license)?.is_none() {
-        let client = match &mut client {
-            Some(client) => client,
-            None => client.insert(http_client()?),
-        };
-        let url = format!("{RELEASE}/LICENSES/Geist-OFL-1.1");
-        let bytes =
-            download(client, &url, MAX_ITEM_BYTES).with_context(|| format!("fetch {url}"))?;
+        let url = release_location("LICENSES/Geist-OFL-1.1");
+        let bytes = release_file(&mut client, &url, MAX_ITEM_BYTES)?;
         write_new(&license, &bytes)?;
     }
 
@@ -896,6 +886,28 @@ fn setup(root: &Path, config: &Config) -> Result<()> {
         println!("Then {next}; `gpuicn list` shows every component.");
     }
     Ok(())
+}
+
+/// A release file's URL, or its path under `GPUICN_RELEASE` (a checkout), which lets CI
+/// set up apps before the release tag exists.
+fn release_location(path: &str) -> String {
+    let base = std::env::var("GPUICN_RELEASE").unwrap_or_else(|_| RELEASE.to_owned());
+    format!("{}/{path}", base.trim_end_matches('/'))
+}
+
+fn release_file(
+    client: &mut Option<reqwest::blocking::Client>,
+    location: &str,
+    limit: u64,
+) -> Result<Vec<u8>> {
+    if !location.starts_with("https://") {
+        return fs::read(location).with_context(|| format!("read {location}"));
+    }
+    let client = match client {
+        Some(client) => client,
+        None => client.insert(http_client()?),
+    };
+    download(client, location, limit).with_context(|| format!("fetch {location}"))
 }
 
 fn write_new(path: &Path, bytes: &[u8]) -> Result<()> {
