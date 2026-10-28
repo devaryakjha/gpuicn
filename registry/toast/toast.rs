@@ -15,9 +15,37 @@ use gpui_kit::{
 use std::time::Duration;
 use web_time::Instant;
 
-struct Notice {
+/// One notification: a title, optional description and auto-dismiss timeout.
+#[derive(Clone, Debug)]
+pub struct Notice {
     title: SharedString,
     description: SharedString,
+    timeout: Option<Duration>,
+}
+impl Notice {
+    /// Creates a notification that dismisses itself after five seconds.
+    pub fn new(title: impl Into<SharedString>) -> Self {
+        Self {
+            title: title.into(),
+            description: SharedString::default(),
+            timeout: Some(Duration::from_secs(5)),
+        }
+    }
+    /// Secondary text below the title.
+    pub fn description(mut self, description: impl Into<SharedString>) -> Self {
+        self.description = description.into();
+        self
+    }
+    /// Dismisses the notification after `timeout`.
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = Some(timeout);
+        self
+    }
+    /// Keeps the notification until the user dismisses it.
+    pub fn persistent(mut self) -> Self {
+        self.timeout = None;
+        self
+    }
 }
 /// Own this entity in the application and mount it once above the page content.
 pub struct ToastState {
@@ -36,25 +64,12 @@ impl ToastState {
             timer: None,
         }
     }
-    /// Replaces an existing ID or adds a new notification. `None` keeps it until dismissed.
-    pub fn push(
-        &mut self,
-        id: impl Into<SharedString>,
-        title: impl Into<SharedString>,
-        description: impl Into<SharedString>,
-        timeout: Option<Duration>,
-        cx: &mut Context<Self>,
-    ) {
+    /// Replaces an existing ID or adds a new notification.
+    pub fn push(&mut self, id: impl Into<SharedString>, notice: Notice, cx: &mut Context<Self>) {
         let empty = self.manager.is_empty();
-        self.manager.push(
-            id.into(),
-            Notice {
-                title: title.into(),
-                description: description.into(),
-            },
-            ToastOptions { timeout },
-            Instant::now(),
-        );
+        let timeout = notice.timeout;
+        self.manager
+            .push(id.into(), notice, ToastOptions { timeout }, Instant::now());
         if empty {
             self.timer = Some(cx.spawn(async move |this, cx| {
                 loop {

@@ -15,7 +15,7 @@ Reference: [pinned shadcn Nova source](https://github.com/shadcn-ui/ui/blob/1773
 | Styling | Semantic sidebar colors, spacing, fonts, radius and motion tokens; `Styled` overrides |
 | Persistence/routing | Application responsibility; no browser cookie or provider API |
 
-Start with `SidebarLayout::new(id, state, mobile, navigation, content, on_change)`. Store the returned state in your view and notify it. Use the same `mobile` decision for the layout, trigger, and `state.icon_collapsed(mobile, mode)`. `sidebar_is_mobile(window)` defaults to 768px; embedded panes can choose their own breakpoint. The site uses 540px to keep its 600px preview useful.
+Start with `SidebarLayout::new(id, state).mobile(mobile).sidebar(navigation).content(content).on_change(handler)`. Store the state the handler receives in your view and notify it. Use the same `mobile` decision for the layout, trigger, and `state.icon_collapsed(mobile, mode)`. `sidebar_is_mobile(window)` defaults to 768px; embedded panes can choose their own breakpoint. The site uses 540px to keep its 600px preview useful.
 
 Navigation uses Geist at 14px with a 20px line height, secondary text at 12px/16px, themed 32px rows and 8px insets. Text sizes and line heights scale together through `text_scale`. Width defaults are 256px expanded, 48px for icons and 288px for the sheet; setters accept application widths. Hidden navigation leaves the focus tree. Keep a visible trigger in content. Omit group labels and nested rows when rendering icons, while retaining full item labels and stable IDs. The shared transition helper honors reduced motion and reverses from the current width.
 

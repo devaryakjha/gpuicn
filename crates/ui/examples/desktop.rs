@@ -226,14 +226,14 @@ impl Render for Desktop {
             "lab.content-split",
             "Resize list and details",
             self.content_height,
-            self.content.clone(),
-            status,
-            cx.listener(|this, value: &gpui_kit::Pixels, _, cx| {
-                this.content_height = *value;
-                this.resize_count += 1;
-                cx.notify();
-            }),
         )
+        .first(self.content.clone())
+        .second(status)
+        .on_resize(cx.listener(|this, value: &gpui_kit::Pixels, _, cx| {
+            this.content_height = *value;
+            this.resize_count += 1;
+            cx.notify();
+        }))
         .vertical()
         .first_limits(PaneLimits::new(px(140.), px(900.)))
         .second_limits(PaneLimits::new(px(180.), px(900.)));
@@ -337,22 +337,18 @@ impl Render for Desktop {
                 }
             })
             .child(
-                Resizable::new(
-                    "lab.sidebar-split",
-                    "Resize navigation",
-                    width,
-                    sidebar,
-                    workspace,
-                    cx.listener(|this, value: &gpui_kit::Pixels, _, cx| {
+                Resizable::new("lab.sidebar-split", "Resize navigation", width)
+                    .first(sidebar)
+                    .second(workspace)
+                    .on_resize(cx.listener(|this, value: &gpui_kit::Pixels, _, cx| {
                         if !this.collapsed && this.sidebar_width != *value {
                             this.sidebar_width = *value;
                             this.resize_count += 1;
                             cx.notify();
                         }
-                    }),
-                )
-                .first_limits(limits)
-                .second_limits(PaneLimits::new(px(460.), px(4000.))),
+                    }))
+                    .first_limits(limits)
+                    .second_limits(PaneLimits::new(px(460.), px(4000.))),
             )
             .when_some(self.benchmark.clone(), |el, benchmark| {
                 el.child(
@@ -394,7 +390,7 @@ impl Render for Content {
         let popup = dialog_popup("lab.dialog.popup", "Native focus check", cx)
             .child(dialog_title("lab.dialog.title", cx).child("Native focus check"))
             .child(Input::new(&input).aria_label("Dialog test input"))
-            .child(dialog_action("lab.dialog.close", &handle, cx).label("Close"));
+            .child(dialog_action("lab.dialog.close", &handle).label("Close"));
         let count = self.rows.clone();
         let state = self.list.clone();
         div()
@@ -418,8 +414,7 @@ impl Render for Content {
                     .child(
                         div()
                             .child(
-                                dialog_trigger("lab.dialog.trigger", &handle, cx)
-                                    .label("Open dialog"),
+                                dialog_trigger("lab.dialog.trigger", &handle).label("Open dialog"),
                             )
                             .child(dialog("lab.dialog", &handle, popup, window, cx)),
                     ),

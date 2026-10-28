@@ -458,18 +458,12 @@ pub struct SidebarLayout {
 }
 impl SidebarLayout {
     /// Compose navigation and application content with controlled state.
-    pub fn new(
-        id: impl Into<ElementId>,
-        state: SidebarState,
-        mobile: bool,
-        sidebar: impl IntoElement,
-        content: impl IntoElement,
-        on_change: impl Fn(&SidebarState, &mut Window, &mut App) + 'static,
-    ) -> Self {
+    /// Store the state passed to [`SidebarLayout::on_change`] and pass it back here.
+    pub fn new(id: impl Into<ElementId>, state: SidebarState) -> Self {
         Self {
             id: id.into(),
             state,
-            mobile,
+            mobile: false,
             side: SidebarSide::Left,
             variant: SidebarVariant::Sidebar,
             collapsible: SidebarCollapsible::Offcanvas,
@@ -477,11 +471,35 @@ impl SidebarLayout {
             icon_width: None,
             mobile_width: None,
             rail: false,
-            sidebar: sidebar.into_any_element(),
-            content: content.into_any_element(),
-            on_change: Rc::new(on_change),
+            sidebar: gpui_kit::Empty.into_any_element(),
+            content: gpui_kit::Empty.into_any_element(),
+            on_change: Rc::new(|_, _, _| {}),
             style: Default::default(),
         }
+    }
+    /// Use the narrow-viewport sheet; pass `sidebar_is_mobile(window)` or your own
+    /// breakpoint, and use the same value for triggers and `state.icon_collapsed`.
+    pub fn mobile(mut self, mobile: bool) -> Self {
+        self.mobile = mobile;
+        self
+    }
+    /// Sets the navigation, usually a [`Sidebar`].
+    pub fn sidebar(mut self, sidebar: impl IntoElement) -> Self {
+        self.sidebar = sidebar.into_any_element();
+        self
+    }
+    /// Sets the application content beside the navigation.
+    pub fn content(mut self, content: impl IntoElement) -> Self {
+        self.content = content.into_any_element();
+        self
+    }
+    /// Receives the next state after the trigger, rail, shortcut or sheet changes it.
+    pub fn on_change(
+        mut self,
+        on_change: impl Fn(&SidebarState, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_change = Rc::new(on_change);
+        self
     }
     /// Add a pointer rail along the navigation edge. Keep a visible keyboard trigger.
     pub fn rail(mut self, rail: bool) -> Self {
@@ -1014,17 +1032,14 @@ mod sidebar_tests {
                     .id("test.opener")
                     .track_focus(&self.opener.clone().tab_stop(true))
                     .child("Open");
-                SidebarLayout::new(
-                    "test.layout",
-                    self.state,
-                    true,
-                    navigation,
-                    main,
-                    cx.listener(|this, state: &SidebarState, _, cx| {
+                SidebarLayout::new("test.layout", self.state)
+                    .mobile(true)
+                    .sidebar(navigation)
+                    .content(main)
+                    .on_change(cx.listener(|this, state: &SidebarState, _, cx| {
                         this.state = *state;
                         cx.notify();
-                    }),
-                )
+                    }))
             }
         }
         let mut cx = TestAppContext::single();

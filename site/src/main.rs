@@ -46,7 +46,7 @@ use gpuicn::{
     switch::Switch,
     tabs::*,
     textarea::*,
-    toast::ToastState,
+    toast::{Notice, ToastState},
     toggle::{Toggle, ToggleVariant},
     toggle_group::*,
     toolbar::{Toolbar, ToolbarButton},
@@ -650,9 +650,7 @@ impl Showcase {
                     .child(alert_dialog_action("confirm").label("Continue")),
             );
         div()
-            .child(
-                dialog_trigger("alert_dialog_preview.trigger", &handle, cx).label("Delete account"),
-            )
+            .child(dialog_trigger("alert_dialog_preview.trigger", &handle).label("Delete account"))
             .child(alert_dialog(
                 "alert_dialog_preview",
                 &handle,
@@ -1071,11 +1069,9 @@ impl Showcase {
                     .child("Update the name shown on your profile."),
             )
             .child(Input::new(&name).aria_label("Name"))
-            .child(
-                dialog_footer(cx).child(dialog_action("save", &handle, cx).label("Save changes")),
-            );
+            .child(dialog_footer(cx).child(dialog_action("save", &handle).label("Save changes")));
         div()
-            .child(dialog_trigger("dialog_preview.trigger", &handle, cx).label("Edit profile"))
+            .child(dialog_trigger("dialog_preview.trigger", &handle).label("Edit profile"))
             .child(dialog("dialog_preview", &handle, popup, window, cx))
     }
 
@@ -1259,7 +1255,7 @@ impl Showcase {
     fn fieldset_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let name = demo_input("shipping.name", "", "Ada Lovelace", window, cx);
         let city = demo_input("shipping.city", "", "London", window, cx);
-        fieldset_root("shipping", cx)
+        fieldset("shipping", cx)
             .w(px(300.))
             .aria_label("Shipping address")
             .child(fieldset_legend(FieldsetLegendVariant::Legend, cx).child("Shipping address"))
@@ -1721,19 +1717,15 @@ impl Showcase {
     fn resizable_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
         use gpuicn::resizable::{PaneLimits, Resizable};
         div().w(px(400.)).h(px(200.)).child(
-            Resizable::new(
-                "preview.split",
-                "Resize panels",
-                self.pane_width,
-                div().p(px(16.)).child("One"),
-                div().p(px(16.)).child("Two"),
-                cx.listener(|this, size: &gpui_kit::Pixels, _, cx| {
+            Resizable::new("preview.split", "Resize panels", self.pane_width)
+                .first(div().p(px(16.)).child("One"))
+                .second(div().p(px(16.)).child("Two"))
+                .on_resize(cx.listener(|this, size: &gpui_kit::Pixels, _, cx| {
                     this.pane_width = *size;
                     cx.notify();
-                }),
-            )
-            .first_limits(PaneLimits::new(px(80.), px(300.)))
-            .second_limits(PaneLimits::new(px(80.), px(300.))),
+                }))
+                .first_limits(PaneLimits::new(px(80.), px(300.)))
+                .second_limits(PaneLimits::new(px(80.), px(300.))),
         )
     }
 
@@ -2278,25 +2270,22 @@ impl Showcase {
                     .child(workspace),
             )
             .child(body);
-        SidebarLayout::new(
-            "sidebar.layout",
-            self.sidebar_state,
-            mobile,
-            navigation,
-            content,
-            cx.listener(|this, state: &SidebarState, _, cx| {
+        SidebarLayout::new("sidebar.layout", self.sidebar_state)
+            .mobile(mobile)
+            .sidebar(navigation)
+            .content(content)
+            .on_change(cx.listener(|this, state: &SidebarState, _, cx| {
                 this.sidebar_state = *state;
                 cx.notify();
-            }),
-        )
-        .variant(variant)
-        .collapsible(mode)
-        .rail(true)
-        .side(if right {
-            SidebarSide::Right
-        } else {
-            SidebarSide::Left
-        })
+            }))
+            .variant(variant)
+            .collapsible(mode)
+            .rail(true)
+            .side(if right {
+                SidebarSide::Right
+            } else {
+                SidebarSide::Left
+            })
     }
 
     fn sidebar_mail_preview(
@@ -2636,20 +2625,17 @@ impl Showcase {
                             .child(self.sidebar_note.clone()),
                     ),
             );
-        SidebarLayout::new(
-            "mail.layout",
-            self.sidebar_state,
-            mobile,
-            navigation,
-            content,
-            cx.listener(|this, state: &SidebarState, _, cx| {
+        SidebarLayout::new("mail.layout", self.sidebar_state)
+            .mobile(mobile)
+            .sidebar(navigation)
+            .content(content)
+            .on_change(cx.listener(|this, state: &SidebarState, _, cx| {
                 this.sidebar_state = *state;
                 cx.notify();
-            }),
-        )
-        .width(s * 87_f32)
-        .collapsible(SidebarCollapsible::Icon)
-        .rail(true)
+            }))
+            .width(s * 87_f32)
+            .collapsible(SidebarCollapsible::Icon)
+            .rail(true)
     }
 
     fn sidebar_docs_preview(
@@ -2808,19 +2794,16 @@ impl Showcase {
                         .on_click(cx.listener(|this, _, _, cx| { this.sidebar_selected = this.sidebar_selected.saturating_sub(1); cx.notify(); })))
                     .child(Button::new("docs.next").variant(ButtonVariant::Outline).disabled(selected == 11).label("Next")
                         .on_click(cx.listener(|this, _, _, cx| { this.sidebar_selected = (this.sidebar_selected + 1).min(11); cx.notify(); })))));
-        SidebarLayout::new(
-            "docs.layout",
-            self.sidebar_state,
-            mobile,
-            navigation,
-            content,
-            cx.listener(|this, state: &SidebarState, _, cx| {
+        SidebarLayout::new("docs.layout", self.sidebar_state)
+            .mobile(mobile)
+            .sidebar(navigation)
+            .content(content)
+            .on_change(cx.listener(|this, state: &SidebarState, _, cx| {
                 this.sidebar_state = *state;
                 cx.notify();
-            }),
-        )
-        .collapsible(SidebarCollapsible::Offcanvas)
-        .rail(true)
+            }))
+            .collapsible(SidebarCollapsible::Offcanvas)
+            .rail(true)
     }
 
     fn separator_preview(&self) -> impl IntoElement {
@@ -2969,9 +2952,8 @@ impl Showcase {
                         trigger.update(cx, |state, cx| {
                             state.push(
                                 id,
-                                "Changes saved",
-                                "Your settings are up to date.",
-                                Some(std::time::Duration::from_secs(5)),
+                                Notice::new("Changes saved")
+                                    .description("Your settings are up to date."),
                                 cx,
                             )
                         })
