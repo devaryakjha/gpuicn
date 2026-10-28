@@ -10,7 +10,7 @@ shows the same starter.
 Use Rust 1.97 or newer. Install the CLI, create an app, and run it:
 
 ```sh
-cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.5 --locked
+cargo install gpuicn-cli --version 0.5.0-beta.5 --locked
 gpuicn new my-app
 cd my-app && cargo run
 gpuicn add sidebar dialog

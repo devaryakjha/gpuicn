@@ -6,7 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Install editable gpuicn Rust components without Node.js."
-publish = false
+readme = "../../README.md"
+homepage = "https://ui.imajha.com/"
+keywords = ["gpui", "shadcn", "ui", "components", "cli"]
+categories = ["command-line-utilities", "gui"]
 default-run = "gpuicn"
 
 [[bin]]

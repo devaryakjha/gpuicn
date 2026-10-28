@@ -58,14 +58,13 @@ function InstallationPage() {
             2. Configure the source installer
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
-            The native CLI is distributed as source and is not yet published to
-            crates.io. Install the current published beta directly from its Git
-            tag. No Node.js or gpuicn checkout is required.
+            Install the native CLI for the current published beta from
+            crates.io. No Node.js or gpuicn checkout is required.
           </p>
           <CodeBlock
             language="bash"
             className="mt-4"
-            value={`cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag ${release} --locked`}
+            value={`cargo install gpuicn-cli --version ${release.slice(1)} --locked`}
           />
           <p className="mt-4 text-sm leading-6 text-muted-foreground">
             From your app root, create gpuicn.toml against the same release

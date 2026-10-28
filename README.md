@@ -25,7 +25,7 @@ components.
 ## Quick start
 
 ```sh
-cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.5 --locked
+cargo install gpuicn-cli --version 0.5.0-beta.5 --locked
 gpuicn new my-app  # cargo new + pinned deps, Geist fonts, theme, Button and a starter window
 cd my-app && cargo run
 gpuicn add sidebar dialog

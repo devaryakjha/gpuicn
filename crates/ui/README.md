@@ -7,7 +7,7 @@ Dialog to Sidebar, Resizable and Virtual List. Behavior comes from
 This crate is gpuicn's *crate mode*. The usual way to set it up is the CLI:
 
 ```sh
-cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --locked
+cargo install gpuicn-cli --version 0.5.0-beta.5 --locked
 gpuicn new my-app --crate
 ```
 
