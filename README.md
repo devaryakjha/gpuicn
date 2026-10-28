@@ -25,7 +25,7 @@ components.
 ## Quick start
 
 ```sh
-cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.4 --locked
+cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.5 --locked
 gpuicn new my-app  # cargo new + pinned deps, Geist fonts, theme, Button and a starter window
 cd my-app && cargo run
 gpuicn add sidebar dialog
@@ -34,11 +34,6 @@ gpuicn add sidebar dialog
 That's the whole setup. No Node.js is involved. In an existing app, run
 `gpuicn init` from its root instead of `gpuicn new`; it keeps everything you
 already have. Installing the CLI also adds `cargo gpuicn` as an alias.
-
-> [!NOTE]
-> `gpuicn new` and the automatic `init` setup ship in the next CLI release. The
-> v0.5.0-beta.4 CLI only writes `gpuicn.toml`; follow
-> [manual setup](docs/registry.md#manual-setup) with it.
 
 Then use components like any other Rust code in your crate:
 
@@ -91,7 +86,7 @@ crate, so every component reads the same theme.
 
 ## Requirements and platform scope
 
-Rust 1.97 or newer. gpuicn v0.5.0-beta.4 targets GPUI Kit 0.6.4 and its pinned
+Rust 1.97 or newer. gpuicn v0.5.0-beta.5 targets GPUI Kit 0.6.4 and its pinned
 `gpui-pre` 0.3.5 runtime; import GPUI types through `gpui_kit`. Apps on another
 GPUI revision must migrate first. macOS native builds need Xcode's Metal toolchain;
 Linux needs the usual GPUI system libraries (fontconfig, xkbcommon, Wayland/X11).

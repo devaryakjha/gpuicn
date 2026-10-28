@@ -27,7 +27,7 @@ jobs:
         run: |
           cargo run -p gpuicn-cli --locked -- build
           node scripts/sync-catalog.mjs
-          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
+          GPUICN_RELEASE="$PWD" cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
           cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml add --all
           cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
           cargo test --manifest-path fixtures/registry-install/Cargo.toml --bin registry-install-fixture --locked --features gpui_platform/runtime_shaders
@@ -66,7 +66,7 @@ jobs:
       - name: Set up and check a new app
         run: |
           cargo build -p gpuicn-cli --locked
-          target/debug/gpuicn --registry "$PWD/site/pages/r" new "$RUNNER_TEMP/my-app"
+          GPUICN_RELEASE="$PWD" target/debug/gpuicn --registry "$PWD/site/pages/r" new "$RUNNER_TEMP/my-app"
           target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" add alert_dialog select
           # Both throwaway apps share one GPUI build.
           CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/my-app/Cargo.toml" --features gpui_platform/runtime_shaders
@@ -74,7 +74,7 @@ jobs:
         run: |
           # An ejected file reaches the crate through `super::`, so nothing it names may be crate-private.
           if grep -rnE "pub\((crate|super)\)" crates/ui/registry; then exit 1; fi
-          target/debug/gpuicn --registry "$PWD/site/pages/r" new --crate "$RUNNER_TEMP/crate-app"
+          GPUICN_RELEASE="$PWD" target/debug/gpuicn --registry "$PWD/site/pages/r" new --crate "$RUNNER_TEMP/crate-app"
           cargo add --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" gpuicn --path "$PWD/crates/ui"
           CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" --features gpui_platform/runtime_shaders
           target/debug/gpuicn --config "$RUNNER_TEMP/crate-app/gpuicn.toml" eject --all

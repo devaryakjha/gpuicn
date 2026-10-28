@@ -4,7 +4,9 @@ Notable changes to gpuicn. Detailed notes for each beta are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
-## Unreleased
+## 0.5.0-beta.5
+
+[Notes](docs/releases/v0.5.0-beta.5.md)
 
 ### Added
 
