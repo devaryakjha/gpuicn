@@ -1663,7 +1663,10 @@ mod tests {
             deps["gpui-kit"]["version"].as_str(),
             Some(format!("={}", pins["gpui_kit"]["version"].as_str().unwrap()).as_str())
         );
-        assert_eq!(deps["gpui-icons"]["rev"], pins["gpui_icons"]["commit"]);
+        assert_eq!(
+            deps["gpui-icons"].as_str(),
+            Some(format!("={}", pins["gpui_icons"]["version"].as_str().unwrap()).as_str())
+        );
         let geist = pins["geist"].as_table().unwrap();
         for ((_, sha), key) in FONTS.iter().zip([
             "sans_regular_sha256",
