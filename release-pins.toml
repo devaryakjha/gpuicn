@@ -1,5 +1,5 @@
 [rust]
-toolchain = "1.97.1"
+toolchain = "1.99.1"
 
 [shadcn]
 version = "4.19.0"

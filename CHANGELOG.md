@@ -19,6 +19,8 @@ APIs can change between minor versions.
 - gpui-icons 0.5.0 with Lucide 1.63.0: 1,924 icons, up from 1,818. Icons
   Lucide renamed, such as `LucideIcon::Music`, still compile.
 - The WASM build uses wasm-bindgen 0.2.127.
+- The minimum Rust is now 1.98, which gpui-pre 0.3.10 needs on macOS. CI
+  builds with 1.99.1.
 
 ## 0.5.0-beta.5
 

@@ -86,7 +86,7 @@ crate, so every component reads the same theme.
 
 ## Requirements and platform scope
 
-Rust 1.97 or newer. gpuicn v0.5.0 targets GPUI Kit 0.8.1 and its pinned
+Rust 1.98 or newer. gpuicn v0.5.0 targets GPUI Kit 0.8.1 and its pinned
 `gpui-pre` 0.3.10 runtime; import GPUI types through `gpui_kit`. Apps on another
 GPUI revision must migrate first. macOS native builds need Xcode's Metal toolchain;
 Linux needs the usual GPUI system libraries (fontconfig, xkbcommon, Wayland/X11).

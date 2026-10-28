@@ -31,7 +31,7 @@ function InstallationPage() {
             1. Create a Rust app
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
-            Use Rust 1.97.1 or newer and the native build tools for your
+            Use Rust 1.98 or newer and the native build tools for your
             platform. This release supports GPUI Kit 0.8.1 on its pinned
             gpui-pre 0.3.10 runtime. Import GPUI types through gpui_kit so your
             app and the components use the same types. Apps on another GPUI

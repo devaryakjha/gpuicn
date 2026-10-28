@@ -7,7 +7,7 @@ shows the same starter.
 
 ## Quick start
 
-Use Rust 1.97 or newer. Install the CLI, create an app, and run it:
+Use Rust 1.98 or newer. Install the CLI, create an app, and run it:
 
 ```sh
 cargo install gpuicn-cli --version 0.5.0 --locked
