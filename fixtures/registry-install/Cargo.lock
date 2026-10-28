@@ -2329,7 +2329,8 @@ dependencies = [
 [[package]]
 name = "gpui-icons"
 version = "0.4.2"
-source = "git+https://github.com/devaryakjha/gpui-icons?rev=ff42e4ed0e29ee0e2f4a00ab977490e7e46fe230#ff42e4ed0e29ee0e2f4a00ab977490e7e46fe230"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bd4bfb68eebb30085c794d2edf627e42acfb5bad23c2c65960e63814672e73f"
 dependencies = [
  "gpui-pre",
 ]

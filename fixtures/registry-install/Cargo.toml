@@ -9,7 +9,7 @@ default-run = "registry-install-fixture"
 [dependencies]
 web-time = "1.1"
 gpui_platform = { package = "gpui-pre-platform", version = "=0.3.5", features = ["font-kit"] }
-gpui-icons = { version = "0.4.2", git = "https://github.com/devaryakjha/gpui-icons", rev = "ff42e4ed0e29ee0e2f4a00ab977490e7e46fe230" }
+gpui-icons = "=0.4.2"
 
 gpui-kit = { version = "=0.6.4", default-features = false, features = ["component"] }
 
