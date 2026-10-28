@@ -480,7 +480,7 @@ impl AdoptionConsumer {
             .child(Field::new("record.editor.name", &self.edit_name).label("Name"))
             .child(
                 dialog_footer(cx)
-                    .child(dialog_action("record.editor.cancel", &editor, cx).label("Cancel"))
+                    .child(dialog_action("record.editor.cancel", &editor).label("Cancel"))
                     .child(
                         Button::new("record.editor.save")
                             .label("Save")
@@ -537,20 +537,16 @@ impl AdoptionConsumer {
             .when(self.long_content, |detail| {
                 detail.child("A deliberately longer paragraph checks wrapping, hierarchy, selection, and readable spacing when the application window becomes narrow or the text scale increases. The split remains keyboard adjustable through its separator.")
             });
-        Resizable::new(
-            "workspace.split",
-            "Resize project list",
-            self.pane_width,
-            list,
-            detail,
-            cx.listener(|this, width, _, cx| {
+        Resizable::new("workspace.split", "Resize project list", self.pane_width)
+            .first(list)
+            .second(detail)
+            .on_resize(cx.listener(|this, width, _, cx| {
                 this.pane_width = *width;
                 cx.notify();
-            }),
-        )
-        .size_full()
-        .first_limits(PaneLimits::new(t.space(40.), t.space(90.)))
-        .second_limits(PaneLimits::new(t.space(64.), t.space(180.)))
+            }))
+            .size_full()
+            .first_limits(PaneLimits::new(t.space(40.), t.space(90.)))
+            .second_limits(PaneLimits::new(t.space(64.), t.space(180.)))
     }
 }
 
@@ -649,18 +645,15 @@ impl Render for AdoptionConsumer {
                     .child(page),
             );
 
-        SidebarLayout::new(
-            "consumer.layout",
-            self.sidebar,
-            mobile,
-            navigation,
-            content,
-            cx.listener(|this, state: &SidebarState, _, cx| {
+        SidebarLayout::new("consumer.layout", self.sidebar)
+            .mobile(mobile)
+            .sidebar(navigation)
+            .content(content)
+            .on_change(cx.listener(|this, state: &SidebarState, _, cx| {
                 this.sidebar = *state;
                 cx.notify();
-            }),
-        )
-        .collapsible(SidebarCollapsible::Icon)
-        .rail(true)
+            }))
+            .collapsible(SidebarCollapsible::Icon)
+            .rail(true)
     }
 }

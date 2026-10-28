@@ -165,7 +165,7 @@ pub(crate) fn modal_viewport(
 }
 
 /// A keyboard-accessible button opening the caller's handle.
-pub fn dialog_trigger(id: impl Into<ElementId>, handle: &DialogHandle, _cx: &App) -> Button {
+pub fn dialog_trigger(id: impl Into<ElementId>, handle: &DialogHandle) -> Button {
     let handle = handle.clone();
     Button::new(id)
         .variant(ButtonVariant::Outline)
@@ -270,7 +270,7 @@ pub fn dialog_close(id: impl Into<ElementId>, cx: &App) -> DialogControl {
     )
 }
 /// Create form actions with `Button`; close the handle after successful validation.
-pub fn dialog_action(id: impl Into<ElementId>, handle: &DialogHandle, _cx: &App) -> Button {
+pub fn dialog_action(id: impl Into<ElementId>, handle: &DialogHandle) -> Button {
     let handle = handle.clone();
     Button::new(id).on_click(move |_, window, cx| handle.close(window, cx))
 }

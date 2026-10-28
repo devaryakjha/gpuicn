@@ -60,15 +60,10 @@ pub struct Resizable {
     on_resize: ResizeHandler,
 }
 impl Resizable {
-    /// Creates a horizontal (left/right) split. `size` is the first pane's preferred size.
-    pub fn new(
-        id: impl Into<ElementId>,
-        label: impl Into<SharedString>,
-        size: Pixels,
-        first: impl IntoElement,
-        second: impl IntoElement,
-        on_resize: impl Fn(&Pixels, &mut Window, &mut App) + 'static,
-    ) -> Self {
+    /// Creates a horizontal (left/right) split. `label` names the resize handle
+    /// for assistive technology; `size` is the first pane's controlled size.
+    /// Store the size from [`Resizable::on_resize`] and pass it back here.
+    pub fn new(id: impl Into<ElementId>, label: impl Into<SharedString>, size: Pixels) -> Self {
         Self {
             style: gpui_kit::StyleRefinement::default(),
             id: id.into(),
@@ -77,10 +72,28 @@ impl Resizable {
             size: f32::from(size),
             first_limits: PaneLimits::default(),
             second_limits: PaneLimits::default(),
-            first: first.into_any_element(),
-            second: second.into_any_element(),
-            on_resize: Rc::new(on_resize),
+            first: gpui_kit::Empty.into_any_element(),
+            second: gpui_kit::Empty.into_any_element(),
+            on_resize: Rc::new(|_, _, _| {}),
         }
+    }
+    /// Sets the left (or top) pane.
+    pub fn first(mut self, first: impl IntoElement) -> Self {
+        self.first = first.into_any_element();
+        self
+    }
+    /// Sets the right (or bottom) pane.
+    pub fn second(mut self, second: impl IntoElement) -> Self {
+        self.second = second.into_any_element();
+        self
+    }
+    /// Receives the first pane's new size after pointer or keyboard resizing.
+    pub fn on_resize(
+        mut self,
+        on_resize: impl Fn(&Pixels, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_resize = Rc::new(on_resize);
+        self
     }
     /// Uses a top/bottom split. Arrow Up/Down resize its horizontal separator.
     pub fn vertical(mut self) -> Self {
@@ -404,19 +417,15 @@ mod interaction_tests {
                     }
                 }))
                 .child(
-                    Resizable::new(
-                        "test.split",
-                        "Resize test",
-                        self.size,
-                        div(),
-                        div(),
-                        cx.listener(|this, value: &Pixels, _, cx| {
+                    Resizable::new("test.split", "Resize test", self.size)
+                        .first(div())
+                        .second(div())
+                        .on_resize(cx.listener(|this, value: &Pixels, _, cx| {
                             this.size = *value;
                             cx.notify();
-                        }),
-                    )
-                    .first_limits(PaneLimits::new(px(160.), px(400.)))
-                    .second_limits(PaneLimits::new(px(240.), px(800.))),
+                        }))
+                        .first_limits(PaneLimits::new(px(160.), px(400.)))
+                        .second_limits(PaneLimits::new(px(240.), px(800.))),
                 )
         }
     }

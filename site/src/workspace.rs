@@ -744,13 +744,13 @@ impl Workspace {
                 "workspace.task-split",
                 "Resize tasks and details",
                 self.list_width,
-                list,
-                self.details(window, cx),
-                cx.listener(|this, value, _, cx| {
-                    this.list_width = *value;
-                    cx.notify();
-                }),
             )
+            .first(list)
+            .second(self.details(window, cx))
+            .on_resize(cx.listener(|this, value, _, cx| {
+                this.list_width = *value;
+                cx.notify();
+            }))
             .first_limits(PaneLimits::new(px(340.), px(1000.)))
             .second_limits(PaneLimits::new(px(300.), px(600.))),
         )
@@ -1483,19 +1483,16 @@ impl Render for Workspace {
                         )
                     }),
             );
-        let main = SidebarLayout::new(
-            "workspace.layout",
-            self.sidebar,
-            false,
-            sidebar,
-            content,
-            cx.listener(|this, state: &SidebarState, _, cx| {
+        let main = SidebarLayout::new("workspace.layout", self.sidebar)
+            .mobile(false)
+            .sidebar(sidebar)
+            .content(content)
+            .on_change(cx.listener(|this, state: &SidebarState, _, cx| {
                 this.sidebar = *state;
                 cx.notify();
-            }),
-        )
-        .width(px(224.))
-        .text_color(c.foreground);
+            }))
+            .width(px(224.))
+            .text_color(c.foreground);
         let modal = cx.entity().downgrade();
         let save_title = if self.unsaved {
             "Save workspace changes?"

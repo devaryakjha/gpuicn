@@ -16,7 +16,7 @@ pub enum FieldsetLegendVariant {
 }
 
 /// Creates a semantic group; give it an accessible label matching its legend.
-pub fn fieldset_root(id: impl Into<ElementId>, cx: &App) -> Stateful<Div> {
+pub fn fieldset(id: impl Into<ElementId>, cx: &App) -> Stateful<Div> {
     let t = UiTheme::read(cx);
     div()
         .id(id)

@@ -18,6 +18,21 @@ Notable changes to gpuicn. Detailed notes for each beta are in
 - Component names accept `alert_dialog` or `alert-dialog`. Unknown names
   suggest close matches, and `add` warns about missing Cargo dependencies.
 
+### Changed (breaking)
+
+Component APIs now share one shape: required inputs go to `new`, everything
+optional is a builder method, and `cx` is taken only when a function reads it.
+Run `gpuicn diff` to see the new source, then update call sites:
+
+| Before | After |
+| --- | --- |
+| `toasts.push(id, title, description, Some(timeout), cx)` | `toasts.push(id, Notice::new(title).description(description).timeout(timeout), cx)`; use `.persistent()` for no timeout |
+| `Resizable::new(id, label, size, first, second, on_resize)` | `Resizable::new(id, label, size).first(first).second(second).on_resize(on_resize)` |
+| `SidebarLayout::new(id, state, mobile, sidebar, content, on_change)` | `SidebarLayout::new(id, state).mobile(mobile).sidebar(sidebar).content(content).on_change(on_change)` |
+| `dialog_trigger(id, &handle, cx)` | `dialog_trigger(id, &handle)` |
+| `dialog_action(id, &handle, cx)` | `dialog_action(id, &handle)` |
+| `fieldset_root(id, cx)` | `fieldset(id, cx)` |
+
 ### Changed
 
 - The CLI shares the gpuicn version, and its default registry is the snapshot

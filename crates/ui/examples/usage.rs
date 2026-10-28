@@ -36,9 +36,9 @@ mod alert_dialog {
     fn example(handle: &DialogHandle, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let popup = dialog_popup("profile.popup", "Edit profile", cx)
             .child(dialog_title("profile.title", cx).child("Edit profile"))
-            .child(dialog_action("profile.save", handle, cx).label("Save"));
+            .child(dialog_action("profile.save", handle).label("Save"));
         gpui_kit::div()
-            .child(dialog_trigger("profile.open", handle, cx).label("Edit profile"))
+            .child(dialog_trigger("profile.open", handle).label("Edit profile"))
             .child(alert_dialog("profile", handle, popup, window, cx))
     }
 }
@@ -176,9 +176,9 @@ mod dialog {
     fn example(handle: &DialogHandle, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let popup = dialog_popup("profile.popup", "Edit profile", cx)
             .child(dialog_title("profile.title", cx).child("Edit profile"))
-            .child(dialog_action("profile.save", handle, cx).label("Save"));
+            .child(dialog_action("profile.save", handle).label("Save"));
         gpui_kit::div()
-            .child(dialog_trigger("profile.open", handle, cx).label("Edit profile"))
+            .child(dialog_trigger("profile.open", handle).label("Edit profile"))
             .child(dialog("profile", handle, popup, window, cx))
     }
 }
@@ -232,7 +232,7 @@ mod fieldset {
     use gpui_kit::{App, IntoElement, ParentElement, StatefulInteractiveElement};
 
     fn example(name: &Entity<InputState>, cx: &App) -> impl IntoElement {
-        fieldset_root("shipping", cx)
+        fieldset("shipping", cx)
             .aria_label("Shipping address")
             .child(fieldset_legend(FieldsetLegendVariant::Legend, cx).child("Shipping address"))
             .child(Field::new("name", name).label("Full name"))
@@ -528,9 +528,7 @@ mod toast {
                 notify.update(cx, |state, cx| {
                     state.push(
                         "saved",
-                        "Saved",
-                        "Your changes were saved.",
-                        Some(std::time::Duration::from_secs(5)),
+                        Notice::new("Saved").description("Your changes were saved."),
                         cx,
                     )
                 });
@@ -615,16 +613,12 @@ mod resizable {
     fn example() -> impl IntoElement {
         // In a Render implementation, pass caller-owned size and a cx.listener
         // that saves the new size and calls cx.notify(). This sample stays fixed.
-        Resizable::new(
-            "panes",
-            "Resize navigation",
-            px(240.),
-            div(),
-            div(),
-            |_: &Pixels, _, _| {},
-        )
-        .first_limits(PaneLimits::new(px(180.), px(360.)))
-        .second_limits(PaneLimits::new(px(300.), px(2000.)))
+        Resizable::new("panes", "Resize navigation", px(240.))
+            .first(div())
+            .second(div())
+            .on_resize(|_: &Pixels, _, _| {})
+            .first_limits(PaneLimits::new(px(180.), px(360.)))
+            .second_limits(PaneLimits::new(px(300.), px(2000.)))
     }
 }
 

@@ -466,13 +466,13 @@ impl Render for Gallery {
                     "gallery.split",
                     "Resize component navigation",
                     self.sidebar_width,
-                    sidebar,
-                    content,
-                    cx.listener(|this, value, _, cx| {
-                        this.sidebar_width = *value;
-                        cx.notify();
-                    }),
                 )
+                .first(sidebar)
+                .second(content)
+                .on_resize(cx.listener(|this, value, _, cx| {
+                    this.sidebar_width = *value;
+                    cx.notify();
+                }))
                 .first_limits(gpuicn::resizable::PaneLimits::new(px(190.), px(360.)))
                 .second_limits(gpuicn::resizable::PaneLimits::new(px(480.), px(2000.))),
             )
