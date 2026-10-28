@@ -10,7 +10,7 @@ shows the same starter.
 Use Rust 1.97 or newer. Install the CLI, create an app, and run it:
 
 ```sh
-cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.4 --locked
+cargo install gpuicn-cli --git https://github.com/devaryakjha/gpuicn --tag v0.5.0-beta.5 --locked
 gpuicn new my-app
 cd my-app && cargo run
 gpuicn add sidebar dialog
@@ -30,10 +30,6 @@ CLI was built from, so the registry, Cargo pins and fonts always match
 
 Running `init` again is safe: it keeps existing files and fills in what is
 missing. Use `gpuicn init --config-only` to create only `gpuicn.toml`.
-
-> `gpuicn new` and the automatic setup ship in the CLI release after v0.5.0-beta.4. With the
-> v0.5.0-beta.4 CLI, `init` only writes `gpuicn.toml`; follow
-> [Manual setup](#manual-setup) for the rest.
 
 ## Crate mode
 
@@ -67,7 +63,7 @@ too when you pass them its types.
 
 ## Manual setup
 
-gpuicn v0.5.0-beta.4 supports GPUI Kit 0.6.4 on its pinned `gpui-pre` 0.3.5
+gpuicn v0.5.0-beta.5 supports GPUI Kit 0.6.4 on its pinned `gpui-pre` 0.3.5
 runtime. Keep these dependency pins together. Apps using another GPUI revision
 must migrate to this runtime before installing the components.
 
@@ -88,7 +84,7 @@ share the same GPUI types. No compatibility crate or Cargo patch is required.
 Initialize a config pointing to the registry from the same release as your CLI:
 
 ```sh
-gpuicn --registry https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/site/pages/r init --config-only
+gpuicn --registry https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.5/site/pages/r init --config-only
 gpuicn list
 gpuicn add button
 ```
@@ -98,7 +94,7 @@ this config; an HTTP(S) URL or a local directory can serve as the registry.
 
 ```toml
 version = 1
-registry = "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/site/pages/r"
+registry = "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.5/site/pages/r"
 output = "src/ui"
 ```
 
@@ -182,10 +178,10 @@ their license and the starter:
 ```sh
 mkdir -p assets/fonts
 for file in Geist-Regular.ttf Geist-Medium.ttf GeistMono-Regular.ttf; do
-  curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/site/assets/fonts/$file" -o "assets/fonts/$file"
+  curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.5/site/assets/fonts/$file" -o "assets/fonts/$file"
 done
-curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt
-curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.4/fixtures/registry-install/src/main.rs" -o src/main.rs
+curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.5/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt
+curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.5.0-beta.5/fixtures/registry-install/src/main.rs" -o src/main.rs
 cargo run
 ```
 
