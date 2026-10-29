@@ -13,6 +13,8 @@ categories = ["gui"]
 
 [features]
 native-fixture = ["dep:gpui_platform"]
+# Syntax-highlights Markdown code blocks with GPUI Kit's syntect highlighter.
+syntect = ["gpui-kit/syntect"]
 
 [dependencies]
 gpui-kit.workspace = true

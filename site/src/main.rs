@@ -14,10 +14,13 @@ use gpuicn::{
     Button, ButtonSize, ButtonVariant, Checkbox, ThemeMode, UiTheme,
     accordion::*,
     alert_dialog::*,
+    attachment::{Attachment, AttachmentStatus, attachment_group},
     avatar::{Avatar, AvatarSize},
+    badge::{Badge, BadgeVariant},
     carousel::*,
     checkbox_group::*,
     collapsible::*,
+    command::{Command, CommandEvent, CommandState, command_dialog_popup},
     dialog::*,
     drawer::{
         Drawer, DrawerContent, DrawerSide, drawer_body, drawer_close, drawer_description,
@@ -29,8 +32,15 @@ use gpuicn::{
     form::form,
     input::{Input, InputEvent, InputState},
     input_group::*,
+    kbd::{Kbd, kbd_group},
+    markdown::EntityLinks,
     menu::{Menu, MenuItem, MenuState},
     menubar::Menubar,
+    message::{
+        Message, MessageHighlight, MessageStatus, Reaction, day_divider, message_action,
+        message_actions, new_messages_divider,
+    },
+    message_list::{MessageList, MessageListState},
     meter::Meter,
     navigation_menu::navigation_menu,
     number_field::NumberField,
@@ -42,10 +52,14 @@ use gpuicn::{
     scroll_area::ScrollArea,
     select::{Select, SelectItem, SelectState},
     separator::Separator,
+    skeleton::Skeleton,
     slider::Slider,
+    spinner::Spinner,
     switch::Switch,
     tabs::*,
+    tag::{Tag, TagVariant},
     textarea::*,
+    title_bar::TitleBar,
     toast::{Notice, ToastState},
     toggle::{Toggle, ToggleVariant},
     toggle_group::*,
@@ -125,7 +139,7 @@ fn launch(cx: &mut App) {
         size(
             px(requested_dimension(
                 "width",
-                if matches!(demo, Demo::Sidebar | Demo::VirtualList) {
+                if matches!(demo, Demo::Sidebar | Demo::VirtualList | Demo::MessageList) {
                     960.
                 } else {
                     640.
@@ -135,7 +149,7 @@ fn launch(cx: &mut App) {
             )),
             px(requested_dimension(
                 "height",
-                if matches!(demo, Demo::Sidebar | Demo::VirtualList) {
+                if matches!(demo, Demo::Sidebar | Demo::VirtualList | Demo::MessageList) {
                     600.
                 } else {
                     288.
@@ -235,6 +249,17 @@ enum Demo {
     ToggleGroup,
     Toolbar,
     Tooltip,
+    Kbd,
+    Badge,
+    Tag,
+    Spinner,
+    Skeleton,
+    Markdown,
+    Command,
+    Message,
+    MessageList,
+    Attachment,
+    TitleBar,
 }
 
 impl Demo {
@@ -285,6 +310,17 @@ impl Demo {
             "toggle-group" => Some(Self::ToggleGroup),
             "toolbar" => Some(Self::Toolbar),
             "tooltip" => Some(Self::Tooltip),
+            "kbd" => Some(Self::Kbd),
+            "badge" => Some(Self::Badge),
+            "tag" => Some(Self::Tag),
+            "spinner" => Some(Self::Spinner),
+            "skeleton" => Some(Self::Skeleton),
+            "markdown" => Some(Self::Markdown),
+            "command" => Some(Self::Command),
+            "message" => Some(Self::Message),
+            "message-list" => Some(Self::MessageList),
+            "attachment" => Some(Self::Attachment),
+            "title-bar" => Some(Self::TitleBar),
             _ => None,
         }
     }
@@ -350,7 +386,10 @@ impl Render for Showcase {
             .items_center()
             .justify_center()
             .p(px(
-                if matches!(self.demo, Demo::Sidebar | Demo::VirtualList) {
+                if matches!(
+                    self.demo,
+                    Demo::Sidebar | Demo::VirtualList | Demo::Message | Demo::MessageList
+                ) {
                     0.
                 } else {
                     16.
@@ -460,7 +499,588 @@ impl Showcase {
             Demo::ToggleGroup => self.toggle_group_preview(window, cx).into_any_element(),
             Demo::Toolbar => self.toolbar_preview(window, cx).into_any_element(),
             Demo::Tooltip => self.tooltip_preview(window, cx).into_any_element(),
+            Demo::Kbd => self.kbd_preview(cx).into_any_element(),
+            Demo::Badge => self.badge_preview().into_any_element(),
+            Demo::Tag => self.tag_preview(cx).into_any_element(),
+            Demo::Spinner => self.spinner_preview(cx).into_any_element(),
+            Demo::Skeleton => self.skeleton_preview().into_any_element(),
+            Demo::Markdown => self.markdown_preview(cx).into_any_element(),
+            Demo::Command => self.command_preview(window, cx).into_any_element(),
+            Demo::Message => self.message_preview(cx).into_any_element(),
+            Demo::MessageList => self.message_list_preview(window, cx).into_any_element(),
+            Demo::Attachment => self.attachment_preview(cx).into_any_element(),
+            Demo::TitleBar => self.title_bar_preview(cx).into_any_element(),
         }
+    }
+
+    fn kbd_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = UiTheme::read(cx).clone();
+        let row = |label: &'static str, keys: gpui_kit::Div| {
+            div()
+                .w_full()
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(16.))
+                .child(
+                    div()
+                        .text_size(px(14.))
+                        .text_color(theme.colors.muted_foreground)
+                        .child(label),
+                )
+                .child(keys)
+        };
+        div()
+            .w_full()
+            .max_w(px(320.0))
+            .flex()
+            .flex_col()
+            .gap(px(12.0))
+            .child(row(
+                "Quick switcher",
+                kbd_group([Kbd::shortcut("secondary-k")], cx),
+            ))
+            .child(row(
+                "Command palette",
+                kbd_group([Kbd::shortcut("secondary-shift-p")], cx),
+            ))
+            .child(row(
+                "Jump to unread",
+                kbd_group([Kbd::new("Alt"), Kbd::new("Shift"), Kbd::new("↑")], cx),
+            ))
+            .child(row("Close", kbd_group([Kbd::new("Esc")], cx)))
+    }
+
+    fn badge_preview(&self) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(16.0))
+            .child(
+                div()
+                    .flex()
+                    .flex_wrap()
+                    .justify_center()
+                    .gap(px(8.0))
+                    .child(Badge::new("Default"))
+                    .child(Badge::new("Secondary").variant(BadgeVariant::Secondary))
+                    .child(Badge::new("Destructive").variant(BadgeVariant::Destructive))
+                    .child(Badge::new("Outline").variant(BadgeVariant::Outline))
+                    .child(Badge::new("Ghost").variant(BadgeVariant::Ghost)),
+            )
+            .child(
+                div()
+                    .flex()
+                    .flex_wrap()
+                    .justify_center()
+                    .gap(px(8.0))
+                    .child(Badge::count(3, 99))
+                    .child(Badge::count(42, 99).variant(BadgeVariant::Secondary))
+                    .child(Badge::count(250, 99).variant(BadgeVariant::Destructive))
+                    .child(
+                        Badge::new("Verified")
+                            .variant(BadgeVariant::Outline)
+                            .icon(LucideIcon::BadgeCheck),
+                    ),
+            )
+    }
+
+    fn tag_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(16.0))
+            .child(
+                div()
+                    .flex()
+                    .flex_wrap()
+                    .justify_center()
+                    .gap(px(8.0))
+                    .child(Tag::new("preview.tag.online", "Online").dot(gpui_kit::rgb(0x22c55e)))
+                    .child(Tag::new("preview.tag.away", "Away").dot(gpui_kit::rgb(0xf59e0b)))
+                    .child(
+                        Tag::new("preview.tag.bot", "Bot")
+                            .variant(TagVariant::Outline)
+                            .icon(LucideIcon::Bot),
+                    )
+                    .child(
+                        Tag::new("preview.tag.deactivated", "Deactivated")
+                            .variant(TagVariant::Destructive),
+                    ),
+            )
+            .when(!self.checked, |root| {
+                root.child(
+                    Tag::new("preview.tag.filter", "from: @arya")
+                        .variant(TagVariant::Outline)
+                        .on_remove(cx.listener(|this, _, _, cx| {
+                            this.checked = true;
+                            this.demo_action = "Removed filter".into();
+                            cx.notify();
+                        })),
+                )
+            })
+    }
+
+    fn spinner_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = UiTheme::read(cx).clone();
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(16.0))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(16.0))
+                    .child(Spinner::new("preview.spinner"))
+                    .child(Spinner::new("preview.spinner.large").size(px(24.)))
+                    .child(
+                        Spinner::new("preview.spinner.primary")
+                            .size(px(32.))
+                            .color(theme.colors.primary),
+                    ),
+            )
+            .child(
+                Button::new("preview.spinner.button")
+                    .disabled(true)
+                    .child(
+                        Spinner::new("preview.spinner.inline")
+                            .label("Sending")
+                            .color(theme.colors.primary_foreground),
+                    )
+                    .label("Sending…"),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(8.0))
+                    .text_size(px(13.))
+                    .text_color(theme.colors.muted_foreground)
+                    .child(Spinner::new("preview.spinner.history").label("Loading older messages"))
+                    .child("Loading older messages"),
+            )
+    }
+
+    fn skeleton_preview(&self) -> impl IntoElement {
+        let message = |id: &'static str, lines: &'static [f32]| {
+            div()
+                .w_full()
+                .flex()
+                .gap(px(12.))
+                .child(Skeleton::new((id, 100usize)).size(px(32.)).rounded_full())
+                .child(
+                    div()
+                        .flex_1()
+                        .flex()
+                        .flex_col()
+                        .gap(px(8.))
+                        .child(Skeleton::new((id, 101usize)).w(px(96.)).h(px(12.)))
+                        .children(lines.iter().enumerate().map(move |(index, width)| {
+                            Skeleton::new((id, index)).w(gpui_kit::relative(*width))
+                        })),
+                )
+        };
+        div()
+            .w_full()
+            .max_w(px(360.0))
+            .flex()
+            .flex_col()
+            .gap(px(20.0))
+            .child(message("preview.skeleton.first", &[1., 0.6]))
+            .child(message("preview.skeleton.second", &[0.8]))
+    }
+
+    fn command_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let owner = cx.entity().downgrade();
+        let handle = window
+            .use_keyed_state("command.handle", cx, |_, _| DialogHandle::new(false))
+            .read(cx)
+            .clone();
+        let state = window
+            .use_keyed_state("command.state", cx, |window, cx| {
+                let state = cx.new(|cx| CommandState::new(command_items(), window, cx));
+                let handle = handle.clone();
+                let subscription =
+                    cx.subscribe_in(&state, window, move |_, _, event, window, cx| {
+                        let action = match event {
+                            CommandEvent::Confirm(value) => format!("Opened {value}"),
+                            CommandEvent::Cancel => "Closed".into(),
+                            CommandEvent::Query(_) => return,
+                        };
+                        handle.close(window, cx);
+                        let _ = owner.update(cx, |this, cx| {
+                            this.demo_action = action;
+                            cx.notify();
+                        });
+                    });
+                (state, subscription)
+            })
+            .read(cx)
+            .0
+            .clone();
+        let inline = window
+            .use_keyed_state("command.inline", cx, |window, cx| {
+                cx.new(|cx| CommandState::new(command_items(), window, cx))
+            })
+            .read(cx)
+            .clone();
+        let open = handle.clone();
+        let focus = state.clone();
+        div()
+            .w_full()
+            .max_w(px(420.))
+            .flex()
+            .flex_col()
+            .gap(px(12.))
+            .child(
+                Button::new("command.open")
+                    .variant(ButtonVariant::Outline)
+                    .on_click(move |_, window, cx| {
+                        open.open(window, cx);
+                        focus.update(cx, |state, cx| state.focus(window, cx));
+                    })
+                    .child("Quick switcher")
+                    .child(Kbd::shortcut("secondary-k")),
+            )
+            .child(Command::new(&inline))
+            .child(dialog(
+                "command.dialog",
+                &handle,
+                command_dialog_popup("command.popup", &state, cx),
+                window,
+                cx,
+            ))
+    }
+
+    fn message_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let image = "https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png";
+        let reacted = self.checked;
+        let toggle = cx.listener(|this, emoji: &SharedString, _, cx| {
+            this.checked = !this.checked;
+            this.demo_action = format!("Toggled {emoji}");
+            cx.notify();
+        });
+        let actions = |id: &'static str, cx: &App| {
+            message_actions(cx)
+                .child(message_action(
+                    (id, 0usize),
+                    LucideIcon::FaceSlightlySmilingPlus,
+                    "Add reaction",
+                    cx,
+                ))
+                .child(message_action(
+                    (id, 1usize),
+                    LucideIcon::Reply,
+                    "Reply in thread",
+                    cx,
+                ))
+                .child(message_action(
+                    (id, 2usize),
+                    LucideIcon::Ellipsis,
+                    "More actions",
+                    cx,
+                ))
+        };
+        div()
+            .size_full()
+            .flex()
+            .flex_col()
+            .pt(px(12.))
+            .child(day_divider("message.day", "Today", cx))
+            .child(
+                Message::new("message.first")
+                    .avatar(
+                        Avatar::new("message.first.avatar")
+                            .image(image)
+                            .fallback("AJ"),
+                    )
+                    .author("Arya")
+                    .timestamp("10:42 AM")
+                    .actions(actions("message.first", cx))
+                    .reactions([
+                        Reaction::new("🎉", if reacted { 4 } else { 3 }, reacted),
+                        Reaction::new("👀", 1, false),
+                    ])
+                    .on_reaction(toggle)
+                    .on_add_reaction(|_, _, _| {})
+                    .child("gpuicn 0.5.0 is out. Chat components are next."),
+            )
+            .child(
+                Message::new("message.second")
+                    .continuation(true)
+                    .gutter_time("10:43")
+                    .actions(actions("message.second", cx))
+                    .child("Hover a row to see its actions and time."),
+            )
+            .child(new_messages_divider("message.new", "New messages", cx))
+            .child(
+                Message::new("message.mention")
+                    .avatar(Avatar::new("message.mention.avatar").fallback("SK"))
+                    .author("Sam")
+                    .timestamp("11:05 AM")
+                    .header_child(
+                        Tag::new("message.mention.bot", "Bot").variant(TagVariant::Outline),
+                    )
+                    .highlight(MessageHighlight::Mention)
+                    .actions(actions("message.mention", cx))
+                    .child("@arya can you review the Matty plan?"),
+            )
+            .child(
+                Message::new("message.failed")
+                    .avatar(
+                        Avatar::new("message.failed.avatar")
+                            .image(image)
+                            .fallback("AJ"),
+                    )
+                    .author("Arya")
+                    .timestamp("11:06 AM")
+                    .status(MessageStatus::Failed)
+                    .on_retry(cx.listener(|this, _, _, cx| {
+                        this.demo_action = "Retried".into();
+                        cx.notify();
+                    }))
+                    .on_delete(|_, _, _| {})
+                    .child("On it."),
+            )
+    }
+
+    fn message_list_preview(
+        &self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let total = window.use_keyed_state("message-list.total", cx, |_, _| 400usize);
+        let unseen = window.use_keyed_state("message-list.unseen", cx, |_, _| 0usize);
+        let state = window
+            .use_keyed_state("message-list.state", cx, |_, cx| {
+                cx.new(|cx| MessageListState::new(400, cx))
+            })
+            .read(cx)
+            .clone();
+        if !state.read(cx).is_scrolled_up() && *unseen.read(cx) > 0 {
+            unseen.update(cx, |unseen, _| *unseen = 0);
+        }
+        let theme = UiTheme::read(cx).clone();
+        let add = {
+            let state = state.clone();
+            let total = total.clone();
+            let unseen = unseen.clone();
+            move |_: &gpui_kit::ClickEvent, _: &mut Window, cx: &mut App| {
+                total.update(cx, |total, _| *total += 1);
+                if state.read(cx).is_scrolled_up() {
+                    unseen.update(cx, |unseen, _| *unseen += 1);
+                }
+                state.update(cx, |state, cx| {
+                    state.append(1, cx);
+                });
+            }
+        };
+        let older = {
+            let state = state.clone();
+            let total = total.clone();
+            move |_: &gpui_kit::ClickEvent, _: &mut Window, cx: &mut App| {
+                total.update(cx, |total, _| *total += 50);
+                state.update(cx, |state, cx| {
+                    state.prepend(50, cx);
+                });
+            }
+        };
+        let count = *total.read(cx);
+        div()
+            .size_full()
+            .flex()
+            .flex_col()
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(8.))
+                    .h(px(48.))
+                    .px(px(16.))
+                    .border_b_1()
+                    .border_color(theme.colors.border)
+                    .child(
+                        div()
+                            .font_weight(gpui_kit::FontWeight::SEMIBOLD)
+                            .child(format!("# general · {count} messages")),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .gap(px(8.))
+                            .child(
+                                Button::new("message-list.older")
+                                    .variant(ButtonVariant::Outline)
+                                    .size(ButtonSize::Sm)
+                                    .on_click(older)
+                                    .label("Load older"),
+                            )
+                            .child(
+                                Button::new("message-list.add")
+                                    .size(ButtonSize::Sm)
+                                    .on_click(add)
+                                    .label("New message"),
+                            ),
+                    ),
+            )
+            .child(
+                div().flex_1().min_h_0().child(
+                    MessageList::new("message-list", &state, move |index, _, cx| {
+                        transcript_row(index, cx)
+                    })
+                    .unseen(*unseen.read(cx)),
+                ),
+            )
+    }
+
+    fn attachment_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let image = "https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png";
+        let removed = self.checked;
+        div()
+            .w_full()
+            .max_w(px(540.))
+            .flex()
+            .flex_col()
+            .gap(px(12.))
+            .child(
+                div()
+                    .flex()
+                    .flex_wrap()
+                    .gap(px(8.))
+                    .child(
+                        Attachment::new("attachment.ready", "matty-plan.pdf")
+                            .icon(LucideIcon::FileText)
+                            .meta("PDF · 2.4 MB")
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.demo_action = "Opened matty-plan.pdf".into();
+                                cx.notify();
+                            })),
+                    )
+                    .child(
+                        Attachment::new("attachment.uploading", "recording.mov")
+                            .icon(LucideIcon::FilePlay)
+                            .status(AttachmentStatus::Uploading(0.64))
+                            .on_remove(|_, _, _| {}),
+                    )
+                    .child(
+                        Attachment::new("attachment.failed", "design.fig")
+                            .status(AttachmentStatus::Failed)
+                            .on_retry(cx.listener(|this, _, _, cx| {
+                                this.demo_action = "Retrying design.fig".into();
+                                cx.notify();
+                            }))
+                            .on_remove(|_, _, _| {}),
+                    ),
+            )
+            .child(attachment_group(
+                "attachment.images",
+                [
+                    Some(Attachment::new("attachment.image", "avatar.png").image(image)),
+                    Some(
+                        Attachment::new("attachment.image.uploading", "avatar-2.png")
+                            .image(image)
+                            .status(AttachmentStatus::Uploading(0.3)),
+                    ),
+                    (!removed).then(|| {
+                        Attachment::new("attachment.image.removable", "avatar-3.png")
+                            .image(image)
+                            .on_remove(cx.listener(|this, _, _, cx| {
+                                this.checked = true;
+                                this.demo_action = "Removed avatar-3.png".into();
+                                cx.notify();
+                            }))
+                    }),
+                ]
+                .into_iter()
+                .flatten(),
+                cx,
+            ))
+    }
+
+    fn title_bar_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = UiTheme::read(cx).clone();
+        div()
+            .w_full()
+            .max_w(px(560.))
+            .rounded(theme.radius.xl)
+            .border_1()
+            .border_color(theme.colors.border)
+            .overflow_hidden()
+            .bg(theme.colors.background)
+            .child(
+                TitleBar::new()
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap(px(6.))
+                            .children((0..3).map(|index| {
+                                div()
+                                    .size(px(12.))
+                                    .rounded_full()
+                                    .bg(theme.colors.border)
+                                    .id(("traffic", index as usize))
+                            })),
+                    )
+                    .child(
+                        div()
+                            .font_weight(gpui_kit::FontWeight::SEMIBOLD)
+                            .child("Matty"),
+                    )
+                    .child(div().flex_1())
+                    .child(
+                        Button::new("title-bar.search")
+                            .variant(ButtonVariant::Outline)
+                            .size(ButtonSize::Xs)
+                            .w(px(200.))
+                            .justify_between()
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(6.))
+                                    .text_color(theme.colors.muted_foreground)
+                                    .child(
+                                        lucide(LucideIcon::Search)
+                                            .size(px(12.))
+                                            .text_color(theme.colors.muted_foreground),
+                                    )
+                                    .child("Search"),
+                            )
+                            .child(Kbd::shortcut("secondary-k")),
+                    )
+                    .child(div().flex_1())
+                    .child(
+                        Avatar::new("title-bar.avatar")
+                            .size(AvatarSize::Sm)
+                            .fallback("AJ"),
+                    )
+                    .pr(px(12.)),
+            )
+            .child(
+                div()
+                    .h(px(120.))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .text_size(px(13.))
+                    .text_color(theme.colors.muted_foreground)
+                    .child("Drag the bar to move the window; double-click to zoom."),
+            )
+    }
+
+    fn markdown_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let source = "**Release day.** gpuicn `v0.5.0` is tagged, thanks [@arya](mention:arya) and [@sam](mention:sam). Notes are in [~releases](channel:releases).\n\n> Matty pins a tagged gpuicn release before beta.\n\n- Message rows and reactions\n- A *virtualized* transcript\n- ~~Bubbles~~ left-aligned team chat\n\n```rust\nlet list = MessageList::new(\"channel\", &state, render_row);\n```\n\n| Component | Status |\n| --- | --- |\n| Command | Ready |\n| Markdown | Ready |";
+        div().w_full().max_w(px(520.)).child(
+            gpuicn::markdown::markdown("preview.markdown", source, cx)
+                .plugin(EntityLinks::new("mention").highlight(|user| user == "arya"))
+                .plugin(EntityLinks::new("channel")),
+        )
     }
 
     fn button_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -3397,6 +4017,17 @@ mod audit_tests {
             "toggle-group",
             "toolbar",
             "tooltip",
+            "kbd",
+            "badge",
+            "tag",
+            "spinner",
+            "skeleton",
+            "markdown",
+            "command",
+            "message",
+            "message-list",
+            "attachment",
+            "title-bar",
         ];
         let mut custom = UiTheme::neutral_light();
         custom.spacing.unit = px(5.);
@@ -3425,6 +4056,78 @@ mod audit_tests {
             }
         }
     }
+}
+
+fn command_items() -> Vec<gpuicn::command::CommandItem> {
+    use gpuicn::command::CommandItem;
+    vec![
+        CommandItem::new("town-square", "Town Square")
+            .group("Channels")
+            .icon(LucideIcon::Hash),
+        CommandItem::new("off-topic", "Off-Topic")
+            .group("Channels")
+            .icon(LucideIcon::Hash),
+        CommandItem::new("gpuicn", "gpuicn")
+            .group("Channels")
+            .icon(LucideIcon::Lock),
+        CommandItem::new("arya", "Arya")
+            .group("Direct messages")
+            .icon(LucideIcon::User),
+        CommandItem::new("sam", "Sam")
+            .group("Direct messages")
+            .icon(LucideIcon::User),
+        CommandItem::new("threads", "Threads")
+            .group("Views")
+            .icon(LucideIcon::MessagesSquare)
+            .shortcut("secondary-shift-t"),
+        CommandItem::new("preferences", "Preferences")
+            .group("Commands")
+            .icon(LucideIcon::Settings)
+            .shortcut("secondary-,"),
+        CommandItem::new("theme", "Toggle dark mode")
+            .group("Commands")
+            .icon(LucideIcon::Moon)
+            .keywords(["theme", "appearance"]),
+        CommandItem::new("archive", "Browse archived channels")
+            .group("Commands")
+            .icon(LucideIcon::Archive)
+            .disabled(true),
+    ]
+}
+
+/// One synthetic transcript row: day dividers every 60 rows and new sender
+/// groups every 4, with varied heights to exercise variable-height layout.
+fn transcript_row(index: usize, cx: &App) -> gpui_kit::AnyElement {
+    use gpuicn::message::{Message, Reaction, day_divider};
+    const AUTHORS: [(&str, &str); 3] = [("Arya", "AJ"), ("Sam", "SK"), ("Lee", "LW")];
+    const LINES: [&str; 5] = [
+        "Pushed the fix.",
+        "Variable-height rows keep their place when older history loads above them.",
+        "Scroll up, then press New message: the pill counts what arrived while you were away.",
+        "Looks good to me.",
+        "Message lists only render the rows on screen, so long channels stay fast. This one wraps onto a second line at narrow widths.",
+    ];
+    if index.is_multiple_of(60) {
+        return day_divider(
+            ("transcript.day", index),
+            format!("Day {}", index / 60 + 1),
+            cx,
+        )
+        .into_any_element();
+    }
+    let (author, initials) = AUTHORS[(index / 4) % AUTHORS.len()];
+    let first = index % 4 == 1 || index % 60 == 1;
+    Message::new(("transcript", index))
+        .continuation(!first)
+        .avatar(Avatar::new(("transcript.avatar", index)).fallback(initials))
+        .author(author)
+        .timestamp(format!("{}:{:02}", 9 + index / 60 % 8, index % 60))
+        .gutter_time(format!("{}:{:02}", 9 + index / 60 % 8, index % 60))
+        .when(index.is_multiple_of(7), |message| {
+            message.reactions([Reaction::new("👍", index % 5 + 1, false)])
+        })
+        .child(LINES[index % LINES.len()])
+        .into_any_element()
 }
 
 fn demo_input(

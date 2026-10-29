@@ -17,6 +17,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "A modal dialog that expects a response from the user.",
     ),
     (
+        "attachment",
+        "Attachment",
+        "File and image cards with upload progress, retry, and remove.",
+    ),
+    (
         "autocomplete",
         "Autocomplete",
         "A text input that suggests matching values.",
@@ -25,6 +30,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "avatar",
         "Avatar",
         "An image element with a fallback for representing a user.",
+    ),
+    (
+        "badge",
+        "Badge",
+        "Labels and unread or mention counts in a compact pill.",
     ),
     (
         "button",
@@ -57,6 +67,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "An input paired with a searchable list of choices.",
     ),
     (
+        "command",
+        "Command",
+        "A searchable command palette and quick switcher.",
+    ),
+    (
         "context-menu",
         "Context Menu",
         "A menu opened by a secondary pointer action.",
@@ -77,6 +92,16 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "Explains an empty state and offers a clear next action.",
     ),
     (
+        "kbd",
+        "Kbd",
+        "Shows a keyboard key or shortcut with platform modifier names.",
+    ),
+    (
+        "markdown",
+        "Markdown",
+        "Renders Markdown with themed code blocks and inline entity chips.",
+    ),
+    (
         "menu",
         "Dropdown Menu",
         "Displays a menu of actions from a trigger.",
@@ -95,6 +120,16 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "form",
         "Form",
         "Coordinates validation and submission for fields.",
+    ),
+    (
+        "message",
+        "Message",
+        "A chat message row with grouping, reactions, and hover actions.",
+    ),
+    (
+        "message-list",
+        "Message List",
+        "A chat transcript that only renders visible rows and follows new messages.",
     ),
     (
         "preview-card",
@@ -173,20 +208,40 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "Application navigation with responsive layouts, icon rails, nested menus, and mobile sheets.",
     ),
     (
+        "skeleton",
+        "Skeleton",
+        "A placeholder that stands in for content while it loads.",
+    ),
+    (
         "slider",
         "Slider",
         "Selects a value or range along a track.",
     ),
     ("switch", "Switch", "Toggles a setting on or off."),
     (
+        "spinner",
+        "Spinner",
+        "An animated indicator that shows work in progress.",
+    ),
+    (
         "tabs",
         "Tabs",
         "Shows one panel from a set of layered sections.",
     ),
     (
+        "tag",
+        "Tag",
+        "A compact chip for a status, role, or removable filter.",
+    ),
+    (
         "textarea",
         "Textarea",
         "A styled multi-line editor backed by native GPUI editing.",
+    ),
+    (
+        "title-bar",
+        "Title Bar",
+        "A draggable custom window title bar with window controls.",
     ),
     (
         "toast",

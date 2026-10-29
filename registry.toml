@@ -58,3 +58,35 @@ dependencies = ["scroll_area", "tooltip"]
 dependencies = ["input"]
 [components.number_field]
 dependencies = ["field"]
+
+[components.kbd]
+description = "Nova key caps that show shortcuts with each platform's modifier names."
+[components.badge]
+description = "Nova pills for labels and capped unread or mention counts."
+[components.tag]
+description = "Compact chips for statuses and roles, with an optional status dot and remove button."
+dependencies = ["button"]
+[components.spinner]
+description = "A rotating Lucide loader announced as a status; it holds still under reduced motion."
+[components.skeleton]
+description = "Muted pulsing placeholders for content that is still loading."
+[components.command]
+description = "A Nova command palette and quick switcher with grouped, fuzzy-filtered, virtualized results."
+dependencies = ["input", "dialog", "kbd"]
+[components.message]
+title = "Message"
+description = "Team-chat message rows with grouping, mention highlights, reactions, hover actions and dividers."
+dependencies = ["button"]
+[components.message_list]
+title = "Message List"
+description = "A virtualized, variable-height chat transcript that follows new messages, with a jump-to-latest pill."
+dependencies = ["button"]
+[components.attachment]
+description = "File and image attachment cards with upload progress, retry and remove."
+dependencies = ["button"]
+[components.title_bar]
+title = "Title Bar"
+description = "A draggable custom window title bar with platform window controls."
+
+[components.markdown]
+description = "Nova-styled Markdown with themed code blocks, tables, quotes and inline entity chips for mentions and channels."

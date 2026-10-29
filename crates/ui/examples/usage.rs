@@ -752,3 +752,191 @@ mod textarea {
         textarea(&state).aria_label("Message")
     }
 }
+
+mod kbd {
+    use crate::ui::kbd::*;
+    use gpui_kit::{App, IntoElement};
+
+    fn example(cx: &App) -> impl IntoElement {
+        kbd_group([Kbd::shortcut("secondary-k"), Kbd::new("Esc")], cx)
+    }
+}
+
+mod badge {
+    use crate::ui::badge::*;
+    use gpui_kit::IntoElement;
+
+    fn example(mentions: usize) -> impl IntoElement {
+        Badge::count(mentions, 99).variant(BadgeVariant::Destructive)
+    }
+}
+
+mod tag {
+    use crate::ui::tag::*;
+    use gpui_kit::{IntoElement, rgb};
+
+    fn example() -> impl IntoElement {
+        Tag::new("status.away", "Away")
+            .dot(rgb(0xf59e0b))
+            .on_remove(|_, _, _| {})
+    }
+}
+
+mod spinner {
+    use crate::ui::spinner::Spinner;
+    use gpui_kit::IntoElement;
+
+    fn example() -> impl IntoElement {
+        Spinner::new("history.loading").label("Loading older messages")
+    }
+}
+
+mod skeleton {
+    use crate::ui::skeleton::Skeleton;
+    use gpui_kit::{IntoElement, ParentElement as _, Styled as _, div, px};
+
+    fn example() -> impl IntoElement {
+        div()
+            .flex()
+            .gap(px(12.))
+            .child(Skeleton::new("row.avatar").size(px(32.)).rounded_full())
+            .child(Skeleton::new("row.line").w(px(240.)))
+    }
+}
+
+mod command {
+    use crate::ui::command::*;
+    use crate::ui::dialog::{DialogHandle, dialog};
+    use gpui_icons::LucideIcon;
+    use gpui_kit::{App, AppContext as _, IntoElement, Window};
+
+    fn example(handle: &DialogHandle, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("switcher", cx, |window, cx| {
+            let handle = handle.clone();
+            let state = cx.new(|cx| {
+                CommandState::new(
+                    [
+                        CommandItem::new("town-square", "Town Square")
+                            .group("Channels")
+                            .icon(LucideIcon::Hash),
+                        CommandItem::new("preferences", "Preferences")
+                            .group("Commands")
+                            .shortcut("secondary-,"),
+                    ],
+                    window,
+                    cx,
+                )
+            });
+            let subscription = cx.subscribe_in(&state, window, move |_, _, event, window, cx| {
+                if let CommandEvent::Confirm(_) | CommandEvent::Cancel = event {
+                    handle.close(window, cx);
+                }
+            });
+            (state, subscription)
+        });
+        let state = state.read(cx).0.clone();
+        dialog(
+            "switcher",
+            handle,
+            command_dialog_popup("switcher.popup", &state, cx),
+            window,
+            cx,
+        )
+    }
+}
+
+mod message {
+    use crate::ui::avatar::Avatar;
+    use crate::ui::message::*;
+    use gpui_icons::LucideIcon;
+    use gpui_kit::{App, IntoElement, ParentElement as _};
+
+    fn example(cx: &App) -> impl IntoElement {
+        Message::new("post.42")
+            .avatar(Avatar::new("post.42.avatar").fallback("AJ"))
+            .author("Arya")
+            .timestamp("10:42 AM")
+            .highlight(MessageHighlight::Mention)
+            .reactions([Reaction::new("🎉", 3, true)])
+            .on_reaction(|emoji, _, _| println!("toggle {emoji}"))
+            .actions(
+                message_actions(cx)
+                    .child(message_action(
+                        "post.42.react",
+                        LucideIcon::FaceSlightlySmilingPlus,
+                        "Add reaction",
+                        cx,
+                    ))
+                    .child(message_action(
+                        "post.42.reply",
+                        LucideIcon::Reply,
+                        "Reply in thread",
+                        cx,
+                    )),
+            )
+            .child("@you the release is tagged.")
+    }
+}
+
+mod message_list {
+    use crate::ui::message::Message;
+    use crate::ui::message_list::*;
+    use gpui_kit::{App, AppContext as _, IntoElement, ParentElement as _, Window};
+
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("channel.list", cx, |_, cx| {
+            cx.new(|cx| MessageListState::new(1_000, cx))
+        });
+        let state = state.read(cx).clone();
+        MessageList::new("channel", &state, |index, _, _| {
+            Message::new(("post", index))
+                .author("Arya")
+                .child(format!("Message {index}"))
+        })
+    }
+}
+
+mod attachment {
+    use crate::ui::attachment::*;
+    use gpui_icons::LucideIcon;
+    use gpui_kit::{App, IntoElement};
+
+    fn example(progress: f32, cx: &App) -> impl IntoElement {
+        attachment_group(
+            "composer.files",
+            [Attachment::new("upload.plan", "plan.pdf")
+                .icon(LucideIcon::FileText)
+                .meta("PDF · 2.4 MB")
+                .status(AttachmentStatus::Uploading(progress))
+                .on_remove(|_, _, _| {})],
+            cx,
+        )
+    }
+}
+
+mod title_bar {
+    use crate::ui::title_bar::*;
+    use gpui_kit::{IntoElement, ParentElement as _};
+
+    fn example() -> impl IntoElement {
+        TitleBar::new().child("Matty")
+    }
+}
+
+mod markdown {
+    use crate::ui::markdown::*;
+    use gpui_kit::{App, IntoElement};
+
+    fn example(cx: &App) -> impl IntoElement {
+        markdown(
+            "post.42.body",
+            "**Shipped** in `v0.5.0`. Thanks [@arya](mention:arya)!",
+            cx,
+        )
+        .plugin(
+            EntityLinks::new("mention")
+                .highlight(|user| user == "arya")
+                .on_click(|user, _, _| println!("open profile {user}")),
+        )
+    }
+}
