@@ -561,6 +561,15 @@ fn sync_component_theme(cx: &mut App, theme: UiTheme) {
     component.button_foreground = colors.foreground.into();
     component.button_hover = colors.accent.into();
     component.button_active = colors.muted.into();
+    // Rich text: links, selection, table headings and code highlighting.
+    component.link = colors.primary.into();
+    component.selection = colors.ring.opacity(0.3).into();
+    component.table_head = colors.muted.into();
+    component.table_head_foreground = colors.foreground.into();
+    component.highlight_theme = match theme.mode {
+        ThemeMode::Light => gpui_kit::component::highlighter::HighlightTheme::default_light(),
+        ThemeMode::Dark => gpui_kit::component::highlighter::HighlightTheme::default_dark(),
+    };
     component.tokens = ThemeTokens::from(&component.colors);
 
     Theme::sync_base(cx);

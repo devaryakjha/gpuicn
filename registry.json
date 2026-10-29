@@ -68,6 +68,29 @@
       ]
     },
     {
+      "name": "attachment",
+      "type": "registry:item",
+      "title": "Attachment",
+      "description": "File and image attachment cards with upload progress, retry and remove.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/attachment/attachment.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/attachment.rs"
+        }
+      ]
+    },
+    {
       "name": "autocomplete",
       "type": "registry:item",
       "title": "Autocomplete",
@@ -256,6 +279,49 @@
           "path": "registry/combobox/combobox.rs",
           "type": "registry:file",
           "target": "~/src/ui/combobox.rs"
+        }
+      ]
+    },
+    {
+      "name": "command",
+      "type": "registry:item",
+      "title": "Command",
+      "description": "A Nova command palette and quick switcher with grouped, fuzzy-filtered, virtualized results.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/dialog/dialog.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/dialog.rs"
+        },
+        {
+          "path": "registry/dialog/modal_focus.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/modal_focus.rs"
+        },
+        {
+          "path": "registry/kbd/kbd.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/kbd.rs"
+        },
+        {
+          "path": "registry/command/command.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/command.rs"
         }
       ]
     },
@@ -495,6 +561,24 @@
       ]
     },
     {
+      "name": "markdown",
+      "type": "registry:item",
+      "title": "Markdown",
+      "description": "Nova-styled Markdown with themed code blocks, tables, quotes and inline entity chips for mentions and channels.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/markdown/markdown.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/markdown.rs"
+        }
+      ]
+    },
+    {
       "name": "menu",
       "type": "registry:item",
       "title": "Menu",
@@ -542,6 +626,52 @@
           "path": "registry/menubar/menubar.rs",
           "type": "registry:file",
           "target": "~/src/ui/menubar.rs"
+        }
+      ]
+    },
+    {
+      "name": "message",
+      "type": "registry:item",
+      "title": "Message",
+      "description": "Team-chat message rows with grouping, mention highlights, reactions, hover actions and dividers.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/message/message.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/message.rs"
+        }
+      ]
+    },
+    {
+      "name": "message-list",
+      "type": "registry:item",
+      "title": "Message List",
+      "description": "A virtualized, variable-height chat transcript that follows new messages, with a jump-to-latest pill.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/message_list/message_list.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/message_list.rs"
         }
       ]
     },
@@ -987,6 +1117,24 @@
           "path": "registry/textarea/textarea.rs",
           "type": "registry:file",
           "target": "~/src/ui/textarea.rs"
+        }
+      ]
+    },
+    {
+      "name": "title-bar",
+      "type": "registry:item",
+      "title": "Title Bar",
+      "description": "A draggable custom window title bar with platform window controls.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/title_bar/title_bar.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/title_bar.rs"
         }
       ]
     },

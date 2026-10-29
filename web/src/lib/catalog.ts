@@ -17,6 +17,11 @@ export const components: CatalogComponent[] = [
     description: "A modal dialog that expects a response from the user.",
   },
   {
+    slug: "attachment",
+    name: "Attachment",
+    description: "File and image cards with upload progress, retry, and remove.",
+  },
+  {
     slug: "autocomplete",
     name: "Autocomplete",
     description: "A text input that suggests matching values.",
@@ -61,6 +66,11 @@ export const components: CatalogComponent[] = [
     slug: "combobox",
     name: "Combobox",
     description: "An input paired with a searchable list of choices.",
+  },
+  {
+    slug: "command",
+    name: "Command",
+    description: "A searchable command palette and quick switcher.",
   },
   {
     slug: "context-menu",
@@ -114,6 +124,12 @@ export const components: CatalogComponent[] = [
     description: "Shows a keyboard key or shortcut with platform modifier names.",
   },
   {
+    slug: "markdown",
+    name: "Markdown",
+    description:
+      "Renders Markdown with themed code blocks and inline entity chips.",
+  },
+  {
     slug: "menu",
     name: "Dropdown Menu",
     description: "Displays a menu of actions from a trigger.",
@@ -122,6 +138,16 @@ export const components: CatalogComponent[] = [
     slug: "menubar",
     name: "Menubar",
     description: "A persistent horizontal set of menus.",
+  },
+  {
+    slug: "message",
+    name: "Message",
+    description: "A chat message row with grouping, reactions, and hover actions.",
+  },
+  {
+    slug: "message-list",
+    name: "Message List",
+    description: "A chat transcript that only renders visible rows and follows new messages.",
   },
   {
     slug: "meter",
@@ -225,6 +251,11 @@ export const components: CatalogComponent[] = [
     description: "A styled multi-line editor backed by native GPUI editing.",
   },
   {
+    slug: "title-bar",
+    name: "Title Bar",
+    description: "A draggable custom window title bar with window controls.",
+  },
+  {
     slug: "toast",
     name: "Toast",
     description: "A brief notification shown above the application.",
@@ -273,14 +304,22 @@ export function findComponent(slug: string) {
 export function previewHeight(slug: string) {
   if (slug === "drawer") return 560
   if (
-    ["carousel", "form", "input-group", "sidebar", "virtual-list"].includes(
-      slug
-    )
+    [
+      "carousel",
+      "form",
+      "input-group",
+      "markdown",
+      "message",
+      "message-list",
+      "sidebar",
+      "virtual-list",
+    ].includes(slug)
   )
     return 520
   if (
     [
       "alert-dialog",
+      "command",
       "context-menu",
       "dialog",
       "menu",

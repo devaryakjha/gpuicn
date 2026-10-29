@@ -17,6 +17,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "A modal dialog that expects a response from the user.",
     ),
     (
+        "attachment",
+        "Attachment",
+        "File and image cards with upload progress, retry, and remove.",
+    ),
+    (
         "autocomplete",
         "Autocomplete",
         "A text input that suggests matching values.",
@@ -62,6 +67,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "An input paired with a searchable list of choices.",
     ),
     (
+        "command",
+        "Command",
+        "A searchable command palette and quick switcher.",
+    ),
+    (
         "context-menu",
         "Context Menu",
         "A menu opened by a secondary pointer action.",
@@ -87,6 +97,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "Shows a keyboard key or shortcut with platform modifier names.",
     ),
     (
+        "markdown",
+        "Markdown",
+        "Renders Markdown with themed code blocks and inline entity chips.",
+    ),
+    (
         "menu",
         "Dropdown Menu",
         "Displays a menu of actions from a trigger.",
@@ -105,6 +120,16 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "form",
         "Form",
         "Coordinates validation and submission for fields.",
+    ),
+    (
+        "message",
+        "Message",
+        "A chat message row with grouping, reactions, and hover actions.",
+    ),
+    (
+        "message-list",
+        "Message List",
+        "A chat transcript that only renders visible rows and follows new messages.",
     ),
     (
         "preview-card",
@@ -212,6 +237,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "textarea",
         "Textarea",
         "A styled multi-line editor backed by native GPUI editing.",
+    ),
+    (
+        "title-bar",
+        "Title Bar",
+        "A draggable custom window title bar with window controls.",
     ),
     (
         "toast",

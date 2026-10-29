@@ -9,6 +9,8 @@
 pub mod accordion;
 #[path = "../registry/alert_dialog/alert_dialog.rs"]
 pub mod alert_dialog;
+#[path = "../registry/attachment/attachment.rs"]
+pub mod attachment;
 #[path = "../registry/autocomplete/autocomplete.rs"]
 pub mod autocomplete;
 #[path = "../registry/avatar/avatar.rs"]
@@ -27,6 +29,8 @@ pub mod checkbox_group;
 pub mod collapsible;
 #[path = "../registry/combobox/combobox.rs"]
 pub mod combobox;
+#[path = "../registry/command/command.rs"]
+pub mod command;
 #[path = "../registry/context_menu/context_menu.rs"]
 pub mod context_menu;
 #[path = "../registry/dialog/dialog.rs"]
@@ -47,10 +51,16 @@ pub mod input;
 pub mod input_group;
 #[path = "../registry/kbd/kbd.rs"]
 pub mod kbd;
+#[path = "../registry/markdown/markdown.rs"]
+pub mod markdown;
 #[path = "../registry/menu/menu.rs"]
 pub mod menu;
 #[path = "../registry/menubar/menubar.rs"]
 pub mod menubar;
+#[path = "../registry/message/message.rs"]
+pub mod message;
+#[path = "../registry/message_list/message_list.rs"]
+pub mod message_list;
 #[path = "../registry/meter/meter.rs"]
 pub mod meter;
 #[path = "../registry/navigation_menu/navigation_menu.rs"]
@@ -89,6 +99,8 @@ pub mod tag;
 pub mod textarea;
 #[path = "../registry/theme/theme.rs"]
 pub mod theme;
+#[path = "../registry/title_bar/title_bar.rs"]
+pub mod title_bar;
 #[path = "../registry/toast/toast.rs"]
 pub mod toast;
 #[path = "../registry/toggle/toggle.rs"]
