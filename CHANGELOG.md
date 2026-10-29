@@ -4,6 +4,25 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.6.0
+
+[Notes](docs/releases/v0.6.0.md)
+
+### Added
+
+- Chat and app-shell components: Command, Message, Message List, Attachment,
+  Title Bar and Markdown (with an `EntityLinks` plugin for mention and channel
+  chips).
+- Small primitives: Kbd, Badge, Tag, Spinner and Skeleton.
+- A `syntect` feature on the `gpuicn` crate that turns on code-block
+  highlighting in Markdown.
+
+### Changed
+
+- The theme now passes link, selection, table and code-highlight colors to
+  GPUI Kit. Copied-source apps should run `gpuicn add theme --overwrite` so
+  Markdown picks them up.
+
 ## 0.5.0
 
 [Notes](docs/releases/v0.5.0.md)
