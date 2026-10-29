@@ -12,7 +12,7 @@ export const Route = createFileRoute("/installation")({
   component: InstallationPage,
 })
 
-const release = "v0.5.0"
+const release = "v0.6.0"
 const releaseSource = `https://raw.githubusercontent.com/devaryakjha/gpuicn/${release}`
 const registry = `${releaseSource}/site/pages/r`
 
