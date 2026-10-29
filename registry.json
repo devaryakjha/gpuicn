@@ -119,6 +119,24 @@
       ]
     },
     {
+      "name": "badge",
+      "type": "registry:item",
+      "title": "Badge",
+      "description": "Nova pills for labels and capped unread or mention counts.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/badge/badge.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/badge.rs"
+        }
+      ]
+    },
+    {
       "name": "button",
       "type": "registry:item",
       "title": "Button",
@@ -455,6 +473,24 @@
           "path": "registry/input_group/input_group.rs",
           "type": "registry:file",
           "target": "~/src/ui/input_group.rs"
+        }
+      ]
+    },
+    {
+      "name": "kbd",
+      "type": "registry:item",
+      "title": "Kbd",
+      "description": "Nova key caps that show shortcuts with each platform's modifier names.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/kbd/kbd.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/kbd.rs"
         }
       ]
     },
@@ -819,6 +855,24 @@
       ]
     },
     {
+      "name": "skeleton",
+      "type": "registry:item",
+      "title": "Skeleton",
+      "description": "Muted pulsing placeholders for content that is still loading.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/skeleton/skeleton.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/skeleton.rs"
+        }
+      ]
+    },
+    {
       "name": "slider",
       "type": "registry:item",
       "title": "Slider",
@@ -833,6 +887,24 @@
           "path": "registry/slider/slider.rs",
           "type": "registry:file",
           "target": "~/src/ui/slider.rs"
+        }
+      ]
+    },
+    {
+      "name": "spinner",
+      "type": "registry:item",
+      "title": "Spinner",
+      "description": "A rotating Lucide loader announced as a status; it holds still under reduced motion.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/spinner/spinner.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/spinner.rs"
         }
       ]
     },
@@ -869,6 +941,29 @@
           "path": "registry/tabs/tabs.rs",
           "type": "registry:file",
           "target": "~/src/ui/tabs.rs"
+        }
+      ]
+    },
+    {
+      "name": "tag",
+      "type": "registry:item",
+      "title": "Tag",
+      "description": "Compact chips for statuses and roles, with an optional status dot and remove button.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/tag/tag.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/tag.rs"
         }
       ]
     },

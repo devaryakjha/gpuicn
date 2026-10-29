@@ -58,3 +58,15 @@ dependencies = ["scroll_area", "tooltip"]
 dependencies = ["input"]
 [components.number_field]
 dependencies = ["field"]
+
+[components.kbd]
+description = "Nova key caps that show shortcuts with each platform's modifier names."
+[components.badge]
+description = "Nova pills for labels and capped unread or mention counts."
+[components.tag]
+description = "Compact chips for statuses and roles, with an optional status dot and remove button."
+dependencies = ["button"]
+[components.spinner]
+description = "A rotating Lucide loader announced as a status; it holds still under reduced motion."
+[components.skeleton]
+description = "Muted pulsing placeholders for content that is still loading."

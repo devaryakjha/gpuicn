@@ -27,6 +27,11 @@ export const components: CatalogComponent[] = [
     description: "An image element with a fallback for representing a user.",
   },
   {
+    slug: "badge",
+    name: "Badge",
+    description: "Labels and unread or mention counts in a compact pill.",
+  },
+  {
     slug: "button",
     name: "Button",
     description: "Displays a button or a component that looks like a button.",
@@ -102,6 +107,11 @@ export const components: CatalogComponent[] = [
     name: "Input Group",
     description:
       "Combines an input or textarea with inline addons and actions.",
+  },
+  {
+    slug: "kbd",
+    name: "Kbd",
+    description: "Shows a keyboard key or shortcut with platform modifier names.",
   },
   {
     slug: "menu",
@@ -180,9 +190,19 @@ export const components: CatalogComponent[] = [
       "Application navigation with responsive layouts, icon rails, nested menus, and mobile sheets.",
   },
   {
+    slug: "skeleton",
+    name: "Skeleton",
+    description: "A placeholder that stands in for content while it loads.",
+  },
+  {
     slug: "slider",
     name: "Slider",
     description: "Selects a value or range along a track.",
+  },
+  {
+    slug: "spinner",
+    name: "Spinner",
+    description: "An animated indicator that shows work in progress.",
   },
   {
     slug: "switch",
@@ -193,6 +213,11 @@ export const components: CatalogComponent[] = [
     slug: "tabs",
     name: "Tabs",
     description: "Shows one panel from a set of layered sections.",
+  },
+  {
+    slug: "tag",
+    name: "Tag",
+    description: "A compact chip for a status, role, or removable filter.",
   },
   {
     slug: "textarea",

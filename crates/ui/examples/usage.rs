@@ -752,3 +752,54 @@ mod textarea {
         textarea(&state).aria_label("Message")
     }
 }
+
+mod kbd {
+    use crate::ui::kbd::*;
+    use gpui_kit::{App, IntoElement};
+
+    fn example(cx: &App) -> impl IntoElement {
+        kbd_group([Kbd::shortcut("secondary-k"), Kbd::new("Esc")], cx)
+    }
+}
+
+mod badge {
+    use crate::ui::badge::*;
+    use gpui_kit::IntoElement;
+
+    fn example(mentions: usize) -> impl IntoElement {
+        Badge::count(mentions, 99).variant(BadgeVariant::Destructive)
+    }
+}
+
+mod tag {
+    use crate::ui::tag::*;
+    use gpui_kit::{IntoElement, rgb};
+
+    fn example() -> impl IntoElement {
+        Tag::new("status.away", "Away")
+            .dot(rgb(0xf59e0b))
+            .on_remove(|_, _, _| {})
+    }
+}
+
+mod spinner {
+    use crate::ui::spinner::Spinner;
+    use gpui_kit::IntoElement;
+
+    fn example() -> impl IntoElement {
+        Spinner::new("history.loading").label("Loading older messages")
+    }
+}
+
+mod skeleton {
+    use crate::ui::skeleton::Skeleton;
+    use gpui_kit::{IntoElement, ParentElement as _, Styled as _, div, px};
+
+    fn example() -> impl IntoElement {
+        div()
+            .flex()
+            .gap(px(12.))
+            .child(Skeleton::new("row.avatar").size(px(32.)).rounded_full())
+            .child(Skeleton::new("row.line").w(px(240.)))
+    }
+}

@@ -15,6 +15,7 @@ use gpuicn::{
     accordion::*,
     alert_dialog::*,
     avatar::{Avatar, AvatarSize},
+    badge::{Badge, BadgeVariant},
     carousel::*,
     checkbox_group::*,
     collapsible::*,
@@ -29,6 +30,7 @@ use gpuicn::{
     form::form,
     input::{Input, InputEvent, InputState},
     input_group::*,
+    kbd::{Kbd, kbd_group},
     menu::{Menu, MenuItem, MenuState},
     menubar::Menubar,
     meter::Meter,
@@ -42,9 +44,12 @@ use gpuicn::{
     scroll_area::ScrollArea,
     select::{Select, SelectItem, SelectState},
     separator::Separator,
+    skeleton::Skeleton,
     slider::Slider,
+    spinner::Spinner,
     switch::Switch,
     tabs::*,
+    tag::{Tag, TagVariant},
     textarea::*,
     toast::{Notice, ToastState},
     toggle::{Toggle, ToggleVariant},
@@ -235,6 +240,11 @@ enum Demo {
     ToggleGroup,
     Toolbar,
     Tooltip,
+    Kbd,
+    Badge,
+    Tag,
+    Spinner,
+    Skeleton,
 }
 
 impl Demo {
@@ -285,6 +295,11 @@ impl Demo {
             "toggle-group" => Some(Self::ToggleGroup),
             "toolbar" => Some(Self::Toolbar),
             "tooltip" => Some(Self::Tooltip),
+            "kbd" => Some(Self::Kbd),
+            "badge" => Some(Self::Badge),
+            "tag" => Some(Self::Tag),
+            "spinner" => Some(Self::Spinner),
+            "skeleton" => Some(Self::Skeleton),
             _ => None,
         }
     }
@@ -460,7 +475,193 @@ impl Showcase {
             Demo::ToggleGroup => self.toggle_group_preview(window, cx).into_any_element(),
             Demo::Toolbar => self.toolbar_preview(window, cx).into_any_element(),
             Demo::Tooltip => self.tooltip_preview(window, cx).into_any_element(),
+            Demo::Kbd => self.kbd_preview(cx).into_any_element(),
+            Demo::Badge => self.badge_preview().into_any_element(),
+            Demo::Tag => self.tag_preview(cx).into_any_element(),
+            Demo::Spinner => self.spinner_preview(cx).into_any_element(),
+            Demo::Skeleton => self.skeleton_preview().into_any_element(),
         }
+    }
+
+    fn kbd_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = UiTheme::read(cx).clone();
+        let row = |label: &'static str, keys: gpui_kit::Div| {
+            div()
+                .w_full()
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(16.))
+                .child(
+                    div()
+                        .text_size(px(14.))
+                        .text_color(theme.colors.muted_foreground)
+                        .child(label),
+                )
+                .child(keys)
+        };
+        div()
+            .w_full()
+            .max_w(px(320.0))
+            .flex()
+            .flex_col()
+            .gap(px(12.0))
+            .child(row(
+                "Quick switcher",
+                kbd_group([Kbd::shortcut("secondary-k")], cx),
+            ))
+            .child(row(
+                "Command palette",
+                kbd_group([Kbd::shortcut("secondary-shift-p")], cx),
+            ))
+            .child(row(
+                "Jump to unread",
+                kbd_group([Kbd::new("Alt"), Kbd::new("Shift"), Kbd::new("↑")], cx),
+            ))
+            .child(row("Close", kbd_group([Kbd::new("Esc")], cx)))
+    }
+
+    fn badge_preview(&self) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(16.0))
+            .child(
+                div()
+                    .flex()
+                    .flex_wrap()
+                    .justify_center()
+                    .gap(px(8.0))
+                    .child(Badge::new("Default"))
+                    .child(Badge::new("Secondary").variant(BadgeVariant::Secondary))
+                    .child(Badge::new("Destructive").variant(BadgeVariant::Destructive))
+                    .child(Badge::new("Outline").variant(BadgeVariant::Outline))
+                    .child(Badge::new("Ghost").variant(BadgeVariant::Ghost)),
+            )
+            .child(
+                div()
+                    .flex()
+                    .flex_wrap()
+                    .justify_center()
+                    .gap(px(8.0))
+                    .child(Badge::count(3, 99))
+                    .child(Badge::count(42, 99).variant(BadgeVariant::Secondary))
+                    .child(Badge::count(250, 99).variant(BadgeVariant::Destructive))
+                    .child(
+                        Badge::new("Verified")
+                            .variant(BadgeVariant::Outline)
+                            .icon(LucideIcon::BadgeCheck),
+                    ),
+            )
+    }
+
+    fn tag_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(16.0))
+            .child(
+                div()
+                    .flex()
+                    .flex_wrap()
+                    .justify_center()
+                    .gap(px(8.0))
+                    .child(Tag::new("preview.tag.online", "Online").dot(gpui_kit::rgb(0x22c55e)))
+                    .child(Tag::new("preview.tag.away", "Away").dot(gpui_kit::rgb(0xf59e0b)))
+                    .child(
+                        Tag::new("preview.tag.bot", "Bot")
+                            .variant(TagVariant::Outline)
+                            .icon(LucideIcon::Bot),
+                    )
+                    .child(
+                        Tag::new("preview.tag.deactivated", "Deactivated")
+                            .variant(TagVariant::Destructive),
+                    ),
+            )
+            .when(!self.checked, |root| {
+                root.child(
+                    Tag::new("preview.tag.filter", "from: @arya")
+                        .variant(TagVariant::Outline)
+                        .on_remove(cx.listener(|this, _, _, cx| {
+                            this.checked = true;
+                            this.demo_action = "Removed filter".into();
+                            cx.notify();
+                        })),
+                )
+            })
+    }
+
+    fn spinner_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = UiTheme::read(cx).clone();
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(16.0))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(16.0))
+                    .child(Spinner::new("preview.spinner"))
+                    .child(Spinner::new("preview.spinner.large").size(px(24.)))
+                    .child(
+                        Spinner::new("preview.spinner.primary")
+                            .size(px(32.))
+                            .color(theme.colors.primary),
+                    ),
+            )
+            .child(
+                Button::new("preview.spinner.button")
+                    .disabled(true)
+                    .child(
+                        Spinner::new("preview.spinner.inline")
+                            .label("Sending")
+                            .color(theme.colors.primary_foreground),
+                    )
+                    .label("Sending…"),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(8.0))
+                    .text_size(px(13.))
+                    .text_color(theme.colors.muted_foreground)
+                    .child(Spinner::new("preview.spinner.history").label("Loading older messages"))
+                    .child("Loading older messages"),
+            )
+    }
+
+    fn skeleton_preview(&self) -> impl IntoElement {
+        let message = |id: &'static str, lines: &'static [f32]| {
+            div()
+                .w_full()
+                .flex()
+                .gap(px(12.))
+                .child(Skeleton::new((id, 100usize)).size(px(32.)).rounded_full())
+                .child(
+                    div()
+                        .flex_1()
+                        .flex()
+                        .flex_col()
+                        .gap(px(8.))
+                        .child(Skeleton::new((id, 101usize)).w(px(96.)).h(px(12.)))
+                        .children(lines.iter().enumerate().map(move |(index, width)| {
+                            Skeleton::new((id, index)).w(gpui_kit::relative(*width))
+                        })),
+                )
+        };
+        div()
+            .w_full()
+            .max_w(px(360.0))
+            .flex()
+            .flex_col()
+            .gap(px(20.0))
+            .child(message("preview.skeleton.first", &[1., 0.6]))
+            .child(message("preview.skeleton.second", &[0.8]))
     }
 
     fn button_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -3397,6 +3598,11 @@ mod audit_tests {
             "toggle-group",
             "toolbar",
             "tooltip",
+            "kbd",
+            "badge",
+            "tag",
+            "spinner",
+            "skeleton",
         ];
         let mut custom = UiTheme::neutral_light();
         custom.spacing.unit = px(5.);

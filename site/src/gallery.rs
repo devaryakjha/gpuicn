@@ -27,6 +27,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "An image element with a fallback for representing a user.",
     ),
     (
+        "badge",
+        "Badge",
+        "Labels and unread or mention counts in a compact pill.",
+    ),
+    (
         "button",
         "Button",
         "Displays a button or a component that looks like a button.",
@@ -75,6 +80,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "empty",
         "Empty",
         "Explains an empty state and offers a clear next action.",
+    ),
+    (
+        "kbd",
+        "Kbd",
+        "Shows a keyboard key or shortcut with platform modifier names.",
     ),
     (
         "menu",
@@ -173,15 +183,30 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "Application navigation with responsive layouts, icon rails, nested menus, and mobile sheets.",
     ),
     (
+        "skeleton",
+        "Skeleton",
+        "A placeholder that stands in for content while it loads.",
+    ),
+    (
         "slider",
         "Slider",
         "Selects a value or range along a track.",
     ),
     ("switch", "Switch", "Toggles a setting on or off."),
     (
+        "spinner",
+        "Spinner",
+        "An animated indicator that shows work in progress.",
+    ),
+    (
         "tabs",
         "Tabs",
         "Shows one panel from a set of layered sections.",
+    ),
+    (
+        "tag",
+        "Tag",
+        "A compact chip for a status, role, or removable filter.",
     ),
     (
         "textarea",

@@ -13,6 +13,8 @@ pub mod alert_dialog;
 pub mod autocomplete;
 #[path = "../registry/avatar/avatar.rs"]
 pub mod avatar;
+#[path = "../registry/badge/badge.rs"]
+pub mod badge;
 #[path = "../registry/button/button.rs"]
 pub mod button;
 #[path = "../registry/carousel/carousel.rs"]
@@ -43,6 +45,8 @@ pub mod form;
 pub mod input;
 #[path = "../registry/input_group/input_group.rs"]
 pub mod input_group;
+#[path = "../registry/kbd/kbd.rs"]
+pub mod kbd;
 #[path = "../registry/menu/menu.rs"]
 pub mod menu;
 #[path = "../registry/menubar/menubar.rs"]
@@ -69,12 +73,18 @@ pub mod scroll_area;
 pub mod select;
 #[path = "../registry/separator/separator.rs"]
 pub mod separator;
+#[path = "../registry/skeleton/skeleton.rs"]
+pub mod skeleton;
 #[path = "../registry/slider/slider.rs"]
 pub mod slider;
+#[path = "../registry/spinner/spinner.rs"]
+pub mod spinner;
 #[path = "../registry/switch/switch.rs"]
 pub mod switch;
 #[path = "../registry/tabs/tabs.rs"]
 pub mod tabs;
+#[path = "../registry/tag/tag.rs"]
+pub mod tag;
 #[path = "../registry/textarea/textarea.rs"]
 pub mod textarea;
 #[path = "../registry/theme/theme.rs"]
