@@ -646,6 +646,11 @@
           "target": "~/src/ui/button.rs"
         },
         {
+          "path": "registry/tooltip/tooltip.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/tooltip.rs"
+        },
+        {
           "path": "registry/message/message.rs",
           "type": "registry:file",
           "target": "~/src/ui/message.rs"

@@ -33,7 +33,7 @@ use gpuicn::{
     input::{Input, InputEvent, InputState},
     input_group::*,
     kbd::{Kbd, kbd_group},
-    markdown::EntityLinks,
+    markdown::{CustomEmoji, EntityLinks, MarkdownImages, selection_root},
     menu::{Menu, MenuItem, MenuState},
     menubar::Menubar,
     message::{
@@ -724,7 +724,38 @@ impl Showcase {
             .clone();
         let inline = window
             .use_keyed_state("command.inline", cx, |window, cx| {
-                cx.new(|cx| CommandState::new(command_items(), window, cx))
+                cx.new(|cx| {
+                    let mut state = CommandState::new(command_items(), window, cx);
+                    // Direct messages lead with an avatar; channels with unread
+                    // messages end with a count.
+                    state.set_leading(
+                        |item, _, _| {
+                            (item.group.as_deref() == Some("Direct messages")).then(|| {
+                                Avatar::new(gpui_kit::ElementId::Name(
+                                    format!("command.avatar.{}", item.value).into(),
+                                ))
+                                .size(AvatarSize::Sm)
+                                .w(px(20.))
+                                .h(px(20.))
+                                .fallback(item.label.chars().take(1).collect::<String>())
+                                .into_any_element()
+                            })
+                        },
+                        cx,
+                    );
+                    state.set_trailing(
+                        |item, _, _| {
+                            let unread = match item.value.as_ref() {
+                                "town-square" => 3,
+                                "gpuicn" => 128,
+                                _ => return None,
+                            };
+                            Some(Badge::count(unread, 99).into_any_element())
+                        },
+                        cx,
+                    );
+                    state
+                })
             })
             .read(cx)
             .clone();
@@ -802,9 +833,19 @@ impl Showcase {
                     .timestamp("10:42 AM")
                     .actions(actions("message.first", cx))
                     .reactions([
-                        Reaction::new("🎉", if reacted { 4 } else { 3 }, reacted),
-                        Reaction::new("👀", 1, false),
+                        Reaction::new("🎉", if reacted { 4 } else { 3 }, reacted).tooltip(
+                            if reacted {
+                                "You, Sam, Lee and Kai"
+                            } else {
+                                "Sam, Lee and Kai"
+                            },
+                        ),
+                        Reaction::new("👀", 1, false).tooltip("Sam"),
+                        Reaction::new(":arya:", 2, false)
+                            .image(image)
+                            .tooltip("Sam and Lee reacted with :arya:"),
                     ])
+                    .aria_description("Arya, 10:42 AM, 3 reactions")
                     .on_reaction(toggle)
                     .on_add_reaction(|_, _, _| {})
                     .child("gpuicn 0.5.0 is out. Chat components are next."),
@@ -828,6 +869,13 @@ impl Showcase {
                     .highlight(MessageHighlight::Mention)
                     .actions(actions("message.mention", cx))
                     .child("@arya can you review the Matty plan?"),
+            )
+            .child(
+                Message::new("message.permalink")
+                    .continuation(true)
+                    .gutter_time("11:05")
+                    .highlight(MessageHighlight::Permalink)
+                    .child("Opened from a link: the permalink target stays tinted."),
             )
             .child(
                 Message::new("message.failed")
@@ -855,6 +903,11 @@ impl Showcase {
     ) -> impl IntoElement {
         let total = window.use_keyed_state("message-list.total", cx, |_, _| 400usize);
         let unseen = window.use_keyed_state("message-list.unseen", cx, |_, _| 0usize);
+        let selected = window.use_keyed_state("message-list.selected", cx, |_, _| None::<usize>);
+        let focus = window
+            .use_keyed_state("message-list.focus", cx, |_, cx| cx.focus_handle())
+            .read(cx)
+            .clone();
         let state = window
             .use_keyed_state("message-list.state", cx, |_, cx| {
                 cx.new(|cx| MessageListState::new(400, cx))
@@ -890,8 +943,10 @@ impl Showcase {
             }
         };
         let count = *total.read(cx);
-        div()
-            .size_full()
+        let current = *selected.read(cx);
+        let select = selected.clone();
+        let owner = cx.entity().downgrade();
+        selection_root("message-list.selection")
             .flex()
             .flex_col()
             .child(
@@ -931,9 +986,22 @@ impl Showcase {
             .child(
                 div().flex_1().min_h_0().child(
                     MessageList::new("message-list", &state, move |index, _, cx| {
-                        transcript_row(index, cx)
+                        transcript_row(index, current, cx)
                     })
-                    .unseen(*unseen.read(cx)),
+                    .unseen(*unseen.read(cx))
+                    .track_focus(&focus)
+                    .selected(current)
+                    .selectable(|index, _| !index.is_multiple_of(60))
+                    .on_select(move |index, _, cx| {
+                        select.update(cx, |selected, _| *selected = index);
+                        let _ = owner.update(cx, |this, cx| {
+                            this.demo_action = match index {
+                                Some(index) => format!("Selected message {index}"),
+                                None => "Cleared the selection".into(),
+                            };
+                            cx.notify();
+                        });
+                    }),
                 ),
             )
     }
@@ -1075,12 +1143,25 @@ impl Showcase {
     }
 
     fn markdown_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let source = "**Release day.** gpuicn `v0.5.0` is tagged, thanks [@arya](mention:arya) and [@sam](mention:sam). Notes are in [~releases](channel:releases).\n\n> Matty pins a tagged gpuicn release before beta.\n\n- Message rows and reactions\n- A *virtualized* transcript\n- ~~Bubbles~~ left-aligned team chat\n\n```rust\nlet list = MessageList::new(\"channel\", &state, render_row);\n```\n\n| Component | Status |\n| --- | --- |\n| Command | Ready |\n| Markdown | Ready |";
-        div().w_full().max_w(px(520.)).child(
-            gpuicn::markdown::markdown("preview.markdown", source, cx)
-                .plugin(EntityLinks::new("mention").highlight(|user| user == "arya"))
-                .plugin(EntityLinks::new("channel")),
-        )
+        let image = "https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png";
+        let source = "**Release day.** gpuicn `v0.5.0` is tagged, thanks [@arya](mention:arya) ![:arya:](emoji:arya) and [@sam](mention:sam). Notes are in [~releases](channel:releases).\n\n> Matty pins a tagged gpuicn release before beta.\n\n- Message rows and reactions\n- A *virtualized* transcript\n- ~~Bubbles~~ left-aligned team chat\n\n```rust\nlet list = MessageList::new(\"channel\", &state, render_row);\n```\n\n| Component | Status |\n| --- | --- |\n| Command | Ready |\n| Markdown | Ready |\n\n![Arya's avatar](avatar.png)";
+        selection_root("markdown.selection")
+            .flex()
+            .items_center()
+            .justify_center()
+            .child(
+                div().w_full().max_w(px(520.)).child(
+                    gpuicn::markdown::markdown("preview.markdown", source, cx)
+                        .plugin(EntityLinks::new("mention").highlight(|user| user == "arya"))
+                        .plugin(EntityLinks::new("channel"))
+                        .plugin(CustomEmoji::new("emoji", move |name, _, _| {
+                            (name == "arya").then(|| image.into())
+                        }))
+                        .plugin(MarkdownImages::new(move |url, _, _| {
+                            (url == "avatar.png").then(|| image.into())
+                        })),
+                ),
+            )
     }
 
     fn button_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -4097,8 +4178,9 @@ fn command_items() -> Vec<gpuicn::command::CommandItem> {
 
 /// One synthetic transcript row: day dividers every 60 rows and new sender
 /// groups every 4, with varied heights to exercise variable-height layout.
-fn transcript_row(index: usize, cx: &App) -> gpui_kit::AnyElement {
-    use gpuicn::message::{Message, Reaction, day_divider};
+fn transcript_row(index: usize, selected: Option<usize>, cx: &App) -> gpui_kit::AnyElement {
+    use gpuicn::markdown::selectable_text;
+    use gpuicn::message::{Message, MessageHighlight, Reaction, day_divider};
     const AUTHORS: [(&str, &str); 3] = [("Arya", "AJ"), ("Sam", "SK"), ("Lee", "LW")];
     const LINES: [&str; 5] = [
         "Pushed the fix.",
@@ -4123,10 +4205,17 @@ fn transcript_row(index: usize, cx: &App) -> gpui_kit::AnyElement {
         .author(author)
         .timestamp(format!("{}:{:02}", 9 + index / 60 % 8, index % 60))
         .gutter_time(format!("{}:{:02}", 9 + index / 60 % 8, index % 60))
+        .when(selected == Some(index), |message| {
+            message.highlight(MessageHighlight::Selected)
+        })
         .when(index.is_multiple_of(7), |message| {
             message.reactions([Reaction::new("👍", index % 5 + 1, false)])
         })
-        .child(LINES[index % LINES.len()])
+        .child(selectable_text(
+            ("transcript.body", index),
+            LINES[index % LINES.len()],
+            cx,
+        ))
         .into_any_element()
 }
 

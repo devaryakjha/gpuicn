@@ -8,6 +8,12 @@ borderless Input, then grouped 32px items with muted headings, leading icons and
 trailing shortcut text, on the popover surface. `command_dialog_popup` puts the
 same palette in a dialog surface for a Cmd/Ctrl+K quick switcher.
 
+`set_leading` renders a caller element in place of the Lucide icon, such as an
+avatar for a direct message or a channel glyph; returning `None` keeps the
+icon. `set_trailing` renders an element before the shortcut, such as a `Badge`
+with an unread or mention count. Keep slot elements 16 to 20px tall so rows
+stay one height for virtualization.
+
 `CommandState` owns the items, the query and the highlight. Filtering matches
 the label and keywords case-insensitively, by substring or by characters in
 order (`gnrl` finds "general"), and keeps the caller's order; ungrouped items

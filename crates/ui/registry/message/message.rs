@@ -8,16 +8,24 @@ use std::rc::Rc;
 
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
-    AnyElement, App, ClickEvent, ElementId, FontWeight, InteractiveElement as _, IntoElement,
-    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _, Styled, Window,
-    div, prelude::FluentBuilder as _, px, relative,
+    AnyElement, AnyView, App, ClickEvent, ElementId, FontWeight, Hsla, ImageSource,
+    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, Styled, Window, div, hsla, img, prelude::FluentBuilder as _,
+    px, relative,
 };
 
 use super::button::{Button, ButtonSize, ButtonVariant};
 use super::theme::{UiTheme, apply_style};
+use super::tooltip::text_tooltip;
 
 type Handler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 type ReactionHandler = Rc<dyn Fn(&SharedString, &mut Window, &mut App) + 'static>;
+type ReactionTooltip = Rc<dyn Fn(&Reaction, &mut Window, &mut App) -> AnyView + 'static>;
+
+/// The amber used for a permalink target, which stays the same in light and dark.
+fn permalink_color() -> Hsla {
+    hsla(43. / 360., 0.96, 0.56, 1.)
+}
 
 /// How a message row is emphasized.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -29,6 +37,8 @@ pub enum MessageHighlight {
     Mention,
     /// Selected for keyboard actions; also keeps the action bar visible.
     Selected,
+    /// The target of a permalink the reader followed: an amber tint and bar.
+    Permalink,
 }
 
 /// Delivery state of the reader's own message.
@@ -44,7 +54,7 @@ pub enum MessageStatus {
 }
 
 /// One reaction chip: an emoji (or short text), its count and whether the reader reacted.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone)]
 pub struct Reaction {
     /// The emoji or short code shown in the chip; also the value toggled.
     pub emoji: SharedString,
@@ -54,6 +64,10 @@ pub struct Reaction {
     pub reacted: bool,
     /// The accessible name, such as "Arya and 2 others reacted with :tada:".
     pub label: Option<SharedString>,
+    /// A custom emoji image shown instead of `emoji`, supplied by the application.
+    pub image: Option<ImageSource>,
+    /// Text shown in a tooltip on hover, such as who reacted.
+    pub tooltip: Option<SharedString>,
 }
 
 impl Reaction {
@@ -64,11 +78,25 @@ impl Reaction {
             count,
             reacted,
             label: None,
+            image: None,
+            tooltip: None,
         }
     }
     /// Sets the accessible name, for example who reacted.
     pub fn label(mut self, label: impl Into<SharedString>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+    /// Shows a custom emoji image, such as a decoded image from the application's
+    /// media cache. `emoji` stays the toggled value and the fallback name.
+    pub fn image(mut self, image: impl Into<ImageSource>) -> Self {
+        self.image = Some(image.into());
+        self
+    }
+    /// Shows text in a tooltip on hover, for example "Arya, Sam and 3 others".
+    /// `Message::reaction_tooltip` replaces it with a custom view.
+    pub fn tooltip(mut self, text: impl Into<SharedString>) -> Self {
+        self.tooltip = Some(text.into());
         self
     }
 }
@@ -86,8 +114,10 @@ pub struct Message {
     children: Vec<AnyElement>,
     reactions: Vec<Reaction>,
     on_reaction: Option<ReactionHandler>,
+    reaction_tooltip: Option<ReactionTooltip>,
     on_add_reaction: Option<Handler>,
     actions: Option<AnyElement>,
+    description: Option<SharedString>,
     continuation: bool,
     highlight: MessageHighlight,
     status: MessageStatus,
@@ -109,8 +139,10 @@ impl Message {
             children: Vec::new(),
             reactions: Vec::new(),
             on_reaction: None,
+            reaction_tooltip: None,
             on_add_reaction: None,
             actions: None,
+            description: None,
             continuation: false,
             highlight: MessageHighlight::None,
             status: MessageStatus::Sent,
@@ -186,6 +218,22 @@ impl Message {
         handler: impl Fn(&SharedString, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.on_reaction = Some(Rc::new(handler));
+        self
+    }
+    /// Builds the tooltip shown when a reaction chip is hovered, for example a
+    /// list of who reacted with avatars. Without it, a chip with
+    /// `Reaction::tooltip` text shows that text.
+    pub fn reaction_tooltip(
+        mut self,
+        builder: impl Fn(&Reaction, &mut Window, &mut App) -> AnyView + 'static,
+    ) -> Self {
+        self.reaction_tooltip = Some(Rc::new(builder));
+        self
+    }
+    /// Sets the description assistive technology reads for the row, such as
+    /// "Arya, 10:42 AM, 2 reactions, edited".
+    pub fn aria_description(mut self, description: impl Into<SharedString>) -> Self {
+        self.description = Some(description.into());
         self
     }
     /// Adds an "Add reaction" button after the chips, for opening an emoji picker.
@@ -303,33 +351,39 @@ impl RenderOnce for Message {
                 })
         });
 
-        let reactions =
-            (!self.reactions.is_empty() || self.on_add_reaction.is_some()).then(|| {
-                let on_reaction = self.on_reaction.clone();
-                div()
-                    .flex()
-                    .flex_wrap()
-                    .gap(theme.space(1.))
-                    .pt(theme.space(1.))
-                    .children(self.reactions.iter().map(|reaction| {
-                        reaction_chip(&self.id, reaction, on_reaction.clone(), &theme)
-                    }))
-                    .when_some(self.on_add_reaction.clone(), |row, handler| {
-                        row.child(
-                            Button::new((self.id.clone(), "add-reaction"))
-                                .variant(ButtonVariant::Ghost)
-                                .size(ButtonSize::IconXs)
-                                .rounded_full()
-                                .aria_label("Add reaction")
-                                .on_click(move |event, window, cx| handler(event, window, cx))
-                                .child(
-                                    lucide(LucideIcon::FaceSlightlySmilingPlus)
-                                        .size(theme.space(3.5))
-                                        .text_color(colors.muted_foreground),
-                                ),
-                        )
-                    })
-            });
+        let reactions = (!self.reactions.is_empty() || self.on_add_reaction.is_some()).then(|| {
+            let on_reaction = self.on_reaction.clone();
+            let tooltip = self.reaction_tooltip.clone();
+            div()
+                .flex()
+                .flex_wrap()
+                .gap(theme.space(1.))
+                .pt(theme.space(1.))
+                .children(self.reactions.iter().map(|reaction| {
+                    reaction_chip(
+                        &self.id,
+                        reaction,
+                        on_reaction.clone(),
+                        tooltip.clone(),
+                        &theme,
+                    )
+                }))
+                .when_some(self.on_add_reaction.clone(), |row, handler| {
+                    row.child(
+                        Button::new((self.id.clone(), "add-reaction"))
+                            .variant(ButtonVariant::Ghost)
+                            .size(ButtonSize::IconXs)
+                            .rounded_full()
+                            .aria_label("Add reaction")
+                            .on_click(move |event, window, cx| handler(event, window, cx))
+                            .child(
+                                lucide(LucideIcon::FaceSlightlySmilingPlus)
+                                    .size(theme.space(3.5))
+                                    .text_color(colors.muted_foreground),
+                            ),
+                    )
+                })
+        });
 
         let body = div()
             .flex_1()
@@ -367,6 +421,13 @@ impl RenderOnce for Message {
                     .border_color(colors.primary)
             })
             .when(selected, |row| row.bg(colors.muted))
+            .when(self.highlight == MessageHighlight::Permalink, |row| {
+                row.bg(permalink_color().opacity(0.14))
+                    .border_color(permalink_color())
+            })
+            .when_some(self.description, |row, description| {
+                row.aria_description(description)
+            })
             .when(self.status == MessageStatus::Pending, |row| {
                 row.opacity(0.6)
             })
@@ -397,6 +458,7 @@ fn reaction_chip(
     message: &ElementId,
     reaction: &Reaction,
     on_reaction: Option<ReactionHandler>,
+    tooltip: Option<ReactionTooltip>,
     theme: &UiTheme,
 ) -> impl IntoElement {
     let colors = theme.colors;
@@ -405,42 +467,63 @@ fn reaction_chip(
         .label
         .clone()
         .unwrap_or_else(|| format!("{} {}", reaction.emoji, reaction.count).into());
-    Button::new((
-        message.clone(),
-        SharedString::from(format!("reaction-{}", reaction.emoji)),
-    ))
-    .variant(ButtonVariant::Outline)
-    .size(ButtonSize::Xs)
-    .h(theme.space(6.))
-    .px(theme.space(2.))
-    .gap(theme.space(1.5))
-    .rounded_full()
-    .when(reaction.reacted, |chip| {
-        chip.bg(colors.primary.opacity(0.1))
-            .border_color(colors.primary.opacity(0.5))
-    })
-    .aria_label(label)
-    .on_click(move |_, window, cx| {
-        if let Some(handler) = &on_reaction {
-            handler(&emoji, window, cx);
-        }
-    })
-    .child(
-        div()
+    let key = SharedString::from(format!("reaction-{}", reaction.emoji));
+    let glyph = match reaction.image.clone() {
+        Some(image) => img(image)
+            .size(theme.space(4.))
+            .flex_shrink_0()
+            .into_any_element(),
+        None => div()
             .text_size(theme.text(14.))
-            .child(reaction.emoji.clone()),
-    )
-    .child(
-        div()
-            .text_size(theme.text(12.))
-            .font_weight(FontWeight::MEDIUM)
-            .text_color(if reaction.reacted {
-                colors.primary
-            } else {
-                colors.muted_foreground
-            })
-            .child(reaction.count.to_string()),
-    )
+            .child(reaction.emoji.clone())
+            .into_any_element(),
+    };
+    let chip = Button::new((message.clone(), key.clone()))
+        .variant(ButtonVariant::Outline)
+        .size(ButtonSize::Xs)
+        .h(theme.space(6.))
+        .px(theme.space(2.))
+        .gap(theme.space(1.5))
+        .rounded_full()
+        .when(reaction.reacted, |chip| {
+            chip.bg(colors.primary.opacity(0.1))
+                .border_color(colors.primary.opacity(0.5))
+        })
+        .aria_label(label)
+        .on_click(move |_, window, cx| {
+            if let Some(handler) = &on_reaction {
+                handler(&emoji, window, cx);
+            }
+        })
+        .child(glyph)
+        .child(
+            div()
+                .text_size(theme.text(12.))
+                .font_weight(FontWeight::MEDIUM)
+                .text_color(if reaction.reacted {
+                    colors.primary
+                } else {
+                    colors.muted_foreground
+                })
+                .child(reaction.count.to_string()),
+        );
+    let tooltip: Option<ReactionTooltip> = match (tooltip, reaction.tooltip.clone()) {
+        (Some(builder), _) => Some(builder),
+        (None, Some(text)) => Some(Rc::new(
+            move |_: &Reaction, _: &mut Window, cx: &mut App| text_tooltip(text.clone(), cx),
+        )),
+        (None, None) => None,
+    };
+    let reaction = reaction.clone();
+    div()
+        .id((
+            message.clone(),
+            SharedString::from(format!("{key}-tooltip")),
+        ))
+        .when_some(tooltip, move |wrapper, builder| {
+            wrapper.tooltip(move |window, cx| builder(&reaction, window, cx))
+        })
+        .child(chip)
 }
 
 /// The floating bar that holds a message's hover actions.

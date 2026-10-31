@@ -8,6 +8,7 @@ use gpui_kit::{
 use gpuicn::{
     attachment::{Attachment, AttachmentStatus, attachment_group},
     command::{Command, CommandEvent, CommandItem, CommandState},
+    markdown::{markdown, selection_root},
     message::{
         Message, MessageHighlight, MessageStatus, Reaction, day_divider, new_messages_divider,
     },
@@ -162,4 +163,127 @@ fn transcript_renders_rows_and_toggles_reactions(cx: &mut TestAppContext) {
     cx.update(|window, cx| window.draw(cx).clear(cx));
     cx.update(|_, cx| assert_eq!(view.read(cx).list.read(cx).item_count(), 253));
     assert!(toggled.borrow().is_empty());
+}
+
+struct Selectable {
+    list: Entity<MessageListState>,
+    focus: gpui_kit::FocusHandle,
+    selected: Rc<RefCell<Option<usize>>>,
+    claimed: Rc<RefCell<Vec<String>>>,
+    bodies: Rc<RefCell<std::collections::HashMap<usize, gpui_kit::Bounds<gpui_kit::Pixels>>>>,
+}
+impl Render for Selectable {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        use gpui_kit::base::ElementExt as _;
+        let selected = *self.selected.borrow();
+        let sink = self.selected.clone();
+        let claimed = self.claimed.clone();
+        let bodies = self.bodies.clone();
+        selection_root("root").child(
+            div().w(px(600.)).h(px(400.)).child(
+                MessageList::new("selectable", &self.list, move |index, _, cx| {
+                    if index == 0 {
+                        return day_divider("day", "Today", cx).into_any_element();
+                    }
+                    let bodies = bodies.clone();
+                    Message::new(("post", index))
+                        .author("Arya")
+                        .highlight(if selected == Some(index) {
+                            MessageHighlight::Selected
+                        } else {
+                            MessageHighlight::None
+                        })
+                        .child(
+                            div()
+                                .child(markdown(
+                                    ("body", index),
+                                    format!("Message number {index}"),
+                                    cx,
+                                ))
+                                .on_prepaint(move |bounds, _, _| {
+                                    bodies.borrow_mut().insert(index, bounds);
+                                }),
+                        )
+                        .into_any_element()
+                })
+                .track_focus(&self.focus)
+                .selected(selected)
+                .selectable(|index, _| index != 0)
+                .on_select(move |index, _, _| *sink.borrow_mut() = index)
+                .on_key(move |event, selected, _, _| {
+                    if event.keystroke.key == "e" {
+                        claimed.borrow_mut().push(format!("edit {selected:?}"));
+                        return true;
+                    }
+                    false
+                }),
+            ),
+        )
+    }
+}
+
+#[gpui_kit::test]
+fn transcript_keyboard_selection_and_copy_across_rows(cx: &mut TestAppContext) {
+    cx.update(gpuicn::init);
+    let selected = Rc::new(RefCell::new(None));
+    let claimed = Rc::new(RefCell::new(Vec::new()));
+    let (selected_sink, claimed_sink) = (selected.clone(), claimed.clone());
+    let (view, cx) = cx.add_window_view(move |_, cx| Selectable {
+        list: cx.new(|cx| MessageListState::new(4, cx)),
+        focus: cx.focus_handle(),
+        selected: selected_sink,
+        claimed: claimed_sink,
+        bodies: Default::default(),
+    });
+    cx.update(|window, cx| {
+        window.activate_window();
+        window.focus(&view.read(cx).focus.clone(), cx);
+        window.draw(cx).clear(cx);
+    });
+    cx.run_until_parked();
+
+    // Up starts at the newest row; the divider at 0 is skipped.
+    cx.simulate_keystrokes("up");
+    assert_eq!(*selected.borrow(), Some(3));
+    cx.simulate_keystrokes("up up up");
+    assert_eq!(*selected.borrow(), Some(1));
+    cx.simulate_keystrokes("down");
+    assert_eq!(*selected.borrow(), Some(2));
+    cx.simulate_keystrokes("e");
+    assert_eq!(claimed.borrow().as_slice(), ["edit Some(2)"]);
+    cx.simulate_keystrokes("escape");
+    assert_eq!(*selected.borrow(), None);
+
+    // A drag from the first body into the last selects across messages.
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    let (first, last) = cx.update(|_, cx| {
+        let bodies = view.read(cx).bodies.borrow();
+        (bodies[&1], bodies[&3])
+    });
+    let start = gpui_kit::point(first.left() + px(2.), first.center().y);
+    let end = gpui_kit::point(last.right() - px(2.), last.center().y);
+    cx.simulate_mouse_down(
+        start,
+        gpui_kit::MouseButton::Left,
+        gpui_kit::Modifiers::default(),
+    );
+    cx.simulate_mouse_move(
+        end,
+        Some(gpui_kit::MouseButton::Left),
+        gpui_kit::Modifiers::default(),
+    );
+    cx.simulate_mouse_up(
+        end,
+        gpui_kit::MouseButton::Left,
+        gpui_kit::Modifiers::default(),
+    );
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    let text = cx.update(gpui_kit::base::TextSelection::selected_text);
+    assert!(text.contains("Message number 1"), "{text:?}");
+    assert!(text.contains("Message number 2"), "{text:?}");
+    assert!(text.contains("Message number 3"), "{text:?}");
+
+    cx.simulate_keystrokes("secondary-c");
+    let copied = cx.update(|_, cx| cx.read_from_clipboard().and_then(|item| item.text()));
+    assert_eq!(copied.as_deref(), Some(text.trim()));
 }

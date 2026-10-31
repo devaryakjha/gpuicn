@@ -827,6 +827,13 @@ mod command {
                     cx,
                 )
             });
+            // Unread counts sit at the trailing edge of channel rows.
+            state.update(cx, |state, cx| {
+                state.set_trailing(
+                    |item, _, _| (item.value == "town-square").then(|| "3".into_any_element()),
+                    cx,
+                )
+            });
             let subscription = cx.subscribe_in(&state, window, move |_, _, event, window, cx| {
                 if let CommandEvent::Confirm(_) | CommandEvent::Cancel = event {
                     handle.close(window, cx);
@@ -857,8 +864,9 @@ mod message {
             .author("Arya")
             .timestamp("10:42 AM")
             .highlight(MessageHighlight::Mention)
-            .reactions([Reaction::new("🎉", 3, true)])
+            .reactions([Reaction::new("🎉", 3, true).tooltip("You, Sam and Lee")])
             .on_reaction(|emoji, _, _| println!("toggle {emoji}"))
+            .aria_description("Arya, 10:42 AM, mentions you, 1 reaction")
             .actions(
                 message_actions(cx)
                     .child(message_action(
@@ -879,7 +887,8 @@ mod message {
 }
 
 mod message_list {
-    use crate::ui::message::Message;
+    use crate::ui::markdown::{markdown, selection_root};
+    use crate::ui::message::{Message, MessageHighlight};
     use crate::ui::message_list::*;
     use gpui_kit::{App, AppContext as _, IntoElement, ParentElement as _, Window};
 
@@ -888,11 +897,34 @@ mod message_list {
             cx.new(|cx| MessageListState::new(1_000, cx))
         });
         let state = state.read(cx).clone();
-        MessageList::new("channel", &state, |index, _, _| {
-            Message::new(("post", index))
-                .author("Arya")
-                .child(format!("Message {index}"))
-        })
+        let focus = window.use_keyed_state("channel.focus", cx, |_, cx| cx.focus_handle());
+        let focus = focus.read(cx).clone();
+        let selected = window.use_keyed_state("channel.selected", cx, |_, _| None::<usize>);
+        let current = *selected.read(cx);
+        // One selection root per window lets a drag select across messages.
+        selection_root("window").child(
+            MessageList::new("channel", &state, move |index, _, cx| {
+                Message::new(("post", index))
+                    .author("Arya")
+                    .highlight(if current == Some(index) {
+                        MessageHighlight::Selected
+                    } else {
+                        MessageHighlight::None
+                    })
+                    .child(markdown(
+                        ("post.body", index),
+                        format!("Message {index}"),
+                        cx,
+                    ))
+            })
+            .track_focus(&focus)
+            .selected(current)
+            .on_select(move |index, _, cx| selected.update(cx, |selected, _| *selected = index))
+            .on_key(|event, selected, _, _| {
+                // E edits the selected message; other keys fall through.
+                event.keystroke.key == "e" && selected.is_some()
+            }),
+        )
     }
 }
 
@@ -938,5 +970,11 @@ mod markdown {
                 .highlight(|user| user == "arya")
                 .on_click(|user, _, _| println!("open profile {user}")),
         )
+        // `:party:` was rewritten to `![:party:](emoji:party)` by the app.
+        .plugin(CustomEmoji::new("emoji", |name, _, _| {
+            (name == "party").then(|| "emoji/party.png".into())
+        }))
+        // Images come from the app's media cache; nothing is fetched here.
+        .plugin(MarkdownImages::new(|_url, _, _| None).on_click(|url, _, _| println!("open {url}")))
     }
 }
