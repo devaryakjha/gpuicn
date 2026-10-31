@@ -9,6 +9,10 @@ use gpuicn::{
     attachment::{Attachment, AttachmentStatus, attachment_group},
     command::{Command, CommandEvent, CommandItem, CommandState},
     composer::{Composer, ComposerEvent, ComposerState, ComposerSuggestion},
+    emoji_picker::{
+        COLUMNS, Emoji, EmojiCategory, EmojiPicker, EmojiPickerEvent, EmojiPickerState,
+    },
+    lightbox::{LightboxImage, LightboxState, lightbox},
     markdown::{markdown, selection_root},
     message::{
         Message, MessageHighlight, MessageStatus, Reaction, day_divider, new_messages_divider,
@@ -410,4 +414,146 @@ fn composer_autocompletes_submits_and_hands_keys_to_the_app(cx: &mut TestAppCont
             assert!(!state.is_composing(window, cx));
         });
     });
+}
+
+struct PickerView {
+    state: Entity<EmojiPickerState>,
+}
+impl Render for PickerView {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        div().child(EmojiPicker::new(&self.state))
+    }
+}
+
+#[gpui_kit::test]
+fn emoji_picker_searches_navigates_and_picks(cx: &mut TestAppContext) {
+    use gpui_icons::LucideIcon;
+    cx.update(gpuicn::init);
+    let events = Rc::new(RefCell::new(Vec::new()));
+    let smileys: Vec<Emoji> = (0..COLUMNS + 3)
+        .map(|index| Emoji::new(format!("smile_{index}"), "🙂"))
+        .collect();
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let state = cx.new(|cx| {
+            let mut state = EmojiPickerState::new(
+                [
+                    EmojiCategory::new("Smileys", LucideIcon::FaceSlightlySmiling, smileys),
+                    EmojiCategory::new(
+                        "Activities",
+                        LucideIcon::Sparkles,
+                        [Emoji::new("tada", "🎉").keywords(["party"])],
+                    ),
+                ],
+                window,
+                cx,
+            );
+            state.set_custom([("parrot".into(), "parrot.gif".into())], cx);
+            state.set_recents(["tada", "missing"], cx);
+            state
+        });
+        let sink = events.clone();
+        cx.subscribe(&state, move |_, _, event: &EmojiPickerEvent, _| {
+            sink.borrow_mut().push(event.clone())
+        })
+        .detach();
+        PickerView { state }
+    });
+    let state = cx.update(|window, cx| {
+        window.activate_window();
+        let state = view.read(cx).state.clone();
+        state.update(cx, |state, cx| state.focus(window, cx));
+        window.draw(cx).clear(cx);
+        state
+    });
+    let highlighted = |cx: &mut gpui_kit::VisualTestContext| {
+        cx.update(|_, cx| state.read(cx).highlighted().map(|emoji| emoji.name.clone()))
+    };
+
+    // Recents come first and skip names the catalog lacks; custom emoji are listed.
+    cx.update(|_, cx| assert_eq!(state.read(cx).visible_count(), 1 + COLUMNS + 3 + 1 + 1));
+    assert_eq!(highlighted(cx).as_deref(), Some("tada"));
+    // Down from the one-emoji recents row enters the first category.
+    cx.simulate_keystrokes("down right");
+    assert_eq!(highlighted(cx).as_deref(), Some("smile_1"));
+    cx.simulate_keystrokes("down");
+    assert_eq!(
+        highlighted(cx).as_deref(),
+        Some(format!("smile_{}", COLUMNS + 1).as_str())
+    );
+    cx.simulate_keystrokes("enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&EmojiPickerEvent::Pick(
+            format!("smile_{}", COLUMNS + 1).into()
+        ))
+    );
+
+    // One character does not filter; two do, and keywords match too.
+    cx.simulate_input("p");
+    cx.update(|_, cx| assert_eq!(state.read(cx).visible_count(), COLUMNS + 6));
+    cx.simulate_input("a");
+    cx.update(|_, cx| assert_eq!(state.read(cx).visible_count(), 2));
+    // A name that starts with the query ranks before a keyword match.
+    assert_eq!(highlighted(cx).as_deref(), Some("parrot"));
+    cx.simulate_keystrokes("right enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&EmojiPickerEvent::Pick("tada".into()))
+    );
+
+    // Escape clears the query first, then cancels.
+    cx.simulate_keystrokes("escape");
+    cx.update(|_, cx| assert!(state.read(cx).query(cx).is_empty()));
+    cx.simulate_keystrokes("escape");
+    assert_eq!(events.borrow().last(), Some(&EmojiPickerEvent::Cancel));
+}
+
+struct ViewerView {
+    handle: gpuicn::dialog::DialogHandle,
+    state: Entity<LightboxState>,
+}
+impl Render for ViewerView {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div().size(px(800.)).child(lightbox(
+            "viewer",
+            &self.handle,
+            &self.state,
+            [],
+            window,
+            cx,
+        ))
+    }
+}
+
+#[gpui_kit::test]
+fn lightbox_pages_zooms_and_closes_from_the_keyboard(cx: &mut TestAppContext) {
+    cx.update(gpuicn::init);
+    let (view, cx) = cx.add_window_view(|_, cx| ViewerView {
+        handle: gpuicn::dialog::DialogHandle::new(false),
+        state: cx.new(|_| {
+            LightboxState::new(
+                ["a.png", "b.png", "c.png"].map(|name| LightboxImage::new(name, name)),
+            )
+        }),
+    });
+    let (handle, state) = cx.update(|window, cx| {
+        window.activate_window();
+        let view = view.read(cx);
+        let (handle, state) = (view.handle.clone(), view.state.clone());
+        state.update(cx, |state, cx| state.show(1, cx));
+        handle.open(window, cx);
+        window.draw(cx).clear(cx);
+        (handle, state)
+    });
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    cx.simulate_keystrokes("right");
+    cx.update(|_, cx| assert_eq!(state.read(cx).index(), 2));
+    cx.simulate_keystrokes("right left left");
+    cx.update(|_, cx| assert_eq!(state.read(cx).index(), 1));
+    cx.simulate_keystrokes("+ +");
+    cx.update(|_, cx| assert!(state.read(cx).zoom() > 1.5));
+    cx.simulate_keystrokes("0");
+    cx.update(|_, cx| assert_eq!(state.read(cx).zoom(), 1.));
+    cx.simulate_keystrokes("escape");
+    assert!(!handle.is_open());
 }

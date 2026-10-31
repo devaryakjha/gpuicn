@@ -76,6 +76,13 @@ dependencies = ["input", "dialog", "kbd"]
 [components.composer]
 description = "A growing chat composer with Enter to send, caret control, paste and key hooks, and autocomplete for mentions, channels, emoji and commands."
 dependencies = ["textarea"]
+[components.emoji_picker]
+title = "Emoji Picker"
+description = "Searchable emoji grid with category tabs, recently used and custom emoji images."
+dependencies = ["input"]
+[components.lightbox]
+description = "A full-window image viewer with zoom, pan and keyboard previous and next."
+dependencies = ["button", "dialog"]
 [components.message]
 title = "Message"
 description = "Team-chat message rows with grouping, mention highlights, reactions, hover actions and dividers."

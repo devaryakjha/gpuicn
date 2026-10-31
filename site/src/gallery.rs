@@ -92,6 +92,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "A panel that slides from an edge of the window.",
     ),
     (
+        "emoji-picker",
+        "Emoji Picker",
+        "A searchable emoji grid with categories, recents and custom emoji.",
+    ),
+    (
         "empty",
         "Empty",
         "Explains an empty state and offers a clear next action.",
@@ -100,6 +105,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "kbd",
         "Kbd",
         "Shows a keyboard key or shortcut with platform modifier names.",
+    ),
+    (
+        "lightbox",
+        "Lightbox",
+        "A full-window image viewer with zoom, pan and previous and next.",
     ),
     (
         "markdown",

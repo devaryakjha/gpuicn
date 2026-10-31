@@ -95,6 +95,12 @@ export const components: CatalogComponent[] = [
     description: "A panel that slides from an edge of the window.",
   },
   {
+    slug: "emoji-picker",
+    name: "Emoji Picker",
+    description:
+      "A searchable emoji grid with categories, recents and custom emoji.",
+  },
+  {
     slug: "empty",
     name: "Empty",
     description: "Explains an empty state and offers a clear next action.",
@@ -130,6 +136,12 @@ export const components: CatalogComponent[] = [
     name: "Kbd",
     description:
       "Shows a keyboard key or shortcut with platform modifier names.",
+  },
+  {
+    slug: "lightbox",
+    name: "Lightbox",
+    description:
+      "A full-window image viewer with zoom, pan and previous and next.",
   },
   {
     slug: "markdown",
@@ -332,6 +344,7 @@ export function previewHeight(slug: string) {
       "command",
       "composer",
       "context-menu",
+      "emoji-picker",
       "dialog",
       "menu",
       "menubar",

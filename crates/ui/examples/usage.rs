@@ -895,6 +895,59 @@ mod composer {
     }
 }
 
+mod emoji_picker {
+    use crate::ui::emoji_picker::*;
+    use gpui_icons::LucideIcon;
+    use gpui_kit::{App, AppContext as _, IntoElement, Window};
+
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("reaction-picker", cx, |window, cx| {
+            let state = cx.new(|cx| {
+                // The application supplies the emoji set, recents and custom images.
+                let mut state = EmojiPickerState::new(
+                    [EmojiCategory::new(
+                        "Activities",
+                        LucideIcon::PartyPopper,
+                        [Emoji::new("tada", "🎉").keywords(["party", "hooray"])],
+                    )],
+                    window,
+                    cx,
+                );
+                state.set_custom([("parrot".into(), "emoji/parrot.gif".into())], cx);
+                state.set_recents(["tada"], cx);
+                state
+            });
+            let subscription = cx.subscribe(&state, |_, _, event, _| {
+                if let EmojiPickerEvent::Pick(name) = event {
+                    println!("react with :{name}:");
+                }
+            });
+            (state, subscription)
+        });
+        let state = state.read(cx).0.clone();
+        EmojiPicker::new(&state)
+    }
+}
+
+mod lightbox {
+    use crate::ui::dialog::DialogHandle;
+    use crate::ui::lightbox::*;
+    use gpui_kit::{App, IntoElement, Window};
+
+    fn example(handle: &DialogHandle, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("viewer", cx, |_, _| {
+            // Pass images the application already loaded; the viewer never fetches.
+            LightboxState::new([
+                LightboxImage::new("cache/screenshot.png", "screenshot.png")
+                    .caption("Arya, 10:42 AM"),
+                LightboxImage::new("cache/diagram.png", "diagram.png"),
+            ])
+        });
+        // Show the clicked image, then open: state.update(cx, |s, cx| s.show(1, cx)); handle.open(window, cx);
+        lightbox("viewer", handle, &state, [], window, cx)
+    }
+}
+
 mod message {
     use crate::ui::avatar::Avatar;
     use crate::ui::message::*;

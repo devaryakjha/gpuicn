@@ -39,6 +39,8 @@ pub mod context_menu;
 pub mod dialog;
 #[path = "../registry/drawer/drawer.rs"]
 pub mod drawer;
+#[path = "../registry/emoji_picker/emoji_picker.rs"]
+pub mod emoji_picker;
 #[path = "../registry/empty/empty.rs"]
 pub mod empty;
 #[path = "../registry/field/field.rs"]
@@ -53,6 +55,8 @@ pub mod input;
 pub mod input_group;
 #[path = "../registry/kbd/kbd.rs"]
 pub mod kbd;
+#[path = "../registry/lightbox/lightbox.rs"]
+pub mod lightbox;
 #[path = "../registry/markdown/markdown.rs"]
 pub mod markdown;
 #[path = "../registry/menu/menu.rs"]

@@ -443,6 +443,29 @@
       ]
     },
     {
+      "name": "emoji-picker",
+      "type": "registry:item",
+      "title": "Emoji Picker",
+      "description": "Searchable emoji grid with category tabs, recently used and custom emoji images.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/emoji_picker/emoji_picker.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/emoji_picker.rs"
+        }
+      ]
+    },
+    {
       "name": "empty",
       "type": "registry:item",
       "title": "Empty",
@@ -585,6 +608,39 @@
           "path": "registry/kbd/kbd.rs",
           "type": "registry:file",
           "target": "~/src/ui/kbd.rs"
+        }
+      ]
+    },
+    {
+      "name": "lightbox",
+      "type": "registry:item",
+      "title": "Lightbox",
+      "description": "A full-window image viewer with zoom, pan and keyboard previous and next.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/dialog/dialog.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/dialog.rs"
+        },
+        {
+          "path": "registry/dialog/modal_focus.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/modal_focus.rs"
+        },
+        {
+          "path": "registry/lightbox/lightbox.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/lightbox.rs"
         }
       ]
     },

@@ -27,6 +27,7 @@ use gpuicn::{
         Drawer, DrawerContent, DrawerSide, drawer_body, drawer_close, drawer_description,
         drawer_footer, drawer_header, drawer_title, drawer_trigger,
     },
+    emoji_picker::{Emoji, EmojiCategory, EmojiPicker, EmojiPickerEvent, EmojiPickerState},
     empty::*,
     field::*,
     fieldset::*,
@@ -34,6 +35,7 @@ use gpuicn::{
     input::{Input, InputEvent, InputState},
     input_group::*,
     kbd::{Kbd, kbd_group},
+    lightbox::{LightboxImage, LightboxState, lightbox},
     markdown::{CustomEmoji, EntityLinks, MarkdownImages, selection_root},
     menu::{Menu, MenuItem, MenuState},
     menubar::Menubar,
@@ -258,6 +260,8 @@ enum Demo {
     Markdown,
     Command,
     Composer,
+    EmojiPicker,
+    Lightbox,
     Message,
     MessageList,
     Attachment,
@@ -320,6 +324,8 @@ impl Demo {
             "markdown" => Some(Self::Markdown),
             "command" => Some(Self::Command),
             "composer" => Some(Self::Composer),
+            "emoji-picker" => Some(Self::EmojiPicker),
+            "lightbox" => Some(Self::Lightbox),
             "message" => Some(Self::Message),
             "message-list" => Some(Self::MessageList),
             "attachment" => Some(Self::Attachment),
@@ -510,6 +516,8 @@ impl Showcase {
             Demo::Markdown => self.markdown_preview(cx).into_any_element(),
             Demo::Command => self.command_preview(window, cx).into_any_element(),
             Demo::Composer => self.composer_preview(window, cx).into_any_element(),
+            Demo::EmojiPicker => self.emoji_picker_preview(window, cx).into_any_element(),
+            Demo::Lightbox => self.lightbox_preview(window, cx).into_any_element(),
             Demo::Message => self.message_preview(cx).into_any_element(),
             Demo::MessageList => self.message_list_preview(window, cx).into_any_element(),
             Demo::Attachment => self.attachment_preview(cx).into_any_element(),
@@ -926,6 +934,115 @@ impl Showcase {
                         ),
                 ),
         )
+    }
+
+    fn emoji_picker_preview(
+        &self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let owner = cx.entity().downgrade();
+        let avatar = "https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png";
+        let state = window
+            .use_keyed_state("emoji-picker.state", cx, |window, cx| {
+                let state = cx.new(|cx| {
+                    let mut state = EmojiPickerState::new(emoji_catalog(), window, cx);
+                    state.set_custom([("arya".into(), avatar.into())], cx);
+                    state.set_recents(["tada", "thumbsup", "eyes", "arya"], cx);
+                    state
+                });
+                let recents = std::rc::Rc::new(std::cell::RefCell::new(vec![
+                    SharedString::from("tada"),
+                    "thumbsup".into(),
+                    "eyes".into(),
+                    "arya".into(),
+                ]));
+                let subscription =
+                    cx.subscribe_in(&state, window, move |_, state, event, _, cx| {
+                        let action = match event {
+                            EmojiPickerEvent::Pick(name) => {
+                                // The application owns recents: move the pick to the front.
+                                let mut list = recents.borrow_mut();
+                                list.retain(|recent| recent != name);
+                                list.insert(0, name.clone());
+                                list.truncate(18);
+                                let list = list.clone();
+                                state.update(cx, |state, cx| state.set_recents(list, cx));
+                                format!("Picked :{name}:")
+                            }
+                            EmojiPickerEvent::Cancel => "Closed".into(),
+                        };
+                        let _ = owner.update(cx, |this, cx| {
+                            this.demo_action = action;
+                            cx.notify();
+                        });
+                    });
+                (state, subscription)
+            })
+            .read(cx)
+            .0
+            .clone();
+        EmojiPicker::new(&state)
+    }
+
+    fn lightbox_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        use gpui_kit::StyledImage as _;
+        let images = lightbox_images();
+        let handle = window
+            .use_keyed_state("lightbox.handle", cx, |_, _| DialogHandle::new(false))
+            .read(cx)
+            .clone();
+        let state = window.use_keyed_state("lightbox.state", cx, |_, _| {
+            LightboxState::new(lightbox_images())
+        });
+        let theme = UiTheme::read(cx).clone();
+        div()
+            .flex()
+            .gap(px(12.))
+            .children(images.into_iter().enumerate().map(|(index, image)| {
+                let open = handle.clone();
+                let state = state.clone();
+                div()
+                    .id(gpui_kit::ElementId::Name(
+                        format!("lightbox.thumb.{index}").into(),
+                    ))
+                    .role(gpui_kit::Role::Button)
+                    .aria_label(format!("Open {}", image.name))
+                    .w(px(144.))
+                    .h(px(96.))
+                    .overflow_hidden()
+                    .rounded(theme.radius.lg)
+                    .border_1()
+                    .border_color(theme.colors.border)
+                    .bg(theme.colors.muted)
+                    .cursor_pointer()
+                    .on_click(move |_, window, cx| {
+                        state.update(cx, |state, cx| state.show(index, cx));
+                        open.open(window, cx);
+                    })
+                    .child(
+                        gpui_kit::img(image.source)
+                            .size_full()
+                            .object_fit(gpui_kit::ObjectFit::Cover),
+                    )
+            }))
+            .child(lightbox(
+                "lightbox.viewer",
+                &handle,
+                &state,
+                [Button::new("lightbox.download")
+                    .size(ButtonSize::Icon)
+                    .variant(ButtonVariant::Ghost)
+                    .aria_label("Download")
+                    .child(
+                        lucide(LucideIcon::Download)
+                            .size(px(18.))
+                            .text_color(gpui_kit::white()),
+                    )
+                    .into_any_element()],
+                window,
+                cx,
+            ))
     }
 
     fn message_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -4247,6 +4364,8 @@ mod audit_tests {
             "markdown",
             "command",
             "composer",
+            "emoji-picker",
+            "lightbox",
             "message",
             "message-list",
             "attachment",
@@ -4279,6 +4398,194 @@ mod audit_tests {
             }
         }
     }
+}
+
+fn lightbox_images() -> Vec<LightboxImage> {
+    let repo = "https://raw.githubusercontent.com/devaryakjha/gpuicn/0f4ecbfad9ccd443af0925137c88d87996e999f7";
+    vec![
+        LightboxImage::new(format!("{repo}/docs/images/catalog-hero.png"), "catalog-hero.png")
+            .caption("Arya in ~gpuicn, 10:42 AM"),
+        LightboxImage::new(
+            format!("{repo}/docs/images/catalog-components.png"),
+            "catalog-components.png",
+        )
+        .caption("Arya in ~gpuicn, 10:43 AM"),
+        LightboxImage::new(
+            "https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png",
+            "avatar.png",
+        )
+        .caption("Sam in ~random, yesterday"),
+    ]
+}
+
+/// A small sample: applications supply the full Unicode set and its shortcodes.
+fn emoji_catalog() -> Vec<EmojiCategory> {
+    let category = |name: &'static str, icon, emoji: &[(&'static str, &'static str)]| {
+        EmojiCategory::new(
+            name,
+            icon,
+            emoji.iter().map(|(name, glyph)| Emoji::new(*name, *glyph)),
+        )
+    };
+    vec![
+        category(
+            "Smileys & Emotion",
+            LucideIcon::FaceSlightlySmiling,
+            &[
+                ("grinning", "😀"),
+                ("smiley", "😃"),
+                ("smile", "😄"),
+                ("grin", "😁"),
+                ("laughing", "😆"),
+                ("sweat_smile", "😅"),
+                ("joy", "😂"),
+                ("rofl", "🤣"),
+                ("slightly_smiling_face", "🙂"),
+                ("upside_down_face", "🙃"),
+                ("wink", "😉"),
+                ("blush", "😊"),
+                ("innocent", "😇"),
+                ("heart_eyes", "😍"),
+                ("star_struck", "🤩"),
+                ("kissing_heart", "😘"),
+                ("yum", "😋"),
+                ("stuck_out_tongue", "😛"),
+                ("thinking", "🤔"),
+                ("neutral_face", "😐"),
+                ("expressionless", "😑"),
+                ("smirk", "😏"),
+                ("unamused", "😒"),
+                ("roll_eyes", "🙄"),
+                ("grimacing", "😬"),
+                ("relieved", "😌"),
+                ("pensive", "😔"),
+                ("sleepy", "😪"),
+                ("sleeping", "😴"),
+                ("sunglasses", "😎"),
+                ("nerd_face", "🤓"),
+                ("confused", "😕"),
+                ("worried", "😟"),
+                ("open_mouth", "😮"),
+                ("astonished", "😲"),
+                ("flushed", "😳"),
+                ("cry", "😢"),
+                ("sob", "😭"),
+                ("scream", "😱"),
+                ("rage", "😡"),
+                ("skull", "💀"),
+                ("heart", "❤️"),
+                ("broken_heart", "💔"),
+                ("sparkling_heart", "💖"),
+                ("100", "💯"),
+            ],
+        ),
+        category(
+            "People & Body",
+            LucideIcon::Hand,
+            &[
+                ("wave", "👋"),
+                ("raised_hand", "✋"),
+                ("ok_hand", "👌"),
+                ("v", "✌️"),
+                ("crossed_fingers", "🤞"),
+                ("point_up", "☝️"),
+                ("thumbsup", "👍"),
+                ("thumbsdown", "👎"),
+                ("clap", "👏"),
+                ("raised_hands", "🙌"),
+                ("pray", "🙏"),
+                ("muscle", "💪"),
+                ("eyes", "👀"),
+                ("brain", "🧠"),
+                ("handshake", "🤝"),
+                ("writing_hand", "✍️"),
+                ("shrug", "🤷"),
+                ("facepalm", "🤦"),
+            ],
+        ),
+        category(
+            "Animals & Nature",
+            LucideIcon::Leaf,
+            &[
+                ("dog", "🐶"),
+                ("cat", "🐱"),
+                ("fox_face", "🦊"),
+                ("panda_face", "🐼"),
+                ("penguin", "🐧"),
+                ("owl", "🦉"),
+                ("turtle", "🐢"),
+                ("octopus", "🐙"),
+                ("crab", "🦀"),
+                ("bee", "🐝"),
+                ("seedling", "🌱"),
+                ("evergreen_tree", "🌲"),
+                ("cactus", "🌵"),
+                ("sunflower", "🌻"),
+                ("fire", "🔥"),
+                ("star", "⭐"),
+                ("zap", "⚡"),
+                ("rainbow", "🌈"),
+            ],
+        ),
+        category(
+            "Food & Drink",
+            LucideIcon::Coffee,
+            &[
+                ("apple", "🍎"),
+                ("avocado", "🥑"),
+                ("pizza", "🍕"),
+                ("taco", "🌮"),
+                ("ramen", "🍜"),
+                ("sushi", "🍣"),
+                ("doughnut", "🍩"),
+                ("cookie", "🍪"),
+                ("cake", "🍰"),
+                ("coffee", "☕"),
+                ("tea", "🍵"),
+                ("beers", "🍻"),
+            ],
+        ),
+        category(
+            "Activities",
+            LucideIcon::PartyPopper,
+            &[
+                ("tada", "🎉"),
+                ("confetti_ball", "🎊"),
+                ("balloon", "🎈"),
+                ("gift", "🎁"),
+                ("trophy", "🏆"),
+                ("medal", "🏅"),
+                ("soccer", "⚽"),
+                ("basketball", "🏀"),
+                ("video_game", "🎮"),
+                ("dart", "🎯"),
+                ("chess_pawn", "♟️"),
+                ("art", "🎨"),
+            ],
+        ),
+        category(
+            "Objects",
+            LucideIcon::Lightbulb,
+            &[
+                ("rocket", "🚀"),
+                ("bulb", "💡"),
+                ("computer", "💻"),
+                ("keyboard", "⌨️"),
+                ("hammer_and_wrench", "🛠️"),
+                ("gear", "⚙️"),
+                ("lock", "🔒"),
+                ("key", "🔑"),
+                ("memo", "📝"),
+                ("pushpin", "📌"),
+                ("bell", "🔔"),
+                ("calendar", "📅"),
+                ("white_check_mark", "✅"),
+                ("x", "❌"),
+                ("warning", "⚠️"),
+                ("question", "❓"),
+            ],
+        ),
+    ]
 }
 
 fn composer_emoji() -> [(&'static str, &'static str); 6] {
