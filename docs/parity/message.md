@@ -19,6 +19,14 @@ layout. Implementation: `crates/ui/registry/message/message.rs`.
 - Reaction chips are outline pill buttons with the emoji and count, filled with
   a primary tint when the reader reacted. They take focus and report the emoji
   through `on_reaction`; `on_add_reaction` adds an icon button for a picker.
+  `Reaction::image` shows a custom emoji image supplied by the application.
+  `Reaction::tooltip` shows who reacted on hover, and
+  `Message::reaction_tooltip` replaces it with any view, such as a list with
+  avatars.
+- `MessageHighlight::Permalink` tints the row amber with an amber gutter bar,
+  for the message a followed link points at.
+- `aria_description` sets what assistive technology reads for the row, such as
+  the sender, time, reaction count and edited state.
 
 `day_divider` and `new_messages_divider` draw the date pill and the destructive
 "New messages" rule. Message content, grouping rules, time formatting and the

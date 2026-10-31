@@ -3,17 +3,27 @@
 //! Code blocks are syntax-highlighted when the application enables GPUI Kit's
 //! `syntect` (or `tree-sitter`) feature; without it they render as plain
 //! monospaced text with the same frame.
+//!
+//! Wrap the window's content in `selection_root` so a selection can span
+//! several views, such as many messages in a transcript, and copy with
+//! Cmd+C or Ctrl+C.
+//!
+//! Images never load over the network on their own: add `MarkdownImages` to
+//! resolve each image URL through the application's media cache, and
+//! `CustomEmoji` for `:emoji:` images sized to the text.
 
 use std::sync::Arc;
 
+use gpui_kit::base::{SelectableText, TextSelection, TextSelectionLayer};
 use gpui_kit::component::text::{
     InlineElement, InlineRenderContext, MarkdownNode, MarkdownParseContext, MarkdownPlugin,
     TextView, TextViewStyle, markdown_ast,
 };
 use gpui_kit::{
-    App, ElementId, HighlightStyle, InteractiveElement as _, IntoElement, ParentElement as _,
-    SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
-    prelude::FluentBuilder as _, px, relative, rems,
+    App, ClipboardItem, ElementId, HighlightStyle, ImageSource, InteractiveElement as _,
+    IntoElement, ObjectFit, ParentElement as _, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, StyledImage as _, Window, div, img, prelude::FluentBuilder as _, px,
+    relative, rems,
 };
 
 pub use gpui_kit::component::text::TextView as MarkdownView;
@@ -208,4 +218,272 @@ impl MarkdownPlugin for EntityLinks {
     ) -> Option<InlineElement> {
         Some(InlineElement::new(self.render(node, window, cx)))
     }
+}
+
+type ImageResolver =
+    Arc<dyn Fn(&str, &mut Window, &mut App) -> Option<ImageSource> + Send + Sync + 'static>;
+type ImageClick = Arc<dyn Fn(&SharedString, &mut Window, &mut App) + Send + Sync + 'static>;
+
+/// One image the application resolves: its key and the text that stands in for it.
+#[derive(Clone, Debug)]
+struct ResolvedImage {
+    key: SharedString,
+    alt: SharedString,
+}
+
+/// Renders `![:tada:](emoji:tada)` images at the height of the surrounding
+/// text, from images the application supplies.
+///
+/// The application rewrites its emoji syntax (`:tada:`) into these images
+/// before rendering. Selection and copy keep the alt text, and an emoji the
+/// resolver does not know renders as that text.
+pub struct CustomEmoji {
+    scheme: SharedString,
+    resolve: ImageResolver,
+}
+
+impl CustomEmoji {
+    /// Matches images whose URL starts with `scheme:`, such as `"emoji"`, and
+    /// resolves the name after it, usually from a decoded-image cache.
+    pub fn new(
+        scheme: impl Into<SharedString>,
+        resolve: impl Fn(&str, &mut Window, &mut App) -> Option<ImageSource> + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            scheme: scheme.into(),
+            resolve: Arc::new(resolve),
+        }
+    }
+}
+
+impl MarkdownPlugin for CustomEmoji {
+    fn name(&self) -> &str {
+        &self.scheme
+    }
+
+    fn parse(
+        &self,
+        node: &markdown_ast::Node,
+        _cx: &MarkdownParseContext<'_>,
+    ) -> Option<MarkdownNode> {
+        let markdown_ast::Node::Image(image) = node else {
+            return None;
+        };
+        let name = image
+            .url
+            .strip_prefix(self.scheme.as_ref())?
+            .strip_prefix(':')?;
+        let alt: SharedString = if image.alt.is_empty() {
+            format!(":{name}:").into()
+        } else {
+            image.alt.clone().into()
+        };
+        Some(
+            MarkdownNode::new(
+                self.scheme.clone(),
+                ResolvedImage {
+                    key: name.to_string().into(),
+                    alt: alt.clone(),
+                },
+            )
+            .text(alt.clone())
+            .accessibility_label(alt),
+        )
+    }
+
+    fn render(&self, node: &MarkdownNode, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let size = UiTheme::read(cx).text(14.) * 1.25;
+        emoji_element(&self.resolve, node, size, window, cx)
+    }
+
+    fn render_inline(
+        &self,
+        node: &MarkdownNode,
+        context: &InlineRenderContext,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Option<InlineElement> {
+        let size = context.font_size() * 1.25;
+        let element = emoji_element(&self.resolve, node, size, window, cx);
+        // Sit the image on the baseline, with the descent below it like text.
+        Some(InlineElement::new(element).with_baseline(context.font_size() * 1.05))
+    }
+}
+
+fn emoji_element(
+    resolve: &ImageResolver,
+    node: &MarkdownNode,
+    size: gpui_kit::Pixels,
+    window: &mut Window,
+    cx: &mut App,
+) -> gpui_kit::AnyElement {
+    let Some(emoji) = node.data::<ResolvedImage>().cloned() else {
+        return div().child(node.as_text().to_string()).into_any_element();
+    };
+    match resolve(&emoji.key, window, cx) {
+        Some(source) => img(source)
+            .size(size)
+            .object_fit(ObjectFit::Contain)
+            .into_any_element(),
+        None => div().child(emoji.alt).into_any_element(),
+    }
+}
+
+/// Resolves every Markdown image through the application, so nothing is
+/// fetched by the view itself.
+///
+/// The resolver gets the image URL and returns a source, such as a decoded
+/// image from the application's media cache. An image it cannot supply yet
+/// renders as its alt text in a muted frame. Images show 200px tall, at most
+/// 360px wide. Add `CustomEmoji` first so its
+/// images are not taken as ordinary images.
+pub struct MarkdownImages {
+    resolve: ImageResolver,
+    on_click: Option<ImageClick>,
+}
+
+impl MarkdownImages {
+    /// Resolves image URLs through `resolve`.
+    pub fn new(
+        resolve: impl Fn(&str, &mut Window, &mut App) -> Option<ImageSource> + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            resolve: Arc::new(resolve),
+            on_click: None,
+        }
+    }
+
+    /// Runs with the image URL when an image is clicked, for opening a lightbox.
+    pub fn on_click(
+        mut self,
+        handler: impl Fn(&SharedString, &mut Window, &mut App) + Send + Sync + 'static,
+    ) -> Self {
+        self.on_click = Some(Arc::new(handler));
+        self
+    }
+}
+
+impl MarkdownPlugin for MarkdownImages {
+    fn name(&self) -> &str {
+        "image"
+    }
+
+    fn parse(
+        &self,
+        node: &markdown_ast::Node,
+        _cx: &MarkdownParseContext<'_>,
+    ) -> Option<MarkdownNode> {
+        let markdown_ast::Node::Image(image) = node else {
+            return None;
+        };
+        let alt: SharedString = if image.alt.is_empty() {
+            "Image".into()
+        } else {
+            image.alt.clone().into()
+        };
+        Some(
+            MarkdownNode::new(
+                "image",
+                ResolvedImage {
+                    key: image.url.clone().into(),
+                    alt: alt.clone(),
+                },
+            )
+            .text(alt.clone())
+            .accessibility_label(alt),
+        )
+    }
+
+    fn render(&self, node: &MarkdownNode, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let Some(image) = node.data::<ResolvedImage>().cloned() else {
+            return div().child(node.as_text().to_string()).into_any_element();
+        };
+        let theme = UiTheme::read(cx).clone();
+        let colors = theme.colors;
+        let source = (self.resolve)(&image.key, window, cx);
+        let on_click = self.on_click.clone();
+        let key = image.key.clone();
+        div()
+            .id(ElementId::Name(format!("image:{}", image.key).into()))
+            .my(theme.space(1.))
+            .rounded(theme.radius.lg)
+            .overflow_hidden()
+            .border_1()
+            .border_color(colors.border)
+            .when_some(on_click, move |frame, handler| {
+                frame
+                    .cursor_pointer()
+                    .on_click(move |_, window, cx| handler(&key, window, cx))
+            })
+            .map(|frame| match source {
+                Some(source) => frame.child(
+                    img(source)
+                        .h(px(200.))
+                        .max_w(px(360.))
+                        .object_fit(ObjectFit::Contain),
+                ),
+                None => frame
+                    .px(theme.space(3.))
+                    .py(theme.space(2.))
+                    .bg(colors.muted)
+                    .text_size(theme.text(13.))
+                    .text_color(colors.muted_foreground)
+                    .child(image.alt),
+            })
+            .into_any_element()
+    }
+}
+
+/// The window's root for text selection. Render it once around the window's
+/// content; Markdown views and `selectable_text` inside it then share one
+/// selection, and Cmd+C (Ctrl+C elsewhere) copies it in reading order.
+///
+/// A focused text field keeps its own copy shortcut.
+pub fn selection_root(id: impl Into<ElementId>) -> gpui_kit::Stateful<gpui_kit::Div> {
+    div()
+        .id(id)
+        .key_context("SelectionRoot")
+        .size_full()
+        .relative()
+        .on_key_down(|event, window, cx| {
+            let keystroke = &event.keystroke;
+            if keystroke.key != "c"
+                || !keystroke.modifiers.secondary(cx)
+                || keystroke.modifiers.shift
+                || keystroke.modifiers.alt
+            {
+                return;
+            }
+            if copy_selection(window, cx) {
+                cx.stop_propagation();
+            }
+        })
+        .child(TextSelectionLayer)
+}
+
+/// Copies the window's text selection to the clipboard. Returns `false` when
+/// nothing is selected.
+pub fn copy_selection(window: &mut Window, cx: &mut App) -> bool {
+    let text = TextSelection::selected_text(window, cx);
+    let text = text.trim();
+    if text.is_empty() {
+        return false;
+    }
+    cx.write_to_clipboard(ClipboardItem::new_string(text.to_string()));
+    true
+}
+
+/// Plain text that joins the window selection, for message bodies that are
+/// not Markdown. Keep `id` stable for the message.
+pub fn selectable_text(
+    id: impl Into<ElementId>,
+    text: impl Into<SharedString>,
+    cx: &App,
+) -> impl IntoElement {
+    let theme = UiTheme::read(cx);
+    div()
+        .w_full()
+        .text_size(theme.text(14.))
+        .text_color(theme.colors.foreground)
+        .child(SelectableText::new(id, text))
 }

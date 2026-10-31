@@ -76,7 +76,7 @@ dependencies = ["input", "dialog", "kbd"]
 [components.message]
 title = "Message"
 description = "Team-chat message rows with grouping, mention highlights, reactions, hover actions and dividers."
-dependencies = ["button"]
+dependencies = ["button", "tooltip"]
 [components.message_list]
 title = "Message List"
 description = "A virtualized, variable-height chat transcript that follows new messages, with a jump-to-latest pill."
