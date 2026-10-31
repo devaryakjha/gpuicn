@@ -72,6 +72,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "A searchable command palette and quick switcher.",
     ),
     (
+        "composer",
+        "Composer",
+        "A chat message box with autocomplete for mentions, channels and emoji.",
+    ),
+    (
         "context-menu",
         "Context Menu",
         "A menu opened by a secondary pointer action.",

@@ -8,6 +8,7 @@ use gpui_kit::{
 use gpuicn::{
     attachment::{Attachment, AttachmentStatus, attachment_group},
     command::{Command, CommandEvent, CommandItem, CommandState},
+    composer::{Composer, ComposerEvent, ComposerState, ComposerSuggestion},
     markdown::{markdown, selection_root},
     message::{
         Message, MessageHighlight, MessageStatus, Reaction, day_divider, new_messages_divider,
@@ -286,4 +287,127 @@ fn transcript_keyboard_selection_and_copy_across_rows(cx: &mut TestAppContext) {
     cx.simulate_keystrokes("secondary-c");
     let copied = cx.update(|_, cx| cx.read_from_clipboard().and_then(|item| item.text()));
     assert_eq!(copied.as_deref(), Some(text.trim()));
+}
+
+struct ComposerView {
+    state: Entity<ComposerState>,
+}
+impl Render for ComposerView {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .w(px(480.))
+            .p(px(200.))
+            .child(Composer::new(&self.state))
+    }
+}
+
+#[gpui_kit::test]
+fn composer_autocompletes_submits_and_hands_keys_to_the_app(cx: &mut TestAppContext) {
+    cx.update(gpuicn::init);
+    let events = Rc::new(RefCell::new(Vec::new()));
+    let claimed = Rc::new(RefCell::new(0));
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let state = cx.new(|cx| ComposerState::new(6, window, cx));
+        let sink = events.clone();
+        cx.subscribe(
+            &state,
+            move |view: &mut ComposerView, _, event: &ComposerEvent, cx| {
+                sink.borrow_mut().push(event.clone());
+                if let ComposerEvent::Autocomplete {
+                    trigger: '@',
+                    query,
+                } = event
+                {
+                    let people = ["arya", "aryan", "bo"]
+                        .into_iter()
+                        .filter(|name| name.starts_with(query.as_ref()))
+                        .map(|name| ComposerSuggestion::new(format!("@{name}"), name));
+                    view.state
+                        .update(cx, |state, cx| state.set_suggestions(people, cx));
+                }
+            },
+        )
+        .detach();
+        let count = claimed.clone();
+        state.update(cx, |state, _| {
+            state.set_on_key(move |keystroke, _, _| {
+                let claim = keystroke.key == "up";
+                if claim {
+                    *count.borrow_mut() += 1;
+                }
+                claim
+            })
+        });
+        ComposerView { state }
+    });
+    let state = cx.update(|window, cx| {
+        window.activate_window();
+        let state = view.read(cx).state.clone();
+        state.update(cx, |state, cx| state.focus(window, cx));
+        window.draw(cx).clear(cx);
+        state
+    });
+
+    cx.simulate_input("hi @ar");
+    cx.run_until_parked();
+    assert!(events.borrow().contains(&ComposerEvent::Autocomplete {
+        trigger: '@',
+        query: "ar".into()
+    }));
+    cx.update(|window, cx| {
+        window.draw(cx).clear(cx);
+        assert!(state.read(cx).is_autocomplete_open());
+        assert!(state.read(cx).caret_bounds(cx).is_some());
+    });
+    // Down highlights the second match; Enter accepts it instead of sending.
+    cx.simulate_keystrokes("down enter");
+    cx.update(|_, cx| {
+        assert_eq!(state.read(cx).value(cx), "hi @aryan ");
+        assert!(!state.read(cx).is_autocomplete_open());
+    });
+    assert!(events.borrow().contains(&ComposerEvent::Accept {
+        trigger: '@',
+        value: "@aryan".into()
+    }));
+    assert!(
+        !events
+            .borrow()
+            .iter()
+            .any(|event| matches!(event, ComposerEvent::Submit(_)))
+    );
+
+    // Escape dismisses the popup until the caret leaves the trigger.
+    cx.simulate_input("@b");
+    cx.run_until_parked();
+    cx.update(|_, cx| assert!(state.read(cx).is_autocomplete_open()));
+    cx.simulate_keystrokes("escape");
+    cx.update(|_, cx| assert!(!state.read(cx).is_autocomplete_open()));
+    cx.simulate_input("o");
+    cx.update(|_, cx| assert!(!state.read(cx).is_autocomplete_open()));
+
+    // The app's key hook runs first; Shift+Enter adds a line; Enter sends.
+    cx.simulate_keystrokes("up");
+    assert_eq!(*claimed.borrow(), 1);
+    cx.simulate_keystrokes("shift-enter");
+    cx.simulate_input("ok");
+    cx.simulate_keystrokes("enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&ComposerEvent::Submit("hi @aryan @bo\nok".into()))
+    );
+
+    // Insert, wrap and selection helpers work at the caret.
+    cx.update(|window, cx| {
+        state.update(cx, |state, cx| {
+            state.set_value("make it bold", window, cx);
+            state.set_selection(8..12, cx);
+            state.wrap_selection("**", "**", window, cx);
+            assert_eq!(state.value(cx), "make it **bold**");
+            assert_eq!(state.selection(cx), 10..14);
+            state.set_selection(16..16, cx);
+            state.insert("!", window, cx);
+            assert_eq!(state.value(cx), "make it **bold**!");
+            assert!(!state.is_composing(window, cx));
+        });
+    });
 }

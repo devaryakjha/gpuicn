@@ -73,6 +73,9 @@ description = "Muted pulsing placeholders for content that is still loading."
 [components.command]
 description = "A Nova command palette and quick switcher with grouped, fuzzy-filtered, virtualized results."
 dependencies = ["input", "dialog", "kbd"]
+[components.composer]
+description = "A growing chat composer with Enter to send, caret control, paste and key hooks, and autocomplete for mentions, channels, emoji and commands."
+dependencies = ["textarea"]
 [components.message]
 title = "Message"
 description = "Team-chat message rows with grouping, mention highlights, reactions, hover actions and dividers."

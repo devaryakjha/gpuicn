@@ -326,6 +326,34 @@
       ]
     },
     {
+      "name": "composer",
+      "type": "registry:item",
+      "title": "Composer",
+      "description": "A growing chat composer with Enter to send, caret control, paste and key hooks, and autocomplete for mentions, channels, emoji and commands.",
+      "files": [
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/textarea/textarea.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/textarea.rs"
+        },
+        {
+          "path": "registry/composer/composer.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/composer.rs"
+        }
+      ]
+    },
+    {
       "name": "context-menu",
       "type": "registry:item",
       "title": "Context Menu",

@@ -852,6 +852,49 @@ mod command {
     }
 }
 
+mod composer {
+    use crate::ui::composer::*;
+    use gpui_icons::LucideIcon;
+    use gpui_kit::{App, AppContext as _, IntoElement, ParentElement as _, Window};
+
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("composer", cx, |window, cx| {
+            let state = cx.new(|cx| {
+                let mut state = ComposerState::new(8, window, cx);
+                // Claim pasted images or files for upload; text pastes normally.
+                state.set_on_paste(|item, _, _| item.text().is_none());
+                // Claim keys before the editor, such as Page Up to scroll the transcript.
+                state.set_on_key(|keystroke, _, _| keystroke.key == "pageup");
+                state
+            });
+            let subscription =
+                cx.subscribe_in(&state, window, |_, state, event, window, cx| match event {
+                    ComposerEvent::Autocomplete {
+                        trigger: '~',
+                        query,
+                    } => {
+                        let channels = ["town-square", "gpuicn"]
+                            .into_iter()
+                            .filter(|name| name.starts_with(query.as_ref()))
+                            .map(|name| {
+                                ComposerSuggestion::new(format!("~{name}"), name)
+                                    .icon(LucideIcon::Hash)
+                            });
+                        state.update(cx, |state, cx| state.set_suggestions(channels, cx));
+                    }
+                    ComposerEvent::Submit(text) => {
+                        println!("send {text}");
+                        state.update(cx, |state, cx| state.set_value("", window, cx));
+                    }
+                    _ => {}
+                });
+            (state, subscription)
+        });
+        let state = state.read(cx).0.clone();
+        Composer::new(&state).child("Attach")
+    }
+}
+
 mod message {
     use crate::ui::avatar::Avatar;
     use crate::ui::message::*;

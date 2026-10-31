@@ -11,6 +11,7 @@ pub mod checkbox_group;
 pub mod collapsible;
 pub mod combobox;
 pub mod command;
+pub mod composer;
 pub mod context_menu;
 pub mod dialog;
 pub mod drawer;

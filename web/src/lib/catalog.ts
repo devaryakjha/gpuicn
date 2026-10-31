@@ -19,7 +19,8 @@ export const components: CatalogComponent[] = [
   {
     slug: "attachment",
     name: "Attachment",
-    description: "File and image cards with upload progress, retry, and remove.",
+    description:
+      "File and image cards with upload progress, retry, and remove.",
   },
   {
     slug: "autocomplete",
@@ -73,6 +74,12 @@ export const components: CatalogComponent[] = [
     description: "A searchable command palette and quick switcher.",
   },
   {
+    slug: "composer",
+    name: "Composer",
+    description:
+      "A chat message box with autocomplete for mentions, channels and emoji.",
+  },
+  {
     slug: "context-menu",
     name: "Context Menu",
     description: "A menu opened by a secondary pointer action.",
@@ -121,7 +128,8 @@ export const components: CatalogComponent[] = [
   {
     slug: "kbd",
     name: "Kbd",
-    description: "Shows a keyboard key or shortcut with platform modifier names.",
+    description:
+      "Shows a keyboard key or shortcut with platform modifier names.",
   },
   {
     slug: "markdown",
@@ -142,12 +150,14 @@ export const components: CatalogComponent[] = [
   {
     slug: "message",
     name: "Message",
-    description: "A chat message row with grouping, reactions, and hover actions.",
+    description:
+      "A chat message row with grouping, reactions, and hover actions.",
   },
   {
     slug: "message-list",
     name: "Message List",
-    description: "A chat transcript that only renders visible rows and follows new messages.",
+    description:
+      "A chat transcript that only renders visible rows and follows new messages.",
   },
   {
     slug: "meter",
@@ -320,6 +330,7 @@ export function previewHeight(slug: string) {
     [
       "alert-dialog",
       "command",
+      "composer",
       "context-menu",
       "dialog",
       "menu",

@@ -31,6 +31,8 @@ pub mod collapsible;
 pub mod combobox;
 #[path = "../registry/command/command.rs"]
 pub mod command;
+#[path = "../registry/composer/composer.rs"]
+pub mod composer;
 #[path = "../registry/context_menu/context_menu.rs"]
 pub mod context_menu;
 #[path = "../registry/dialog/dialog.rs"]
