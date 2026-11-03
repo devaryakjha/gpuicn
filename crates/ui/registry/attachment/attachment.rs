@@ -168,15 +168,32 @@ impl RenderOnce for Attachment {
                 &theme,
             )
         });
+        // GPUI clips children to a rectangle, not to the card's rounded
+        // corners, so the bar stays clear of them and images carry the inner radius.
+        let inner_radius = theme.radius.lg - px(1.);
+        let is_image = self.image.is_some();
         let progress_bar = progress.map(|progress| {
+            let (inset, bottom, height) = if is_image {
+                (theme.space(1.5), theme.space(1.5), px(3.))
+            } else {
+                (theme.radius.lg, px(0.), px(2.))
+            };
             div()
                 .absolute()
-                .left_0()
-                .right_0()
-                .bottom_0()
-                .h(px(2.))
+                .left(inset)
+                .right(inset)
+                .bottom(bottom)
+                .h(height)
+                .rounded_full()
+                .overflow_hidden()
                 .bg(colors.muted)
-                .child(div().h_full().w(relative(progress)).bg(colors.primary))
+                .child(
+                    div()
+                        .h_full()
+                        .w(relative(progress))
+                        .rounded_full()
+                        .bg(colors.primary),
+                )
         });
 
         let root = div()
@@ -207,6 +224,7 @@ impl RenderOnce for Attachment {
                 .child(
                     img(source)
                         .size_full()
+                        .rounded(inner_radius)
                         .object_fit(ObjectFit::Cover)
                         .when(progress.is_some() || failed, |image| image.opacity(0.5)),
                 )
@@ -215,6 +233,7 @@ impl RenderOnce for Attachment {
                         div()
                             .absolute()
                             .inset_0()
+                            .rounded(inner_radius)
                             .flex()
                             .items_center()
                             .justify_center()

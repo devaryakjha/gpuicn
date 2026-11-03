@@ -754,7 +754,6 @@ impl Render for EmojiPickerState {
             .flex()
             .flex_col()
             .overflow_hidden()
-            .bg(colors.popover)
             .text_color(colors.popover_foreground)
             .font_family(theme.fonts.body.clone())
             .text_size(theme.text(14.))
@@ -904,6 +903,9 @@ impl RenderOnce for EmojiPicker {
             .flex_none()
             .overflow_hidden()
             .rounded(theme.radius.xl)
+            // GPUI clips children to a rectangle, so the surface color lives
+            // on the rounded root rather than on the square picker inside.
+            .bg(theme.colors.popover)
             .when(self.bordered, |root| {
                 root.border_1()
                     .border_color(theme.colors.border)
