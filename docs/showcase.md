@@ -97,24 +97,28 @@ docker run --rm --user "$(id -u):$(id -g)" \
 
 ## Distribution and verification
 
+Releases build, sign, notarize and publish these downloads in CI; see
+[Releases](../CONTRIBUTING.md#releases). The **Build release downloads**
+workflow builds them without releasing anything, which is useful to test a
+change to packaging.
+
 Without signing settings, the script creates an ad-hoc signed local preview.
 For public releases, set `SHOWCASE_SIGN_IDENTITY` to a Developer ID Application
-identity and `SHOWCASE_NOTARY_PROFILE` to credentials stored by `notarytool` in
-the macOS Keychain. The script signs with the hardened runtime, submits to Apple,
-staples and validates the ticket, and checks Gatekeeper before writing download
-metadata. Credentials and private keys stay outside the repository.
+identity and either `SHOWCASE_NOTARY_PROFILE` to credentials stored by
+`notarytool` in the macOS Keychain, or `SHOWCASE_NOTARY_KEY`,
+`SHOWCASE_NOTARY_KEY_ID` and `SHOWCASE_NOTARY_ISSUER` to an App Store Connect
+API key (CI uses the key). The script signs with the hardened runtime, submits
+to Apple, staples and validates the ticket, and checks Gatekeeper before writing
+download metadata. Credentials and private keys stay outside the repository.
 
-Upload the ZIP, its `.sha256` file, and `showcase.json` to the matching GitHub
-release. Run **Deploy ui.imajha.com** with that release tag. Deployment checks
-the version, source revision, notarization flag, file size, and checksum before
-building the catalog with the same download. The release tag and packaged source
-must refer to the same clean commit.
-
-The GitHub workflow requires `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID` repository secrets. A signed-in local release checkout
-can instead build the catalog with `cd web && bun run build`, then run
-`bunx wrangler@4.129.0 deploy` from the repository root. Keep the verified
-release download files in `web/public/downloads/` for either path.
+**Deploy ui.imajha.com** serves the downloads of one GitHub release. It checks
+the version, source revision, file size and checksum, and, once the Apple
+secrets exist, the notarization flag, before building the catalog with the same
+download. It needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the
+`release` environment. A signed-in local release checkout can instead build the
+catalog with `cd web && bun run build`, then run `bunx wrangler@4.129.0 deploy`
+from the repository root, with the release download files in
+`web/public/downloads/`.
 
 [The audit record](validation/showcase.md) distinguishes automated checks,
 completed native/browser journeys, and remaining limits. NumberField and toolbar
@@ -122,14 +126,6 @@ inputs now expose native editor roles, names and values.
 Both now use the shared editor for undo/redo and word editing while retaining
 numeric rules and toolbar focus behavior; see their parity notes.
 
-To build macOS releases without compiling on your laptop, run **Build release
-downloads** on the release commit. Download `showcase-macos-arm64`, put its
-`showcase` executable at `target/release/showcase` in a clean checkout of that
-same commit, restore its executable bit, and run `scripts/package-showcase.py
---skip-build` with the signing settings above. Confirm the workflow's commit
-matches the checkout before signing.
-
-The same workflow packages Linux x86-64 and ARM64 archives on Ubuntu 24.04
-runners. Download their archive, checksum and manifest artifacts and attach
-them to the matching release. These build jobs do not qualify desktop runtime
+The release also packages Linux x86-64 and ARM64 archives on Ubuntu 24.04
+runners, and the site links to the latest release's archives. These build jobs do not qualify desktop runtime
 behavior; keep the experimental labels until native testing supports changing them.

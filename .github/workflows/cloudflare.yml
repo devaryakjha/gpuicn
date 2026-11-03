@@ -1,10 +1,15 @@
 name: Deploy ui.imajha.com
 
 on:
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Release tag with the notarized macOS download
+        description: Release tag whose downloads the site serves, for example v0.7.0
         required: true
         type: string
 
@@ -18,7 +23,18 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Holds CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
+    environment: release
     steps:
+      - name: Check the Cloudflare secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID to the release environment, then re-run this job."
+            exit 1
+          fi
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.release_tag }}
@@ -34,10 +50,12 @@ jobs:
         with:
           version: "v0.21.14"
       - uses: oven-sh/setup-bun@v2
-      - name: Fetch and verify the notarized release download
+      - name: Fetch and verify the release download
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release_tag }}
+          # Once the Apple secrets exist, an unnotarized build must not reach the site.
+          REQUIRE_NOTARIZED: ${{ secrets.APPLE_API_KEY_P8 != '' }}
         run: |
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
             --pattern 'gpuicn-workspace-macos-arm64.zip*' --pattern 'showcase.json' \
@@ -47,7 +65,7 @@ jobs:
           folder = pathlib.Path("web/public/downloads")
           data = json.loads((folder / "showcase.json").read_text())
           archive = folder / "gpuicn-workspace-macos-arm64.zip"
-          assert data["notarized"] is True
+          assert data["notarized"] is True or os.environ["REQUIRE_NOTARIZED"] != "true"
           assert data["url"] == "/downloads/" + archive.name
           assert data["architecture"] == "arm64"
           assert "v" + data["version"] == os.environ["RELEASE_TAG"]
