@@ -177,7 +177,7 @@ their license and the starter:
 
 ```sh
 mkdir -p assets/fonts
-for file in Geist-Regular.ttf Geist-Medium.ttf GeistMono-Regular.ttf; do
+for file in Geist-Regular.ttf Geist-Medium.ttf Geist-SemiBold.ttf GeistMono-Regular.ttf; do
   curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.8.0/site/assets/fonts/$file" -o "assets/fonts/$file"
 done
 curl -fL "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.8.0/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt

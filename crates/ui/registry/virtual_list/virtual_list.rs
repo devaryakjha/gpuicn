@@ -4,7 +4,10 @@
 //! state in your view. Replace metadata only when data changes, not on every render.
 //! Domain data, loading, filtering and actions remain in the application.
 
-use super::theme::UiTheme;
+use super::theme::{
+    UiTheme,
+    primitives::{disabled, text},
+};
 use gpui_kit::accesskit::Role;
 use gpui_kit::{
     AnyElement, App, ElementId, FontWeight, InteractiveElement as _, IntoElement, ListOffset,
@@ -599,9 +602,7 @@ impl RenderOnce for VirtualList {
             .min_w_0()
             .min_h_0()
             .overflow_hidden()
-            .font_family(theme.fonts.body.clone())
-            .text_size(px(14.) * theme.text_scale)
-            .line_height(px(20.) * theme.text_scale)
+            .map(|el| text::sm(el, &theme))
             .bg(theme.colors.background)
             .text_color(theme.colors.foreground)
             .on_key_down(move |event, window, cx| {
@@ -664,7 +665,7 @@ impl RenderOnce for VirtualList {
                             .aria_size_of_set(total)
                             .when(row.focused, |el| el.aria_active_descendant())
                             .when(row.item.disabled, |el| {
-                                el.aria_description("Unavailable").opacity(0.5)
+                                disabled::dim(el.aria_description("Unavailable"), true)
                             })
                             .w_full()
                             .min_w_0()

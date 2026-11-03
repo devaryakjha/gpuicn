@@ -1,10 +1,10 @@
 //! Nova tooltips for pointer hover and keyboard focus.
-use super::theme::UiTheme;
+use super::theme::{UiTheme, primitives::surface};
 use gpui_kit::base::{Button, ElementExt as _, Tooltip, TooltipOverlay, TooltipRequest};
 use gpui_kit::{
     App, AppContext as _, Bounds, Context, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    ParentElement as _, Pixels, SharedString, StatefulInteractiveElement as _, Styled,
-    Subscription, Window, div, px,
+    ParentElement as _, Pixels, SharedString, StatefulInteractiveElement as _, Subscription,
+    Window, div,
 };
 
 /// Adds a tooltip to one existing button, preserving a single focus target.
@@ -125,28 +125,18 @@ impl gpui_kit::Render for TextTooltip {
     ) -> impl gpui_kit::IntoElement {
         use gpui_kit::ParentElement as _;
         let theme = UiTheme::read(cx);
-        let spacing = theme.spacing.unit;
-        let text_scale = theme.text_scale;
-        Tooltip::new("tooltip-content")
-            .rounded(theme.radius.sm)
-            .px(spacing * 3_f32)
-            .py(spacing * 1.5_f32)
-            .bg(theme.colors.foreground)
-            .text_color(theme.colors.background)
-            .font_family(theme.fonts.body.clone())
-            .text_size(px(12.) * text_scale)
-            .child(
-                div()
-                    .debug_selector(|| "tooltip-label".into())
-                    .child(self.0.clone()),
-            )
+        surface::tooltip(Tooltip::new("tooltip-content"), theme).child(
+            div()
+                .debug_selector(|| "tooltip-label".into())
+                .child(self.0.clone()),
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui_kit::{IntoElement, Modifiers, Render, TestAppContext};
+    use gpui_kit::{IntoElement, Modifiers, Render, Styled, TestAppContext, px};
     use std::time::Duration;
 
     #[gpui_kit::test]

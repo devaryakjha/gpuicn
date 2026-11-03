@@ -1,9 +1,12 @@
 //! Nova tabs with controlled selection and automatic keyboard activation.
-use super::theme::{RovingFocus, UiTheme, apply_style};
+use super::theme::{
+    RovingFocus, UiTheme, apply_style,
+    primitives::{disabled, focus, text},
+};
 use gpui_kit::{
     App, Div, ElementId, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce,
     Role, SharedString, Stateful, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
-    div, prelude::FluentBuilder as _, px,
+    div, prelude::FluentBuilder as _,
 };
 use std::rc::Rc;
 
@@ -163,9 +166,11 @@ impl RenderOnce for Tabs {
                             colors.background.opacity(0.)
                         })
                     })
-                    .when(item.disabled, |tab| tab.opacity(0.5).cursor_not_allowed())
-                    .when(!item.disabled, |tab| tab.cursor_pointer())
-                    .focus_visible(move |s| s.border_color(colors.ring))
+                    .map(|tab| disabled::interactive(tab, item.disabled))
+                    .focus_visible({
+                        let theme = theme.clone();
+                        move |s| focus::ring(s, &theme)
+                    })
                     .when_some(change, |tab, handler| {
                         tab.on_click(move |_, window, cx| handler(item.value.clone(), window, cx))
                     })
@@ -211,7 +216,6 @@ pub fn tabs_content(
         .aria_label(label)
         .tab_index(0)
         .flex_1()
-        .font_family(theme.fonts.body.clone())
-        .text_size(px(14.) * theme.text_scale)
+        .map(|panel| text::sm(panel, theme))
         .text_color(theme.colors.foreground)
 }

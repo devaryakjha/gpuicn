@@ -8,24 +8,22 @@ use std::rc::Rc;
 
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
-    AnyElement, AnyView, App, ClickEvent, ElementId, FontWeight, Hsla, ImageSource,
+    AnyElement, AnyView, App, Axis, ClickEvent, ElementId, FontWeight, ImageSource,
     InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
-    StatefulInteractiveElement as _, Styled, Window, div, hsla, img, prelude::FluentBuilder as _,
-    px, relative,
+    StatefulInteractiveElement as _, Styled, Window, div, img, prelude::FluentBuilder as _, px,
+    relative,
 };
 
 use super::button::{Button, ButtonSize, ButtonVariant};
-use super::theme::{UiTheme, apply_style};
+use super::theme::{
+    UiTheme, apply_style,
+    primitives::{hover_reveal_in_group, surface, text},
+};
 use super::tooltip::text_tooltip;
 
 type Handler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 type ReactionHandler = Rc<dyn Fn(&SharedString, &mut Window, &mut App) + 'static>;
 type ReactionTooltip = Rc<dyn Fn(&Reaction, &mut Window, &mut App) -> AnyView + 'static>;
-
-/// The amber used for a permalink target, which stays the same in light and dark.
-fn permalink_color() -> Hsla {
-    hsla(43. / 360., 0.96, 0.56, 1.)
-}
 
 /// How a message row is emphasized.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -265,37 +263,36 @@ impl Styled for Message {
 }
 
 impl RenderOnce for Message {
-    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
-        let hovered = window.use_keyed_state((self.id.clone(), "hovered"), cx, |_, _| false);
-        let is_hovered = *hovered.read(cx);
+        let group: SharedString = format!("message-{}", self.id).into();
         let selected = self.highlight == MessageHighlight::Selected;
-        let show_actions = is_hovered || selected;
         let gutter = theme.space(8.);
 
         let gutter_content = if self.continuation {
             // The hover time floats in the gutter so showing it never changes
             // the row's height.
-            div()
-                .w(gutter)
-                .flex_shrink_0()
-                .relative()
-                .when(is_hovered, |gutter| {
-                    gutter.children(self.gutter_time.clone().or(self.timestamp.clone()).map(
-                        |time| {
-                            div()
+            div().w(gutter).flex_shrink_0().relative().children(
+                self.gutter_time
+                    .clone()
+                    .or(self.timestamp.clone())
+                    .map(|time| {
+                        hover_reveal_in_group(
+                            text::xs(div(), &theme)
+                                .id((self.id.clone(), "gutter-time"))
                                 .absolute()
                                 .top(px(2.))
                                 .right_0()
-                                .text_size(theme.text(11.))
                                 .line_height(theme.text(20.))
                                 .text_color(colors.muted_foreground)
                                 .whitespace_nowrap()
-                                .child(time)
-                        },
-                    ))
-                })
+                                .child(time),
+                            group.clone(),
+                            false,
+                        )
+                    }),
+            )
         } else {
             div()
                 .w(gutter)
@@ -411,9 +408,10 @@ impl RenderOnce for Message {
             .children(failed)
             .children(reactions);
 
-        let hover_state = hovered.clone();
+        let permalink = colors.warning;
         let root = div()
             .id(self.id.clone())
+            .group(group.clone())
             .role(Role::ListItem)
             .relative()
             .w_full()
@@ -424,15 +422,16 @@ impl RenderOnce for Message {
             .when(!self.continuation, |row| row.pt(theme.space(2.)))
             .border_l_2()
             .border_color(colors.primary.opacity(0.))
-            .when(is_hovered, |row| row.bg(colors.muted.opacity(0.5)))
+            .when(!selected, |row| {
+                row.hover(move |style| style.bg(colors.muted.opacity(0.5)))
+            })
             .when(self.highlight == MessageHighlight::Mention, |row| {
                 row.bg(colors.primary.opacity(0.06))
                     .border_color(colors.primary)
             })
             .when(selected, |row| row.bg(colors.muted))
             .when(self.highlight == MessageHighlight::Permalink, |row| {
-                row.bg(permalink_color().opacity(0.14))
-                    .border_color(permalink_color())
+                row.bg(permalink.opacity(0.14)).border_color(permalink)
             })
             .when_some(self.description, |row, description| {
                 row.aria_description(description)
@@ -440,24 +439,19 @@ impl RenderOnce for Message {
             .when(self.status == MessageStatus::Pending, |row| {
                 row.opacity(0.6)
             })
-            .on_hover(move |hovered, _, cx| {
-                hover_state.update(cx, |state, cx| {
-                    if *state != *hovered {
-                        *state = *hovered;
-                        cx.notify();
-                    }
-                })
-            })
             .child(gutter_content)
             .child(body)
-            .when_some(self.actions.filter(|_| show_actions), |row, actions| {
-                row.child(
+            .when_some(self.actions, |row, actions| {
+                row.child(hover_reveal_in_group(
                     div()
+                        .id((self.id.clone(), "actions"))
                         .absolute()
                         .top(-theme.space(3.))
                         .right(theme.space(4.))
                         .child(actions),
-                )
+                    group.clone(),
+                    selected,
+                ))
             });
         apply_style(root, &self.style)
     }
@@ -576,7 +570,7 @@ pub fn day_divider(
     cx: &App,
 ) -> impl IntoElement {
     let theme = UiTheme::read(cx);
-    let rule = || div().flex_1().h(px(1.)).bg(theme.colors.border);
+    let rule = || surface::divider(div().flex_1(), theme, Axis::Horizontal);
     div()
         .id(id)
         .role(Role::Splitter)
@@ -621,7 +615,9 @@ pub fn new_messages_divider(
         .gap(theme.space(2.))
         .px(theme.space(4.))
         .py(theme.space(1.))
-        .child(div().flex_1().h(px(1.)).bg(theme.colors.destructive))
+        .child(
+            surface::divider(div().flex_1(), theme, Axis::Horizontal).bg(theme.colors.destructive),
+        )
         .child(
             div()
                 .text_size(theme.text(12.))

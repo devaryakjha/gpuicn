@@ -463,10 +463,16 @@ pub struct ControlColors {
     pub border: Rgba,
     /// Hover fill of outline, ghost and toggle controls.
     pub hover: Rgba,
+    /// Hover fill of ghost buttons and plain icon buttons.
+    pub ghost_hover: Rgba,
     /// Fill of a pressed toggle or selected tab.
     pub pressed: Rgba,
     /// Unchecked switch track.
     pub track: Rgba,
+    /// Switch thumb on the unchecked track.
+    pub thumb: Rgba,
+    /// Switch thumb on the checked (`primary`) track.
+    pub thumb_checked: Rgba,
     /// Tinted destructive fill, for destructive buttons, badges and tags.
     pub destructive_background: Rgba,
     /// Hover of the tinted destructive fill.
@@ -683,11 +689,26 @@ impl UiTheme {
             } else {
                 colors.muted
             },
+            ghost_hover: if dark {
+                colors.muted.opacity(0.50)
+            } else {
+                colors.muted
+            },
             pressed: colors.muted,
             track: if dark {
                 colors.input.opacity(0.80)
             } else {
                 colors.input
+            },
+            thumb: if dark {
+                colors.foreground
+            } else {
+                colors.background
+            },
+            thumb_checked: if dark {
+                colors.primary_foreground
+            } else {
+                colors.background
             },
             destructive_background: colors.destructive.opacity(if dark { 0.20 } else { 0.10 }),
             destructive_hover: colors.destructive.opacity(if dark { 0.30 } else { 0.20 }),

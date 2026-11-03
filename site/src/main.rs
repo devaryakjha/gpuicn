@@ -120,6 +120,7 @@ fn launch(cx: &mut App) {
         .add_fonts(vec![
             Cow::Borrowed(include_bytes!("../assets/fonts/Geist-Regular.ttf")),
             Cow::Borrowed(include_bytes!("../assets/fonts/Geist-Medium.ttf")),
+            Cow::Borrowed(include_bytes!("../assets/fonts/Geist-SemiBold.ttf")),
             Cow::Borrowed(include_bytes!("../assets/fonts/GeistMono-Regular.ttf")),
         ])
         .expect("failed to load pinned Geist fonts");

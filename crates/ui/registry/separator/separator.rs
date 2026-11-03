@@ -2,10 +2,10 @@
 
 use gpui_kit::{
     App, Axis, ElementId, InteractiveElement as _, IntoElement, RenderOnce, Role,
-    StatefulInteractiveElement as _, Styled, Window, div, px,
+    StatefulInteractiveElement as _, Window, div,
 };
 
-use super::theme::UiTheme;
+use super::theme::{UiTheme, primitives::surface};
 
 #[derive(IntoElement)]
 /// A Nova horizontal or vertical separator.
@@ -47,11 +47,10 @@ impl RenderOnce for Separator {
                     Axis::Horizontal => gpui_kit::accesskit::Orientation::Horizontal,
                     Axis::Vertical => gpui_kit::accesskit::Orientation::Vertical,
                 });
-        let base = match self.orientation {
-            Axis::Horizontal => base.w_full().h(px(1.)),
-            Axis::Vertical => base.h_full().w(px(1.)),
-        };
-        super::theme::apply_style(base.bg(theme.colors.border), &self.style)
+        super::theme::apply_style(
+            surface::divider(base, &theme, self.orientation),
+            &self.style,
+        )
     }
 }
 

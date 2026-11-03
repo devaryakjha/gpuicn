@@ -2,7 +2,7 @@
 use super::{
     button::{Button, ButtonVariant},
     dialog::{dialog_backdrop, dialog_description, dialog_title, modal_focus},
-    theme::{UiEasing, UiTheme, apply_style, presence_with, transition_with},
+    theme::{UiEasing, UiTheme, apply_style, presence_with, primitives::surface, transition_with},
 };
 pub use gpui_kit::base::DialogHandle as DrawerHandle;
 use gpui_kit::base::{ElementExt as _, Sheet};
@@ -271,11 +271,7 @@ impl RenderOnce for Drawer {
             .flex()
             .min_h(px(0.))
             .overflow_hidden()
-            .bg(t.colors.popover)
-            .text_color(t.colors.popover_foreground)
-            .font_family(t.fonts.body.clone())
-            .text_size(t.text(14.))
-            .border_color(t.colors.border)
+            .map(|panel| surface::sheet(panel, &t))
             .when(vertical, |d| d.flex_col())
             .map(|d| match side {
                 DrawerSide::Bottom => d

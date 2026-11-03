@@ -9,7 +9,11 @@ use gpui_kit::{
     prelude::FluentBuilder as _, px,
 };
 
-use super::theme::{ThemeMode, UiTheme, transition_value};
+use super::theme::{
+    UiTheme,
+    primitives::{disabled, focus, switch_colors},
+    transition_value,
+};
 
 type ChangeHandler = Rc<dyn Fn(bool, &ClickEvent, &mut Window, &mut App) + 'static>;
 
@@ -73,10 +77,8 @@ impl RenderOnce for Switch {
         let theme = UiTheme::read(cx).clone();
         let spacing = theme.spacing.unit;
         let colors = theme.colors;
-        let unchecked = match theme.mode {
-            ThemeMode::Light => colors.input,
-            ThemeMode::Dark => colors.input.opacity(0.80),
-        };
+        let (track, _) = switch_colors(&theme, self.checked);
+        let focus_theme = theme.clone();
         let thumb_id = ElementId::NamedChild(Arc::new(self.id.clone()), "thumb-motion".into());
         let root = BaseSwitch::new(self.id)
             .checked(self.checked)
@@ -89,18 +91,12 @@ impl RenderOnce for Switch {
             .rounded_full()
             .border_1()
             .border_color(colors.background.opacity(0.))
-            .bg(if self.checked {
-                colors.primary
-            } else {
-                unchecked
-            })
-            .focus_visible(move |style| style.border_color(colors.ring))
+            .bg(track)
+            .focus_visible(move |style| focus::ring(style, &focus_theme))
             .when(!self.disabled && !self.read_only, |root| {
                 root.cursor_pointer()
             })
-            .when(self.disabled, |root| {
-                root.opacity(0.50).cursor_not_allowed()
-            })
+            .when(self.disabled, disabled::style)
             .when_some(self.aria_label, |root, label| {
                 root.accessibility_label(label)
             })
@@ -143,11 +139,7 @@ impl RenderOnce for AnimatedThumb {
             .left(inset + travel * progress)
             .size(thumb)
             .rounded_full()
-            .bg(match (theme.mode, self.checked) {
-                (ThemeMode::Dark, false) => theme.colors.foreground,
-                (ThemeMode::Dark, true) => theme.colors.primary_foreground,
-                _ => theme.colors.background,
-            })
+            .bg(switch_colors(&theme, self.checked).1)
     }
 }
 

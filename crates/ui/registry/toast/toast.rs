@@ -1,7 +1,10 @@
 //! Nova notifications using Kit's toast queue, timers and measured stack.
 use super::{
     button::{Button, ButtonSize, ButtonVariant},
-    theme::UiTheme,
+    theme::{
+        UiTheme,
+        primitives::{surface, text},
+    },
 };
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::base::{
@@ -149,13 +152,8 @@ impl Render for ToastState {
                 .transition_status(phase)
                 .relative()
                 .occlude()
-                .w_full()
-                .rounded(theme.radius.two_xl)
-                .border_1()
-                .border_color(colors.border)
-                .bg(colors.popover)
-                .text_color(colors.popover_foreground)
-                .font_family(theme.fonts.body.clone())
+                .w_full();
+            let toast = surface::toast(toast, &theme)
                 .p(theme.space(4.))
                 .pr(theme.space(12.))
                 .flex()
@@ -165,15 +163,9 @@ impl Render for ToastState {
                 .child(
                     div()
                         .font_weight(FontWeight::MEDIUM)
-                        .text_size(theme.text(14.))
                         .child(notice.title.clone()),
                 )
-                .child(
-                    div()
-                        .text_size(theme.text(14.))
-                        .text_color(colors.muted_foreground)
-                        .child(notice.description.clone()),
-                )
+                .child(text::muted(div(), &theme).child(notice.description.clone()))
                 .child(close);
             stack = stack.item(id.clone(), toast);
         }

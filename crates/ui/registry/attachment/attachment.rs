@@ -6,12 +6,15 @@ use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
     AnyElement, App, ClickEvent, ElementId, FontWeight, ImageSource, InteractiveElement as _,
     IntoElement, ObjectFit, ParentElement, RenderOnce, SharedString,
-    StatefulInteractiveElement as _, Styled, StyledImage as _, Window, div, img,
-    prelude::FluentBuilder as _, px, relative,
+    StatefulInteractiveElement as _, Styled, Window, div, prelude::FluentBuilder as _, px,
+    relative,
 };
 
 use super::button::{Button, ButtonSize, ButtonVariant};
-use super::theme::{UiTheme, apply_style};
+use super::theme::{
+    UiTheme, apply_style,
+    primitives::{clipped_image, disabled},
+};
 
 type Handler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
@@ -221,16 +224,10 @@ impl RenderOnce for Attachment {
         let root: AnyElement = match self.image {
             Some(source) => root
                 .size(theme.space(16.))
-                .child(
-                    // Layout otherwise sizes an image by its own aspect ratio,
-                    // so a non-square image would overflow the rounded clip.
-                    img(source)
-                        .size_full()
-                        .aspect_square()
-                        .rounded(inner_radius)
-                        .object_fit(ObjectFit::Cover)
-                        .when(progress.is_some() || failed, |image| image.opacity(0.5)),
-                )
+                .child(disabled::dim(
+                    clipped_image(source, inner_radius, ObjectFit::Cover, &theme).size_full(),
+                    progress.is_some() || failed,
+                ))
                 .when(failed, |root| {
                     root.child(
                         div()

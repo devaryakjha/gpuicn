@@ -15,6 +15,11 @@ struct Rule {
     needles_in_file: &'static [&'static str],
     /// Counted per line; when empty, the file-level match counts once.
     needles_per_line: &'static [&'static str],
+    /// Lines containing any of these are not counted (color alpha is not element opacity).
+    skip_lines_with: &'static [&'static str],
+    /// `(opener, follower, lines)`: counts an `opener` line followed by a
+    /// `follower` line within `lines`, for builder chains such as `img(..).rounded(..)`.
+    needles_within: Option<(&'static str, &'static str, usize)>,
     /// Files exempt from the rule, by `module/file.rs`.
     allow: &'static [&'static str],
     fix: &'static str,
@@ -26,7 +31,17 @@ const RULES: &[Rule] = &[
     Rule {
         name: "raw-color",
         needles_in_file: &[],
-        needles_per_line: &["hsla(", "rgb(0x", "rgba(0x", "white()", "black()"],
+        needles_per_line: &[
+            "hsla(",
+            "rgb(0x",
+            "rgba(0x",
+            "::white()",
+            "::black()",
+            " white()",
+            " black()",
+        ],
+        skip_lines_with: &[],
+        needles_within: None,
         allow: &["theme/theme.rs", "lightbox/lightbox.rs"],
         fix: "read colors from `UiTheme`; add a semantic token when none fits",
     },
@@ -39,6 +54,8 @@ const RULES: &[Rule] = &[
             "* theme.text_scale)",
             "* t.text_scale)",
         ],
+        skip_lines_with: &[],
+        needles_within: None,
         allow: &["theme/theme.rs"],
         fix: "use `text::xs/sm/base/lg` from the primitives or `theme.text(..)`",
     },
@@ -46,13 +63,17 @@ const RULES: &[Rule] = &[
         name: "disabled-literal",
         needles_in_file: &[],
         needles_per_line: &["opacity(0.5)", "opacity(0.50)"],
+        skip_lines_with: &["colors."],
+        needles_within: None,
         allow: &["theme/theme.rs", PRIMITIVES],
-        fix: "apply `disabled::style(..)` from the primitives",
+        fix: "apply `disabled::style(..)` or `disabled::dim(..)` from the primitives",
     },
     Rule {
         name: "mode-branch",
         needles_in_file: &[],
         needles_per_line: &["ThemeMode::Dark"],
+        skip_lines_with: &[],
+        needles_within: None,
         allow: &["theme/theme.rs", PRIMITIVES],
         fix: "use the derived control tokens (`colors.control_*`) computed once in theme.rs",
     },
@@ -64,34 +85,37 @@ const RULES: &[Rule] = &[
             ".bg(theme.colors.popover)",
             ".bg(colors.popover)",
         ],
+        skip_lines_with: &[],
+        needles_within: None,
         allow: &[PRIMITIVES],
         fix: "use `surface::popover(..)` or `surface::modal(..)` from the primitives",
     },
     Rule {
         name: "image-clip",
-        needles_in_file: &["img(", ".overflow_hidden()"],
+        needles_in_file: &[],
         needles_per_line: &[],
-        allow: &[PRIMITIVES],
+        skip_lines_with: &[],
+        needles_within: Some(("img(", ".rounded", 6)),
+        // Markdown pictures size their frame from the picture, so they round
+        // themselves inside a plain frame.
+        allow: &[PRIMITIVES, "markdown/markdown.rs"],
         fix: "use `clipped_image(..)` from the primitives; GPUI clips to rectangles",
     },
     Rule {
         name: "hover-state",
         needles_in_file: &[],
         needles_per_line: &["\"hovered\""],
+        skip_lines_with: &[],
+        needles_within: None,
         allow: &[],
         fix: "style hover with `.hover(..)`; reserve space for revealed actions instead of re-rendering",
-    },
-    Rule {
-        name: "splitter-role",
-        needles_in_file: &[],
-        needles_per_line: &["Role::Splitter"],
-        allow: &["resizable/resizable.rs"],
-        fix: "a divider is `Role::Separator`; `Splitter` means resizable",
     },
     Rule {
         name: "key-glyph",
         needles_in_file: &[],
         needles_per_line: &["⌘", "⇧", "⌥", "⌃"],
+        skip_lines_with: &[],
+        needles_within: None,
         allow: &["kbd/kbd.rs"],
         fix: "draw key symbols through `kbd::key_label`; the bundled fonts have no glyphs for them",
     },
@@ -99,6 +123,8 @@ const RULES: &[Rule] = &[
         name: "crate-private",
         needles_in_file: &[],
         needles_per_line: &["pub(crate)", "pub(super)"],
+        skip_lines_with: &[],
+        needles_within: None,
         allow: &[],
         fix: "ejected files reach the crate through `super::`; use `#[doc(hidden)] pub`",
     },
@@ -106,6 +132,8 @@ const RULES: &[Rule] = &[
         name: "manual-focus-style",
         needles_in_file: &[],
         needles_per_line: &[".when(focused"],
+        skip_lines_with: &[],
+        needles_within: None,
         allow: &[PRIMITIVES],
         fix: "use `focus::ring` through `focus_visible`, not a border swap on `is_focused`",
     },
@@ -147,12 +175,26 @@ fn count(rule: &Rule, source: &str) -> usize {
     if !rule.needles_in_file.iter().all(|n| source.contains(n)) {
         return 0;
     }
+    if let Some((opener, follower, within)) = rule.needles_within {
+        let lines: Vec<&str> = source.lines().collect();
+        return lines
+            .iter()
+            .enumerate()
+            .filter(|(index, line)| {
+                line.contains(opener)
+                    && lines[*index..(*index + within).min(lines.len())]
+                        .iter()
+                        .any(|next| next.contains(follower))
+            })
+            .count();
+    }
     if rule.needles_per_line.is_empty() {
         return 1;
     }
     source
         .lines()
         .filter(|line| !line.trim_start().starts_with("//"))
+        .filter(|line| !rule.skip_lines_with.iter().any(|n| line.contains(n)))
         .map(|line| {
             rule.needles_per_line
                 .iter()

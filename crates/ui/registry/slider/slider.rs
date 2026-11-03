@@ -1,5 +1,8 @@
 //! Single-value slider using Kit state and pointer primitives.
-use super::theme::{UiTheme, apply_style};
+use super::theme::{
+    UiTheme, apply_style,
+    primitives::{disabled, focus},
+};
 pub use gpui_kit::base::slider::{SliderEvent, SliderState, SliderValue};
 use gpui_kit::base::{SliderIndicator, SliderThumb, SliderTrack};
 use gpui_kit::{
@@ -93,11 +96,9 @@ impl RenderOnce for Slider {
             .size(theme.space(3.))
             .rounded_full()
             .border_1()
-            .border_color(colors.ring)
+            .border_color(colors.primary)
             .bg(colors.background)
-            .when(focused && !self.disabled, |t| {
-                t.border_color(colors.foreground)
-            })
+            .map(|thumb| focus::shown(thumb, &theme, focused && !self.disabled))
             .when(!self.disabled, |t| {
                 t.on_mouse_down(MouseButton::Left, move |_, window, cx| {
                     thumb_focus.focus(window, cx)
@@ -117,7 +118,7 @@ impl RenderOnce for Slider {
             .h(theme.space(5.))
             .flex()
             .items_center()
-            .when(self.disabled, |root| root.opacity(0.5).cursor_not_allowed())
+            .when(self.disabled, disabled::style)
             .when(!self.disabled, |root| {
                 root.track_focus(&focus)
                     .cursor_pointer()

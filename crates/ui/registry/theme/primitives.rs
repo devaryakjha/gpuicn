@@ -9,9 +9,9 @@
 
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
-    AnyElement, Axis, BoxShadow, Div, FontWeight, ImageSource, IntoElement, MouseButton, ObjectFit,
-    ParentElement as _, Pixels, Rgba, StatefulInteractiveElement, StyleRefinement, Styled,
-    StyledImage as _, Window, div, img, prelude::FluentBuilder as _, px,
+    AnyElement, Axis, BoxShadow, Div, FontWeight, ImageSource, Img, InteractiveElement,
+    IntoElement, MouseButton, ObjectFit, ParentElement, Pixels, Rgba, SharedString,
+    StatefulInteractiveElement, StyleRefinement, Styled, StyledImage as _, Window, div, img, px,
 };
 
 use super::{UiTextStyle, UiTheme};
@@ -122,6 +122,22 @@ pub mod focus {
             ring(style, theme)
         }
     }
+    /// Draws the ring on `element` while `focused`, for controls whose focus is
+    /// tracked on a parent (a grouped checkbox or radio draws it on its box).
+    pub fn shown<T: Styled>(element: T, theme: &UiTheme, focused: bool) -> T {
+        shown_for(element, theme, focused, false)
+    }
+    /// [`shown`] with the invalid ring when `invalid`.
+    pub fn shown_for<T: Styled>(element: T, theme: &UiTheme, focused: bool, invalid: bool) -> T {
+        if focused {
+            super::super::apply_style(
+                element,
+                &ring_for(StyleRefinement::default(), theme, invalid),
+            )
+        } else {
+            element
+        }
+    }
 }
 
 /// Disabled and interactive cursor treatment.
@@ -138,6 +154,15 @@ pub mod disabled {
             style(element)
         } else {
             element.cursor_pointer()
+        }
+    }
+    /// Half opacity while `dimmed`, for content that is unavailable rather than
+    /// a control that is disabled: uploading pictures, disabled list rows.
+    pub fn dim<T: Styled>(element: T, dimmed: bool) -> T {
+        if dimmed {
+            element.opacity(0.5)
+        } else {
+            element
         }
     }
 }
@@ -229,13 +254,13 @@ pub mod control {
         theme.radius.sm * (2. / 3.)
     }
 
-    /// The frame every text-like control shares: inputs, selects, number and
-    /// OTP cells. Height 32px, 10px inset, large radius, input border.
+    /// The frame every text-like control shares: inputs, textareas, selects,
+    /// number and OTP cells. Large radius, input border and fill, small text.
+    /// Callers set the size: `h(theme.space(8.))` and `px(theme.space(2.5))`
+    /// for a single-line control.
     pub fn frame<T: Styled>(element: T, theme: &UiTheme, invalid: bool) -> T {
         let control = theme.control();
         text::sm(element, theme)
-            .h(theme.space(8.))
-            .px(theme.space(2.5))
             .rounded(theme.radius.lg)
             .border_1()
             .border_color(if invalid {
@@ -247,12 +272,18 @@ pub mod control {
             .text_color(theme.colors.foreground)
     }
 
-    /// A 16px check box with its mark, for checkboxes and grouped checkboxes.
-    pub fn checkbox_box(theme: &UiTheme, checked: bool, indeterminate: bool) -> Div {
+    /// Styles `element` as the 16px check box with its mark, for checkboxes and
+    /// grouped checkboxes. The element is the interactive root of the control.
+    pub fn checkbox_box<T: Styled + ParentElement>(
+        element: T,
+        theme: &UiTheme,
+        checked: bool,
+        indeterminate: bool,
+    ) -> T {
         let colors = theme.colors;
         let control = theme.control();
         let selected = checked || indeterminate;
-        div()
+        let element = element
             .flex()
             .flex_shrink_0()
             .items_center()
@@ -269,25 +300,27 @@ pub mod control {
                 colors.primary
             } else {
                 control.background
-            })
-            .when(selected, |root| {
-                root.child(
-                    lucide(if indeterminate {
-                        LucideIcon::Minus
-                    } else {
-                        LucideIcon::Check
-                    })
-                    .size(icon::sm(theme))
-                    .text_color(colors.primary_foreground),
-                )
-            })
+            });
+        if selected {
+            element.child(
+                lucide(if indeterminate {
+                    LucideIcon::Minus
+                } else {
+                    LucideIcon::Check
+                })
+                .size(icon::sm(theme))
+                .text_color(colors.primary_foreground),
+            )
+        } else {
+            element
+        }
     }
 
-    /// A 16px radio circle with its dot.
-    pub fn radio_dot(theme: &UiTheme, checked: bool) -> Div {
+    /// Styles `element` as the 16px radio circle with its dot.
+    pub fn radio_dot<T: Styled + ParentElement>(element: T, theme: &UiTheme, checked: bool) -> T {
         let colors = theme.colors;
         let control = theme.control();
-        div()
+        let element = element
             .flex()
             .flex_shrink_0()
             .items_center()
@@ -304,15 +337,17 @@ pub mod control {
                 colors.primary
             } else {
                 control.background
-            })
-            .when(checked, |root| {
-                root.child(
-                    div()
-                        .size(theme.space(2.))
-                        .rounded_full()
-                        .bg(colors.primary_foreground),
-                )
-            })
+            });
+        if checked {
+            element.child(
+                div()
+                    .size(theme.space(2.))
+                    .rounded_full()
+                    .bg(colors.primary_foreground),
+            )
+        } else {
+            element
+        }
     }
 
     /// The toggle look shared by Toggle and Toggle Group items: transparent at
@@ -343,6 +378,16 @@ pub mod control {
     }
 }
 
+/// The switch track and thumb colors for a checked or unchecked switch.
+pub fn switch_colors(theme: &UiTheme, checked: bool) -> (Rgba, Rgba) {
+    let control = theme.control();
+    if checked {
+        (theme.colors.primary, control.thumb_checked)
+    } else {
+        (control.track, control.thumb)
+    }
+}
+
 /// An image inside a rounded frame. GPUI clips children to rectangles, so the
 /// frame rounds itself and the image rounds to the frame's inner radius; the
 /// image fills the frame's box and never sizes the frame from its aspect ratio.
@@ -352,20 +397,31 @@ pub fn clipped_image(
     fit: ObjectFit,
     theme: &UiTheme,
 ) -> Div {
+    clipped_image_with(source, radius, fit, theme, |image| image)
+}
+
+/// [`clipped_image`] with access to the picture, for loading and fallback views.
+pub fn clipped_image_with(
+    source: impl Into<ImageSource>,
+    radius: Pixels,
+    fit: ObjectFit,
+    theme: &UiTheme,
+    configure: impl FnOnce(Img) -> Img,
+) -> Div {
     div()
         .relative()
         .flex_shrink_0()
         .overflow_hidden()
         .rounded(radius)
         .bg(theme.colors.muted)
-        .child(
+        .child(configure(
             img(source)
                 .absolute()
                 .inset_0()
                 .size_full()
                 .rounded(radius)
                 .object_fit(fit),
-        )
+        ))
 }
 
 /// A circular image, as in avatars.
@@ -404,6 +460,23 @@ pub mod dismiss {
 /// size and only its opacity follows `visible`.
 pub fn hover_reveal<T: Styled>(element: T, visible: bool) -> T {
     element.opacity(if visible { 1. } else { 0. })
+}
+
+/// Content shown while the pointer is over the enclosing `.group(name)`
+/// element, with no state and no re-render: opacity 0 at rest, 1 on hover.
+/// Pass `pinned` to keep it visible, as for a selected row's actions.
+pub fn hover_reveal_in_group<T: Styled + InteractiveElement>(
+    element: T,
+    group: impl Into<SharedString>,
+    pinned: bool,
+) -> T {
+    if pinned {
+        element
+    } else {
+        element
+            .opacity(0.)
+            .group_hover(group, |style| style.opacity(1.))
+    }
 }
 
 /// Erases an element's type after styling, for callers that store children.

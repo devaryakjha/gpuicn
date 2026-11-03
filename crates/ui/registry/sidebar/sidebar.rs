@@ -1,7 +1,14 @@
 //! Sidebar navigation composed from GPUI Kit buttons, Scroll Area and Tooltip.
 //! Applications own navigation and collapsed state; this component owns no router.
 
-use super::{scroll_area::*, theme::UiTheme, tooltip::text_tooltip};
+use super::{
+    scroll_area::*,
+    theme::{
+        UiTheme,
+        primitives::{disabled, text},
+    },
+    tooltip::text_tooltip,
+};
 use gpui_kit::base::Button as BaseButton;
 use gpui_kit::{
     AnyElement, App, ClickEvent, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement,
@@ -66,7 +73,6 @@ impl RenderOnce for Sidebar {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let spacing = theme.spacing.unit;
-        let text_scale = theme.text_scale;
         let color = theme.colors.sidebar;
         let padding = self.content_padding.unwrap_or(spacing * 2_f32);
         let content = ScrollArea::new(part(&self.id, "scroll"))
@@ -92,9 +98,7 @@ impl RenderOnce for Sidebar {
             .min_h_0()
             .bg(color)
             .text_color(theme.colors.sidebar_foreground)
-            .font_family(theme.fonts.body)
-            .text_size(px(14.) * text_scale)
-            .line_height(px(20.) * text_scale)
+            .map(|el| text::sm(el, &theme))
             .when_some(self.header, |el, header| {
                 el.child(div().flex_shrink_0().p(spacing * 2_f32).child(header))
             })
@@ -117,16 +121,14 @@ impl RenderOnce for Sidebar {
 pub fn sidebar_group_label(label: impl Into<SharedString>, cx: &App) -> Div {
     let theme = UiTheme::read(cx).clone();
     let spacing = theme.spacing.unit;
-    let text_scale = theme.text_scale;
     div()
         .flex()
         .items_center()
         .h(spacing * 8_f32)
         .px(spacing * 2_f32)
-        .text_size(px(12.) * text_scale)
-        .line_height(px(16.) * text_scale)
+        .map(|el| text::xs(el, &theme))
         .font_weight(FontWeight::MEDIUM)
-        .text_color(UiTheme::read(cx).colors.sidebar_foreground.opacity(0.7))
+        .text_color(theme.colors.sidebar_foreground.opacity(0.7))
         .child(label.into())
 }
 
@@ -310,7 +312,7 @@ impl RenderOnce for SidebarItem {
                         })
                         .when(selected, |el| el.font_weight(FontWeight::MEDIUM))
                         .when(collapsed, |el| el.w(spacing * 8_f32).justify_center())
-                        .when(self.disabled, |el| el.opacity(0.5).cursor_not_allowed())
+                        .when(self.disabled, disabled::style)
                         .when(!self.disabled, |el| {
                             el.cursor_pointer().hover(|style| {
                                 style
@@ -419,11 +421,12 @@ impl SidebarState {
     }
 }
 
-/// Uses the available GPUI window width, including an embedded preview's viewport.
-/// Pass the same result to the layout and menu composition. Applications with a
-/// narrower nested pane can instead supply their own breakpoint decision.
-pub fn sidebar_is_mobile(window: &Window) -> bool {
-    window.viewport_size().width < px(768.)
+/// Uses the available GPUI window width, including an embedded preview's viewport,
+/// against `theme.breakpoints.mobile`. Pass the same result to the layout and
+/// menu composition. Applications with a narrower nested pane can instead
+/// supply their own breakpoint decision.
+pub fn sidebar_is_mobile(window: &Window, cx: &App) -> bool {
+    window.viewport_size().width < UiTheme::read(cx).breakpoints.mobile
 }
 
 struct SidebarFocus {
@@ -477,7 +480,7 @@ impl SidebarLayout {
             style: Default::default(),
         }
     }
-    /// Use the narrow-viewport sheet; pass `sidebar_is_mobile(window)` or your own
+    /// Use the narrow-viewport sheet; pass `sidebar_is_mobile(window, cx)` or your own
     /// breakpoint, and use the same value for triggers and `state.icon_collapsed`.
     pub fn mobile(mut self, mobile: bool) -> Self {
         self.mobile = mobile;
@@ -632,9 +635,7 @@ impl RenderOnce for SidebarLayout {
             .min_h_0()
             .flex()
             .bg(theme.colors.sidebar)
-            .font_family(theme.fonts.body.clone())
-            .text_size(px(14.) * theme.text_scale)
-            .line_height(px(20.) * theme.text_scale)
+            .map(|el| text::sm(el, &theme))
             .when(self.side == SidebarSide::Right, |el| el.flex_row_reverse())
             .on_key_down(move |event, window, cx| {
                 if event.keystroke.key == "b"
@@ -806,8 +807,7 @@ pub fn sidebar_badge(label: impl Into<SharedString>, cx: &App) -> Div {
         .items_center()
         .justify_center()
         .rounded(t.radius.md)
-        .text_size(px(12.) * t.text_scale)
-        .line_height(px(16.) * t.text_scale)
+        .map(|el| text::xs(el, t))
         .font_weight(FontWeight::MEDIUM)
         .child(label.into())
 }

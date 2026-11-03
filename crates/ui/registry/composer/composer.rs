@@ -19,7 +19,7 @@ use gpui_kit::{
 };
 
 use super::input::{InputEvent, Textarea, TextareaState};
-use super::theme::{UiTheme, apply_style};
+use super::theme::{UiTheme, apply_style, primitives::surface};
 
 type KeyHandler = Rc<dyn Fn(&Keystroke, &mut Window, &mut App) -> bool + 'static>;
 type PasteHandler = Rc<dyn Fn(&ClipboardItem, &mut Window, &mut App) -> bool + 'static>;
@@ -595,15 +595,7 @@ impl Render for ComposerState {
                                 .w(theme.space(72.))
                                 .max_h(theme.space(72.))
                                 .overflow_y_scroll()
-                                .p(theme.space(1.))
-                                .rounded(theme.radius.lg)
-                                .border_1()
-                                .border_color(colors.border)
-                                .bg(colors.popover)
-                                .font_family(theme.fonts.body.clone())
-                                .text_color(colors.popover_foreground)
-                                .text_size(theme.text(14.))
-                                .shadow(theme.shadows.md.to_vec())
+                                .map(|list| surface::menu(list, &theme))
                                 .children(rows),
                         ),
                 )

@@ -140,7 +140,7 @@ function InstallationPage() {
           <CodeBlock
             className="mt-4"
             language="bash"
-            value={`mkdir -p assets/fonts\nfor file in Geist-Regular.ttf Geist-Medium.ttf GeistMono-Regular.ttf; do\n  curl -fL "${releaseSource}/site/assets/fonts/$file" -o "assets/fonts/$file"\ndone\ncurl -fL "${releaseSource}/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt`}
+            value={`mkdir -p assets/fonts\nfor file in Geist-Regular.ttf Geist-Medium.ttf Geist-SemiBold.ttf GeistMono-Regular.ttf; do\n  curl -fL "${releaseSource}/site/assets/fonts/$file" -o "assets/fonts/$file"\ndone\ncurl -fL "${releaseSource}/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt`}
           />
         </section>
 

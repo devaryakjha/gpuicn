@@ -729,32 +729,41 @@ fn disclosures_reveal_retain_exiting_content_and_remove_it(cx: &mut TestAppConte
 fn long_dialog_content_can_scroll_to_the_footer(cx: &mut TestAppContext) {
     use gpui_kit::{ScrollDelta, ScrollEvent, point};
     use gpuicn::dialog::*;
+    // The surface never scrolls itself; the host's viewport around it does, so a
+    // dialog has one scroll container and its footer travels with the content.
     struct LongDialog;
     impl Render for LongDialog {
-        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-            dialog_popup("long-popup", "Long dialog", cx)
+        fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            let popup = dialog_popup("long-popup", "Long dialog", cx)
                 .debug_selector(|| "long-popup".into())
-                .child(div().h(px(900.)).flex_shrink_0().child("Long content"))
+                .child(div().h(px(1200.)).flex_shrink_0().child("Long content"))
                 .child(
                     div()
                         .h(px(32.))
                         .flex_shrink_0()
                         .debug_selector(|| "long-footer".into())
                         .child("Last action"),
-                )
+                );
+            modal_viewport("long-viewport", popup, window, cx)
+                .debug_selector(|| "long-viewport".into())
         }
     }
     cx.update(gpuicn::init);
     let (_, cx) = cx.add_window_view(|_, _| LongDialog);
     cx.update(|window, cx| window.draw(cx).clear(cx));
+    let viewport = cx.debug_bounds("long-viewport").unwrap();
     let popup = cx.debug_bounds("long-popup").unwrap();
-    assert!(cx.debug_bounds("long-footer").unwrap().bottom() > popup.bottom());
+    assert!(
+        popup.bottom() > viewport.bottom(),
+        "the surface grows with its content"
+    );
+    assert!(cx.debug_bounds("long-footer").unwrap().bottom() > viewport.bottom());
     cx.simulate_event(ScrollEvent {
-        position: popup.center(),
-        delta: ScrollDelta::Pixels(point(px(0.), px(-1000.))),
+        position: viewport.center(),
+        delta: ScrollDelta::Pixels(point(px(0.), px(-1400.))),
         ..Default::default()
     });
     cx.update(|window, cx| window.draw(cx).clear(cx));
     let footer = cx.debug_bounds("long-footer").unwrap();
-    assert!(footer.top() >= popup.top() && footer.bottom() <= popup.bottom());
+    assert!(footer.top() >= viewport.top() && footer.bottom() <= viewport.bottom());
 }

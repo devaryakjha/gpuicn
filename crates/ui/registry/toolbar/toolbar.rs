@@ -1,7 +1,7 @@
 //! Nova toolbar with roving focus and GPUI Kit buttons and editors.
 use super::{
     input::{Input, InputState},
-    theme::UiTheme,
+    theme::{UiTheme, primitives::disabled},
 };
 use gpui_kit::base::Button as BaseButton;
 use gpui_kit::{
@@ -137,7 +137,7 @@ impl RenderOnce for ToolbarButton {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
         self.button
             .disabled(self.disabled)
-            .when(self.disabled, |b| b.opacity(0.5).cursor_not_allowed())
+            .when(self.disabled, disabled::style)
     }
 }
 

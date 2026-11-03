@@ -35,7 +35,7 @@ pub use gpuicn::*;
 ";
 const CARGO_NEW_MAIN: &str = "fn main() {\n    println!(\"Hello, world!\");\n}\n";
 /// Geist files and their SHA-256 from release-pins.toml.
-const FONTS: [(&str, &str); 3] = [
+const FONTS: [(&str, &str); 4] = [
     (
         "Geist-Regular.ttf",
         "85a1c6b18a6b0a06dfe9fd4f6d6a5d4979f74ec861eaef4bc7868b5492b8a117",
@@ -43,6 +43,10 @@ const FONTS: [(&str, &str); 3] = [
     (
         "Geist-Medium.ttf",
         "3a3b36f0d0b981f4857f7f00eeef4a5ee123605575d362ab31ee7c19e3d11f2f",
+    ),
+    (
+        "Geist-SemiBold.ttf",
+        "b9f52322d6d20a7ff1e7fe1310ff12ec851aebb83d24f8b4f1d4149298f489b2",
     ),
     (
         "GeistMono-Regular.ttf",
@@ -1671,6 +1675,7 @@ mod tests {
         for ((_, sha), key) in FONTS.iter().zip([
             "sans_regular_sha256",
             "sans_medium_sha256",
+            "sans_semibold_sha256",
             "mono_regular_sha256",
         ]) {
             assert_eq!(geist[key].as_str(), Some(*sha), "{key}");

@@ -4,7 +4,10 @@
 pub mod modal_focus;
 use super::{
     button::{Button, ButtonSize, ButtonVariant},
-    theme::UiTheme,
+    theme::{
+        UiTheme, presence,
+        primitives::{surface, text},
+    },
 };
 use gpui_icons::{LucideIcon, lucide};
 pub use gpui_kit::base::{Dialog, DialogChangeReason, DialogHandle};
@@ -124,14 +127,22 @@ pub fn dialog(
     cx: &mut App,
 ) -> Dialog {
     let id = id.into();
-    let focus = modal_focus::prepare(id.clone(), handle.is_open(), window, cx);
+    let open = handle.is_open();
+    let focus = modal_focus::prepare(id.clone(), open, window, cx);
     let scope = modal_focus::ModalFocus::new(id.clone());
+    // Kit removes the popup when the handle closes, so only the entrance is
+    // animated: a fade with a short rise, as in shadcn's `zoom-in-95`.
+    let entrance = presence((id.clone(), "presence"), open, window, cx).progress;
+    let t = UiTheme::read(cx).clone();
     let popup = scope
         .trap(div(), true)
         .id(id.clone())
         .track_focus(&focus)
         .w_full()
-        .max_w(UiTheme::read(cx).space(96.))
+        .max_w(t.space(96.))
+        .relative()
+        .top(t.space(2.) * (1. - entrance))
+        .opacity(entrance)
         .on_key_down(|event, window, cx| {
             if event.keystroke.key == "escape" {
                 window.dispatch_action(Box::new(gpui_kit::base::actions::Cancel), cx);
@@ -147,8 +158,8 @@ pub fn dialog(
         .flex()
         .items_center()
         .justify_center()
-        .p(UiTheme::read(cx).space(4.))
-        .backdrop(dismiss_backdrop(cx))
+        .p(t.space(4.))
+        .backdrop(dismiss_backdrop(cx).opacity(entrance))
         .popup(popup)
         // Enter in an arbitrary child must not dismiss an unfinished form.
         .on_ok(|_, _, _| false)
@@ -220,26 +231,20 @@ pub fn dialog_popup(
 ) -> Stateful<Div> {
     let t = UiTheme::read(cx);
     let id = id.into();
-    div()
+    let popup = div()
         .id(id)
         .aria_label(label)
         .occlude()
         .w_full()
         .min_w(px(0.))
         .max_w(t.space(96.))
-        .max_h(t.space(100.))
-        .overflow_y_scroll()
         .flex()
         .flex_col()
         .gap(t.space(4.))
-        .rounded(t.radius.xl)
-        .border_1()
-        .border_color(t.colors.foreground.opacity(0.1))
-        .p(t.space(4.))
-        .bg(t.colors.popover)
-        .text_color(t.colors.popover_foreground)
-        .font_family(t.fonts.body.clone())
-        .text_size(t.text(14.))
+        .p(t.space(4.));
+    // The host's viewport scrolls a tall dialog; the surface itself never does,
+    // so there is one scroll container and the footer stays with the content.
+    surface::modal(popup, t)
 }
 /// Medium-weight dialog title.
 pub fn dialog_title(id: impl Into<ElementId>, cx: &App) -> Stateful<Div> {
@@ -257,11 +262,7 @@ pub fn dialog_title(id: impl Into<ElementId>, cx: &App) -> Stateful<Div> {
 /// Muted dialog description.
 pub fn dialog_description(id: impl Into<ElementId>, cx: &App) -> Stateful<Div> {
     let t = UiTheme::read(cx);
-    div()
-        .id(id)
-        .font_family(t.fonts.body.clone())
-        .text_size(t.text(14.))
-        .text_color(t.colors.muted_foreground)
+    text::muted(div().id(id), t)
 }
 /// Icon-only close control; Kit routes Cancel through the owning dialog's veto callback.
 pub fn dialog_close(id: impl Into<ElementId>, cx: &App) -> DialogControl {

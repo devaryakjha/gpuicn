@@ -2,9 +2,15 @@
 
 use std::rc::Rc;
 
-use super::theme::{ThemeMode, UiTheme};
+use super::theme::{
+    UiTheme,
+    primitives::{control, disabled, focus},
+};
 pub use gpui_kit::base::input::{InputEvent, InputState, TextareaState};
-use gpui_kit::base::{InputBase, input::InputEditorStyle};
+use gpui_kit::base::{
+    InputBase,
+    input::{InputBaseState, InputEditorStyle, InputModeKind},
+};
 use gpui_kit::{
     AccessibleAction, App, ClipboardItem, ElementId, Entity, EntityInputHandler as _, FocusHandle,
     Focusable as _, InteractiveElement as _, IntoElement, MouseButton, ParentElement as _,
@@ -188,100 +194,18 @@ impl Styled for Input {
 impl RenderOnce for Input {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
-        let colors = theme.colors;
-        self.state.update(cx, |state, cx| {
-            state.set_disabled(self.disabled, cx);
-            state.set_readonly(self.read_only, cx);
-            state.set_editor_style(InputEditorStyle {
-                foreground: colors.foreground.into(),
-                muted_foreground: colors.muted_foreground.into(),
-                background: colors.background.into(),
-                border: colors.input.into(),
-                selection: colors.ring.opacity(0.3).into(),
-                caret: colors.foreground.into(),
-                ..Default::default()
-            });
-        });
-        let state = self.state.read(cx);
-        let focus = state.focus_handle(cx);
-        let focused = focus.is_focused(window) && !self.disabled;
-        let value = state.value();
-        let placeholder = state.presentation().placeholder().clone();
-        let action_state = self.state.clone();
-        let click_state = self.state.clone();
-        let a11y_focus = self.state.clone();
-        let paste_handler = self
-            .paste_handler
-            .filter(|_| !self.disabled && !self.read_only);
-        let root = InputBase::new(ElementId::from(("input", self.state.entity_id())))
-            .focused(focused)
-            .disabled(self.disabled)
-            .when_some(self.label, |root, label| root.accessibility_label(label))
-            .aria_value(value)
-            .aria_placeholder(placeholder)
-            .when(self.read_only, |root| root.aria_description("Read only"))
-            .when(self.invalid, |root| root.aria_description("Invalid value"))
-            .when(!self.disabled, |root| {
-                root.on_a11y_action(AccessibleAction::Focus, move |_, window, cx| {
-                    a11y_focus.update(cx, |state, cx| state.focus(window, cx));
-                })
-            })
-            .when(!self.disabled, |root| {
-                root.on_mouse_down(MouseButton::Left, move |_, window, cx| {
-                    click_state.update(cx, |state, cx| state.focus(window, cx));
-                })
-            })
-            .when(!self.disabled && !self.read_only, |root| {
-                root.on_a11y_action(AccessibleAction::SetValue, move |data, window, cx| {
-                    if let Some(gpui_kit::accesskit::ActionData::Value(value)) = data {
-                        action_state.update(cx, |state, cx| {
-                            let end = state.value().encode_utf16().count();
-                            state.replace_text_in_range(Some(0..end), value, window, cx);
-                        });
-                    }
-                })
-            })
-            .flex()
-            .w_full()
-            .min_w_0()
+        let core = InputCore {
+            label: self.label,
+            disabled: self.disabled,
+            read_only: self.read_only,
+            invalid: self.invalid,
+            bordered: self.bordered,
+            paste_handler: self.paste_handler,
+        };
+        let root = core
+            .render("input", self.state, &theme, window, cx)
             .h(theme.space(8.))
-            .items_center()
-            .px(theme.space(2.5))
-            .font_family(theme.fonts.body.clone())
-            .text_size(theme.text(14.))
-            .line_height(theme.text(20.))
-            .text_color(colors.foreground)
-            .when(self.bordered, |root| {
-                root.rounded(theme.radius.lg)
-                    .border_1()
-                    .border_color(if self.invalid {
-                        colors.destructive
-                    } else {
-                        colors.input
-                    })
-                    .bg(match theme.mode {
-                        ThemeMode::Light => colors.background.opacity(0.),
-                        ThemeMode::Dark => colors.input.opacity(0.3),
-                    })
-            })
-            .when(focused && self.bordered, |root| {
-                root.border_color(if self.invalid {
-                    colors.destructive
-                } else {
-                    colors.ring
-                })
-            })
-            .when(self.disabled, |root| root.opacity(0.5).cursor_not_allowed())
-            .when_some(paste_handler, |root, handler| {
-                root.capture_action(move |_: &gpui_kit::base::input::Paste, window, cx| {
-                    if let Some(clipboard) = cx.read_from_clipboard()
-                        && handler(&clipboard, window, cx)
-                    {
-                        cx.stop_propagation();
-                    }
-                })
-            })
-            .child(self.state);
+            .items_center();
         super::theme::apply_style(root, &self.style)
     }
 }
@@ -289,32 +213,77 @@ impl RenderOnce for Input {
 impl RenderOnce for Textarea {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
+        let core = InputCore {
+            label: self.label,
+            disabled: self.disabled,
+            read_only: self.read_only,
+            invalid: self.invalid,
+            bordered: self.bordered,
+            paste_handler: self.paste_handler,
+        };
+        let root = core
+            .render("textarea", self.state, &theme, window, cx)
+            .min_h(theme.space(16.))
+            .items_start()
+            .py(theme.space(2.));
+        super::theme::apply_style(root, &self.style)
+    }
+}
+
+/// The Nova editing frame around any Kit input state. `Input` and `Textarea`
+/// differ only in their size, so both build on this.
+#[doc(hidden)]
+pub struct InputCore {
+    pub label: Option<SharedString>,
+    pub disabled: bool,
+    pub read_only: bool,
+    pub invalid: bool,
+    pub bordered: bool,
+    pub paste_handler: Option<PasteHandler>,
+}
+
+impl InputCore {
+    /// The editor colors every Kit input in a gpuicn app uses.
+    pub fn editor_style(theme: &UiTheme) -> InputEditorStyle {
         let colors = theme.colors;
-        self.state.update(cx, |state, cx| {
+        InputEditorStyle {
+            foreground: colors.foreground.into(),
+            muted_foreground: colors.muted_foreground.into(),
+            background: colors.background.into(),
+            border: colors.input.into(),
+            selection: colors.ring.opacity(0.3).into(),
+            caret: colors.foreground.into(),
+            ..Default::default()
+        }
+    }
+
+    #[doc(hidden)]
+    pub fn render<M: InputModeKind>(
+        self,
+        kind: &'static str,
+        state: Entity<InputBaseState<M>>,
+        theme: &UiTheme,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> InputBase {
+        let editor_style = Self::editor_style(theme);
+        state.update(cx, |state, cx| {
             state.set_disabled(self.disabled, cx);
             state.set_readonly(self.read_only, cx);
-            state.set_editor_style(InputEditorStyle {
-                foreground: colors.foreground.into(),
-                muted_foreground: colors.muted_foreground.into(),
-                background: colors.background.into(),
-                border: colors.input.into(),
-                selection: colors.ring.opacity(0.3).into(),
-                caret: colors.foreground.into(),
-                ..Default::default()
-            });
+            state.set_editor_style(editor_style);
         });
-        let state = self.state.read(cx);
-        let focus = state.focus_handle(cx);
-        let focused = focus.is_focused(window) && !self.disabled;
-        let value = state.value();
-        let placeholder = state.presentation().placeholder().clone();
-        let action_state = self.state.clone();
-        let click_state = self.state.clone();
-        let a11y_focus = self.state.clone();
+        let read = state.read(cx);
+        let focus_handle = read.focus_handle(cx);
+        let focused = focus_handle.is_focused(window) && !self.disabled;
+        let value = read.value();
+        let placeholder = read.presentation().placeholder().clone();
+        let action_state = state.clone();
+        let click_state = state.clone();
+        let a11y_focus = state.clone();
         let paste_handler = self
             .paste_handler
             .filter(|_| !self.disabled && !self.read_only);
-        let root = InputBase::new(ElementId::from(("textarea", self.state.entity_id())))
+        let root = InputBase::new(ElementId::from((kind, state.entity_id())))
             .focused(focused)
             .disabled(self.disabled)
             .when_some(self.label, |root, label| root.accessibility_label(label))
@@ -345,35 +314,19 @@ impl RenderOnce for Textarea {
             .flex()
             .w_full()
             .min_w_0()
-            .min_h(theme.space(16.))
-            .items_start()
             .px(theme.space(2.5))
-            .py(theme.space(2.))
-            .font_family(theme.fonts.body.clone())
-            .text_size(theme.text(14.))
-            .line_height(theme.text(20.))
-            .text_color(colors.foreground)
-            .when(self.bordered, |root| {
-                root.rounded(theme.radius.lg)
-                    .border_1()
-                    .border_color(if self.invalid {
-                        colors.destructive
-                    } else {
-                        colors.input
-                    })
-                    .bg(match theme.mode {
-                        ThemeMode::Light => colors.background.opacity(0.),
-                        ThemeMode::Dark => colors.input.opacity(0.3),
-                    })
-            })
-            .when(focused && self.bordered, |root| {
-                root.border_color(if self.invalid {
-                    colors.destructive
-                } else {
-                    colors.ring
-                })
-            })
-            .when(self.disabled, |root| root.opacity(0.5).cursor_not_allowed())
+            .text_color(theme.colors.foreground);
+        let root = if self.bordered {
+            focus::shown_for(
+                control::frame(root, theme, self.invalid),
+                theme,
+                focused,
+                self.invalid,
+            )
+        } else {
+            super::theme::primitives::text::sm(root, theme)
+        };
+        root.when(self.disabled, disabled::style)
             .when_some(paste_handler, |root, handler| {
                 root.capture_action(move |_: &gpui_kit::base::input::Paste, window, cx| {
                     if let Some(clipboard) = cx.read_from_clipboard()
@@ -383,8 +336,7 @@ impl RenderOnce for Textarea {
                     }
                 })
             })
-            .child(self.state);
-        super::theme::apply_style(root, &self.style)
+            .child(state)
     }
 }
 
