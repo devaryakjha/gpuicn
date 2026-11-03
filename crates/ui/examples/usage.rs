@@ -827,6 +827,13 @@ mod command {
                     cx,
                 )
             });
+            // Unread counts sit at the trailing edge of channel rows.
+            state.update(cx, |state, cx| {
+                state.set_trailing(
+                    |item, _, _| (item.value == "town-square").then(|| "3".into_any_element()),
+                    cx,
+                )
+            });
             let subscription = cx.subscribe_in(&state, window, move |_, _, event, window, cx| {
                 if let CommandEvent::Confirm(_) | CommandEvent::Cancel = event {
                     handle.close(window, cx);
@@ -845,6 +852,102 @@ mod command {
     }
 }
 
+mod composer {
+    use crate::ui::composer::*;
+    use gpui_icons::LucideIcon;
+    use gpui_kit::{App, AppContext as _, IntoElement, ParentElement as _, Window};
+
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("composer", cx, |window, cx| {
+            let state = cx.new(|cx| {
+                let mut state = ComposerState::new(8, window, cx);
+                // Claim pasted images or files for upload; text pastes normally.
+                state.set_on_paste(|item, _, _| item.text().is_none());
+                // Claim keys before the editor, such as Page Up to scroll the transcript.
+                state.set_on_key(|keystroke, _, _| keystroke.key == "pageup");
+                state
+            });
+            let subscription =
+                cx.subscribe_in(&state, window, |_, state, event, window, cx| match event {
+                    ComposerEvent::Autocomplete {
+                        trigger: '~',
+                        query,
+                    } => {
+                        let channels = ["town-square", "gpuicn"]
+                            .into_iter()
+                            .filter(|name| name.starts_with(query.as_ref()))
+                            .map(|name| {
+                                ComposerSuggestion::new(format!("~{name}"), name)
+                                    .icon(LucideIcon::Hash)
+                            });
+                        state.update(cx, |state, cx| state.set_suggestions(channels, cx));
+                    }
+                    ComposerEvent::Submit(text) => {
+                        println!("send {text}");
+                        state.update(cx, |state, cx| state.set_value("", window, cx));
+                    }
+                    _ => {}
+                });
+            (state, subscription)
+        });
+        let state = state.read(cx).0.clone();
+        Composer::new(&state).child("Attach")
+    }
+}
+
+mod emoji_picker {
+    use crate::ui::emoji_picker::*;
+    use gpui_icons::LucideIcon;
+    use gpui_kit::{App, AppContext as _, IntoElement, Window};
+
+    fn example(window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("reaction-picker", cx, |window, cx| {
+            let state = cx.new(|cx| {
+                // The application supplies the emoji set, recents and custom images.
+                let mut state = EmojiPickerState::new(
+                    [EmojiCategory::new(
+                        "Activities",
+                        LucideIcon::PartyPopper,
+                        [Emoji::new("tada", "🎉").keywords(["party", "hooray"])],
+                    )],
+                    window,
+                    cx,
+                );
+                state.set_custom([("parrot".into(), "emoji/parrot.gif".into())], cx);
+                state.set_recents(["tada"], cx);
+                state
+            });
+            let subscription = cx.subscribe(&state, |_, _, event, _| {
+                if let EmojiPickerEvent::Pick(name) = event {
+                    println!("react with :{name}:");
+                }
+            });
+            (state, subscription)
+        });
+        let state = state.read(cx).0.clone();
+        EmojiPicker::new(&state)
+    }
+}
+
+mod lightbox {
+    use crate::ui::dialog::DialogHandle;
+    use crate::ui::lightbox::*;
+    use gpui_kit::{App, IntoElement, Window};
+
+    fn example(handle: &DialogHandle, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let state = window.use_keyed_state("viewer", cx, |_, _| {
+            // Pass images the application already loaded; the viewer never fetches.
+            LightboxState::new([
+                LightboxImage::new("cache/screenshot.png", "screenshot.png")
+                    .caption("Arya, 10:42 AM"),
+                LightboxImage::new("cache/diagram.png", "diagram.png"),
+            ])
+        });
+        // Show the clicked image, then open: state.update(cx, |s, cx| s.show(1, cx)); handle.open(window, cx);
+        lightbox("viewer", handle, &state, [], window, cx)
+    }
+}
+
 mod message {
     use crate::ui::avatar::Avatar;
     use crate::ui::message::*;
@@ -857,8 +960,9 @@ mod message {
             .author("Arya")
             .timestamp("10:42 AM")
             .highlight(MessageHighlight::Mention)
-            .reactions([Reaction::new("🎉", 3, true)])
+            .reactions([Reaction::new("🎉", 3, true).tooltip("You, Sam and Lee")])
             .on_reaction(|emoji, _, _| println!("toggle {emoji}"))
+            .aria_description("Arya, 10:42 AM, mentions you, 1 reaction")
             .actions(
                 message_actions(cx)
                     .child(message_action(
@@ -879,7 +983,8 @@ mod message {
 }
 
 mod message_list {
-    use crate::ui::message::Message;
+    use crate::ui::markdown::{markdown, selection_root};
+    use crate::ui::message::{Message, MessageHighlight};
     use crate::ui::message_list::*;
     use gpui_kit::{App, AppContext as _, IntoElement, ParentElement as _, Window};
 
@@ -888,11 +993,34 @@ mod message_list {
             cx.new(|cx| MessageListState::new(1_000, cx))
         });
         let state = state.read(cx).clone();
-        MessageList::new("channel", &state, |index, _, _| {
-            Message::new(("post", index))
-                .author("Arya")
-                .child(format!("Message {index}"))
-        })
+        let focus = window.use_keyed_state("channel.focus", cx, |_, cx| cx.focus_handle());
+        let focus = focus.read(cx).clone();
+        let selected = window.use_keyed_state("channel.selected", cx, |_, _| None::<usize>);
+        let current = *selected.read(cx);
+        // One selection root per window lets a drag select across messages.
+        selection_root("window").child(
+            MessageList::new("channel", &state, move |index, _, cx| {
+                Message::new(("post", index))
+                    .author("Arya")
+                    .highlight(if current == Some(index) {
+                        MessageHighlight::Selected
+                    } else {
+                        MessageHighlight::None
+                    })
+                    .child(markdown(
+                        ("post.body", index),
+                        format!("Message {index}"),
+                        cx,
+                    ))
+            })
+            .track_focus(&focus)
+            .selected(current)
+            .on_select(move |index, _, cx| selected.update(cx, |selected, _| *selected = index))
+            .on_key(|event, selected, _, _| {
+                // E edits the selected message; other keys fall through.
+                event.keystroke.key == "e" && selected.is_some()
+            }),
+        )
     }
 }
 
@@ -938,5 +1066,11 @@ mod markdown {
                 .highlight(|user| user == "arya")
                 .on_click(|user, _, _| println!("open profile {user}")),
         )
+        // `:party:` was rewritten to `![:party:](emoji:party)` by the app.
+        .plugin(CustomEmoji::new("emoji", |name, _, _| {
+            (name == "party").then(|| "emoji/party.png".into())
+        }))
+        // Images come from the app's media cache; nothing is fetched here.
+        .plugin(MarkdownImages::new(|_url, _, _| None).on_click(|url, _, _| println!("open {url}")))
     }
 }

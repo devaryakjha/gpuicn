@@ -8,6 +8,12 @@ use gpui_kit::{
 use gpuicn::{
     attachment::{Attachment, AttachmentStatus, attachment_group},
     command::{Command, CommandEvent, CommandItem, CommandState},
+    composer::{Composer, ComposerEvent, ComposerState, ComposerSuggestion},
+    emoji_picker::{
+        COLUMNS, Emoji, EmojiCategory, EmojiPicker, EmojiPickerEvent, EmojiPickerState,
+    },
+    lightbox::{LightboxImage, LightboxState, lightbox},
+    markdown::{markdown, selection_root},
     message::{
         Message, MessageHighlight, MessageStatus, Reaction, day_divider, new_messages_divider,
     },
@@ -162,4 +168,460 @@ fn transcript_renders_rows_and_toggles_reactions(cx: &mut TestAppContext) {
     cx.update(|window, cx| window.draw(cx).clear(cx));
     cx.update(|_, cx| assert_eq!(view.read(cx).list.read(cx).item_count(), 253));
     assert!(toggled.borrow().is_empty());
+}
+
+struct Selectable {
+    list: Entity<MessageListState>,
+    focus: gpui_kit::FocusHandle,
+    selected: Rc<RefCell<Option<usize>>>,
+    claimed: Rc<RefCell<Vec<String>>>,
+    bodies: Rc<RefCell<std::collections::HashMap<usize, gpui_kit::Bounds<gpui_kit::Pixels>>>>,
+}
+impl Render for Selectable {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        use gpui_kit::base::ElementExt as _;
+        let selected = *self.selected.borrow();
+        let sink = self.selected.clone();
+        let claimed = self.claimed.clone();
+        let bodies = self.bodies.clone();
+        selection_root("root").child(
+            div().w(px(600.)).h(px(400.)).child(
+                MessageList::new("selectable", &self.list, move |index, _, cx| {
+                    if index == 0 {
+                        return day_divider("day", "Today", cx).into_any_element();
+                    }
+                    let bodies = bodies.clone();
+                    Message::new(("post", index))
+                        .author("Arya")
+                        .highlight(if selected == Some(index) {
+                            MessageHighlight::Selected
+                        } else {
+                            MessageHighlight::None
+                        })
+                        .child(
+                            div()
+                                .child(markdown(
+                                    ("body", index),
+                                    format!("Message number {index}"),
+                                    cx,
+                                ))
+                                .on_prepaint(move |bounds, _, _| {
+                                    bodies.borrow_mut().insert(index, bounds);
+                                }),
+                        )
+                        .into_any_element()
+                })
+                .track_focus(&self.focus)
+                .selected(selected)
+                .selectable(|index, _| index != 0)
+                .on_select(move |index, _, _| *sink.borrow_mut() = index)
+                .on_key(move |event, selected, _, _| {
+                    if event.keystroke.key == "e" {
+                        claimed.borrow_mut().push(format!("edit {selected:?}"));
+                        return true;
+                    }
+                    false
+                }),
+            ),
+        )
+    }
+}
+
+#[gpui_kit::test]
+fn transcript_keyboard_selection_and_copy_across_rows(cx: &mut TestAppContext) {
+    cx.update(gpuicn::init);
+    let selected = Rc::new(RefCell::new(None));
+    let claimed = Rc::new(RefCell::new(Vec::new()));
+    let (selected_sink, claimed_sink) = (selected.clone(), claimed.clone());
+    let (view, cx) = cx.add_window_view(move |_, cx| Selectable {
+        list: cx.new(|cx| MessageListState::new(4, cx)),
+        focus: cx.focus_handle(),
+        selected: selected_sink,
+        claimed: claimed_sink,
+        bodies: Default::default(),
+    });
+    cx.update(|window, cx| {
+        window.activate_window();
+        window.focus(&view.read(cx).focus.clone(), cx);
+        window.draw(cx).clear(cx);
+    });
+    cx.run_until_parked();
+
+    // Up starts at the newest row; the divider at 0 is skipped.
+    cx.simulate_keystrokes("up");
+    assert_eq!(*selected.borrow(), Some(3));
+    cx.simulate_keystrokes("up up up");
+    assert_eq!(*selected.borrow(), Some(1));
+    cx.simulate_keystrokes("down");
+    assert_eq!(*selected.borrow(), Some(2));
+    cx.simulate_keystrokes("e");
+    assert_eq!(claimed.borrow().as_slice(), ["edit Some(2)"]);
+    cx.simulate_keystrokes("escape");
+    assert_eq!(*selected.borrow(), None);
+
+    // A drag from the first body into the last selects across messages.
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    let (first, last) = cx.update(|_, cx| {
+        let bodies = view.read(cx).bodies.borrow();
+        (bodies[&1], bodies[&3])
+    });
+    let start = gpui_kit::point(first.left() + px(2.), first.center().y);
+    let end = gpui_kit::point(last.right() - px(2.), last.center().y);
+    cx.simulate_mouse_down(
+        start,
+        gpui_kit::MouseButton::Left,
+        gpui_kit::Modifiers::default(),
+    );
+    cx.simulate_mouse_move(
+        end,
+        Some(gpui_kit::MouseButton::Left),
+        gpui_kit::Modifiers::default(),
+    );
+    cx.simulate_mouse_up(
+        end,
+        gpui_kit::MouseButton::Left,
+        gpui_kit::Modifiers::default(),
+    );
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    let text = cx.update(gpui_kit::base::TextSelection::selected_text);
+    assert!(text.contains("Message number 1"), "{text:?}");
+    assert!(text.contains("Message number 2"), "{text:?}");
+    assert!(text.contains("Message number 3"), "{text:?}");
+
+    cx.simulate_keystrokes("secondary-c");
+    let copied = cx.update(|_, cx| cx.read_from_clipboard().and_then(|item| item.text()));
+    assert_eq!(copied.as_deref(), Some(text.trim()));
+}
+
+struct ComposerView {
+    state: Entity<ComposerState>,
+}
+impl Render for ComposerView {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .w(px(480.))
+            .p(px(200.))
+            .child(Composer::new(&self.state))
+    }
+}
+
+#[gpui_kit::test]
+fn composer_autocompletes_submits_and_hands_keys_to_the_app(cx: &mut TestAppContext) {
+    cx.update(gpuicn::init);
+    let events = Rc::new(RefCell::new(Vec::new()));
+    let claimed = Rc::new(RefCell::new(0));
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let state = cx.new(|cx| ComposerState::new(6, window, cx));
+        let sink = events.clone();
+        cx.subscribe(
+            &state,
+            move |view: &mut ComposerView, _, event: &ComposerEvent, cx| {
+                sink.borrow_mut().push(event.clone());
+                if let ComposerEvent::Autocomplete {
+                    trigger: '@',
+                    query,
+                } = event
+                {
+                    let people = ["arya", "aryan", "bo"]
+                        .into_iter()
+                        .filter(|name| name.starts_with(query.as_ref()))
+                        .map(|name| ComposerSuggestion::new(format!("@{name}"), name));
+                    view.state
+                        .update(cx, |state, cx| state.set_suggestions(people, cx));
+                }
+            },
+        )
+        .detach();
+        let count = claimed.clone();
+        state.update(cx, |state, _| {
+            state.set_on_key(move |keystroke, _, _| {
+                let claim = keystroke.key == "up";
+                if claim {
+                    *count.borrow_mut() += 1;
+                }
+                claim
+            })
+        });
+        ComposerView { state }
+    });
+    let state = cx.update(|window, cx| {
+        window.activate_window();
+        let state = view.read(cx).state.clone();
+        state.update(cx, |state, cx| state.focus(window, cx));
+        window.draw(cx).clear(cx);
+        state
+    });
+
+    cx.simulate_input("hi @ar");
+    cx.run_until_parked();
+    assert!(events.borrow().contains(&ComposerEvent::Autocomplete {
+        trigger: '@',
+        query: "ar".into()
+    }));
+    cx.update(|window, cx| {
+        window.draw(cx).clear(cx);
+        assert!(state.read(cx).is_autocomplete_open());
+        assert!(state.read(cx).caret_bounds(cx).is_some());
+    });
+    // Down highlights the second match; Enter accepts it instead of sending.
+    cx.simulate_keystrokes("down enter");
+    cx.update(|_, cx| {
+        assert_eq!(state.read(cx).value(cx), "hi @aryan ");
+        assert!(!state.read(cx).is_autocomplete_open());
+    });
+    assert!(events.borrow().contains(&ComposerEvent::Accept {
+        trigger: '@',
+        value: "@aryan".into()
+    }));
+    assert!(
+        !events
+            .borrow()
+            .iter()
+            .any(|event| matches!(event, ComposerEvent::Submit(_)))
+    );
+
+    // Escape dismisses the popup until the caret leaves the trigger.
+    cx.simulate_input("@b");
+    cx.run_until_parked();
+    cx.update(|_, cx| assert!(state.read(cx).is_autocomplete_open()));
+    cx.simulate_keystrokes("escape");
+    cx.update(|_, cx| assert!(!state.read(cx).is_autocomplete_open()));
+    cx.simulate_input("o");
+    cx.update(|_, cx| assert!(!state.read(cx).is_autocomplete_open()));
+
+    // The app's key hook runs first; Shift+Enter adds a line; Enter sends.
+    cx.simulate_keystrokes("up");
+    assert_eq!(*claimed.borrow(), 1);
+    cx.simulate_keystrokes("shift-enter");
+    cx.simulate_input("ok");
+    cx.simulate_keystrokes("enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&ComposerEvent::Submit("hi @aryan @bo\nok".into()))
+    );
+
+    // Insert, wrap and selection helpers work at the caret.
+    cx.update(|window, cx| {
+        state.update(cx, |state, cx| {
+            state.set_value("make it bold", window, cx);
+            state.set_selection(8..12, cx);
+            state.wrap_selection("**", "**", window, cx);
+            assert_eq!(state.value(cx), "make it **bold**");
+            assert_eq!(state.selection(cx), 10..14);
+            state.set_selection(16..16, cx);
+            state.insert("!", window, cx);
+            assert_eq!(state.value(cx), "make it **bold**!");
+            assert!(!state.is_composing(window, cx));
+        });
+    });
+}
+
+struct PickerView {
+    state: Entity<EmojiPickerState>,
+}
+impl Render for PickerView {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        div().child(EmojiPicker::new(&self.state))
+    }
+}
+
+#[gpui_kit::test]
+fn emoji_picker_searches_navigates_and_picks(cx: &mut TestAppContext) {
+    use gpui_icons::LucideIcon;
+    cx.update(gpuicn::init);
+    let events = Rc::new(RefCell::new(Vec::new()));
+    let smileys: Vec<Emoji> = (0..COLUMNS + 3)
+        .map(|index| Emoji::new(format!("smile_{index}"), "🙂"))
+        .collect();
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let state = cx.new(|cx| {
+            let mut state = EmojiPickerState::new(
+                [
+                    EmojiCategory::new("Smileys", LucideIcon::FaceSlightlySmiling, smileys),
+                    EmojiCategory::new(
+                        "Activities",
+                        LucideIcon::Sparkles,
+                        [Emoji::new("tada", "🎉").keywords(["party"])],
+                    ),
+                ],
+                window,
+                cx,
+            );
+            state.set_custom([("parrot".into(), "parrot.gif".into())], cx);
+            state.set_recents(["tada", "missing"], cx);
+            state
+        });
+        let sink = events.clone();
+        cx.subscribe(&state, move |_, _, event: &EmojiPickerEvent, _| {
+            sink.borrow_mut().push(event.clone())
+        })
+        .detach();
+        PickerView { state }
+    });
+    let state = cx.update(|window, cx| {
+        window.activate_window();
+        let state = view.read(cx).state.clone();
+        state.update(cx, |state, cx| state.focus(window, cx));
+        window.draw(cx).clear(cx);
+        state
+    });
+    let highlighted = |cx: &mut gpui_kit::VisualTestContext| {
+        cx.update(|_, cx| state.read(cx).highlighted().map(|emoji| emoji.name.clone()))
+    };
+
+    // Recents come first and skip names the catalog lacks; custom emoji are listed.
+    cx.update(|_, cx| assert_eq!(state.read(cx).visible_count(), 1 + COLUMNS + 3 + 1 + 1));
+    assert_eq!(highlighted(cx).as_deref(), Some("tada"));
+    // Down from the one-emoji recents row enters the first category.
+    cx.simulate_keystrokes("down right");
+    assert_eq!(highlighted(cx).as_deref(), Some("smile_1"));
+    cx.simulate_keystrokes("down");
+    assert_eq!(
+        highlighted(cx).as_deref(),
+        Some(format!("smile_{}", COLUMNS + 1).as_str())
+    );
+    cx.simulate_keystrokes("enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&EmojiPickerEvent::Pick(
+            format!("smile_{}", COLUMNS + 1).into()
+        ))
+    );
+
+    // One character does not filter; two do, and keywords match too.
+    cx.simulate_input("p");
+    cx.update(|_, cx| assert_eq!(state.read(cx).visible_count(), COLUMNS + 6));
+    cx.simulate_input("a");
+    cx.update(|_, cx| assert_eq!(state.read(cx).visible_count(), 2));
+    // A name that starts with the query ranks before a keyword match.
+    assert_eq!(highlighted(cx).as_deref(), Some("parrot"));
+    cx.simulate_keystrokes("right enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&EmojiPickerEvent::Pick("tada".into()))
+    );
+
+    // Escape clears the query first, then cancels.
+    cx.simulate_keystrokes("escape");
+    cx.update(|_, cx| assert!(state.read(cx).query(cx).is_empty()));
+    cx.simulate_keystrokes("escape");
+    assert_eq!(events.borrow().last(), Some(&EmojiPickerEvent::Cancel));
+}
+
+struct ViewerView {
+    handle: gpuicn::dialog::DialogHandle,
+    state: Entity<LightboxState>,
+}
+impl Render for ViewerView {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div().size(px(800.)).child(lightbox(
+            "viewer",
+            &self.handle,
+            &self.state,
+            [],
+            window,
+            cx,
+        ))
+    }
+}
+
+#[gpui_kit::test]
+fn lightbox_pages_zooms_and_closes_from_the_keyboard(cx: &mut TestAppContext) {
+    cx.update(gpuicn::init);
+    let (view, cx) = cx.add_window_view(|_, cx| ViewerView {
+        handle: gpuicn::dialog::DialogHandle::new(false),
+        state: cx.new(|_| {
+            LightboxState::new(
+                ["a.png", "b.png", "c.png"].map(|name| LightboxImage::new(name, name)),
+            )
+        }),
+    });
+    let (handle, state) = cx.update(|window, cx| {
+        window.activate_window();
+        let view = view.read(cx);
+        let (handle, state) = (view.handle.clone(), view.state.clone());
+        state.update(cx, |state, cx| state.show(1, cx));
+        handle.open(window, cx);
+        window.draw(cx).clear(cx);
+        (handle, state)
+    });
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    cx.simulate_keystrokes("right");
+    cx.update(|_, cx| assert_eq!(state.read(cx).index(), 2));
+    cx.simulate_keystrokes("right left left");
+    cx.update(|_, cx| assert_eq!(state.read(cx).index(), 1));
+    cx.simulate_keystrokes("+ +");
+    cx.update(|_, cx| assert!(state.read(cx).zoom() > 1.5));
+    cx.simulate_keystrokes("0");
+    cx.update(|_, cx| assert_eq!(state.read(cx).zoom(), 1.));
+    cx.simulate_keystrokes("escape");
+    assert!(!handle.is_open());
+}
+
+#[gpui_kit::test]
+fn emoji_picker_skin_tones_and_frequently_used(cx: &mut TestAppContext) {
+    use gpui_icons::LucideIcon;
+    cx.update(gpuicn::init);
+    let events = Rc::new(RefCell::new(Vec::new()));
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let state = cx.new(|cx| {
+            let mut state = EmojiPickerState::new(
+                [EmojiCategory::new(
+                    "People",
+                    LucideIcon::Hand,
+                    [
+                        Emoji::new("wave", "👋").skin_tones(
+                            ["🏻", "🏼", "🏽", "🏾", "🏿"].iter().enumerate().map(
+                                |(tone, modifier)| {
+                                    Emoji::new(
+                                        format!("wave_tone{}", tone + 1),
+                                        format!("👋{modifier}"),
+                                    )
+                                },
+                            ),
+                        ),
+                        Emoji::new("eyes", "👀"),
+                    ],
+                )],
+                window,
+                cx,
+            );
+            // Frequently used comes before recents; a tone variant's name finds its base.
+            state.set_frequent(["eyes"], cx);
+            state.set_recents(["wave_tone3", "eyes"], cx);
+            state
+        });
+        let sink = events.clone();
+        cx.subscribe(&state, move |_, _, event: &EmojiPickerEvent, _| {
+            sink.borrow_mut().push(event.clone())
+        })
+        .detach();
+        PickerView { state }
+    });
+    let state = cx.update(|window, cx| {
+        window.activate_window();
+        let state = view.read(cx).state.clone();
+        state.update(cx, |state, cx| state.focus(window, cx));
+        window.draw(cx).clear(cx);
+        state
+    });
+    // eyes (frequent), wave + eyes (recent), wave + eyes (People).
+    cx.update(|_, cx| assert_eq!(state.read(cx).visible_count(), 5));
+    cx.simulate_keystrokes("right enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&EmojiPickerEvent::Pick("wave".into()))
+    );
+    cx.update(|_, cx| state.update(cx, |state, cx| state.set_skin_tone(Some(2), cx)));
+    cx.simulate_keystrokes("enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&EmojiPickerEvent::Pick("wave_tone3".into()))
+    );
+    // Emoji without variants are unchanged.
+    cx.simulate_keystrokes("right enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&EmojiPickerEvent::Pick("eyes".into()))
+    );
 }

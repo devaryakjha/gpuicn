@@ -31,12 +31,16 @@ pub mod collapsible;
 pub mod combobox;
 #[path = "../registry/command/command.rs"]
 pub mod command;
+#[path = "../registry/composer/composer.rs"]
+pub mod composer;
 #[path = "../registry/context_menu/context_menu.rs"]
 pub mod context_menu;
 #[path = "../registry/dialog/dialog.rs"]
 pub mod dialog;
 #[path = "../registry/drawer/drawer.rs"]
 pub mod drawer;
+#[path = "../registry/emoji_picker/emoji_picker.rs"]
+pub mod emoji_picker;
 #[path = "../registry/empty/empty.rs"]
 pub mod empty;
 #[path = "../registry/field/field.rs"]
@@ -51,6 +55,8 @@ pub mod input;
 pub mod input_group;
 #[path = "../registry/kbd/kbd.rs"]
 pub mod kbd;
+#[path = "../registry/lightbox/lightbox.rs"]
+pub mod lightbox;
 #[path = "../registry/markdown/markdown.rs"]
 pub mod markdown;
 #[path = "../registry/menu/menu.rs"]

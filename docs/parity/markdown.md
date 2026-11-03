@@ -21,3 +21,16 @@ render mentions and channels: rewrite `@arya` to `[@arya](mention:arya)` before
 rendering and add `EntityLinks::new("mention")`. `highlight` fills chips that
 match, such as mentions of the reader, and `on_click` receives the target.
 Which entities exist and how they resolve stay with the application.
+
+`selection_root` mounts GPUI Kit's window text-selection layer and copies the
+selection with Cmd+C or Ctrl+C, so a selection can span several Markdown views
+and `selectable_text` runs, such as many messages. A focused text field keeps
+its own copy shortcut.
+
+Images never load by themselves. `MarkdownImages` resolves each image URL
+through the application, usually from a decoded-image cache, and shows the alt
+text in a muted frame until the image is available; `on_click` receives the
+URL for opening a lightbox. `CustomEmoji` handles images with its own scheme,
+such as `![:party:](emoji:party)`, drawing them at the height of the text with
+the alt text kept for selection, copy and assistive technology. Add
+`CustomEmoji` before `MarkdownImages`.

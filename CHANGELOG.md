@@ -4,6 +4,24 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.7.0
+
+[Notes](docs/releases/v0.7.0.md)
+
+### Added
+
+- Composer, Emoji Picker and Lightbox.
+- Message: custom emoji images and who-reacted tooltips on reactions, a
+  permalink highlight and per-row accessible descriptions.
+- Message List: keyboard selection mode.
+- Markdown: `selection_root` for selecting and copying across messages,
+  `CustomEmoji` inline images and `MarkdownImages` for app-supplied images.
+- Command: leading and trailing item slots.
+
+### Changed
+
+- Message now depends on Tooltip in the registry.
+
 ## 0.6.0
 
 [Notes](docs/releases/v0.6.0.md)

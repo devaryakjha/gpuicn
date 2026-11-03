@@ -3,14 +3,16 @@
 //! Visual source: shadcn/ui 4.19.0 `command.tsx`, Nova style. The list is
 //! virtualized, so a quick switcher can hold thousands of channels.
 
+use std::rc::Rc;
+
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::base::actions::{Cancel, Confirm, SelectDown, SelectUp};
 use gpui_kit::{
-    App, AppContext as _, Context, ElementId, Entity, EventEmitter, FocusHandle, Focusable,
-    FontWeight, InteractiveElement as _, IntoElement, ParentElement as _, Render, RenderOnce, Role,
-    ScrollStrategy, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled,
-    Subscription, UniformListScrollHandle, Window, div, prelude::FluentBuilder as _, px,
-    uniform_list,
+    AnyElement, App, AppContext as _, Context, ElementId, Entity, EventEmitter, FocusHandle,
+    Focusable, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _, Render,
+    RenderOnce, Role, ScrollStrategy, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Subscription, UniformListScrollHandle, Window, div,
+    prelude::FluentBuilder as _, px, uniform_list,
 };
 
 use super::input::{Input, InputEvent, InputState};
@@ -88,6 +90,8 @@ pub enum CommandEvent {
     Cancel,
 }
 
+type ItemSlot = Rc<dyn Fn(&CommandItem, &mut Window, &mut App) -> Option<AnyElement> + 'static>;
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Row {
     Heading(usize),
@@ -102,6 +106,8 @@ pub struct CommandState {
     highlighted: Option<usize>,
     filter: bool,
     scroll: UniformListScrollHandle,
+    leading: Option<ItemSlot>,
+    trailing: Option<ItemSlot>,
     _subscription: Subscription,
 }
 
@@ -127,10 +133,35 @@ impl CommandState {
             highlighted: None,
             filter: true,
             scroll: UniformListScrollHandle::new(),
+            leading: None,
+            trailing: None,
             _subscription: subscription,
         };
         state.refilter(cx);
         state
+    }
+
+    /// Renders the leading element of each item, such as an avatar image or a
+    /// channel glyph. Return `None` to fall back to the item's Lucide icon.
+    /// Keep the element 16 to 20 px tall so rows stay one height.
+    pub fn set_leading(
+        &mut self,
+        slot: impl Fn(&CommandItem, &mut Window, &mut App) -> Option<AnyElement> + 'static,
+        cx: &mut Context<Self>,
+    ) {
+        self.leading = Some(Rc::new(slot));
+        cx.notify();
+    }
+
+    /// Renders an element at the trailing edge of each item, before its
+    /// shortcut, such as an unread or mention count `Badge`.
+    pub fn set_trailing(
+        &mut self,
+        slot: impl Fn(&CommandItem, &mut Window, &mut App) -> Option<AnyElement> + 'static,
+        cx: &mut Context<Self>,
+    ) {
+        self.trailing = Some(Rc::new(slot));
+        cx.notify();
     }
 
     /// Replaces the items, keeping the query. Use this to show results from an
@@ -315,10 +346,12 @@ impl Render for CommandState {
         let highlighted = self.highlighted;
         let row_theme = theme.clone();
         let list_id = id.clone();
+        let leading_slot = self.leading.clone();
+        let trailing_slot = self.trailing.clone();
         let rows_list = uniform_list(
             (id.clone(), "rows"),
             total,
-            cx.processor(move |this, range: std::ops::Range<usize>, _window, cx| {
+            cx.processor(move |this, range: std::ops::Range<usize>, window, cx| {
                 range
                     .map(|row| match rows[row] {
                         Row::Heading(index) => div()
@@ -336,6 +369,12 @@ impl Render for CommandState {
                         Row::Item(index) => {
                             let item = &this.items[index];
                             let selected = highlighted == Some(index);
+                            let leading = leading_slot
+                                .as_ref()
+                                .and_then(|slot| slot(item, window, cx));
+                            let trailing = trailing_slot
+                                .as_ref()
+                                .and_then(|slot| slot(item, window, cx));
                             div()
                                 .id((list_id.clone(), SharedString::from(row.to_string())))
                                 .role(Role::ListBoxOption)
@@ -373,13 +412,17 @@ impl Render for CommandState {
                                             this.confirm(index, cx)
                                         }))
                                 })
-                                .when_some(item.icon, |row, icon| {
-                                    row.child(
+                                .map(|row| match (leading, item.icon) {
+                                    (Some(leading), _) => row.child(
+                                        div().flex_shrink_0().flex().items_center().child(leading),
+                                    ),
+                                    (None, Some(icon)) => row.child(
                                         lucide(icon)
                                             .size(row_theme.space(4.))
                                             .flex_shrink_0()
                                             .text_color(row_theme.colors.muted_foreground),
-                                    )
+                                    ),
+                                    (None, None) => row,
                                 })
                                 .child(
                                     div()
@@ -389,11 +432,15 @@ impl Render for CommandState {
                                         .text_ellipsis()
                                         .child(item.label.clone()),
                                 )
+                                .when_some(trailing, |row, trailing| {
+                                    row.child(
+                                        div().flex_shrink_0().flex().items_center().child(trailing),
+                                    )
+                                })
                                 .when_some(item.shortcut.clone(), |row, shortcut| {
                                     row.child(
                                         div()
                                             .flex_shrink_0()
-                                            .ml_auto()
                                             .text_size(row_theme.text(12.))
                                             .text_color(row_theme.colors.muted_foreground)
                                             .child(format_shortcut(&shortcut, os)),
