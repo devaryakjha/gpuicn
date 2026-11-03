@@ -80,11 +80,9 @@ fn seed_component_fonts(cx: &mut App) {
     } else {
         UiTheme::neutral_light().fonts
     };
-    let component = Theme {
-        font_family: fonts.body,
-        mono_font_family: fonts.mono,
-        ..Theme::default()
-    };
+    let mut component = Theme::default();
+    component.font_family = fonts.body;
+    component.mono_font_family = fonts.mono;
     cx.set_global(component);
 }
 
@@ -531,6 +529,12 @@ fn sync_component_theme(cx: &mut App, theme: UiTheme) {
         ThemeMode::Light => gpui_kit::component::ThemeMode::Light,
         ThemeMode::Dark => gpui_kit::component::ThemeMode::Dark,
     };
+    // Start from Kit's palette for this mode, so colors gpuicn doesn't set
+    // below, such as scrollbar tracks, never keep the other mode's values.
+    component.colors = *match theme.mode {
+        ThemeMode::Light => gpui_kit::component::ThemeColor::light(),
+        ThemeMode::Dark => gpui_kit::component::ThemeColor::dark(),
+    };
     component.font_family = theme.fonts.body;
     component.mono_font_family = theme.fonts.mono;
     component.radius = theme.radius.md;
@@ -561,6 +565,17 @@ fn sync_component_theme(cx: &mut App, theme: UiTheme) {
     component.button_foreground = colors.foreground.into();
     component.button_hover = colors.accent.into();
     component.button_active = colors.muted.into();
+    // Nova scrollbars float over content with no track.
+    component.scrollbar = gpui_kit::transparent_black();
+    component.scrollbar_thumb = colors.border.into();
+    component.scrollbar_thumb_hover = colors.muted_foreground.opacity(0.72).into();
+    component.sidebar = colors.sidebar.into();
+    component.sidebar_foreground = colors.sidebar_foreground.into();
+    component.sidebar_border = colors.sidebar_border.into();
+    component.sidebar_accent = colors.sidebar_accent.into();
+    component.sidebar_accent_foreground = colors.sidebar_accent_foreground.into();
+    component.title_bar = colors.sidebar.into();
+    component.title_bar_border = colors.border.into();
     // Rich text: links, selection, table headings and code highlighting.
     component.link = colors.primary.into();
     component.selection = colors.ring.opacity(0.3).into();
@@ -863,7 +878,9 @@ fn neutral_dark_colors() -> UiColors {
         sidebar_accent_foreground: neutral(0.985),
         sidebar_border: neutral_alpha(1.0, 0.10),
         sidebar_ring: neutral(0.556),
-        overlay: black().alpha(0.10).into(),
+        // shadcn pairs black/10 with a backdrop blur GPUI lacks; without it a
+        // 10% scrim disappears on a near-black page.
+        overlay: black().alpha(0.50).into(),
     }
 }
 

@@ -275,17 +275,26 @@ impl RenderOnce for Message {
         let gutter = theme.space(8.);
 
         let gutter_content = if self.continuation {
+            // The hover time floats in the gutter so showing it never changes
+            // the row's height.
             div()
                 .w(gutter)
                 .flex_shrink_0()
-                .pt(px(2.))
-                .text_size(theme.text(11.))
-                .line_height(theme.text(20.))
-                .text_color(colors.muted_foreground)
-                .text_right()
-                .whitespace_nowrap()
+                .relative()
                 .when(is_hovered, |gutter| {
-                    gutter.children(self.gutter_time.clone().or(self.timestamp.clone()))
+                    gutter.children(self.gutter_time.clone().or(self.timestamp.clone()).map(
+                        |time| {
+                            div()
+                                .absolute()
+                                .top(px(2.))
+                                .right_0()
+                                .text_size(theme.text(11.))
+                                .line_height(theme.text(20.))
+                                .text_color(colors.muted_foreground)
+                                .whitespace_nowrap()
+                                .child(time)
+                        },
+                    ))
                 })
         } else {
             div()

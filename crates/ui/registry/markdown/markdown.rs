@@ -420,6 +420,7 @@ impl MarkdownPlugin for MarkdownImages {
                     img(source)
                         .h(px(200.))
                         .max_w(px(360.))
+                        .rounded(theme.radius.lg - px(1.))
                         .object_fit(ObjectFit::Contain),
                 ),
                 None => frame

@@ -20,7 +20,7 @@ use gpuicn::{
     carousel::*,
     checkbox_group::*,
     collapsible::*,
-    command::{Command, CommandEvent, CommandState, command_dialog_popup},
+    command::{CommandEvent, CommandState, command_dialog_popup},
     composer::{Composer, ComposerEvent, ComposerState, ComposerSuggestion},
     dialog::*,
     drawer::{
@@ -95,10 +95,17 @@ fn main() {
 }
 
 fn application() -> Application {
+    // gpui-pre 0.3.11 no longer installs a Fetch client on the web, so image
+    // URLs need one passed in.
     #[cfg(target_family = "wasm")]
-    let app = gpui_kit::platform::application_with_web_backend(
-        gpui_kit::platform::WebBackendPreference::WebGpu,
-    );
+    let app = {
+        let platform = gpui_kit::web::WebPlatform::new_with_backend(
+            true,
+            gpui_kit::platform::WebBackendPreference::WebGpu,
+        );
+        let http_client = std::sync::Arc::new(platform.fetch_http_client());
+        Application::with_platform(std::rc::Rc::new(platform)).with_http_client(http_client)
+    };
     #[cfg(not(target_family = "wasm"))]
     let app = gpui_kit::application();
 
@@ -714,29 +721,7 @@ impl Showcase {
             .clone();
         let state = window
             .use_keyed_state("command.state", cx, |window, cx| {
-                let state = cx.new(|cx| CommandState::new(command_items(), window, cx));
-                let handle = handle.clone();
-                let subscription =
-                    cx.subscribe_in(&state, window, move |_, _, event, window, cx| {
-                        let action = match event {
-                            CommandEvent::Confirm(value) => format!("Opened {value}"),
-                            CommandEvent::Cancel => "Closed".into(),
-                            CommandEvent::Query(_) => return,
-                        };
-                        handle.close(window, cx);
-                        let _ = owner.update(cx, |this, cx| {
-                            this.demo_action = action;
-                            cx.notify();
-                        });
-                    });
-                (state, subscription)
-            })
-            .read(cx)
-            .0
-            .clone();
-        let inline = window
-            .use_keyed_state("command.inline", cx, |window, cx| {
-                cx.new(|cx| {
+                let state = cx.new(|cx| {
                     let mut state = CommandState::new(command_items(), window, cx);
                     // Direct messages lead with an avatar; channels with unread
                     // messages end with a count.
@@ -767,9 +752,25 @@ impl Showcase {
                         cx,
                     );
                     state
-                })
+                });
+                let handle = handle.clone();
+                let subscription =
+                    cx.subscribe_in(&state, window, move |_, _, event, window, cx| {
+                        let action = match event {
+                            CommandEvent::Confirm(value) => format!("Opened {value}"),
+                            CommandEvent::Cancel => "Closed".into(),
+                            CommandEvent::Query(_) => return,
+                        };
+                        handle.close(window, cx);
+                        let _ = owner.update(cx, |this, cx| {
+                            this.demo_action = action;
+                            cx.notify();
+                        });
+                    });
+                (state, subscription)
             })
             .read(cx)
+            .0
             .clone();
         let open = handle.clone();
         let focus = state.clone();
@@ -778,6 +779,7 @@ impl Showcase {
             .max_w(px(420.))
             .flex()
             .flex_col()
+            .items_center()
             .gap(px(12.))
             .child(
                 Button::new("command.open")
@@ -789,7 +791,6 @@ impl Showcase {
                     .child("Quick switcher")
                     .child(Kbd::shortcut("secondary-k")),
             )
-            .child(Command::new(&inline))
             .child(dialog(
                 "command.dialog",
                 &handle,
@@ -942,6 +943,12 @@ impl Showcase {
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let owner = cx.entity().downgrade();
+        // Shown like a reaction popover: picks keep it open, and Escape
+        // closes it. Recents picked while open show from the next open.
+        let shown = window
+            .use_keyed_state("emoji-picker.shown", cx, |_, _| true)
+            .clone();
+        let hide = shown.clone();
         let avatar = "https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png";
         let state = window
             .use_keyed_state("emoji-picker.state", cx, |window, cx| {
@@ -971,7 +978,13 @@ impl Showcase {
                                 state.update(cx, |state, cx| state.set_recents(list, cx));
                                 format!("Picked :{name}:")
                             }
-                            EmojiPickerEvent::Cancel => "Closed".into(),
+                            EmojiPickerEvent::Cancel => {
+                                hide.update(cx, |shown, cx| {
+                                    *shown = false;
+                                    cx.notify();
+                                });
+                                "Closed".into()
+                            }
                             EmojiPickerEvent::SkinTone(tone) => match tone {
                                 Some(tone) => format!("Skin tone {}", tone + 1),
                                 None => "Default skin tone".into(),
@@ -987,7 +1000,29 @@ impl Showcase {
             .read(cx)
             .0
             .clone();
-        EmojiPicker::new(&state)
+        let open = *shown.read(cx);
+        let toggle = state.clone();
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(12.))
+            .child(
+                Button::new("emoji-picker.toggle")
+                    .variant(ButtonVariant::Outline)
+                    .on_click(move |_, window, cx| {
+                        let open = !*shown.read(cx);
+                        shown.update(cx, |shown, cx| {
+                            *shown = open;
+                            cx.notify();
+                        });
+                        if open {
+                            toggle.update(cx, |state, cx| state.open(window, cx));
+                        }
+                    })
+                    .child(if open { "Close picker" } else { "Add reaction" }),
+            )
+            .when(open, |preview| preview.child(EmojiPicker::new(&state)))
     }
 
     fn lightbox_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -1026,8 +1061,13 @@ impl Showcase {
                         open.open(window, cx);
                     })
                     .child(
+                        // GPUI clips to a rectangle, so the image takes the inner radius.
+                        // Layout otherwise sizes an image by its own aspect ratio,
+                        // so a tall image would overflow the frame's rounded clip.
                         gpui_kit::img(image.source)
                             .size_full()
+                            .aspect_ratio(144. / 96.)
+                            .rounded(theme.radius.lg - px(1.))
                             .object_fit(gpui_kit::ObjectFit::Cover),
                     )
             }))
@@ -1344,7 +1384,10 @@ impl Showcase {
             .overflow_hidden()
             .bg(theme.colors.background)
             .child(
+                // GPUI clips children to a rectangle, so the bar takes the
+                // frame's inner radius.
                 TitleBar::new()
+                    .rounded_t(theme.radius.xl - px(1.))
                     .child(
                         div()
                             .flex()

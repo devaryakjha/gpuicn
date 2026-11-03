@@ -20,7 +20,14 @@ pub fn scroll_area_scrollbar_for<H: ScrollbarHandle + Clone>(
         .mode(ScrollbarMode::Scrolling)
         .styles(|styles| {
             styles
-                .track(|style| style.width(t.space(2.5)))
+                // No rail: the thumb floats over content in every state.
+                .track(|style| style.width(t.space(2.5)).bg(gpui_kit::transparent_black()))
+                .track_hover(|style| style.bg(gpui_kit::transparent_black()))
+                .track_active(|style| {
+                    style
+                        .bg(gpui_kit::transparent_black())
+                        .border_color(gpui_kit::transparent_black())
+                })
                 .thumb(|style| {
                     style
                         .bg(t.colors.border)

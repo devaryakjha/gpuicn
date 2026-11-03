@@ -687,7 +687,7 @@ impl RenderOnce for SidebarLayout {
                         cx,
                     );
                 })
-                .backdrop(dialog_backdrop(cx))
+                .backdrop(dismiss_backdrop(cx))
                 .popup(
                     div()
                         .absolute()

@@ -8,12 +8,12 @@ default-run = "registry-install-fixture"
 
 [dependencies]
 web-time = "1.1"
-gpui_platform = { package = "gpui-pre-platform", version = "=0.3.10", features = ["font-kit"] }
-gpui-icons = "=0.5.0"
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.11", features = ["font-kit"] }
+gpui-icons = "=0.6.0"
 
-gpui-kit = { version = "=0.8.1", default-features = false, features = ["component"] }
+gpui-kit = { version = "=0.9.0", default-features = false, features = ["component"] }
 
 [dev-dependencies]
-gpui-kit = { version = "=0.8.1", default-features = false, features = ["component", "test-support"] }
+gpui-kit = { version = "=0.9.0", default-features = false, features = ["component", "test-support"] }
 
 [workspace]

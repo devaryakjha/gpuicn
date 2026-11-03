@@ -1,8 +1,9 @@
 //! Nova-styled keyboard shortcut hints.
 
+use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
-    Action, App, AsKeystroke as _, Div, FontWeight, IntoElement, Keystroke, OperatingSystem,
-    ParentElement, RenderOnce, SharedString, Styled, Window, div, relative,
+    Action, AnyElement, App, AsKeystroke as _, Div, FontWeight, IntoElement, Keystroke,
+    OperatingSystem, ParentElement, RenderOnce, SharedString, Styled, Window, div, relative,
 };
 
 use super::theme::UiTheme;
@@ -145,13 +146,76 @@ impl RenderOnce for Kbd {
             .text_size(theme.text(12.))
             .line_height(relative(1.))
             .whitespace_nowrap()
-            .child(match self.keys {
-                Keys::Text(text) => text,
-                Keys::Shortcut(source) => format_shortcut(&source, cx.platform_info().os),
-                Keys::Keystroke(keystroke) => format_keystroke(&keystroke, cx.platform_info().os),
-            });
+            .gap(theme.space(0.5))
+            .children(key_parts(
+                &match self.keys {
+                    Keys::Text(text) => text,
+                    Keys::Shortcut(source) => format_shortcut(&source, cx.platform_info().os),
+                    Keys::Keystroke(keystroke) => {
+                        format_keystroke(&keystroke, cx.platform_info().os)
+                    }
+                },
+                theme.text(12.),
+                // Icons don't inherit text color, so follow a caller's override.
+                self.style
+                    .text
+                    .color
+                    .unwrap_or(theme.colors.muted_foreground.into()),
+            ));
         super::theme::apply_style(root, &self.style).into_any_element()
     }
+}
+
+/// The icon drawn for a key symbol. UI fonts such as Geist have no glyphs for
+/// most of these, and the browser build has no system font to fall back on.
+fn key_icon(symbol: char) -> Option<LucideIcon> {
+    Some(match symbol {
+        '⌘' => LucideIcon::Command,
+        '⌥' => LucideIcon::Option,
+        '⇧' => LucideIcon::ArrowBigUp,
+        '⌃' => LucideIcon::ChevronUp,
+        '↩' => LucideIcon::CornerDownLeft,
+        '⌫' => LucideIcon::Delete,
+        '⇥' => LucideIcon::ArrowRightToLine,
+        '↑' => LucideIcon::ArrowUp,
+        '↓' => LucideIcon::ArrowDown,
+        '←' => LucideIcon::ArrowLeft,
+        '→' => LucideIcon::ArrowRight,
+        _ => return None,
+    })
+}
+
+/// Draws formatted keys such as `"⇧⌘P"` inline, with key symbols as icons, for
+/// shortcut hints outside a key cap.
+pub fn key_label(keys: &str, size: gpui_kit::Pixels, color: gpui_kit::Hsla) -> Div {
+    div()
+        .flex()
+        .items_center()
+        .gap(size / 6.)
+        .text_color(color)
+        .children(key_parts(keys, size, color))
+}
+
+/// Splits formatted keys into text runs and symbol icons.
+fn key_parts(keys: &str, size: gpui_kit::Pixels, color: gpui_kit::Hsla) -> Vec<AnyElement> {
+    let mut parts = Vec::new();
+    let mut text = String::new();
+    for symbol in keys.chars() {
+        if let Some(icon) = key_icon(symbol) {
+            if !text.is_empty() {
+                parts.push(std::mem::take(&mut text).into_any_element());
+            }
+            parts.push(lucide(icon).size(size).text_color(color).into_any_element());
+        } else if symbol == '⎋' {
+            text.push_str("Esc");
+        } else {
+            text.push(symbol);
+        }
+    }
+    if !text.is_empty() {
+        parts.push(text.into_any_element());
+    }
+    parts
 }
 
 impl Styled for Kbd {

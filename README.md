@@ -25,7 +25,7 @@ components.
 ## Quick start
 
 ```sh
-cargo install gpuicn-cli --version 0.7.1 --locked
+cargo install gpuicn-cli --version 0.8.0 --locked
 gpuicn new my-app  # cargo new + pinned deps, Geist fonts, theme, Button and a starter window
 cd my-app && cargo run
 gpuicn add sidebar dialog
@@ -86,8 +86,8 @@ crate, so every component reads the same theme.
 
 ## Requirements and platform scope
 
-Rust 1.98 or newer. gpuicn v0.7.1 targets GPUI Kit 0.8.1 and its pinned
-`gpui-pre` 0.3.10 runtime; import GPUI types through `gpui_kit`. Apps on another
+Rust 1.98 or newer. gpuicn v0.8.0 targets GPUI Kit 0.9.0 and its pinned
+`gpui-pre` 0.3.11 runtime; import GPUI types through `gpui_kit`. Apps on another
 GPUI revision must migrate first. macOS native builds need Xcode's Metal toolchain;
 Linux needs the usual GPUI system libraries (fontconfig, xkbcommon, Wayland/X11).
 

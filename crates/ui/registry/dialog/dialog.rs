@@ -9,7 +9,7 @@ use super::{
 use gpui_icons::{LucideIcon, lucide};
 pub use gpui_kit::base::{Dialog, DialogChangeReason, DialogHandle};
 use gpui_kit::{
-    AnyElement, App, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement,
+    AnyElement, App, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement, MouseButton,
     ParentElement, SharedString, Stateful, StatefulInteractiveElement as _, Styled, Window, div,
     px,
 };
@@ -148,7 +148,7 @@ pub fn dialog(
         .items_center()
         .justify_center()
         .p(UiTheme::read(cx).space(4.))
-        .backdrop(dialog_backdrop(cx))
+        .backdrop(dismiss_backdrop(cx))
         .popup(popup)
         // Enter in an arbitrary child must not dismiss an unfinished form.
         .on_ok(|_, _, _| false)
@@ -182,6 +182,16 @@ pub fn dialog_backdrop(cx: &App) -> Div {
         .inset_0()
         .bg(UiTheme::read(cx).colors.overlay)
         .occlude()
+}
+/// A backdrop that dismisses its dialog when pressed. The occluding backdrop
+/// hides the press from Kit's host, so it routes Cancel through the dialog's
+/// veto callback itself.
+#[doc(hidden)]
+pub fn dismiss_backdrop(cx: &App) -> Div {
+    dialog_backdrop(cx).on_mouse_down(MouseButton::Left, |_, window, cx| {
+        window.dispatch_action(Box::new(gpui_kit::base::actions::Cancel), cx);
+        cx.stop_propagation();
+    })
 }
 /// Stacked dialog heading content.
 pub fn dialog_header(cx: &App) -> Div {
