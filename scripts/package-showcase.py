@@ -40,7 +40,17 @@ def main():
     build = revision + ("-local" if dirty else "")
     identity = os.environ.get("SHOWCASE_SIGN_IDENTITY", "-")
     profile = os.environ.get("SHOWCASE_NOTARY_PROFILE")
-    if profile and identity == "-":
+    # CI notarizes with an App Store Connect API key instead of a keychain profile.
+    api_key = os.environ.get("SHOWCASE_NOTARY_KEY")
+    if api_key:
+        credentials = ["--key", api_key, "--key-id", os.environ["SHOWCASE_NOTARY_KEY_ID"],
+                       "--issuer", os.environ["SHOWCASE_NOTARY_ISSUER"]]
+    elif profile:
+        credentials = ["--keychain-profile", profile]
+    else:
+        credentials = None
+    notarize = credentials is not None
+    if notarize and identity == "-":
         parser.error("notarization requires SHOWCASE_SIGN_IDENTITY")
     filename = f"gpuicn-workspace-macos-{architecture}.zip"
     archive = output / filename
@@ -78,8 +88,8 @@ def main():
         run(*signing, str(app))
         run("codesign", "--verify", "--deep", "--strict", str(app))
         run("ditto", "-c", "-k", "--sequesterRsrc", "--keepParent", str(app), str(archive))
-        if profile:
-            run("xcrun", "notarytool", "submit", str(archive), "--keychain-profile", profile, "--wait")
+        if notarize:
+            run("xcrun", "notarytool", "submit", str(archive), *credentials, "--wait")
             run("xcrun", "stapler", "staple", str(app))
             run("xcrun", "stapler", "validate", str(app))
             run("spctl", "--assess", "--type", "execute", str(app))
@@ -96,9 +106,9 @@ def main():
     (output / "showcase.json").write_text(json.dumps({
         "url": f"/downloads/{filename}", "architecture": architecture,
         "bytes": archive.stat().st_size, "sha256": digest, "build": build,
-        "notarized": bool(profile), "version": version,
+        "notarized": notarize, "version": version,
     }, indent=2) + "\n")
-    print(f"Packaged {archive} ({build}); notarized: {bool(profile)}")
+    print(f"Packaged {archive} ({build}); notarized: {notarize}")
 
 
 if __name__ == "__main__":
