@@ -18,8 +18,15 @@ The application owns all of the data, and gpuicn ships none:
 - `set_custom` adds a "Custom" category from `(name, ImageSource)` pairs,
   for server emoji the application has already resolved. The picker never
   fetches.
-- `set_recents` lists shortcodes first as "Recently used"; names the catalog
-  lacks are skipped. The application updates it after each pick.
+- `set_frequent` and `set_recents` list shortcodes first, as "Frequently
+  used" and "Recently used"; names the catalog lacks are skipped, and a
+  skin-tone variant's name finds its base emoji. The application updates them
+  after each pick.
+- `Emoji::skin_tones` adds the five tone variants, each with its own
+  shortcode. The footer's six swatches choose the tone, emitting
+  `EmojiPickerEvent::SkinTone` so the application can save it, and
+  `set_skin_tone` restores it. Emoji with variants show and report the chosen
+  tone; others are unchanged.
 
 Search filters once the query reaches two characters (`set_min_query`), as in
 Mattermost; shorter queries show every category. Names that start with the
@@ -32,5 +39,4 @@ same Escape close a hosting popover. A click on a tab jumps to that category.
 The grid is a `ListBox` of `ListBoxOption` cells named `:shortcode:`, and the
 tabs are a `TabList`.
 
-Skin tones and a frequency-ranked "Frequently used" are left to a later
-release; until then the application can order `set_recents` by frequency.
+The skin-tone swatches are a `RadioGroup` of named `RadioButton`s.

@@ -948,6 +948,7 @@ impl Showcase {
                 let state = cx.new(|cx| {
                     let mut state = EmojiPickerState::new(emoji_catalog(), window, cx);
                     state.set_custom([("arya".into(), avatar.into())], cx);
+                    state.set_frequent(["thumbsup", "tada", "rocket", "eyes", "100"], cx);
                     state.set_recents(["tada", "thumbsup", "eyes", "arya"], cx);
                     state
                 });
@@ -971,6 +972,10 @@ impl Showcase {
                                 format!("Picked :{name}:")
                             }
                             EmojiPickerEvent::Cancel => "Closed".into(),
+                            EmojiPickerEvent::SkinTone(tone) => match tone {
+                                Some(tone) => format!("Skin tone {}", tone + 1),
+                                None => "Default skin tone".into(),
+                            },
                         };
                         let _ = owner.update(cx, |this, cx| {
                             this.demo_action = action;
@@ -4420,11 +4425,41 @@ fn lightbox_images() -> Vec<LightboxImage> {
 
 /// A small sample: applications supply the full Unicode set and its shortcodes.
 fn emoji_catalog() -> Vec<EmojiCategory> {
+    // Hands come in five skin tones, named like Mattermost's `_tone1` variants.
+    let toned = [
+        "wave",
+        "raised_hand",
+        "ok_hand",
+        "v",
+        "crossed_fingers",
+        "point_up",
+        "thumbsup",
+        "thumbsdown",
+        "clap",
+        "raised_hands",
+        "pray",
+        "muscle",
+        "writing_hand",
+    ];
     let category = |name: &'static str, icon, emoji: &[(&'static str, &'static str)]| {
         EmojiCategory::new(
             name,
             icon,
-            emoji.iter().map(|(name, glyph)| Emoji::new(*name, *glyph)),
+            emoji.iter().map(|(name, glyph)| {
+                let emoji = Emoji::new(*name, *glyph);
+                if !toned.contains(name) {
+                    return emoji;
+                }
+                let base = glyph.trim_end_matches('\u{fe0f}');
+                emoji.skin_tones(["🏻", "🏼", "🏽", "🏾", "🏿"].iter().enumerate().map(
+                    |(tone, modifier)| {
+                        Emoji::new(
+                            format!("{name}_tone{}", tone + 1),
+                            format!("{base}{modifier}"),
+                        )
+                    },
+                ))
+            }),
         )
     };
     vec![

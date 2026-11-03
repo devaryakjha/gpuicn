@@ -33,6 +33,8 @@ pub struct Emoji {
     pub image: Option<ImageSource>,
     /// Extra words search matches, such as aliases.
     pub keywords: Vec<SharedString>,
+    /// Skin-tone variants, lightest first, each with its own shortcode.
+    pub skin_tones: Vec<Emoji>,
 }
 
 impl Emoji {
@@ -43,6 +45,7 @@ impl Emoji {
             glyph: Some(glyph.into()),
             image: None,
             keywords: Vec::new(),
+            skin_tones: Vec::new(),
         }
     }
     /// A custom emoji drawn from an image the application supplies.
@@ -52,6 +55,7 @@ impl Emoji {
             glyph: None,
             image: Some(image.into()),
             keywords: Vec::new(),
+            skin_tones: Vec::new(),
         }
     }
     /// Adds words search should also match.
@@ -59,7 +63,33 @@ impl Emoji {
         self.keywords = keywords.into_iter().map(Into::into).collect();
         self
     }
+    /// Adds the five skin-tone variants, lightest first, such as
+    /// `Emoji::new("thumbsup_tone1", "👍🏻")`. The picker shows and reports the
+    /// variant for the chosen skin tone.
+    pub fn skin_tones(mut self, variants: impl IntoIterator<Item = Emoji>) -> Self {
+        self.skin_tones = variants.into_iter().collect();
+        self
+    }
+    /// This emoji in skin tone `tone` (0 is lightest), or itself when it has
+    /// no variant for that tone.
+    pub fn in_tone(&self, tone: Option<usize>) -> &Emoji {
+        tone.and_then(|tone| self.skin_tones.get(tone))
+            .unwrap_or(self)
+    }
 }
+
+/// The number of skin tones after the default yellow.
+pub const SKIN_TONES: usize = 5;
+const TONE_SWATCHES: [u32; SKIN_TONES + 1] =
+    [0xffc93a, 0xf7dece, 0xf3d2a2, 0xd5ab88, 0xaf7e57, 0x7c533e];
+const TONE_NAMES: [&str; SKIN_TONES + 1] = [
+    "Default skin tone",
+    "Light skin tone",
+    "Medium-light skin tone",
+    "Medium skin tone",
+    "Medium-dark skin tone",
+    "Dark skin tone",
+];
 
 /// A titled group of emoji with a tab icon.
 #[derive(Clone)]
@@ -95,6 +125,9 @@ pub enum EmojiPickerEvent {
     Pick(SharedString),
     /// Escape was pressed with an empty query.
     Cancel,
+    /// The reader chose a skin tone (`None` is the default yellow). The
+    /// application saves it and passes it back with `set_skin_tone`.
+    SkinTone(Option<usize>),
 }
 
 /// A grid row: a section heading or up to `COLUMNS` emoji.
@@ -118,6 +151,8 @@ struct Section {
 pub struct EmojiPickerState {
     categories: Vec<EmojiCategory>,
     recents: Vec<SharedString>,
+    frequent: Vec<SharedString>,
+    skin_tone: Option<usize>,
     input: Entity<InputState>,
     min_query: usize,
     sections: Vec<Section>,
@@ -174,6 +209,8 @@ impl EmojiPickerState {
         let mut state = Self {
             categories: categories.into_iter().collect(),
             recents: Vec::new(),
+            frequent: Vec::new(),
+            skin_tone: None,
             input,
             min_query: 2,
             sections: Vec::new(),
@@ -225,6 +262,29 @@ impl EmojiPickerState {
         self.rebuild(cx);
     }
 
+    /// Shows these shortcodes first, as "Frequently used", for example the
+    /// application's most-picked emoji. Names the catalog lacks are skipped.
+    pub fn set_frequent(
+        &mut self,
+        frequent: impl IntoIterator<Item = impl Into<SharedString>>,
+        cx: &mut Context<Self>,
+    ) {
+        self.frequent = frequent.into_iter().map(Into::into).collect();
+        self.rebuild(cx);
+    }
+
+    /// Shows emoji with skin-tone variants in tone `tone` (0 is lightest;
+    /// `None` is the default yellow).
+    pub fn set_skin_tone(&mut self, tone: Option<usize>, cx: &mut Context<Self>) {
+        self.skin_tone = tone.filter(|tone| *tone < SKIN_TONES);
+        cx.notify();
+    }
+
+    /// The chosen skin tone.
+    pub fn skin_tone(&self) -> Option<usize> {
+        self.skin_tone
+    }
+
     /// How many characters the query needs before it filters. Defaults to 2;
     /// shorter queries show every category.
     pub fn set_min_query(&mut self, min: usize, cx: &mut Context<Self>) {
@@ -250,11 +310,11 @@ impl EmojiPickerState {
         self.rebuild(cx);
     }
 
-    /// The highlighted emoji, which Enter picks.
+    /// The highlighted emoji in the chosen skin tone, which Enter picks.
     pub fn highlighted(&self) -> Option<&Emoji> {
         let (section, index) = self.highlighted?;
         let (category, emoji) = *self.sections.get(section)?.emoji.get(index)?;
-        Some(&self.categories[category].emoji[emoji])
+        Some(self.categories[category].emoji[emoji].in_tone(self.skin_tone))
     }
 
     /// How many emoji are listed, counting recents.
@@ -270,6 +330,7 @@ impl EmojiPickerState {
         self.input.read(cx).focus_handle(cx).focus(window, cx);
     }
 
+    /// Finds an emoji by its name or one of its skin-tone variants' names.
     fn find(&self, name: &str) -> Option<(usize, usize)> {
         self.categories
             .iter()
@@ -278,9 +339,31 @@ impl EmojiPickerState {
                 group
                     .emoji
                     .iter()
-                    .position(|emoji| emoji.name == name)
+                    .position(|emoji| {
+                        emoji.name == name || emoji.skin_tones.iter().any(|tone| tone.name == name)
+                    })
                     .map(|index| (category, index))
             })
+    }
+
+    fn named_section(
+        &self,
+        names: &[SharedString],
+        title: &str,
+        icon: LucideIcon,
+    ) -> Option<Section> {
+        let mut emoji: Vec<_> = Vec::new();
+        for at in names.iter().filter_map(|name| self.find(name)) {
+            if !emoji.contains(&at) {
+                emoji.push(at);
+            }
+        }
+        (!emoji.is_empty()).then(|| Section {
+            name: title.to_string().into(),
+            icon,
+            emoji,
+            tab: true,
+        })
     }
 
     fn rebuild(&mut self, cx: &mut Context<Self>) {
@@ -305,19 +388,12 @@ impl EmojiPickerState {
                 tab: false,
             }]
         } else {
-            let recents: Vec<_> = self
-                .recents
-                .iter()
-                .filter_map(|name| self.find(name))
-                .collect();
-            let recent = (!recents.is_empty()).then(|| Section {
-                name: "Recently used".into(),
-                icon: LucideIcon::Clock,
-                emoji: recents,
-                tab: true,
-            });
-            recent
+            let frequent =
+                self.named_section(&self.frequent, "Frequently used", LucideIcon::TrendingUp);
+            let recent = self.named_section(&self.recents, "Recently used", LucideIcon::Clock);
+            frequent
                 .into_iter()
+                .chain(recent)
                 .chain(
                     self.categories
                         .iter()
@@ -562,7 +638,8 @@ impl Render for EmojiPickerState {
                             .flex()
                             .children(cells.clone().map(|index| {
                                 let (category, at) = this.sections[*section].emoji[index];
-                                let emoji = &this.categories[category].emoji[at];
+                                let emoji =
+                                    this.categories[category].emoji[at].in_tone(this.skin_tone);
                                 let selected = highlighted == Some((*section, index));
                                 let target = (*section, index);
                                 let name = emoji.name.clone();
@@ -641,6 +718,35 @@ impl Render for EmojiPickerState {
             .collect::<Vec<_>>();
 
         let preview = self.highlighted().cloned();
+        let tones = (0..=SKIN_TONES)
+            .map(|swatch| {
+                let tone = swatch.checked_sub(1);
+                let checked = tone == self.skin_tone;
+                div()
+                    .id((id.clone(), SharedString::from(format!("tone-{swatch}"))))
+                    .role(Role::RadioButton)
+                    .aria_label(TONE_NAMES[swatch])
+                    .aria_toggled(if checked {
+                        gpui_kit::accesskit::Toggled::True
+                    } else {
+                        gpui_kit::accesskit::Toggled::False
+                    })
+                    .size(theme.space(4.))
+                    .rounded_full()
+                    .bg(gpui_kit::rgb(TONE_SWATCHES[swatch]))
+                    .border_2()
+                    .border_color(if checked {
+                        gpui_kit::Hsla::from(colors.ring)
+                    } else {
+                        gpui_kit::transparent_black()
+                    })
+                    .cursor_pointer()
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.set_skin_tone(tone, cx);
+                        cx.emit(EmojiPickerEvent::SkinTone(tone));
+                    }))
+            })
+            .collect::<Vec<_>>();
         div()
             .id(id.clone())
             .key_context("EmojiPicker")
@@ -719,6 +825,7 @@ impl Render for EmojiPickerState {
                     .when_some(preview, |footer, emoji| {
                         footer.child(emoji_face(&emoji, theme.space(7.))).child(
                             div()
+                                .flex_1()
                                 .min_w_0()
                                 .overflow_hidden()
                                 .text_ellipsis()
@@ -726,7 +833,17 @@ impl Render for EmojiPickerState {
                                 .text_color(colors.muted_foreground)
                                 .child(format!(":{}:", emoji.name)),
                         )
-                    }),
+                    })
+                    .child(
+                        div()
+                            .id((id.clone(), "tones"))
+                            .role(Role::RadioGroup)
+                            .aria_label("Skin tone")
+                            .ml_auto()
+                            .flex()
+                            .gap(theme.space(1.))
+                            .children(tones),
+                    ),
             )
     }
 }

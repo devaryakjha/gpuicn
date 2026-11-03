@@ -557,3 +557,71 @@ fn lightbox_pages_zooms_and_closes_from_the_keyboard(cx: &mut TestAppContext) {
     cx.simulate_keystrokes("escape");
     assert!(!handle.is_open());
 }
+
+#[gpui_kit::test]
+fn emoji_picker_skin_tones_and_frequently_used(cx: &mut TestAppContext) {
+    use gpui_icons::LucideIcon;
+    cx.update(gpuicn::init);
+    let events = Rc::new(RefCell::new(Vec::new()));
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let state = cx.new(|cx| {
+            let mut state = EmojiPickerState::new(
+                [EmojiCategory::new(
+                    "People",
+                    LucideIcon::Hand,
+                    [
+                        Emoji::new("wave", "👋").skin_tones(
+                            ["🏻", "🏼", "🏽", "🏾", "🏿"].iter().enumerate().map(
+                                |(tone, modifier)| {
+                                    Emoji::new(
+                                        format!("wave_tone{}", tone + 1),
+                                        format!("👋{modifier}"),
+                                    )
+                                },
+                            ),
+                        ),
+                        Emoji::new("eyes", "👀"),
+                    ],
+                )],
+                window,
+                cx,
+            );
+            // Frequently used comes before recents; a tone variant's name finds its base.
+            state.set_frequent(["eyes"], cx);
+            state.set_recents(["wave_tone3", "eyes"], cx);
+            state
+        });
+        let sink = events.clone();
+        cx.subscribe(&state, move |_, _, event: &EmojiPickerEvent, _| {
+            sink.borrow_mut().push(event.clone())
+        })
+        .detach();
+        PickerView { state }
+    });
+    let state = cx.update(|window, cx| {
+        window.activate_window();
+        let state = view.read(cx).state.clone();
+        state.update(cx, |state, cx| state.focus(window, cx));
+        window.draw(cx).clear(cx);
+        state
+    });
+    // eyes (frequent), wave + eyes (recent), wave + eyes (People).
+    cx.update(|_, cx| assert_eq!(state.read(cx).visible_count(), 5));
+    cx.simulate_keystrokes("right enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&EmojiPickerEvent::Pick("wave".into()))
+    );
+    cx.update(|_, cx| state.update(cx, |state, cx| state.set_skin_tone(Some(2), cx)));
+    cx.simulate_keystrokes("enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&EmojiPickerEvent::Pick("wave_tone3".into()))
+    );
+    // Emoji without variants are unchanged.
+    cx.simulate_keystrokes("right enter");
+    assert_eq!(
+        events.borrow().last(),
+        Some(&EmojiPickerEvent::Pick("eyes".into()))
+    );
+}
