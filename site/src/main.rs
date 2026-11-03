@@ -1062,12 +1062,11 @@ impl Showcase {
                     })
                     .child(
                         // GPUI clips to a rectangle, so the image takes the inner radius.
+                        // Layout otherwise sizes an image by its own aspect ratio,
+                        // so a tall image would overflow the frame's rounded clip.
                         gpui_kit::img(image.source)
                             .size_full()
-                            // An image's aspect ratio sets a minimum size, so
-                            // tall images would overflow the frame's height.
-                            .min_w_0()
-                            .min_h_0()
+                            .aspect_ratio(144. / 96.)
                             .rounded(theme.radius.lg - px(1.))
                             .object_fit(gpui_kit::ObjectFit::Cover),
                     )

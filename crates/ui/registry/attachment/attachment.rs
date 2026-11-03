@@ -222,12 +222,11 @@ impl RenderOnce for Attachment {
             Some(source) => root
                 .size(theme.space(16.))
                 .child(
+                    // Layout otherwise sizes an image by its own aspect ratio,
+                    // so a non-square image would overflow the rounded clip.
                     img(source)
                         .size_full()
-                        // An image's aspect ratio sets a minimum size, so
-                        // non-square images would overflow the thumbnail.
-                        .min_w_0()
-                        .min_h_0()
+                        .aspect_square()
                         .rounded(inner_radius)
                         .object_fit(ObjectFit::Cover)
                         .when(progress.is_some() || failed, |image| image.opacity(0.5)),
