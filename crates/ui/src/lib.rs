@@ -9,6 +9,8 @@
 pub mod accordion;
 #[path = "../registry/alert_dialog/alert_dialog.rs"]
 pub mod alert_dialog;
+#[path = "../registry/app/app.rs"]
+pub mod app;
 #[path = "../registry/attachment/attachment.rs"]
 pub mod attachment;
 #[path = "../registry/autocomplete/autocomplete.rs"]
@@ -127,7 +129,9 @@ pub mod virtual_list;
 
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use checkbox::Checkbox;
-pub use theme::{ThemeMode, UiColors, UiFonts, UiRadius, UiShadows, UiSpacing, UiTheme};
+pub use theme::{
+    Appearance, ThemeMode, UiColors, UiFonts, UiRadius, UiShadows, UiSpacing, UiTheme,
+};
 
 /// Installs the default theme and all shared keyboard/component behavior.
 pub fn init(cx: &mut gpui_kit::App) {

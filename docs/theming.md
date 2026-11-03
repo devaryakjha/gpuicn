@@ -58,17 +58,47 @@ button.focus_visible(|style| focus::ring(style, &theme)); // the 3px outer ring 
 - `clipped_image` and `round_image` clip pictures to a radius without the overflow workaround.
 - `dismiss::on_outside` closes a layer on outside press or Escape; `hover_reveal` shows actions on hover without a re-render.
 
+## Base color, radius and appearance
+
+`gpuicn init` writes `assets/theme.css` from one of shadcn's base colors and
+generates `src/ui/app_theme.rs`, so the starter is:
+
+```rust
+ui::app::run(
+    AppConfig::new("My App")
+        .themes(app_theme::light(), app_theme::dark())
+        .appearance(app_theme::APPEARANCE),
+    |_, _| Root,
+);
+```
+
+`app::run` opens the platform with the Lucide assets, loads the bundled Geist
+fonts, installs the pair with `UiTheme::set_pair`, applies the `Appearance`
+(`Light`, `Dark` or `System`) and keeps it in step with the operating system
+through `theme::follow_system`. Change any of it from the shell:
+
+```sh
+gpuicn theme set --base-color zinc --radius 0.5rem --appearance dark
+```
+
+In code, `UiTheme::set_pair(cx, light, dark)` installs a pair and
+`UiTheme::set_appearance(cx, Appearance::Dark)` picks one; a window that
+calls `theme::follow_system(window, cx)` swaps palettes when the OS does.
+`AppConfig::install(cx)` does the setup without opening a window, for
+applications that open their own.
+
 ## Import a shadcn theme
 
-Any shadcn theme CSS works, including the output of the shadcn theme picker and
-tweakcn. Paste it into your app and build both modes:
+Any shadcn theme CSS works, including the output of the shadcn theme editor and
+tweakcn. `gpuicn theme import theme.css` (a path or URL) copies it to
+`assets/theme.css` and regenerates `app_theme.rs`. To do the same by hand:
 
 ```rust
 const THEME_CSS: &str = include_str!("theme.css");
 
 let light = UiTheme::from_shadcn_css(THEME_CSS, ThemeMode::Light)?;
 let dark = UiTheme::from_shadcn_css(THEME_CSS, ThemeMode::Dark)?;
-UiTheme::set(cx, if prefers_dark { dark } else { light });
+UiTheme::set_pair(cx, light, dark);
 ```
 
 Light reads `:root`; dark reads `:root` then `.dark`. Colors may be

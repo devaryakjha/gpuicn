@@ -21,15 +21,54 @@ existing app, run `gpuicn init` from its root. `init` works from the release the
 CLI was built from, so the registry, Cargo pins and fonts always match
 `gpuicn --version`. It:
 
-- writes `gpuicn.toml` pointing at that release's registry snapshot;
+- writes `gpuicn.toml` pointing at that release's registry snapshot, with the
+  theme you chose (`--base-color`, `--radius`, `--appearance`, or `--theme` for
+  a shadcn CSS file or URL);
 - adds the dependencies below to `Cargo.toml`, keeping any you already declare
   and warning when yours differ;
 - downloads Geist and its license into `assets/fonts/`, checking each font's SHA-256;
-- installs Button and the theme, then writes a starter `src/main.rs`, but only
-  when `src/main.rs` is missing or still the `cargo new` default.
+- writes `assets/theme.css` from the base color and generates
+  `src/ui/app_theme.rs`, whose `light()`, `dark()` and `APPEARANCE` the starter
+  passes to `ui::app::run`;
+- installs the theme and `app`, then Button and a starter `src/main.rs`, but
+  only when `src/main.rs` is missing or still the `cargo new` default. Pass
+  `--all` to install every component.
 
 Running `init` again is safe: it keeps existing files and fills in what is
 missing. Use `gpuicn init --config-only` to create only `gpuicn.toml`.
+
+## Theme
+
+```sh
+gpuicn theme set --base-color stone            # neutral, stone, zinc, mauve, olive, mist or taupe
+gpuicn theme set --radius 0.5rem --appearance dark
+gpuicn theme import theme.css                  # or a URL; the shadcn theme editor's CSS works
+gpuicn theme preview                           # every token, light and dark
+```
+
+The base colors are shadcn 4.19.0's own. `theme set` rewrites
+`assets/theme.css` and `src/ui/app_theme.rs`; `theme import` copies your CSS
+there instead and clears the base color in `gpuicn.toml`, so later `--radius`
+changes apply to your CSS. Edit `assets/theme.css` by hand when you prefer:
+`init` keeps an edited file, and `theme set` replaces it. See
+[theming](theming.md) for what the CSS may contain.
+
+## Update and doctor
+
+```sh
+gpuicn update                 # to the latest release
+gpuicn update --to 0.9.0      # to a release; --dry-run shows the changes
+gpuicn update --overwrite     # also replace installed files with the release's
+gpuicn doctor                 # exit 1 with a fix line per finding
+```
+
+`update` points `gpuicn.toml` at the release's registry, replaces the Cargo
+pins with that release's, fetches fonts you lack, regenerates the theme files,
+and then runs `status` so you can `diff` before `--overwrite`. It ends by
+printing the `cargo install` line for the matching CLI. `doctor` checks the
+config version, the registry release against the CLI, the Cargo pins, the
+fonts and their license, `assets/theme.css`, `app_theme.rs`, how `main.rs`
+starts, and whether installed components match the registry.
 
 ## Crate mode
 
@@ -89,19 +128,25 @@ gpuicn list
 gpuicn add button
 ```
 
-`gpuicn.toml` contains only the registry and destination. Paths resolve beside
-this config; an HTTP(S) URL or a local directory can serve as the registry.
+`gpuicn.toml` holds the registry, the destination and the theme. Paths resolve
+beside this config; an HTTP(S) URL or a local directory can serve as the
+registry. Version 1 configs (without `[theme]`) still load; `theme set` and
+`update` rewrite them as version 2.
 
 ```toml
-version = 1
+version = 2
 registry = "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.8.0/site/pages/r"
 output = "src/ui"
+
+[theme]
+base_color = "neutral"
+appearance = "system"
 ```
 
 The installer copies Button and its shared theme and adds declarations to
 `src/ui/mod.rs`, preserving caller code. Add `mod ui;` to your crate root and
-call `ui::theme::init(cx)` once at startup; components panic with that
-instruction if the theme is missing. No Node.js, npm, `components.json`, or
+start through `ui::app::run`, or call `ui::theme::init(cx)` once at startup;
+components panic with that instruction if the theme is missing. No Node.js, npm, `components.json`, or
 `tsconfig.json` is needed. The copied Rust files have no CLI runtime
 dependency; you can edit, move, or copy them yourself.
 
@@ -136,7 +181,9 @@ gpuicn remove carousel   # delete its own files and mod.rs lines
 component counts as installed when its own module, such as `src/ui/dialog.rs`,
 exists. `remove` keeps files that another installed component still uses and
 refuses to delete files you have edited unless you pass `--force`; use
-`--dry-run` to preview.
+`--dry-run` to preview. `remove --unused` finds the installed components no
+Rust file outside `src/ui` names (as `ui::dialog::…` or in a `use` list) and
+removes them; `theme` and `app` always stay.
 
 To adopt a newer gpuicn release, reinstall the CLI from its new tag with
 `--force` and update the registry URL in `gpuicn.toml` to that same tag. First

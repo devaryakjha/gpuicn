@@ -12,6 +12,14 @@ use std::{
 };
 use tempfile::NamedTempFile;
 
+mod maintain;
+mod theme;
+
+use maintain::{doctor, unused_components, update};
+use theme::{
+    AppearanceSetting, ThemeConfig, assets_dir, check_theme_css, write_config, write_theme_files,
+};
+
 /// Raw files from the release this CLI was built from, so the default registry,
 /// fonts, and Cargo pins always match the CLI version.
 const RELEASE: &str = concat!(
@@ -88,6 +96,11 @@ enum Command {
         /// component when you want to edit it.
         #[arg(long = "crate")]
         crate_mode: bool,
+        #[command(flatten)]
+        theme: ThemeArgs,
+        /// Also install every component.
+        #[arg(long)]
+        all: bool,
     },
     /// Create a new Cargo app and set it up like `init`, ready for `cargo run`.
     New {
@@ -98,6 +111,11 @@ enum Command {
         /// Depend on the `gpuicn` crate instead of copying source.
         #[arg(long = "crate")]
         crate_mode: bool,
+        #[command(flatten)]
+        theme: ThemeArgs,
+        /// Also install every component.
+        #[arg(long)]
+        all: bool,
     },
     /// List the components available in the configured registry.
     List,
@@ -112,6 +130,9 @@ enum Command {
     /// Files shared with other installed components are kept.
     Remove {
         components: Vec<String>,
+        /// Remove every installed component no file outside the output directory uses.
+        #[arg(long)]
+        unused: bool,
         /// Also delete files you have edited.
         #[arg(long)]
         force: bool,
@@ -142,6 +163,25 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Change the app's theme: a shadcn base color, radius and appearance, or imported CSS.
+    Theme {
+        #[command(subcommand)]
+        action: ThemeAction,
+    },
+    /// Move the app to a newer gpuicn release: gpuicn.toml, Cargo pins, fonts and theme files.
+    Update {
+        /// Release version, such as 0.9.0; the latest release by default.
+        #[arg(long)]
+        to: Option<String>,
+        /// Also replace installed component files with the release's.
+        #[arg(long)]
+        overwrite: bool,
+        /// Report changes without writing files.
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Check the app against this CLI's release and print a fix for each finding.
+    Doctor,
     /// Build an open, shadcn-compatible source registry from registry.toml and crates/ui/registry/.
     Build {
         #[arg(long, default_value = ".")]
@@ -151,7 +191,43 @@ enum Command {
     },
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(clap::Args, Default)]
+struct ThemeArgs {
+    /// shadcn base color: neutral, stone, zinc, mauve, olive, mist or taupe.
+    #[arg(long)]
+    base_color: Option<String>,
+    /// Corner radius as CSS, such as 0.625rem.
+    #[arg(long)]
+    radius: Option<String>,
+    /// Open in light or dark mode, or follow the system.
+    #[arg(long, value_enum)]
+    appearance: Option<AppearanceSetting>,
+    /// A shadcn theme CSS file or URL to use instead of a base color.
+    #[arg(long, conflicts_with = "base_color")]
+    theme: Option<String>,
+}
+
+#[derive(Subcommand)]
+enum ThemeAction {
+    /// Use a shadcn theme CSS (a file or URL with `:root` and `.dark` blocks).
+    Import { source: String },
+    /// Set the base color, radius or appearance and regenerate the theme files.
+    Set {
+        /// shadcn base color: neutral, stone, zinc, mauve, olive, mist or taupe.
+        #[arg(long)]
+        base_color: Option<String>,
+        /// Corner radius as CSS, such as 0.625rem.
+        #[arg(long)]
+        radius: Option<String>,
+        /// Open in light or dark mode, or follow the system.
+        #[arg(long, value_enum)]
+        appearance: Option<AppearanceSetting>,
+    },
+    /// Print every theme token in light and dark mode.
+    Preview,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Config {
     version: u32,
@@ -159,6 +235,8 @@ struct Config {
     output: PathBuf,
     #[serde(default, skip_serializing_if = "Mode::is_source")]
     mode: Mode,
+    #[serde(default)]
+    theme: ThemeConfig,
 }
 
 /// How an app gets components: copied source, or the `gpuicn` crate plus ejected copies.
@@ -251,11 +329,25 @@ fn run(cli: Cli) -> Result<()> {
             output,
             config_only,
             crate_mode,
-        } => init(&cli.config, cli.registry, output, config_only, crate_mode)?,
+            theme,
+            all,
+        } => init(
+            &cli.config,
+            cli.registry,
+            InitOptions {
+                output,
+                config_only,
+                crate_mode,
+                theme,
+                all,
+            },
+        )?,
         Command::New {
             path,
             output,
             crate_mode,
+            theme,
+            all,
         } => {
             ensure!(
                 fs::symlink_metadata(&path).is_err(),
@@ -272,9 +364,13 @@ fn run(cli: Cli) -> Result<()> {
             init(
                 &path.join("gpuicn.toml"),
                 cli.registry,
-                output,
-                false,
-                crate_mode,
+                InitOptions {
+                    output,
+                    config_only: false,
+                    crate_mode,
+                    theme,
+                    all,
+                },
             )?;
             println!("Next: cd {} && cargo run", path.display());
         }
@@ -294,10 +390,43 @@ fn run(cli: Cli) -> Result<()> {
                 Command::Status => status(&source, &output, own)?,
                 Command::Diff { components } => diff(&source, &output, &components, own)?,
                 Command::Remove {
-                    components,
+                    mut components,
+                    unused,
                     force,
                     dry_run,
-                } => remove(&source, &output, &components, force, dry_run, own)?,
+                } => {
+                    ensure!(
+                        !unused || components.is_empty(),
+                        "use component names or --unused, not both"
+                    );
+                    if unused {
+                        let installed = installed_components(&source, &output)?;
+                        components = unused_components(&root, &output, &installed)?;
+                        if components.is_empty() {
+                            println!("Every installed component is used.");
+                            return Ok(());
+                        }
+                        println!("Unused: {}", components.join(", "));
+                    }
+                    remove(&source, &output, &components, force, dry_run, own)?
+                }
+                Command::Theme { action } => match action {
+                    ThemeAction::Import { source } => {
+                        theme::import(&root, &cli.config, config, &source)?
+                    }
+                    ThemeAction::Set {
+                        base_color,
+                        radius,
+                        appearance,
+                    } => theme::set(&root, &cli.config, config, base_color, radius, appearance)?,
+                    ThemeAction::Preview => theme::preview(&root, &config)?,
+                },
+                Command::Update {
+                    to,
+                    overwrite,
+                    dry_run,
+                } => update(&root, &cli.config, config, to, overwrite, dry_run)?,
+                Command::Doctor => doctor(&root, &cli.config, &config)?,
                 Command::Eject {
                     mut components,
                     all,
@@ -362,22 +491,47 @@ fn run(cli: Cli) -> Result<()> {
     Ok(())
 }
 
-fn init(
-    path: &Path,
-    registry: Option<String>,
+struct InitOptions {
     output: PathBuf,
     config_only: bool,
     crate_mode: bool,
-) -> Result<()> {
+    theme: ThemeArgs,
+    all: bool,
+}
+
+fn init(path: &Path, registry: Option<String>, options: InitOptions) -> Result<()> {
+    let InitOptions {
+        output,
+        config_only,
+        crate_mode,
+        theme,
+        all,
+    } = options;
+    let chosen_theme = theme.base_color.is_some()
+        || theme.radius.is_some()
+        || theme.appearance.is_some()
+        || theme.theme.is_some();
     if current_file(path)?.is_none() {
+        if let Some(name) = &theme.base_color {
+            theme::base_color_css(name)?;
+        }
         let config = Config {
-            version: 1,
+            version: 2,
             registry: registry.clone().unwrap_or_else(default_registry),
             output,
             mode: if crate_mode {
                 Mode::Crate
             } else {
                 Mode::Source
+            },
+            theme: ThemeConfig {
+                base_color: if theme.theme.is_some() {
+                    None
+                } else {
+                    Some(theme.base_color.clone().unwrap_or_else(|| "neutral".into()))
+                },
+                radius: theme.radius.clone(),
+                appearance: theme.appearance.unwrap_or_default(),
             },
         };
         let text = toml::to_string_pretty(&config)?;
@@ -394,11 +548,16 @@ fn init(
             "{} already exists; an existing config is never overwritten",
             path.display()
         );
+        ensure!(
+            !chosen_theme,
+            "{} already exists; `gpuicn theme set` and `gpuicn theme import` change its theme",
+            path.display()
+        );
         println!("Keep {}", path.display());
     }
     if config_only {
         println!(
-            "Run `gpuicn add button` next. Add `mod ui;` to your crate root and call `ui::theme::init(cx)` at application startup."
+            "Run `gpuicn add button` next. Add `mod ui;` to your crate root and start through `ui::app::run`, or call `ui::theme::init(cx)` at application startup."
         );
         return Ok(());
     }
@@ -408,7 +567,27 @@ fn init(
         "{} already uses source mode; set `mode = \"crate\"` in it to switch",
         path.display()
     );
-    setup(&config_root(path)?, &config)
+    let root = config_root(path)?;
+    if let Some(source) = &theme.theme {
+        let css = theme::read_css(source, &root)?;
+        check_theme_css(&css)
+            .with_context(|| format!("{source} is not a complete shadcn theme"))?;
+        let css_path = assets_dir(&root, &config.output).join("theme.css");
+        write_new(&css_path, css.as_bytes())?;
+    }
+    setup(&root, &config)?;
+    if all && config.mode == Mode::Source {
+        let source = Source::new(&config.registry, &root)?;
+        let components: Vec<_> = source
+            .index()?
+            .items
+            .into_iter()
+            .map(|item| item.name)
+            .collect();
+        let files = collect_files(&source, &components, false)?;
+        install(&root.join(&config.output), files, false, false)?;
+    }
+    Ok(())
 }
 
 fn read_config(path: &Path, registry: Option<String>) -> Result<Config> {
@@ -416,8 +595,8 @@ fn read_config(path: &Path, registry: Option<String>) -> Result<Config> {
         &fs::read_to_string(path).context("read gpuicn.toml; run `gpuicn init` first")?,
     )?;
     ensure!(
-        config.version == 1,
-        "unsupported config version {}",
+        matches!(config.version, 1 | 2),
+        "unsupported config version {}; this CLI reads versions 1 and 2",
         config.version
     );
     if let Some(registry) = registry {
@@ -815,7 +994,7 @@ fn setup(root: &Path, config: &Config) -> Result<()> {
         ),
     }
 
-    let fonts = root.join("assets/fonts");
+    let fonts = assets_dir(root, &config.output).join("fonts");
     let mut client = None;
     for (file, sha256) in FONTS {
         let path = fonts.join(file);
@@ -851,6 +1030,12 @@ fn setup(root: &Path, config: &Config) -> Result<()> {
         Mode::Crate => "use any `ui::<component>`; `gpuicn eject <component>` copies one to edit",
     };
     let output = root.join(&config.output);
+    if config.mode == Mode::Source {
+        // The theme and `app::run`, which the generated app_theme.rs and starter use.
+        let source = Source::new(&config.registry, root)?;
+        let files = collect_files(&source, &["app".into()], false)?;
+        install(&output, files, false, false)?;
+    }
     if config.mode == Mode::Crate {
         let mod_path = output.join("mod.rs");
         match current_file(&mod_path)? {
@@ -866,6 +1051,7 @@ fn setup(root: &Path, config: &Config) -> Result<()> {
             Some(_) => {}
         }
     }
+    write_theme_files(root, config, false)?;
     if starter {
         if config.mode == Mode::Source {
             let source = Source::new(&config.registry, root)?;
@@ -884,8 +1070,10 @@ fn setup(root: &Path, config: &Config) -> Result<()> {
         if !text.contains("mod ui;") {
             println!("Add `mod ui;` to your crate root.");
         }
-        if !text.contains("theme::init") {
-            println!("Call `ui::theme::init(cx)` once at application startup.");
+        if !text.contains("app::run") && !text.contains("theme::init") {
+            println!(
+                "Start through `ui::app::run(AppConfig::new(\"My App\").themes(ui::app_theme::light(), ui::app_theme::dark()), |_, _| Root)`, or call `ui::theme::init(cx)` once at startup."
+            );
         }
         println!("Then {next}; `gpuicn list` shows every component.");
     }
@@ -1553,16 +1741,20 @@ mod tests {
         );
 
         let config = Config {
-            version: 1,
+            version: 2,
             registry: "r".into(),
             output: "src/ui".into(),
             mode: Mode::Source,
+            theme: ThemeConfig::default(),
         };
-        assert!(!toml::to_string(&config)?.contains("mode"));
+        let text = toml::to_string(&config)?;
+        assert!(!text.contains("mode"));
+        assert!(text.contains("[theme]\nbase_color = \"neutral\"\nappearance = \"system\""));
         let config: Config = toml::from_str(
             "version = 1\nregistry = \"r\"\noutput = \"src/ui\"\nmode = \"crate\"\n",
         )?;
         assert_eq!(config.mode, Mode::Crate);
+        assert_eq!(config.theme, ThemeConfig::default());
         Ok(())
     }
     #[test]
@@ -1681,12 +1873,20 @@ mod tests {
             assert_eq!(geist[key].as_str(), Some(*sha), "{key}");
         }
         for (file, sha) in FONTS {
-            assert_eq!(
-                hex_sha256(&fs::read(repo.join("site/assets/fonts").join(file))?),
-                sha,
-                "{file}"
-            );
+            for dir in ["site/assets/fonts", "crates/ui/assets/fonts"] {
+                assert_eq!(
+                    hex_sha256(&fs::read(repo.join(dir).join(file))?),
+                    sha,
+                    "{dir}/{file}"
+                );
+            }
         }
+        assert!(STARTER.contains("app::run(") || STARTER.contains("run(\n"));
+        assert!(STARTER.contains("app_theme::light()"));
+        assert_eq!(
+            fs::read_to_string(repo.join("LICENSES/Geist-OFL-1.1"))?,
+            fs::read_to_string(repo.join("crates/ui/assets/fonts/OFL.txt"))?
+        );
         Ok(())
     }
     #[test]

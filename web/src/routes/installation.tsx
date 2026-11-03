@@ -79,7 +79,7 @@ function InstallationPage() {
           <CodeBlock
             language="toml"
             className="mt-3"
-            value={`version = 1\nregistry = "${registry}"\noutput = "src/ui"`}
+            value={`version = 2\nregistry = "${registry}"\noutput = "src/ui"\n\n[theme]\nbase_color = "neutral"\nappearance = "system"`}
           />
           <p className="mt-4 text-sm leading-6 text-muted-foreground">
             {release} is the current published release. Fixes made after that tag
@@ -150,9 +150,11 @@ function InstallationPage() {
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
             Replace <code className="text-sm">src/main.rs</code> with this
-            starter. It calls ui::theme::init(cx) to enable component actions
-            and keyboard navigation, loads the fonts, and renders a working
-            counter button.
+            starter. ui::app::run opens the window with the Lucide icons and
+            the Geist fonts, installs the light and dark themes generated from
+            assets/theme.css, follows the system appearance, and renders a
+            working counter button. gpuicn theme set changes the base color,
+            radius and appearance.
           </p>
           <CodeBlock className="mt-4" value={setup.starter} />
           <a

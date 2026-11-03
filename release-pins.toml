@@ -7,6 +7,8 @@ commit = "1773ecfeeb4a04366978d353e69b5c7ded78dcb2"
 style = "nova"
 base = "base-ui"
 theme = "neutral"
+# crates/cli/templates/base-colors/*.css, from apps/v4/registry/themes.ts at `commit`.
+base_colors = ["neutral", "stone", "zinc", "mauve", "olive", "mist", "taupe"]
 font_sans = "geist"
 font_mono = "geist-mono"
 

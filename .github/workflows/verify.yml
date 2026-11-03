@@ -40,6 +40,14 @@ jobs:
           bun scripts/sync-catalog.mjs
           GPUICN_RELEASE="$PWD" cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
           cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml add --all
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml doctor
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml theme set --base-color zinc --radius 0.5rem --appearance dark
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml theme import ../../crates/cli/templates/base-colors/stone.css
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml theme preview
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml remove --unused --dry-run
+          version="$(cargo pkgid -p gpuicn-cli | sed 's/.*[@#]//')"
+          GPUICN_RELEASE="$PWD" cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml update --to "$version" --dry-run
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml theme set --base-color neutral --appearance system
           cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
           cargo test --manifest-path fixtures/registry-install/Cargo.toml --bin registry-install-fixture --locked --features gpui_platform/runtime_shaders
       - name: Install with the stock shadcn CLI
@@ -76,8 +84,10 @@ jobs:
       - name: Set up and check a new app
         run: |
           cargo build -p gpuicn-cli --locked
-          GPUICN_RELEASE="$PWD" target/debug/gpuicn --registry "$PWD/site/pages/r" new "$RUNNER_TEMP/my-app"
+          GPUICN_RELEASE="$PWD" target/debug/gpuicn --registry "$PWD/site/pages/r" new --base-color mauve --radius 0.5rem --appearance dark "$RUNNER_TEMP/my-app"
           target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" add alert_dialog select
+          target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" doctor
+          target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" remove --unused --dry-run
           # Both throwaway apps share one GPUI build.
           CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/my-app/Cargo.toml" --features gpui_platform/runtime_shaders
       - name: Set up a crate-mode app and eject every component
@@ -85,6 +95,7 @@ jobs:
           GPUICN_RELEASE="$PWD" target/debug/gpuicn --registry "$PWD/site/pages/r" new --crate "$RUNNER_TEMP/crate-app"
           cargo add --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" gpuicn --path "$PWD/crates/ui"
           CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" --features gpui_platform/runtime_shaders
+          target/debug/gpuicn --config "$RUNNER_TEMP/crate-app/gpuicn.toml" theme set --base-color olive
           target/debug/gpuicn --config "$RUNNER_TEMP/crate-app/gpuicn.toml" eject --all
           CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" --features gpui_platform/runtime_shaders
 

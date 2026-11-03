@@ -26,14 +26,22 @@ components.
 
 ```sh
 cargo install gpuicn-cli --version 0.8.0 --locked
-gpuicn new my-app  # cargo new + pinned deps, Geist fonts, theme, Button and a starter window
+gpuicn new my-app --base-color zinc  # cargo new + pinned deps, Geist fonts, theme, Button and a starter window
 cd my-app && cargo run
 gpuicn add sidebar dialog
+gpuicn theme set --radius 0.5rem --appearance dark
 ```
 
 That's the whole setup. No Node.js is involved. In an existing app, run
 `gpuicn init` from its root instead of `gpuicn new`; it keeps everything you
 already have. Installing the CLI also adds `cargo gpuicn` as an alias.
+
+The starter `main.rs` is one call: `ui::app::run` opens the window with the
+Lucide icons, the Geist fonts and the light and dark themes generated from
+`assets/theme.css`, and follows the system appearance. Pick any of shadcn's
+base colors (neutral, stone, zinc, mauve, olive, mist, taupe), or
+`gpuicn theme import theme.css` with a theme from the shadcn theme editor or
+tweakcn.
 
 Then use components like any other Rust code in your crate:
 
@@ -74,7 +82,13 @@ crate, so every component reads the same theme.
 | `gpuicn diff [name…]` | The exact change an update would make |
 | `gpuicn add <name> --overwrite` | Replace your copy with the registry version |
 | `gpuicn remove <name>…` | Delete a component, keeping files others still use |
+| `gpuicn remove --unused` | Delete every installed component your code does not reference |
 | `gpuicn eject <name>…` | Crate mode: copy a component out of the crate to edit it |
+| `gpuicn theme set --base-color stone --radius 0.5rem --appearance dark` | Regenerate `assets/theme.css` and `src/ui/app_theme.rs` |
+| `gpuicn theme import <file or URL>` | Use a shadcn theme CSS instead of a base color |
+| `gpuicn theme preview` | Every theme token in light and dark mode |
+| `gpuicn update [--to 0.9.0] [--overwrite]` | Move gpuicn.toml, the Cargo pins and the fonts to a release |
+| `gpuicn doctor` | Check the app against the CLI's release, with a fix for each finding |
 
 ## Learn more
 

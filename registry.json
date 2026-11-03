@@ -83,6 +83,29 @@
       ]
     },
     {
+      "name": "app",
+      "type": "registry:item",
+      "title": "App",
+      "description": "One-call application start: icon assets, bundled Geist fonts, the theme pair and the first window.",
+      "files": [
+        {
+          "path": "registry/theme/primitives.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/primitives.rs"
+        },
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/app/app.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/app.rs"
+        }
+      ]
+    },
+    {
       "name": "attachment",
       "type": "registry:item",
       "title": "Attachment",

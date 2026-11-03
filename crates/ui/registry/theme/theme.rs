@@ -6,7 +6,8 @@
 use std::{sync::Arc, time::Duration};
 
 use gpui_kit::{
-    App, BoxShadow, ElementId, Global, Pixels, Rgba, SharedString, Styled, Window, black, px,
+    App, BoxShadow, ElementId, Global, Pixels, Rgba, SharedString, Styled, Subscription, Window,
+    WindowAppearance, black, px,
 };
 
 #[path = "primitives.rs"]
@@ -112,6 +113,49 @@ pub enum ThemeMode {
     Light,
     /// The Neutral dark palette.
     Dark,
+}
+
+/// Which of an application's two palettes is shown.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum Appearance {
+    /// Always the light palette.
+    Light,
+    /// Always the dark palette.
+    Dark,
+    /// The palette matching the operating system's window appearance.
+    #[default]
+    System,
+}
+
+impl Appearance {
+    /// The mode this appearance shows under the given system appearance.
+    pub fn resolve(self, system: WindowAppearance) -> ThemeMode {
+        match self {
+            Appearance::Light => ThemeMode::Light,
+            Appearance::Dark => ThemeMode::Dark,
+            Appearance::System => match system {
+                WindowAppearance::Dark | WindowAppearance::VibrantDark => ThemeMode::Dark,
+                WindowAppearance::Light | WindowAppearance::VibrantLight => ThemeMode::Light,
+            },
+        }
+    }
+}
+
+/// The application's light and dark themes and which one it shows.
+#[derive(Clone)]
+struct ThemePair {
+    light: UiTheme,
+    dark: UiTheme,
+    appearance: Appearance,
+}
+impl Global for ThemePair {}
+
+/// Swaps palettes when the operating system's appearance changes while the
+/// application follows it. Call it for each window the application opens and
+/// keep the subscription; `app::run` does this for the first window.
+pub fn follow_system(window: &mut Window, cx: &mut App) -> Subscription {
+    UiTheme::apply_appearance(cx);
+    window.observe_window_appearance(|_, cx| UiTheme::apply_appearance(cx))
 }
 
 /// Semantic colors consumed by installed components.
@@ -536,6 +580,59 @@ impl UiTheme {
     /// Creates the pinned Neutral dark theme.
     pub fn neutral_dark() -> Self {
         Self::new(ThemeMode::Dark, neutral_dark_colors())
+    }
+
+    /// Installs light and dark themes together and shows the one the current
+    /// [`Appearance`] selects (System until [`UiTheme::set_appearance`] says
+    /// otherwise). [`follow_system`] keeps the pair in step with the OS.
+    pub fn set_pair(cx: &mut App, light: Self, dark: Self) {
+        let appearance = cx
+            .try_global::<ThemePair>()
+            .map_or(Appearance::System, |pair| pair.appearance);
+        cx.set_global(ThemePair {
+            light,
+            dark,
+            appearance,
+        });
+        Self::apply_appearance(cx);
+    }
+
+    /// Chooses which of the installed pair to show. Without a pair, the
+    /// pinned Neutral palettes stand in.
+    pub fn set_appearance(cx: &mut App, appearance: Appearance) {
+        match cx.try_global::<ThemePair>() {
+            Some(_) => cx.global_mut::<ThemePair>().appearance = appearance,
+            None => cx.set_global(ThemePair {
+                light: Self::neutral_light(),
+                dark: Self::neutral_dark(),
+                appearance,
+            }),
+        }
+        Self::apply_appearance(cx);
+    }
+
+    /// The appearance the application asked for, System when none was set.
+    pub fn appearance(cx: &App) -> Appearance {
+        cx.try_global::<ThemePair>()
+            .map_or(Appearance::System, |pair| pair.appearance)
+    }
+
+    /// Installs the pair member the appearance selects, if a pair is installed.
+    fn apply_appearance(cx: &mut App) {
+        let Some(pair) = cx.try_global::<ThemePair>().cloned() else {
+            return;
+        };
+        let theme = match pair.appearance.resolve(cx.window_appearance()) {
+            ThemeMode::Light => pair.light,
+            ThemeMode::Dark => pair.dark,
+        };
+        let current = cx.try_global::<Self>();
+        if current
+            .is_some_and(|current| current.mode == theme.mode && current.colors == theme.colors)
+        {
+            return;
+        }
+        Self::set(cx, theme);
     }
 
     /// Installs a theme into the application.

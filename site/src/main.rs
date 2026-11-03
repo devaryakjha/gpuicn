@@ -219,6 +219,7 @@ fn launch(cx: &mut App) {
 enum Demo {
     Icons,
     Accordion,
+    App,
     AlertDialog,
     Autocomplete,
     Avatar,
@@ -284,6 +285,7 @@ impl Demo {
         match value {
             "icons" => Some(Self::Icons),
             "accordion" => Some(Self::Accordion),
+            "app" => Some(Self::App),
             "alert-dialog" => Some(Self::AlertDialog),
             "autocomplete" => Some(Self::Autocomplete),
             "avatar" => Some(Self::Avatar),
@@ -476,6 +478,7 @@ impl Showcase {
         match self.demo {
             Demo::Icons => self.icons_preview(cx).into_any_element(),
             Demo::Accordion => self.accordion_preview(window, cx).into_any_element(),
+            Demo::App => self.app_preview(cx).into_any_element(),
             Demo::AlertDialog => self.alert_dialog_preview(window, cx).into_any_element(),
             Demo::Autocomplete => self.autocomplete_preview(window, cx).into_any_element(),
             Demo::Avatar => self.avatar_preview(cx).into_any_element(),
@@ -1566,6 +1569,67 @@ impl Showcase {
                     )
                     .child(div().text_size(px(11.)).child(format!("{size:.0}")))
             }))
+    }
+
+    fn app_preview(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        use gpuicn::Appearance;
+        let theme = UiTheme::read(cx).clone();
+        let current = UiTheme::appearance(cx);
+        let choice = |label: &'static str, appearance: Appearance| {
+            Button::new(SharedString::from(format!("app-appearance-{label}")))
+                .variant(if current == appearance {
+                    ButtonVariant::Secondary
+                } else {
+                    ButtonVariant::Ghost
+                })
+                .size(ButtonSize::Sm)
+                .child(label)
+                .on_click(move |_, _, cx| UiTheme::set_appearance(cx, appearance))
+        };
+        div()
+            .w(px(420.))
+            .rounded(theme.radius.lg)
+            .border_1()
+            .border_color(theme.colors.border)
+            .bg(theme.colors.card)
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .px(px(16.))
+                    .py(px(10.))
+                    .border_b_1()
+                    .border_color(theme.colors.border)
+                    .child(
+                        div()
+                            .text_color(theme.colors.card_foreground)
+                            .font_weight(gpui_kit::FontWeight::MEDIUM)
+                            .child("My App"),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .gap(px(4.))
+                            .child(choice("Light", Appearance::Light))
+                            .child(choice("Dark", Appearance::Dark))
+                            .child(choice("System", Appearance::System)),
+                    ),
+            )
+            .child(
+                div()
+                    .px(px(16.))
+                    .py(px(20.))
+                    .flex()
+                    .flex_col()
+                    .gap(px(8.))
+                    .child(
+                        div()
+                            .text_color(theme.colors.muted_foreground)
+                            .child("app::run opens the window, loads Geist, installs the light and dark themes and follows the OS appearance."),
+                    )
+                    .child(Button::new("app-button").child("Count: 0")),
+            )
     }
 
     fn accordion_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
