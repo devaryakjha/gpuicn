@@ -1,7 +1,7 @@
 # Message List parity
 
 shadcn/ui has no virtualized transcript. Implementation:
-`crates/ui/registry/message_list/message_list.rs`, wrapping GPUI Kit 0.8.1's
+`crates/ui/registry/message_list/message_list.rs`, wrapping GPUI Kit 0.9.0's
 `MessageScroller`.
 
 Kit supplies variable-height virtualization over GPUI's `list`, tail following
@@ -19,6 +19,15 @@ treatment.
 GPUI's list measures rows as they are laid out. Give images and embeds their
 final size up front so the list does not jump when they load. Width changes
 remeasure rows; the anchor row stays in place.
+
+The scrollbar is gpuicn's, not the list's. GPUI counts an unmeasured row as
+0px, so a thumb fed by the list describes only the rows the reader has passed
+and jumps as more are measured. `MessageListScrollbar` measures every row the
+transcript lays out, estimates the content height as row count × average row
+height, and places the thumb from the row under the viewport's top edge; a
+drag scrolls to the row at that fraction of the transcript, and dragging to the
+bottom resumes following the tail. Pass one through `scrollbar_handle` to read
+`scrolled()` and `content_height()` from the application or its tests.
 
 Keyboard selection mode is opt-in. `track_focus` makes the transcript
 focusable (a click focuses it), `selected` names the row the application

@@ -1,6 +1,6 @@
 # Local desktop and distribution pass — 8 September 2026
 
-This is a local review build on `codex/v0.3-component-fidelity`. No release, commit, push, or deployment belongs to this pass. The running scope and remaining work are in [TODO.md](../TODO.md).
+This is a local review build on `codex/v0.3-component-fidelity`. No release, commit, push, or deployment belongs to this pass. Later work is tracked in GitHub issues.
 
 ## Changes ready to review
 

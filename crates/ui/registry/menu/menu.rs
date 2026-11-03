@@ -1,7 +1,10 @@
 //! Nova menus composed from Kit buttons and popup positioning.
 use super::{
     button::{ButtonSize, ButtonVariant, style_button},
-    theme::{UiTheme, apply_style},
+    theme::{
+        UiTheme, apply_style,
+        primitives::{disabled, surface},
+    },
 };
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::base::{Align, Button, ElementExt as _, Placement, Positioner};
@@ -380,15 +383,7 @@ impl Render for MenuState {
                 .min_w(t.space(40.))
                 .max_h(t.space(72.))
                 .overflow_y_scroll()
-                .p(t.space(1.))
-                .rounded(t.radius.lg)
-                .border_1()
-                .border_color(t.colors.border)
-                .bg(t.colors.popover)
-                .text_color(t.colors.popover_foreground)
-                .font_family(t.fonts.body.clone())
-                .text_size(t.text(14.))
-                .shadow(t.shadows.md.clone())
+                .map(|popup| surface::menu(popup, &t))
                 .on_prepaint(move |bounds, _, cx| {
                     entity.update(cx, |this, _| this.popup_bounds[depth] = bounds)
                 })
@@ -441,7 +436,7 @@ impl Render for MenuState {
                     .px(t.space(1.5))
                     .rounded(t.radius.sm)
                     .when(selected, |b| b.bg(t.colors.accent).aria_active_descendant())
-                    .when(item.disabled, |b| b.opacity(0.5))
+                    .map(|b| disabled::dim(b, item.disabled))
                     .when_some(item.checked, |b, checked| {
                         b.aria_toggled(if checked {
                             gpui_kit::Toggled::True

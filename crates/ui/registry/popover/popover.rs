@@ -1,7 +1,7 @@
 //! Nova surfaces for GPUI Kit's anchored popover.
 use super::{
     button::{ButtonSize, ButtonVariant, style_button},
-    theme::UiTheme,
+    theme::{UiTheme, primitives::surface},
 };
 use gpui_kit::base::Button;
 pub use gpui_kit::base::{Popover, PopoverState};
@@ -31,22 +31,15 @@ pub fn popover_popup(
     cx: &App,
 ) -> Stateful<Div> {
     let t = UiTheme::read(cx);
-    div()
+    let popup = div()
         .id(id)
         .aria_label(label)
         .w(t.space(72.))
         .flex()
         .flex_col()
         .gap(t.space(2.5))
-        .rounded(t.radius.lg)
-        .border_1()
-        .border_color(t.colors.foreground.opacity(0.1))
-        .p(t.space(2.5))
-        .bg(t.colors.popover)
-        .text_color(t.colors.popover_foreground)
-        .font_family(t.fonts.body.clone())
-        .text_size(t.text(14.))
-        .shadow(t.shadows.md.clone())
+        .p(t.space(2.5));
+    surface::popover(popup, t)
 }
 /// Medium-weight popover title.
 pub fn popover_title(cx: &App) -> Div {

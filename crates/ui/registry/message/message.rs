@@ -8,24 +8,22 @@ use std::rc::Rc;
 
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
-    AnyElement, AnyView, App, ClickEvent, ElementId, FontWeight, Hsla, ImageSource,
+    AnyElement, AnyView, App, Axis, ClickEvent, ElementId, FontWeight, ImageSource,
     InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
-    StatefulInteractiveElement as _, Styled, Window, div, hsla, img, prelude::FluentBuilder as _,
-    px, relative,
+    StatefulInteractiveElement as _, Styled, Window, div, img, prelude::FluentBuilder as _, px,
+    relative,
 };
 
 use super::button::{Button, ButtonSize, ButtonVariant};
-use super::theme::{UiTheme, apply_style};
+use super::theme::{
+    UiTheme, apply_style,
+    primitives::{hover_reveal_in_group, surface, text},
+};
 use super::tooltip::text_tooltip;
 
 type Handler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 type ReactionHandler = Rc<dyn Fn(&SharedString, &mut Window, &mut App) + 'static>;
 type ReactionTooltip = Rc<dyn Fn(&Reaction, &mut Window, &mut App) -> AnyView + 'static>;
-
-/// The amber used for a permalink target, which stays the same in light and dark.
-fn permalink_color() -> Hsla {
-    hsla(43. / 360., 0.96, 0.56, 1.)
-}
 
 /// How a message row is emphasized.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -39,6 +37,17 @@ pub enum MessageHighlight {
     Selected,
     /// The target of a permalink the reader followed: an amber tint and bar.
     Permalink,
+}
+
+/// How much room a row takes.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum MessageDensity {
+    #[default]
+    /// Avatar gutter, a header line with the name and time, then the body.
+    Standard,
+    /// One line per post, as Mattermost's compact display: the time always
+    /// sits in the gutter, the name starts the body line, and rows are tighter.
+    Compact,
 }
 
 /// Delivery state of the reader's own message.
@@ -119,6 +128,7 @@ pub struct Message {
     actions: Option<AnyElement>,
     description: Option<SharedString>,
     continuation: bool,
+    density: MessageDensity,
     highlight: MessageHighlight,
     status: MessageStatus,
     on_retry: Option<Handler>,
@@ -144,11 +154,17 @@ impl Message {
             actions: None,
             description: None,
             continuation: false,
+            density: MessageDensity::Standard,
             highlight: MessageHighlight::None,
             status: MessageStatus::Sent,
             on_retry: None,
             on_delete: None,
         }
+    }
+    /// Chooses the standard or compact row layout.
+    pub fn density(mut self, density: MessageDensity) -> Self {
+        self.density = density;
+        self
     }
     /// Sets the sender's avatar, usually an `Avatar`.
     pub fn avatar(mut self, avatar: impl IntoElement) -> Self {
@@ -265,37 +281,56 @@ impl Styled for Message {
 }
 
 impl RenderOnce for Message {
-    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
-        let hovered = window.use_keyed_state((self.id.clone(), "hovered"), cx, |_, _| false);
-        let is_hovered = *hovered.read(cx);
+        let group: SharedString = format!("message-{}", self.id).into();
         let selected = self.highlight == MessageHighlight::Selected;
-        let show_actions = is_hovered || selected;
-        let gutter = theme.space(8.);
+        let compact = self.density == MessageDensity::Compact;
+        let gutter = if compact {
+            theme.space(11.)
+        } else {
+            theme.space(8.)
+        };
 
-        let gutter_content = if self.continuation {
+        let gutter_content = if compact {
+            // Compact rows always show the time, so the gutter has a fixed
+            // width and the body lines up from row to row.
+            div().w(gutter).flex_shrink_0().pt(px(2.)).children(
+                self.gutter_time
+                    .clone()
+                    .or(self.timestamp.clone())
+                    .map(|time| {
+                        text::xs(div(), &theme)
+                            .line_height(theme.text(20.))
+                            .text_color(colors.muted_foreground)
+                            .whitespace_nowrap()
+                            .child(time)
+                    }),
+            )
+        } else if self.continuation {
             // The hover time floats in the gutter so showing it never changes
             // the row's height.
-            div()
-                .w(gutter)
-                .flex_shrink_0()
-                .relative()
-                .when(is_hovered, |gutter| {
-                    gutter.children(self.gutter_time.clone().or(self.timestamp.clone()).map(
-                        |time| {
-                            div()
+            div().w(gutter).flex_shrink_0().relative().children(
+                self.gutter_time
+                    .clone()
+                    .or(self.timestamp.clone())
+                    .map(|time| {
+                        hover_reveal_in_group(
+                            text::xs(div(), &theme)
+                                .id((self.id.clone(), "gutter-time"))
                                 .absolute()
                                 .top(px(2.))
                                 .right_0()
-                                .text_size(theme.text(11.))
                                 .line_height(theme.text(20.))
                                 .text_color(colors.muted_foreground)
                                 .whitespace_nowrap()
-                                .child(time)
-                        },
-                    ))
-                })
+                                .child(time),
+                            group.clone(),
+                            false,
+                        )
+                    }),
+            )
         } else {
             div()
                 .w(gutter)
@@ -304,7 +339,8 @@ impl RenderOnce for Message {
                 .children(self.avatar)
         };
 
-        let header = (!self.continuation).then(|| {
+        let mut header_children = self.header;
+        let header = (!self.continuation && !compact).then(|| {
             div()
                 .flex()
                 .items_baseline()
@@ -327,7 +363,7 @@ impl RenderOnce for Message {
                         .text_color(colors.muted_foreground)
                         .child(time)
                 }))
-                .children(self.header)
+                .children(std::mem::take(&mut header_children))
         });
 
         let failed = (self.status == MessageStatus::Failed).then(|| {
@@ -394,6 +430,26 @@ impl RenderOnce for Message {
                 })
         });
 
+        // Compact rows start the body line with the name; continuation rows
+        // keep only the time in the gutter.
+        let inline_author = (compact && !self.continuation)
+            .then(|| self.author.clone())
+            .flatten()
+            .map(|author| {
+                div()
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_color(colors.foreground)
+                    .whitespace_nowrap()
+                    .child(author)
+            });
+        let inline_header =
+            (compact && !self.continuation && !header_children.is_empty()).then(|| {
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(theme.space(1.))
+                    .children(header_children)
+            });
         let body = div()
             .flex_1()
             .min_w_0()
@@ -406,33 +462,46 @@ impl RenderOnce for Message {
                     .text_size(theme.text(14.))
                     .line_height(relative(1.45))
                     .text_color(colors.foreground)
+                    .when(compact, |content| {
+                        content
+                            .flex()
+                            .flex_wrap()
+                            .items_baseline()
+                            .gap(theme.space(1.5))
+                    })
+                    .children(inline_author)
+                    .children(inline_header)
                     .children(self.children),
             )
             .children(failed)
             .children(reactions);
 
-        let hover_state = hovered.clone();
+        let permalink = colors.warning;
         let root = div()
             .id(self.id.clone())
+            .group(group.clone())
             .role(Role::ListItem)
             .relative()
             .w_full()
             .flex()
             .gap(theme.space(2.))
             .px(theme.space(4.))
-            .py(theme.space(0.5))
-            .when(!self.continuation, |row| row.pt(theme.space(2.)))
+            .py(theme.space(if compact { 0.25 } else { 0.5 }))
+            .when(!self.continuation && !compact, |row| {
+                row.pt(theme.space(2.))
+            })
             .border_l_2()
             .border_color(colors.primary.opacity(0.))
-            .when(is_hovered, |row| row.bg(colors.muted.opacity(0.5)))
+            .when(!selected, |row| {
+                row.hover(move |style| style.bg(colors.muted.opacity(0.5)))
+            })
             .when(self.highlight == MessageHighlight::Mention, |row| {
                 row.bg(colors.primary.opacity(0.06))
                     .border_color(colors.primary)
             })
             .when(selected, |row| row.bg(colors.muted))
             .when(self.highlight == MessageHighlight::Permalink, |row| {
-                row.bg(permalink_color().opacity(0.14))
-                    .border_color(permalink_color())
+                row.bg(permalink.opacity(0.14)).border_color(permalink)
             })
             .when_some(self.description, |row, description| {
                 row.aria_description(description)
@@ -440,24 +509,19 @@ impl RenderOnce for Message {
             .when(self.status == MessageStatus::Pending, |row| {
                 row.opacity(0.6)
             })
-            .on_hover(move |hovered, _, cx| {
-                hover_state.update(cx, |state, cx| {
-                    if *state != *hovered {
-                        *state = *hovered;
-                        cx.notify();
-                    }
-                })
-            })
             .child(gutter_content)
             .child(body)
-            .when_some(self.actions.filter(|_| show_actions), |row, actions| {
-                row.child(
+            .when_some(self.actions, |row, actions| {
+                row.child(hover_reveal_in_group(
                     div()
+                        .id((self.id.clone(), "actions"))
                         .absolute()
                         .top(-theme.space(3.))
                         .right(theme.space(4.))
                         .child(actions),
-                )
+                    group.clone(),
+                    selected,
+                ))
             });
         apply_style(root, &self.style)
     }
@@ -547,7 +611,7 @@ pub fn message_actions(cx: &App) -> gpui_kit::Div {
         .border_1()
         .border_color(theme.colors.border)
         .bg(theme.colors.background)
-        .shadow(theme.shadows.sm.clone())
+        .shadow(theme.shadows.sm.to_vec())
 }
 
 /// An icon button for `message_actions`, named for assistive technology.
@@ -576,7 +640,7 @@ pub fn day_divider(
     cx: &App,
 ) -> impl IntoElement {
     let theme = UiTheme::read(cx);
-    let rule = || div().flex_1().h(px(1.)).bg(theme.colors.border);
+    let rule = || surface::divider(div().flex_1(), theme, Axis::Horizontal);
     div()
         .id(id)
         .role(Role::Splitter)
@@ -621,7 +685,9 @@ pub fn new_messages_divider(
         .gap(theme.space(2.))
         .px(theme.space(4.))
         .py(theme.space(1.))
-        .child(div().flex_1().h(px(1.)).bg(theme.colors.destructive))
+        .child(
+            surface::divider(div().flex_1(), theme, Axis::Horizontal).bg(theme.colors.destructive),
+        )
         .child(
             div()
                 .text_size(theme.text(12.))
@@ -629,4 +695,67 @@ pub fn new_messages_divider(
                 .text_color(theme.colors.destructive)
                 .child(label.into()),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui_kit::{Context, Pixels, Render, TestAppContext, VisualTestContext};
+
+    struct Probe(MessageDensity);
+
+    impl Render for Probe {
+        fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+            div()
+                .flex()
+                .flex_col()
+                .w(px(600.))
+                .child(
+                    div().debug_selector(|| "post".into()).child(
+                        Message::new("post")
+                            .density(self.0)
+                            .author("Arya")
+                            .timestamp("10:42")
+                            .header_child(div().child("Bot"))
+                            .child("First line"),
+                    ),
+                )
+                .child(
+                    div().debug_selector(|| "follow".into()).child(
+                        Message::new("follow")
+                            .density(self.0)
+                            .continuation(true)
+                            .gutter_time("10:43")
+                            .child("Second"),
+                    ),
+                )
+        }
+    }
+
+    fn row_heights(cx: &mut TestAppContext, density: MessageDensity) -> (Pixels, Pixels) {
+        let window = cx.add_window(|_, _| Probe(density));
+        let mut cx = VisualTestContext::from_window(window.into(), cx);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let height = |cx: &mut VisualTestContext, id: &'static str| {
+            cx.debug_bounds(id)
+                .unwrap_or_else(|| panic!("{id} drew"))
+                .size
+                .height
+        };
+        (height(&mut cx, "post"), height(&mut cx, "follow"))
+    }
+
+    #[gpui_kit::test]
+    fn compact_rows_are_one_line_and_shorter(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let (standard_first, standard_follow) = row_heights(cx, MessageDensity::Standard);
+        let (compact_first, compact_follow) = row_heights(cx, MessageDensity::Compact);
+        assert!(
+            compact_first < standard_first,
+            "compact first row {compact_first:?} should be shorter than {standard_first:?}"
+        );
+        assert!(compact_follow < standard_follow);
+        // One line: the name sits inline, so the first row is as tall as a continuation row.
+        assert_eq!(compact_first, compact_follow);
+    }
 }

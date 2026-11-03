@@ -1,12 +1,13 @@
 //! Nova-styled controlled checkbox using GPUI Kit's interaction and accessibility.
 
-use super::theme::{ThemeMode, UiTheme};
-use gpui_icons::{LucideIcon, lucide};
+use super::theme::{
+    UiTheme,
+    primitives::{control, disabled, focus},
+};
 use gpui_kit::base::{Checkbox as BaseCheckbox, CheckboxState};
 use gpui_kit::{
-    App, ClickEvent, ElementId, InteractiveElement as _, IntoElement, ParentElement as _,
-    RenderOnce, SharedString, StatefulInteractiveElement as _, Styled, Window,
-    prelude::FluentBuilder as _,
+    App, ClickEvent, ElementId, InteractiveElement as _, IntoElement, RenderOnce, SharedString,
+    StatefulInteractiveElement as _, Styled, Window, prelude::FluentBuilder as _,
 };
 use std::rc::Rc;
 
@@ -77,51 +78,19 @@ impl Checkbox {
 impl RenderOnce for Checkbox {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
-        let colors = theme.colors;
-        let selected = self.checked || self.indeterminate;
-        let background = if selected {
-            colors.primary
-        } else {
-            match theme.mode {
-                ThemeMode::Light => colors.background.opacity(0.),
-                ThemeMode::Dark => colors.input.opacity(0.30),
-            }
-        };
+        let focus_theme = theme.clone();
         let root = BaseCheckbox::new(self.id)
             .checked(self.checked)
             .indeterminate(self.indeterminate)
             .disabled(self.disabled)
-            .when(self.read_only, |root| root.aria_description("Read only"))
-            .flex()
-            .flex_shrink_0()
-            .items_center()
-            .justify_center()
-            .size(theme.space(4.))
-            .rounded(theme.radius.sm * (2. / 3.))
-            .border_1()
-            .border_color(if selected {
-                colors.primary
-            } else {
-                colors.input
-            })
-            .bg(background)
-            .focus_visible(move |style| style.border_color(colors.ring))
+            .when(self.read_only, |root| root.aria_description("Read only"));
+        let root = control::checkbox_box(root, &theme, self.checked, self.indeterminate)
+            .focus_visible(move |style| focus::ring(style, &focus_theme))
             .when(!self.disabled && !self.read_only, |root| {
                 root.cursor_pointer()
             })
-            .when(self.disabled, |root| root.opacity(0.5).cursor_not_allowed())
+            .when(self.disabled, disabled::style)
             .when_some(self.label, |root, label| root.accessibility_label(label))
-            .when(selected, |root| {
-                root.child(
-                    lucide(if self.indeterminate {
-                        LucideIcon::Minus
-                    } else {
-                        LucideIcon::Check
-                    })
-                    .size(theme.space(3.5))
-                    .text_color(colors.primary_foreground),
-                )
-            })
             .when(!self.read_only, |root| {
                 root.when_some(self.on_change, |root, handler| {
                     root.on_change(move |state, event, window, cx| {

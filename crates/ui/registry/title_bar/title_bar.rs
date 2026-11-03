@@ -118,7 +118,7 @@ impl Control {
 fn control(kind: Control, on_close: Option<CloseHandler>, theme: &UiTheme) -> impl IntoElement {
     let colors = theme.colors;
     let (hover_bg, hover_fg) = if kind == Control::Close {
-        (colors.destructive, gpui_kit::white().into())
+        (colors.destructive, colors.destructive_foreground)
     } else {
         (colors.accent, colors.accent_foreground)
     };

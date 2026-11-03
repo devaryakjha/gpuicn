@@ -4,7 +4,10 @@ use super::{
     button::{Button, ButtonSize, ButtonVariant},
     field::FieldControl,
     input::{Input, Textarea},
-    theme::{ThemeMode, UiTheme},
+    theme::{
+        UiTheme,
+        primitives::{control, disabled, focus},
+    },
 };
 use gpui_kit::{
     AnyElement, App, ClickEvent, ElementId, FocusHandle, InteractiveElement as _, IntoElement,
@@ -221,17 +224,6 @@ impl RenderOnce for InputGroup {
         let control = self
             .control
             .render(self.label.clone(), disabled, read_only, invalid);
-        let background = match theme.mode {
-            ThemeMode::Light => colors.background.opacity(0.),
-            ThemeMode::Dark => colors.input.opacity(0.3),
-        };
-        let border = if invalid {
-            colors.destructive
-        } else if focused {
-            colors.ring
-        } else {
-            colors.input
-        };
         let click_focus = focus.clone();
         let root = div()
             .id(self.id)
@@ -240,44 +232,44 @@ impl RenderOnce for InputGroup {
             .min_w_0()
             .flex()
             .flex_col()
-            .rounded(theme.radius.lg)
-            .border_1()
-            .border_color(border)
-            .bg(background)
-            .font_family(theme.fonts.body.clone())
-            .text_color(colors.foreground)
-            .when(!multiline && !has_block, |root| root.h(theme.space(8.)))
-            .when(disabled, |root| {
-                root.opacity(0.5)
-                    .cursor_not_allowed()
-                    .capture_any_mouse_down(|_, _, cx| cx.stop_propagation())
-                    .capture_key_down(|event, _, cx| {
-                        if event.keystroke.key != "tab" {
-                            cx.stop_propagation();
-                        }
-                    })
-            })
-            .when(!disabled, |root| {
-                root.on_mouse_down(MouseButton::Left, move |_, window, cx| {
-                    if !window.default_prevented() {
-                        click_focus.focus(window, cx);
-                        window.prevent_default();
+            .text_color(colors.foreground);
+        let root = focus::shown_for(
+            control::frame(root, &theme, invalid),
+            &theme,
+            focused,
+            invalid,
+        )
+        .when(!multiline && !has_block, |root| root.h(theme.space(8.)))
+        .when(disabled, |root| {
+            disabled::style(root)
+                .capture_any_mouse_down(|_, _, cx| cx.stop_propagation())
+                .capture_key_down(|event, _, cx| {
+                    if event.keystroke.key != "tab" {
+                        cx.stop_propagation();
                     }
                 })
+        })
+        .when(!disabled, |root| {
+            root.on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                if !window.default_prevented() {
+                    click_focus.focus(window, cx);
+                    window.prevent_default();
+                }
             })
-            .children(block_start)
-            .child(
-                div()
-                    .flex()
-                    .w_full()
-                    .min_w_0()
-                    .items_center()
-                    .when(!multiline && !has_block, |row| row.h_full())
-                    .children(inline_start)
-                    .child(div().flex_1().min_w_0().child(control))
-                    .children(inline_end),
-            )
-            .children(block_end);
+        })
+        .children(block_start)
+        .child(
+            div()
+                .flex()
+                .w_full()
+                .min_w_0()
+                .items_center()
+                .when(!multiline && !has_block, |row| row.h_full())
+                .children(inline_start)
+                .child(div().flex_1().min_w_0().child(control))
+                .children(inline_end),
+        )
+        .children(block_end);
         super::theme::apply_style(root, &self.style)
     }
 }

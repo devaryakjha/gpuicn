@@ -6,6 +6,30 @@ use gpuicn as ui;
 
 fn main() {}
 
+mod app {
+    use crate::ui::app::{AppConfig, run};
+    use crate::ui::theme::{Appearance, UiTheme};
+    use gpui_kit::{Context, IntoElement, ParentElement, Render, Window, div};
+
+    struct Hello;
+
+    impl Render for Hello {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            div().child("Hello")
+        }
+    }
+
+    #[allow(dead_code)]
+    fn example() {
+        run(
+            AppConfig::new("My App")
+                .themes(UiTheme::neutral_light(), UiTheme::neutral_dark())
+                .appearance(Appearance::System),
+            |_, _| Hello,
+        );
+    }
+}
+
 mod accordion {
     use crate::ui::accordion::*;
     use gpui_kit::{App, IntoElement, ParentElement, Window};

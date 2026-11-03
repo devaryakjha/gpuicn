@@ -172,11 +172,17 @@ jobs:
           pattern: showcase-*
           path: dist
           merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          # The catalog sheet verify.yml shot from this commit's site build.
+          name: screenshots
+          path: screenshots
       - name: Publish the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.plan.outputs.tag }}
         run: |
+          (cd screenshots && zip -qr "../dist/catalog-screenshots-$TAG.zip" .)
           ls -l dist
           # A draft left by a failed run may hold stray files; nobody can see
           # it yet, so start it again. The tag stays.

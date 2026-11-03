@@ -33,12 +33,21 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: oven-sh/setup-bun@v2
       - name: Install with the gpuicn CLI
         run: |
           cargo run -p gpuicn-cli --locked -- build
-          node scripts/sync-catalog.mjs
+          bun scripts/sync-catalog.mjs
           GPUICN_RELEASE="$PWD" cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
           cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml add --all
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml doctor
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml theme set --base-color zinc --radius 0.5rem --appearance dark
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml theme import ../../crates/cli/templates/base-colors/stone.css
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml theme preview
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml remove --unused --dry-run
+          version="$(cargo pkgid -p gpuicn-cli | sed 's/.*[@#]//')"
+          GPUICN_RELEASE="$PWD" cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml update --to "$version" --dry-run
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml theme set --base-color neutral --appearance system
           cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
           cargo test --manifest-path fixtures/registry-install/Cargo.toml --bin registry-install-fixture --locked --features gpui_platform/runtime_shaders
       - name: Install with the stock shadcn CLI
@@ -48,12 +57,12 @@ jobs:
           for item in "$PWD"/site/pages/r/*.json; do
             [[ "$item" == */registry.json ]] || items+=("$item")
           done
-          npx -y shadcn@4.19.0 add "${items[@]}" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
+          bunx shadcn@4.19.0 add "${items[@]}" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
           for source in crates/ui/registry/*/*.rs; do
             cmp "$source" "fixtures/registry-install/src/ui/$(basename "$source")"
           done
           perl -0pi -e 's/Nova modal surfaces[^\n]+/Changed by the overwrite gate/' fixtures/registry-install/src/ui/dialog.rs
-          npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
+          bunx shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
           cmp crates/ui/registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
           cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
 
@@ -75,8 +84,10 @@ jobs:
       - name: Set up and check a new app
         run: |
           cargo build -p gpuicn-cli --locked
-          GPUICN_RELEASE="$PWD" target/debug/gpuicn --registry "$PWD/site/pages/r" new "$RUNNER_TEMP/my-app"
+          GPUICN_RELEASE="$PWD" target/debug/gpuicn --registry "$PWD/site/pages/r" new --base-color mauve --radius 0.5rem --appearance dark "$RUNNER_TEMP/my-app"
           target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" add alert_dialog select
+          target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" doctor
+          target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" remove --unused --dry-run
           # Both throwaway apps share one GPUI build.
           CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/my-app/Cargo.toml" --features gpui_platform/runtime_shaders
       - name: Set up a crate-mode app and eject every component
@@ -84,6 +95,7 @@ jobs:
           GPUICN_RELEASE="$PWD" target/debug/gpuicn --registry "$PWD/site/pages/r" new --crate "$RUNNER_TEMP/crate-app"
           cargo add --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" gpuicn --path "$PWD/crates/ui"
           CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" --features gpui_platform/runtime_shaders
+          target/debug/gpuicn --config "$RUNNER_TEMP/crate-app/gpuicn.toml" theme set --base-color olive
           target/debug/gpuicn --config "$RUNNER_TEMP/crate-app/gpuicn.toml" eject --all
           CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" --features gpui_platform/runtime_shaders
 
@@ -119,3 +131,18 @@ jobs:
             echo "::error::These files exceed Cloudflare Workers' 25 MiB asset limit, so the site can't deploy."
             exit 1
           fi
+      - uses: oven-sh/setup-bun@v2
+      - name: Shoot every preview in light and dark mode
+        # The sheet is the before/after evidence for release notes and pull
+        # requests. It compares against the newest folder under docs/screenshots.
+        run: |
+          mkdir -p "$RUNNER_TEMP/playwright"
+          printf '{"name":"screenshots","private":true}\n' > "$RUNNER_TEMP/playwright/package.json"
+          (cd "$RUNNER_TEMP/playwright" && bun add playwright@1.56.1 && bunx playwright install --with-deps chromium)
+          previous=$(ls -d docs/screenshots/v* | sort -V | tail -n 1)
+          NODE_PATH="$RUNNER_TEMP/playwright/node_modules" bun scripts/screenshots.mjs --dist web/public/demo --out screenshots --compare "$previous" || echo "::warning::Some previews changed or failed; see the screenshots artifact."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots
+          retention-days: 30

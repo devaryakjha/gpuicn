@@ -12,7 +12,7 @@ export const Route = createFileRoute("/installation")({
   component: InstallationPage,
 })
 
-const release = "v0.8.0"
+const release = "v0.9.0"
 const releaseSource = `https://raw.githubusercontent.com/devaryakjha/gpuicn/${release}`
 const registry = `${releaseSource}/site/pages/r`
 
@@ -79,7 +79,7 @@ function InstallationPage() {
           <CodeBlock
             language="toml"
             className="mt-3"
-            value={`version = 1\nregistry = "${registry}"\noutput = "src/ui"`}
+            value={`version = 2\nregistry = "${registry}"\noutput = "src/ui"\n\n[theme]\nbase_color = "neutral"\nappearance = "system"`}
           />
           <p className="mt-4 text-sm leading-6 text-muted-foreground">
             {release} is the current published release. Fixes made after that tag
@@ -140,7 +140,7 @@ function InstallationPage() {
           <CodeBlock
             className="mt-4"
             language="bash"
-            value={`mkdir -p assets/fonts\nfor file in Geist-Regular.ttf Geist-Medium.ttf GeistMono-Regular.ttf; do\n  curl -fL "${releaseSource}/site/assets/fonts/$file" -o "assets/fonts/$file"\ndone\ncurl -fL "${releaseSource}/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt`}
+            value={`mkdir -p assets/fonts\nfor file in Geist-Regular.ttf Geist-Medium.ttf Geist-SemiBold.ttf GeistMono-Regular.ttf; do\n  curl -fL "${releaseSource}/site/assets/fonts/$file" -o "assets/fonts/$file"\ndone\ncurl -fL "${releaseSource}/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt`}
           />
         </section>
 
@@ -150,9 +150,11 @@ function InstallationPage() {
           </h2>
           <p className="mt-3 leading-7 text-muted-foreground">
             Replace <code className="text-sm">src/main.rs</code> with this
-            starter. It calls ui::theme::init(cx) to enable component actions
-            and keyboard navigation, loads the fonts, and renders a working
-            counter button.
+            starter. ui::app::run opens the window with the Lucide icons and
+            the Geist fonts, installs the light and dark themes generated from
+            assets/theme.css, follows the system appearance, and renders a
+            working counter button. gpuicn theme set changes the base color,
+            radius and appearance.
           </p>
           <CodeBlock className="mt-4" value={setup.starter} />
           <a

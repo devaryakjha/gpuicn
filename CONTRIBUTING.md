@@ -12,7 +12,8 @@ requests are welcome; say which checks you ran.
 | `registry.toml` | Component titles, descriptions and source dependencies. |
 | `crates/ui` | The `gpuicn` crate: compiles the registry via `#[path]` modules, plus tests and examples. It is published for crate mode. |
 | `crates/cli` | The `gpuicn` CLI (`init`, `new`, `add`, `status`, `diff`, `remove`, `build`). |
-| `site/` | The GPUI/WASM previews and the gpuicn Workspace example app. |
+| `site/` | The GPUI/WASM previews (one file per component under `site/src/previews/`) and the gpuicn Workspace example app. |
+| `xtask/` | `cargo xtask new-component <name>` scaffolds a component in every place above. |
 | `web/` | The catalog website (TanStack, Bun). |
 | `fixtures/registry-install` | A consumer app CI installs every component into. |
 | `docs/` | User docs; `docs/internal/` holds plans and validation records. |
@@ -48,7 +49,7 @@ cargo fmt --all -- --check
 cargo test --workspace --locked --features gpui_platform/runtime_shaders
 cargo clippy --workspace --all-targets --locked --features gpui_platform/runtime_shaders -- -D warnings
 cargo run -p gpuicn-cli --locked -- build   # regenerate registry.json and site/pages/r
-node scripts/sync-catalog.mjs               # checks previews, usage, API docs and platform notes
+bun scripts/sync-catalog.mjs               # checks previews, usage, API docs and platform notes
 git diff --exit-code -- registry.json site/pages/r
 ```
 
@@ -56,6 +57,29 @@ Any change under `crates/ui/registry/` changes the generated registry; commit th
 rebuilt `registry.json` and `site/pages/r`. CI also installs every component
 into `fixtures/registry-install` with the native CLI and the stock shadcn CLI,
 compares the copies byte for byte, and builds the WASM catalog.
+
+## Design rules are checked
+
+`cargo test -p gpuicn --test registry_lint` reads every file under
+`crates/ui/registry` and fails on patterns the shared primitives replace:
+raw colors, raw text sizes, `opacity(0.5)` for disabled, `ThemeMode::Dark`
+branches outside the theme, hand-written popover surfaces, `img` inside a
+rounded clip, hover state kept in `use_keyed_state`, key glyph literals, and
+components without any test. `crates/ui/tests/registry_lint_baseline.txt`
+lists what was allowed when a rule was added; counts may only go down, and the
+test tells you which baseline lines to lower. After adding a rule, run the test
+once with `REGISTRY_LINT_WRITE_BASELINE=1` to record the current state.
+
+`scripts/screenshots.mjs` shoots every preview in light and dark mode from the
+built site and writes a Markdown sheet, comparing against the newest folder in
+`docs/screenshots/`. The release verification runs it and uploads the sheet as
+the `screenshots` artifact; run it locally for a pull request that changes
+how anything looks:
+
+```sh
+(cd site && trunk build --release --public-url /demo/ --dist ../web/public/demo)
+bun scripts/screenshots.mjs --dist web/public/demo --out docs/screenshots/v<next> --compare docs/screenshots/v<previous>
+```
 
 ## Add a component
 

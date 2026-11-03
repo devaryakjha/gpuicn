@@ -4,6 +4,8 @@ homepage = "https://ui.imajha.com/"
 # Every component includes theme. Dependencies are recursive and installed once.
 [components.theme]
 description = "The app-owned shadcn Neutral theme and shared native motion tokens for GPUI."
+[components.app]
+description = "One-call application start: icon assets, bundled Geist fonts, the theme pair and the first window."
 [components.field]
 dependencies = ["input"]
 [components.input]

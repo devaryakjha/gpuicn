@@ -2,13 +2,10 @@
 use super::{
     button::{Button, ButtonVariant},
     dialog::{dialog_backdrop, dialog_description, dialog_title, modal_focus},
-    theme::{UiTheme, apply_style},
+    theme::{UiEasing, UiTheme, apply_style, presence_with, primitives::surface, transition_with},
 };
 pub use gpui_kit::base::DialogHandle as DrawerHandle;
-use gpui_kit::base::{
-    ElementExt as _, Sheet,
-    motion::{Easing, Presence, Transition, transition},
-};
+use gpui_kit::base::{ElementExt as _, Sheet};
 use gpui_kit::{
     AnyElement, App, Div, ElementId, InteractiveElement as _, IntoElement, MouseButton,
     ParentElement, Pixels, Point, RenderOnce, Role, SharedString, Size, Stateful,
@@ -198,20 +195,14 @@ impl RenderOnce for Drawer {
         };
         let open = self.handle.is_open();
         let t = UiTheme::read(cx).clone();
-        let duration = if t.motion.reduced {
-            Duration::ZERO
-        } else {
-            t.motion.normal
-        };
-        let policy = Transition::new(duration).easing(Easing::CubicBezier {
-            x1: 0.22,
-            y1: 1.,
-            x2: 0.36,
-            y2: 1.,
-        });
-        let presence = Presence::new((self.id.clone(), "presence"), open)
-            .transition(policy.clone())
-            .sample(window, cx);
+        let presence = presence_with(
+            (self.id.clone(), "presence"),
+            open,
+            t.motion.normal,
+            UiEasing::Emphasized,
+            window,
+            cx,
+        );
         let visible = presence.should_render() && (open || presence.progress > 0.);
         let focus = modal_focus::prepare(self.id.clone(), visible, window, cx);
         let swipe = window.use_keyed_state((self.id.clone(), "swipe"), cx, |_, _| Swipe::default());
@@ -220,10 +211,11 @@ impl RenderOnce for Drawer {
                 state.start = None;
                 state.offset = px(0.);
             });
-            transition(
+            transition_with(
                 (self.id.clone(), "drag"),
                 0_f32,
-                Transition::new(Duration::ZERO),
+                Duration::ZERO,
+                UiEasing::Linear,
                 window,
                 cx,
             );
@@ -244,14 +236,15 @@ impl RenderOnce for Drawer {
             state.size.width
         };
         let dragging = state.start.is_some();
-        let offset = transition(
+        let offset = transition_with(
             (self.id.clone(), "drag"),
             f32::from(state.offset),
             if dragging {
-                Transition::new(Duration::ZERO)
+                Duration::ZERO
             } else {
-                policy
+                t.motion.normal
             },
+            UiEasing::Emphasized,
             window,
             cx,
         );
@@ -278,11 +271,7 @@ impl RenderOnce for Drawer {
             .flex()
             .min_h(px(0.))
             .overflow_hidden()
-            .bg(t.colors.popover)
-            .text_color(t.colors.popover_foreground)
-            .font_family(t.fonts.body.clone())
-            .text_size(t.text(14.))
-            .border_color(t.colors.border)
+            .map(|panel| surface::sheet(panel, &t))
             .when(vertical, |d| d.flex_col())
             .map(|d| match side {
                 DrawerSide::Bottom => d

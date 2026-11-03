@@ -1,5 +1,8 @@
 //! Nova toggle sets with controlled selection and arrow-key focus.
-use super::theme::{RovingFocus, UiTheme, apply_style};
+use super::theme::{
+    RovingFocus, UiTheme, apply_style,
+    primitives::{control, focus},
+};
 use gpui_kit::{
     AnyElement, App, ElementId, InteractiveElement as _, IntoElement, ParentElement, RenderOnce,
     SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window,
@@ -125,7 +128,7 @@ impl Styled for ToggleGroup {
 impl RenderOnce for ToggleGroup {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
-        let colors = theme.colors;
+        let control = theme.control();
         let focus = RovingFocus::new(
             self.id.clone(),
             &self
@@ -177,20 +180,12 @@ impl RenderOnce for ToggleGroup {
                     .when(self.joined && index + 1 == count, |t| {
                         t.rounded_r(theme.radius.lg)
                     })
-                    .border_1()
-                    .border_color(colors.background.opacity(0.))
-                    .text_size(theme.text(14.))
-                    .text_color(colors.foreground)
-                    .bg(if pressed {
-                        colors.muted
-                    } else {
-                        colors.background.opacity(0.)
+                    .map(|t| control::toggle(t, &theme, pressed, disabled, false))
+                    .focus_visible({
+                        let theme = theme.clone();
+                        move |s| focus::ring(s, &theme)
                     })
-                    .focus_visible(move |s| s.border_color(colors.ring))
-                    .when(disabled, |t| t.opacity(0.5).cursor_not_allowed())
-                    .when(!disabled, |t| {
-                        t.cursor_pointer().hover(move |s| s.bg(colors.muted))
-                    })
+                    .when(!disabled, |t| t.hover(move |s| s.bg(control.hover)))
                     .children(item.children)
                     .when_some(change, |toggle, handler| {
                         toggle.on_change(move |_, _, window, cx| handler(next.clone(), window, cx))

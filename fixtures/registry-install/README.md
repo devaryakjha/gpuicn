@@ -14,7 +14,7 @@ replaces local edits in this review fixture:
 
 ```sh
 cargo run -p gpuicn-cli --locked -j 1 -- build
-node scripts/sync-catalog.mjs
+bun scripts/sync-catalog.mjs
 cargo run -p gpuicn-cli --locked -j 1 -- --config fixtures/registry-install/gpuicn.toml add --all --overwrite
 cargo run --manifest-path fixtures/registry-install/Cargo.toml --locked -j 1 --bin readiness --features gpui_platform/runtime_shaders
 ```
@@ -24,7 +24,8 @@ the header controls for light/dark themes, a custom palette, compact spacing,
 larger text, long content and disabled settings fields. Resize the window below
 768px to review the mobile sidebar. Settings and record edits are kept in memory
 for the current review session. The catalog sync copies the bundled Geist fonts;
-`init` only creates the installer config. Skip `init` if that config already exists.
+`init` creates the installer config, `assets/theme.css` and `src/ui/app_theme.rs`.
+Skip `init` if that config already exists.
 
 This provides a review surface for the current registry. The readiness fixes
 ship in `v0.5.0-beta.4`; the earlier `v0.5.0-beta.3` registry does not include them.

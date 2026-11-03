@@ -17,19 +17,88 @@ theme.motion.normal = std::time::Duration::from_millis(180);
 UiTheme::set(cx, theme);     // repaints open windows, including retained child views
 ```
 
-Colors, fonts, radius, spacing, shadows, overlay color, and motion are app-owned tokens. `theme.space(2.)` means two spacing units; `theme.text(14.)` scales a 14px default text size. One-pixel borders, focus outlines, circular shapes, pointer coordinates, and caller-supplied pane limits retain their physical or semantic meaning. Check contrast and legibility when choosing a palette or dense layout.
+Colors, fonts, radius, spacing, shadows, overlay color, typography, breakpoints and motion are app-owned tokens. `theme.space(2.)` means two spacing units; `theme.text(14.)` scales a 14px default text size. One-pixel borders, focus outlines, circular shapes, pointer coordinates, and caller-supplied pane limits retain their physical or semantic meaning. Check contrast and legibility when choosing a palette or dense layout.
+
+## Tokens
+
+| Group | Fields | Notes |
+| --- | --- | --- |
+| `theme.colors` | the shadcn palette plus `destructive_foreground`, `success(_foreground)`, `warning(_foreground)`, `info(_foreground)`, `overlay` | `from_shadcn_css` reads the matching `--success`, `--warning` and `--info` variables when a theme defines them |
+| `theme.control()` | `background`, `border`, `hover`, `pressed`, `track`, `destructive_*`, `ring`, `invalid_ring`, `surface_border` | derived per mode once, so no component branches on `ThemeMode` |
+| `theme.typography` | `xs` 12/16, `sm` 14/20, `base` 16/24, `lg` 18/28, `xl` 20/28 | `theme.text_style(theme.typography.sm)` applies `text_scale` to size and line height |
+| `theme.radius` | `base`, `sm`, `md`, `lg`, `xl`, `two_xl`, `three_xl` | one `--radius` drives the scale, as in shadcn |
+| `theme.shadows` | `sm`, `md`, `lg` | shared slices; apply with `.shadow(theme.shadows.md.to_vec())` |
+| `theme.breakpoints` | `mobile` 768px, `compact` 640px | sidebar and sheet behavior switch here |
+| `theme.motion` | `fast`, `normal`, `easing`, `reduced` | see Motion |
+
+Every Kit widget color follows these tokens: `UiTheme::set` maps all of Kit's
+`ThemeColor` fields, so a Kit table, tab bar or switch inside a themed app never
+shows Kit's default palette. A test fails when a Kit color is left unmapped.
+
+## Primitives
+
+`ui::theme::primitives` holds the styling every component is built from, so a
+custom component looks like the catalog without copying numbers:
+
+```rust
+use ui::theme::{UiTheme, primitives::{focus, surface, text}};
+
+let theme = UiTheme::read(cx);
+surface::popover(div(), &theme)          // radius, border, background, shadow and text size of every floating panel
+    .child(text::muted(div(), &theme).child("Description"));
+button.focus_visible(|style| focus::ring(style, &theme)); // the 3px outer ring on every control
+```
+
+- `text::{xs, sm, base, lg, xl, heading, mono, muted}` set size, line height and font.
+- `icon::{xs, sm, md, lg, xl}` are the icon sizes (12 to 24px before spacing scale).
+- `focus::{ring, invalid_ring, ring_for}` draw the shared focus ring through `focus_visible`.
+- `disabled::{style, interactive}` apply the shared disabled look.
+- `surface::{popover, menu, modal, sheet, toast, card, floating, tooltip, divider}` are the surfaces.
+- `control::{frame, checkbox_box, radio_dot, toggle}` are the form-control frames.
+- `clipped_image` and `round_image` clip pictures to a radius without the overflow workaround.
+- `dismiss::on_outside` closes a layer on outside press or Escape; `hover_reveal` shows actions on hover without a re-render.
+
+## Base color, radius and appearance
+
+`gpuicn init` writes `assets/theme.css` from one of shadcn's base colors and
+generates `src/ui/app_theme.rs`, so the starter is:
+
+```rust
+ui::app::run(
+    AppConfig::new("My App")
+        .themes(app_theme::light(), app_theme::dark())
+        .appearance(app_theme::APPEARANCE),
+    |_, _| Root,
+);
+```
+
+`app::run` opens the platform with the Lucide assets, loads the bundled Geist
+fonts, installs the pair with `UiTheme::set_pair`, applies the `Appearance`
+(`Light`, `Dark` or `System`) and keeps it in step with the operating system
+through `theme::follow_system`. Change any of it from the shell:
+
+```sh
+gpuicn theme set --base-color zinc --radius 0.5rem --appearance dark
+```
+
+In code, `UiTheme::set_pair(cx, light, dark)` installs a pair and
+`UiTheme::set_appearance(cx, Appearance::Dark)` picks one; a window that
+calls `theme::follow_system(window, cx)` swaps palettes when the OS does.
+`AppConfig::install(cx)` does the setup without opening a window, for
+applications that open their own.
 
 ## Import a shadcn theme
 
-Any shadcn theme CSS works, including the output of the shadcn theme picker and
-tweakcn. Paste it into your app and build both modes:
+Any shadcn theme CSS works, including the output of the shadcn theme editor and
+tweakcn. `gpuicn theme import theme.css` (a path or URL) copies it to
+`assets/theme.css` and regenerates `app_theme.rs`. To do the same by hand:
 
 ```rust
 const THEME_CSS: &str = include_str!("theme.css");
 
 let light = UiTheme::from_shadcn_css(THEME_CSS, ThemeMode::Light)?;
 let dark = UiTheme::from_shadcn_css(THEME_CSS, ThemeMode::Dark)?;
-UiTheme::set(cx, if prefers_dark { dark } else { light });
+UiTheme::set_pair(cx, light, dark);
 ```
 
 Light reads `:root`; dark reads `:root` then `.dark`. Colors may be
@@ -59,6 +128,13 @@ Input editing colors come from `UiTheme` and update with the surrounding control
 ## Motion
 
 `UiMotion` provides fast/normal durations, an easing choice, and a reduced-motion preference. The shared `transition_value(id, target, duration, window, cx)` starts at its target, retargets from its current value, and requests frames only while moving. Use stable IDs and retain expensive child entities. Switch thumbs and disclosure chevrons use this pattern; the desktop example uses it for sidebar width.
+
+`presence(id, open, window, cx)` is the one enter/exit lifecycle: its sample's
+`progress` runs 0→1 on open and back on close, and `should_render()` keeps the
+element mounted until the exit finishes, so overlays fade and drawers slide
+with the same timing. `transition_with` and `presence_with` take an explicit
+duration and `UiEasing`; drawers use `UiEasing::Emphasized`. All of these go
+through one policy that honors `theme.motion.reduced` and `cx.reduce_motion()`.
 
 Keep pointer dragging and keyboard navigation immediate. Width changes run native layout; they are not compositor-only animations. Both `theme.motion.reduced` and `cx.reduce_motion()` disable movement while preserving state feedback. The pinned GPUI does not automatically wire the operating system's reduced-motion preference into this flag; the application must set it.
 

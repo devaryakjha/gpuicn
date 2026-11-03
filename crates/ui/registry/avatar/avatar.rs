@@ -3,10 +3,9 @@
 use gpui_kit::{
     App, ElementId, ImageSource, InteractiveElement as _, IntoElement, ObjectFit, ParentElement,
     RenderOnce, SharedString, StatefulInteractiveElement as _, Styled, StyledImage, Window, div,
-    img,
 };
 
-use super::theme::UiTheme;
+use super::theme::{UiTheme, primitives::clipped_image_with};
 
 /// A compact, circular Avatar with an optional image and fallback content.
 #[derive(IntoElement)]
@@ -75,6 +74,7 @@ impl RenderOnce for Avatar {
             AvatarSize::Lg => 40.,
         };
         let image_size = theme.space(size / 4.);
+        let frame_theme = theme.clone();
         let fallback = move || {
             div()
                 .size_full()
@@ -92,26 +92,22 @@ impl RenderOnce for Avatar {
                 .child(self.fallback.clone())
                 .into_any_element()
         };
-        let content = match self.image {
+        let root = match self.image {
             Some(source) => {
                 let loading = fallback.clone();
-                img(source)
-                    .size_full()
-                    .rounded_full()
-                    .object_fit(ObjectFit::Cover)
-                    .with_loading(loading)
-                    .with_fallback(fallback)
-                    .into_any_element()
+                clipped_image_with(
+                    source,
+                    image_size / 2.,
+                    ObjectFit::Cover,
+                    &frame_theme,
+                    |image| image.with_loading(loading).with_fallback(fallback),
+                )
             }
-            None => fallback(),
-        };
-        let root = div()
-            .id(self.id)
-            .size(image_size)
-            .flex_shrink_0()
-            .rounded_full()
-            .overflow_hidden()
-            .child(content);
+            None => div().rounded_full().overflow_hidden().child(fallback()),
+        }
+        .id(self.id)
+        .size(image_size)
+        .flex_shrink_0();
         let root = if let Some(label) = self.aria_label {
             root.aria_label(label)
         } else {

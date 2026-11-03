@@ -1,5 +1,5 @@
 //! Nova accordion presentation with caller-owned disclosure state.
-use super::theme::UiTheme;
+use super::theme::{UiTheme, primitives::disabled};
 use gpui_icons::{LucideIcon, lucide};
 pub use gpui_kit::base::{
     Accordion, AccordionHeader, AccordionItem, AccordionPanel, AccordionTrigger,
@@ -43,8 +43,7 @@ pub fn accordion_trigger(
             b.tab_index(0).cursor_pointer().hover(|s| s.underline())
         })
         .when(disabled, |b| {
-            b.opacity(0.5)
-                .cursor_not_allowed()
+            disabled::style(b)
                 .capture_any_mouse_down(|_, window, cx| {
                     window.prevent_default();
                     cx.stop_propagation();

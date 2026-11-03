@@ -50,10 +50,11 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
       - run: cargo test -p gpuicn -p gpuicn-cli --locked
+      - uses: oven-sh/setup-bun@v2
       - name: Check the generated registry is up to date
         run: |
           cargo run -q -p gpuicn-cli --locked -- build
-          node scripts/sync-catalog.mjs
+          bun scripts/sync-catalog.mjs
           git diff --exit-code -- registry.json site/pages/r
       # Crate mode depends on the published crate, so its component source must package.
       - run: cargo package -p gpuicn --list --locked > /dev/null
@@ -85,4 +86,4 @@ jobs:
           bun run lint
           bun scripts/check-highlighting.ts
           bun scripts/check-platform-notes.tsx
-          node ../scripts/check-preview-updates.mjs
+          bun ../scripts/check-preview-updates.mjs

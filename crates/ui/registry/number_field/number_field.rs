@@ -1,6 +1,13 @@
 //! Nova presentation for GPUI Kit's numeric input and step actions.
 
-use super::{field::FieldControl, input::Input, theme::UiTheme};
+use super::{
+    field::FieldControl,
+    input::Input,
+    theme::{
+        UiTheme,
+        primitives::{control, disabled, focus},
+    },
+};
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::base::{NumberInput, input::InputState};
 pub use gpui_kit::base::{NumberInputEvent, NumberStep, StepAction};
@@ -73,21 +80,15 @@ impl RenderOnce for NumberField {
             .disabled(self.disabled)
             .w_full()
             .h(t.space(8.))
-            .rounded(t.radius.lg)
-            .border_1()
-            .border_color(if self.invalid {
-                t.colors.destructive
-            } else {
-                t.colors.input
+            .map(|root| {
+                focus::shown_for(
+                    control::frame(root, &t, self.invalid),
+                    &t,
+                    focused,
+                    self.invalid,
+                )
             })
-            .when(focused, |root| {
-                root.border_color(if self.invalid {
-                    t.colors.destructive
-                } else {
-                    t.colors.ring
-                })
-            })
-            .when(self.disabled, |root| root.opacity(0.5))
+            .when(self.disabled, disabled::style)
             .decrement_button({
                 let t = t.clone();
                 move |button| {

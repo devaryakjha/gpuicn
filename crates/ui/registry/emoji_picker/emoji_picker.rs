@@ -17,7 +17,7 @@ use gpui_kit::{
 };
 
 use super::input::{Input, InputEvent, InputState};
-use super::theme::{UiTheme, apply_style};
+use super::theme::{UiTheme, apply_style, primitives::surface};
 
 /// Emoji per grid row.
 pub const COLUMNS: usize = 9;
@@ -927,19 +927,16 @@ impl Styled for EmojiPicker {
 impl RenderOnce for EmojiPicker {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx);
-        let root = div()
-            .flex_none()
-            .overflow_hidden()
-            .rounded(theme.radius.xl)
-            // GPUI clips children to a rectangle, so the surface color lives
-            // on the rounded root rather than on the square picker inside.
-            .bg(theme.colors.popover)
-            .when(self.bordered, |root| {
-                root.border_1()
-                    .border_color(theme.colors.border)
-                    .shadow(theme.shadows.md.clone())
-            })
-            .child(self.state);
+        // GPUI clips children to a rectangle, so the surface lives on the
+        // rounded root rather than on the square picker inside; an unbordered
+        // picker sits in a popover that already draws the surface.
+        let root = div().flex_none().overflow_hidden().rounded(theme.radius.xl);
+        let root = if self.bordered {
+            surface::popover(root, theme).rounded(theme.radius.xl)
+        } else {
+            root
+        }
+        .child(self.state);
         apply_style(root, &self.style)
     }
 }

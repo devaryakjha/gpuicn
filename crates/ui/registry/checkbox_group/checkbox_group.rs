@@ -1,6 +1,8 @@
 //! Controlled checkbox sets with clickable labels.
-use super::theme::{ThemeMode, UiTheme, apply_style};
-use gpui_icons::{LucideIcon, lucide};
+use super::theme::{
+    UiTheme, apply_style,
+    primitives::{control, disabled, focus, text},
+};
 use gpui_kit::{
     App, ElementId, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce, Role,
     SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Window, div,
@@ -124,35 +126,11 @@ impl RenderOnce for CheckboxGroup {
                 if !checked {
                     next.push(item.value);
                 }
-                let radius = theme.radius.sm * (2. / 3.);
-                let square = div()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .flex_shrink_0()
-                    .size(theme.space(4.))
-                    .rounded(radius)
-                    .border_1()
-                    .border_color(if checked {
-                        colors.primary
-                    } else {
-                        colors.input
-                    })
-                    .bg(if checked {
-                        colors.primary
-                    } else if theme.mode == ThemeMode::Dark {
-                        colors.input.opacity(0.3)
-                    } else {
-                        colors.background.opacity(0.)
-                    })
-                    .when(focused, |d| d.border_color(colors.ring))
-                    .when(checked, |d| {
-                        d.child(
-                            lucide(LucideIcon::Check)
-                                .size(theme.space(3.5))
-                                .text_color(colors.primary_foreground),
-                        )
-                    });
+                let square = focus::shown(
+                    control::checkbox_box(div(), &theme, checked, false),
+                    &theme,
+                    focused,
+                );
                 let checkbox = gpui_kit::base::Checkbox::new(item.id)
                     .checked(checked)
                     .disabled(disabled)
@@ -161,18 +139,14 @@ impl RenderOnce for CheckboxGroup {
                     .flex()
                     .items_center()
                     .gap(theme.space(2.))
-                    .font_family(theme.fonts.body.clone())
-                    .text_size(theme.text(14.))
-                    .line_height(theme.text(20.))
                     .text_color(colors.foreground)
-                    .when(disabled, |d| d.opacity(0.5).cursor_not_allowed())
-                    .when(!disabled, |d| d.cursor_pointer())
                     .child(square)
                     .child(gpui_kit::Text::new_inaccessible(item.label))
                     .when_some(change, |checkbox, handler| {
                         checkbox
                             .on_change(move |_, _, window, cx| handler(next.clone(), window, cx))
                     });
+                let checkbox = disabled::interactive(text::sm(checkbox, &theme), disabled);
                 apply_style(checkbox, &item.style)
             })
             .collect::<Vec<_>>();

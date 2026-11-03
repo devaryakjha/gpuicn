@@ -553,7 +553,7 @@ impl AdoptionConsumer {
 impl Render for AdoptionConsumer {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t = UiTheme::read(cx).clone();
-        let mobile = sidebar_is_mobile(window);
+        let mobile = sidebar_is_mobile(window, cx);
         let collapsed = self
             .sidebar
             .icon_collapsed(mobile, SidebarCollapsible::Icon);

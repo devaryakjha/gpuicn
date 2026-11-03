@@ -8,7 +8,10 @@ use gpui_kit::{
     RenderOnce, SharedString, Styled, Window, prelude::FluentBuilder as _,
 };
 
-use super::theme::UiTheme;
+use super::theme::{
+    UiTheme,
+    primitives::{control, focus},
+};
 
 type ChangeHandler = Rc<dyn Fn(bool, &ClickEvent, &mut Window, &mut App) + 'static>;
 
@@ -107,12 +110,12 @@ impl RenderOnce for Toggle {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let spacing = theme.spacing.unit;
-        let colors = theme.colors;
         let variant = self.variant;
-        let (height, radius, text_size) = match self.size {
-            ToggleSize::Sm => (28., theme.radius.md, 12.8),
-            ToggleSize::Default => (32., theme.radius.lg, 14.),
-            ToggleSize::Lg => (36., theme.radius.lg, 14.),
+        let control = theme.control();
+        let (height, radius) = match self.size {
+            ToggleSize::Sm => (28., theme.radius.md),
+            ToggleSize::Default => (32., theme.radius.lg),
+            ToggleSize::Lg => (36., theme.radius.lg),
         };
         let pressed = self.pressed;
         let disabled = self.disabled;
@@ -126,25 +129,22 @@ impl RenderOnce for Toggle {
             .h(spacing * (height / 4.))
             .px(spacing * 2.5_f32)
             .rounded(radius)
-            .border_1()
-            .border_color(colors.background.opacity(0.0))
-            .text_size(theme.text(text_size))
-            .text_color(colors.foreground)
-            .bg(if pressed {
-                colors.muted
-            } else {
-                colors.background.opacity(0.)
+            .map(|base| {
+                control::toggle(
+                    base,
+                    &theme,
+                    pressed,
+                    disabled,
+                    variant == ToggleVariant::Outline,
+                )
             })
-            .focus_visible(move |style| style.border_color(colors.ring))
-            .when(disabled, |base| base.opacity(0.50).cursor_not_allowed())
+            .focus_visible({
+                let theme = theme.clone();
+                move |style| focus::ring(style, &theme)
+            })
             .when(!disabled, |base| {
-                base.cursor_pointer()
-                    .hover(move |style| style.bg(colors.muted))
+                base.hover(move |style| style.bg(control.hover))
             });
-        let base = match variant {
-            ToggleVariant::Default => base,
-            ToggleVariant::Outline => base.border_1().border_color(colors.input),
-        };
         let mut toggle = super::theme::apply_style(base, &self.style).children(self.children);
         if let Some(label) = self.aria_label {
             toggle = toggle.accessibility_label(label);

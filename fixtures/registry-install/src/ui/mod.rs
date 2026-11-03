@@ -1,5 +1,7 @@
 pub mod accordion;
 pub mod alert_dialog;
+pub mod app;
+pub mod app_theme;
 pub mod attachment;
 pub mod autocomplete;
 pub mod avatar;

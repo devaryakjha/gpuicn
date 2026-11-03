@@ -2,34 +2,24 @@
 
 mod ui;
 
-use std::borrow::Cow;
-
-use gpui_kit::{
-    App, AppContext as _, Context, IntoElement, ParentElement as _, Render, Styled,
-    Window, WindowOptions, div, px,
+use gpui_kit::{Context, IntoElement, ParentElement as _, Render, Styled, Window, div, px};
+use ui::{
+    app::{AppConfig, run},
+    app_theme,
+    button::Button,
+    theme::UiTheme,
 };
-use gpui_icons::LucideAssetSource;
-use ui::{button::Button, theme::UiTheme};
 
 fn main() {
-    gpui_kit::platform::application()
-        .with_assets(LucideAssetSource)
-        .run(|cx: &mut App| {
-            ui::theme::init(cx);
-            cx.text_system()
-                .add_fonts(vec![
-                    Cow::Borrowed(include_bytes!("../assets/fonts/Geist-Regular.ttf")),
-                    Cow::Borrowed(include_bytes!("../assets/fonts/Geist-Medium.ttf")),
-                    Cow::Borrowed(include_bytes!("../assets/fonts/GeistMono-Regular.ttf")),
-                ])
-                .expect("load bundled Geist fonts");
-            UiTheme::set(cx, UiTheme::neutral_light());
-            cx.open_window(WindowOptions::default(), |_, cx| {
-                cx.new(|_| Hello { count: 0 })
-            })
-            .expect("open application window");
-            cx.activate(true);
-        });
+    // Opens the window with the Lucide icons, the Geist fonts and the theme pair
+    // from assets/theme.css; `gpuicn theme set` changes the base color, radius
+    // and appearance.
+    run(
+        AppConfig::new("My App")
+            .themes(app_theme::light(), app_theme::dark())
+            .appearance(app_theme::APPEARANCE),
+        |_, _| Hello { count: 0 },
+    );
 }
 
 struct Hello {

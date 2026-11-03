@@ -1,6 +1,6 @@
 //! Nova OTP cells using GPUI Kit's digit entry and paste handling.
 
-use super::theme::UiTheme;
+use super::theme::{UiTheme, primitives::disabled};
 use gpui_kit::base::OtpInput;
 pub use gpui_kit::base::{OtpEvent, OtpState};
 use gpui_kit::{
@@ -100,7 +100,7 @@ impl RenderOnce for OtpField {
             .aria_label(self.label)
             .aria_value(value)
             .when(self.read_only, |root| root.aria_description("Read only"))
-            .when(self.disabled, |root| root.opacity(0.5).cursor_not_allowed())
+            .when(self.disabled, disabled::style)
             .when(!self.disabled, |root| {
                 root.on_mouse_down(MouseButton::Left, move |_, window, cx| {
                     focus.focus(window, cx)

@@ -3,11 +3,15 @@
 //! Source: shadcn/ui 4.19.0 at
 //! `1773ecfeeb4a04366978d353e69b5c7ded78dcb2`, Nova style.
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use gpui_kit::{
-    App, BoxShadow, ElementId, Global, Pixels, Rgba, SharedString, Styled, Window, black, px,
+    App, BoxShadow, ElementId, Global, Pixels, Rgba, SharedString, Styled, Subscription, Window,
+    WindowAppearance, black, px,
 };
+
+#[path = "primitives.rs"]
+pub mod primitives;
 
 gpui_kit::actions!(
     gpuicn,
@@ -111,6 +115,49 @@ pub enum ThemeMode {
     Dark,
 }
 
+/// Which of an application's two palettes is shown.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum Appearance {
+    /// Always the light palette.
+    Light,
+    /// Always the dark palette.
+    Dark,
+    /// The palette matching the operating system's window appearance.
+    #[default]
+    System,
+}
+
+impl Appearance {
+    /// The mode this appearance shows under the given system appearance.
+    pub fn resolve(self, system: WindowAppearance) -> ThemeMode {
+        match self {
+            Appearance::Light => ThemeMode::Light,
+            Appearance::Dark => ThemeMode::Dark,
+            Appearance::System => match system {
+                WindowAppearance::Dark | WindowAppearance::VibrantDark => ThemeMode::Dark,
+                WindowAppearance::Light | WindowAppearance::VibrantLight => ThemeMode::Light,
+            },
+        }
+    }
+}
+
+/// The application's light and dark themes and which one it shows.
+#[derive(Clone)]
+struct ThemePair {
+    light: UiTheme,
+    dark: UiTheme,
+    appearance: Appearance,
+}
+impl Global for ThemePair {}
+
+/// Swaps palettes when the operating system's appearance changes while the
+/// application follows it. Call it for each window the application opens and
+/// keep the subscription; `app::run` does this for the first window.
+pub fn follow_system(window: &mut Window, cx: &mut App) -> Subscription {
+    UiTheme::apply_appearance(cx);
+    window.observe_window_appearance(|_, cx| UiTheme::apply_appearance(cx))
+}
+
 /// Semantic colors consumed by installed components.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct UiColors {
@@ -144,6 +191,20 @@ pub struct UiColors {
     pub accent_foreground: Rgba,
     /// Destructive action color.
     pub destructive: Rgba,
+    /// Text on a solid `destructive` surface.
+    pub destructive_foreground: Rgba,
+    /// Positive status, such as a completed upload or an online presence dot.
+    pub success: Rgba,
+    /// Text on a `success` fill.
+    pub success_foreground: Rgba,
+    /// Cautionary status, such as a permalink highlight or a pending state.
+    pub warning: Rgba,
+    /// Text on a `warning` fill.
+    pub warning_foreground: Rgba,
+    /// Informational status.
+    pub info: Rgba,
+    /// Text on an `info` fill.
+    pub info_foreground: Rgba,
     /// Default border.
     pub border: Rgba,
     /// Input border.
@@ -262,6 +323,9 @@ pub enum UiEasing {
     /// Smooth acceleration and deceleration for changes within a layout.
     #[default]
     EaseInOut,
+    /// Quick start and a long settle (`cubic-bezier(0.22, 1, 0.36, 1)`), for
+    /// surfaces that slide in from an edge, such as drawers and sheets.
+    Emphasized,
 }
 impl UiEasing {
     fn sample(self, progress: f32) -> f32 {
@@ -269,6 +333,13 @@ impl UiEasing {
             Self::Linear => progress,
             Self::EaseOut => gpui_kit::ease_out_quint()(progress),
             Self::EaseInOut => gpui_kit::ease_in_out(progress),
+            Self::Emphasized => gpui_kit::base::motion::Easing::CubicBezier {
+                x1: 0.22,
+                y1: 1.,
+                x2: 0.36,
+                y2: 1.,
+            }
+            .sample(progress),
         }
     }
 }
@@ -285,24 +356,34 @@ pub fn transition_value(
     window: &mut Window,
     cx: &mut App,
 ) -> f32 {
+    let easing = UiTheme::read(cx).motion.easing;
+    transition_with(id, target, duration, easing, window, cx)
+}
+
+/// [`transition_value`] with an explicit curve, for the few surfaces whose motion
+/// differs from the theme default (drawers slide with [`UiEasing::Emphasized`]).
+pub fn transition_with(
+    id: impl Into<ElementId>,
+    target: f32,
+    duration: Duration,
+    easing: UiEasing,
+    window: &mut Window,
+    cx: &mut App,
+) -> f32 {
     assert!(target.is_finite(), "transition targets must be finite");
-    let motion = UiTheme::read(cx).motion;
-    let duration = if motion.reduced || cx.reduce_motion() {
-        Duration::ZERO
-    } else {
-        duration
-    };
     gpui_kit::base::motion::transition(
         id.into(),
         target,
-        gpui_kit::base::motion::Transition::new(duration)
-            .ease(move |progress| motion.easing.sample(progress)),
+        motion_policy(duration, easing, cx),
         window,
         cx,
     )
 }
 
 /// Shares the theme's disclosure and notification timing with Kit's presence lifecycle.
+/// Returns a sample whose `progress` runs 0→1 while entering and 1→0 while leaving, so
+/// a surface fades or scales with it; `should_render()` keeps the element mounted
+/// until the exit transition has finished.
 #[doc(hidden)]
 pub fn presence(
     id: impl Into<ElementId>,
@@ -311,28 +392,143 @@ pub fn presence(
     cx: &mut App,
 ) -> gpui_kit::base::motion::PresenceSample {
     let motion = UiTheme::read(cx).motion;
-    let duration = if motion.reduced {
-        Duration::ZERO
-    } else {
-        motion.fast
-    };
+    presence_with(id, present, motion.fast, motion.easing, window, cx)
+}
+
+/// [`presence`] with explicit timing and curve, for panels that take the theme's
+/// `normal` duration or a different easing.
+#[doc(hidden)]
+pub fn presence_with(
+    id: impl Into<ElementId>,
+    present: bool,
+    duration: Duration,
+    easing: UiEasing,
+    window: &mut Window,
+    cx: &mut App,
+) -> gpui_kit::base::motion::PresenceSample {
     gpui_kit::base::motion::Presence::new(id.into(), present)
-        .transition(
-            gpui_kit::base::motion::Transition::new(duration)
-                .ease(move |progress| motion.easing.sample(progress)),
-        )
+        .transition(motion_policy(duration, easing, cx))
         .sample(window, cx)
 }
 
-/// Shared shadcn elevation tokens.
+/// The one place motion honors the theme and platform reduced-motion settings.
+fn motion_policy(
+    duration: Duration,
+    easing: UiEasing,
+    cx: &App,
+) -> gpui_kit::base::motion::Transition {
+    let duration = if UiTheme::read(cx).motion.reduced || cx.reduce_motion() {
+        Duration::ZERO
+    } else {
+        duration
+    };
+    gpui_kit::base::motion::Transition::new(duration).ease(move |progress| easing.sample(progress))
+}
+
+/// Shared shadcn elevation tokens. Each level is shared, so cloning a theme
+/// every render costs no allocation; `to_vec()` the level you apply.
 #[derive(Clone, Debug, PartialEq)]
 pub struct UiShadows {
     /// Tailwind `shadow-sm`.
-    pub sm: Vec<BoxShadow>,
+    pub sm: Arc<[BoxShadow]>,
     /// Tailwind `shadow-md`.
-    pub md: Vec<BoxShadow>,
+    pub md: Arc<[BoxShadow]>,
     /// Tailwind `shadow-lg`.
-    pub lg: Vec<BoxShadow>,
+    pub lg: Arc<[BoxShadow]>,
+}
+
+/// One step of the type scale: a text size and the line height that goes with it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UiTextStyle {
+    /// Font size before `text_scale`.
+    pub size: Pixels,
+    /// Line height before `text_scale`.
+    pub line_height: Pixels,
+}
+
+/// The type scale, Tailwind's by default. Components read sizes from here through
+/// `primitives::text`, so `text_scale` and a custom scale reach every label.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UiTypography {
+    /// Captions and key caps (12/16).
+    pub xs: UiTextStyle,
+    /// Controls and body copy in dense desktop layouts (14/20); the Nova default.
+    pub sm: UiTextStyle,
+    /// Prose and dialog titles (16/24).
+    pub base: UiTextStyle,
+    /// Section headings (18/28).
+    pub lg: UiTextStyle,
+    /// Page headings (20/28).
+    pub xl: UiTextStyle,
+}
+
+impl Default for UiTypography {
+    fn default() -> Self {
+        let style = |size: f32, line_height: f32| UiTextStyle {
+            size: px(size),
+            line_height: px(line_height),
+        };
+        Self {
+            xs: style(12., 16.),
+            sm: style(14., 20.),
+            base: style(16., 24.),
+            lg: style(18., 28.),
+            xl: style(20., 28.),
+        }
+    }
+}
+
+/// Window widths at which layouts change shape.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UiBreakpoints {
+    /// Below this width, sidebars become sheets and drawers fill the window (768px).
+    pub mobile: Pixels,
+    /// Below this width, side drawers take three quarters of the window (640px).
+    pub compact: Pixels,
+}
+
+impl Default for UiBreakpoints {
+    fn default() -> Self {
+        Self {
+            mobile: px(768.),
+            compact: px(640.),
+        }
+    }
+}
+
+/// Colors every form control shares, derived once from the palette and mode so
+/// no component chooses its own dark-mode alpha. These follow shadcn Nova's
+/// `dark:bg-input/30`, `dark:hover:bg-input/50` and `dark:border-input` rules.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ControlColors {
+    /// Resting fill of inputs, checkboxes, radios and outline buttons.
+    pub background: Rgba,
+    /// Resting border of the same controls.
+    pub border: Rgba,
+    /// Hover fill of outline, ghost and toggle controls.
+    pub hover: Rgba,
+    /// Hover fill of ghost buttons and plain icon buttons.
+    pub ghost_hover: Rgba,
+    /// Fill of a pressed toggle or selected tab.
+    pub pressed: Rgba,
+    /// Unchecked switch track.
+    pub track: Rgba,
+    /// Switch thumb on the unchecked track.
+    pub thumb: Rgba,
+    /// Switch thumb on the checked (`primary`) track.
+    pub thumb_checked: Rgba,
+    /// Tinted destructive fill, for destructive buttons, badges and tags.
+    pub destructive_background: Rgba,
+    /// Hover of the tinted destructive fill.
+    pub destructive_hover: Rgba,
+    /// Hairline around tinted destructive chips.
+    pub destructive_border: Rgba,
+    /// Focus ring color at Nova's 50% opacity.
+    pub ring: Rgba,
+    /// Focus ring of an invalid control.
+    pub invalid_ring: Rgba,
+    /// Hairline around popovers and dialogs (`ring-foreground/10`).
+    pub surface_border: Rgba,
 }
 
 /// Base spacing unit from the pinned Nova style.
@@ -361,6 +557,10 @@ pub struct UiTheme {
     pub motion: UiMotion,
     /// Typography scale, independent of control density (1 by default).
     pub text_scale: f32,
+    /// Text sizes and line heights, multiplied by `text_scale` when applied.
+    pub typography: UiTypography,
+    /// Window widths at which layouts change shape.
+    pub breakpoints: UiBreakpoints,
 }
 
 impl Global for UiTheme {}
@@ -380,6 +580,59 @@ impl UiTheme {
     /// Creates the pinned Neutral dark theme.
     pub fn neutral_dark() -> Self {
         Self::new(ThemeMode::Dark, neutral_dark_colors())
+    }
+
+    /// Installs light and dark themes together and shows the one the current
+    /// [`Appearance`] selects (System until [`UiTheme::set_appearance`] says
+    /// otherwise). [`follow_system`] keeps the pair in step with the OS.
+    pub fn set_pair(cx: &mut App, light: Self, dark: Self) {
+        let appearance = cx
+            .try_global::<ThemePair>()
+            .map_or(Appearance::System, |pair| pair.appearance);
+        cx.set_global(ThemePair {
+            light,
+            dark,
+            appearance,
+        });
+        Self::apply_appearance(cx);
+    }
+
+    /// Chooses which of the installed pair to show. Without a pair, the
+    /// pinned Neutral palettes stand in.
+    pub fn set_appearance(cx: &mut App, appearance: Appearance) {
+        match cx.try_global::<ThemePair>() {
+            Some(_) => cx.global_mut::<ThemePair>().appearance = appearance,
+            None => cx.set_global(ThemePair {
+                light: Self::neutral_light(),
+                dark: Self::neutral_dark(),
+                appearance,
+            }),
+        }
+        Self::apply_appearance(cx);
+    }
+
+    /// The appearance the application asked for, System when none was set.
+    pub fn appearance(cx: &App) -> Appearance {
+        cx.try_global::<ThemePair>()
+            .map_or(Appearance::System, |pair| pair.appearance)
+    }
+
+    /// Installs the pair member the appearance selects, if a pair is installed.
+    fn apply_appearance(cx: &mut App) {
+        let Some(pair) = cx.try_global::<ThemePair>().cloned() else {
+            return;
+        };
+        let theme = match pair.appearance.resolve(cx.window_appearance()) {
+            ThemeMode::Light => pair.light,
+            ThemeMode::Dark => pair.dark,
+        };
+        let current = cx.try_global::<Self>();
+        if current
+            .is_some_and(|current| current.mode == theme.mode && current.colors == theme.colors)
+        {
+            return;
+        }
+        Self::set(cx, theme);
     }
 
     /// Installs a theme into the application.
@@ -487,31 +740,87 @@ impl UiTheme {
             radius: UiRadius::new(px(10.)),
             motion: UiMotion::default(),
             text_scale: 1.,
+            typography: UiTypography::default(),
+            breakpoints: UiBreakpoints::default(),
             spacing: UiSpacing { unit: px(4.) },
             shadows: UiShadows {
-                sm: vec![
+                sm: Arc::from([
                     BoxShadow::new(px(0.), px(1.), black().alpha(0.10)).blur_radius(px(3.)),
                     BoxShadow::new(px(0.), px(1.), black().alpha(0.10))
                         .blur_radius(px(2.))
                         .spread_radius(px(-1.)),
-                ],
-                md: vec![
+                ]),
+                md: Arc::from([
                     BoxShadow::new(px(0.), px(4.), black().alpha(0.10))
                         .blur_radius(px(6.))
                         .spread_radius(px(-1.)),
                     BoxShadow::new(px(0.), px(2.), black().alpha(0.10))
                         .blur_radius(px(4.))
                         .spread_radius(px(-2.)),
-                ],
-                lg: vec![
+                ]),
+                lg: Arc::from([
                     BoxShadow::new(px(0.), px(10.), black().alpha(0.10))
                         .blur_radius(px(15.))
                         .spread_radius(px(-3.)),
                     BoxShadow::new(px(0.), px(4.), black().alpha(0.10))
                         .blur_radius(px(6.))
                         .spread_radius(px(-4.)),
-                ],
+                ]),
             },
+        }
+    }
+
+    /// The shared form-control colors for the active mode. See [`ControlColors`].
+    pub fn control(&self) -> ControlColors {
+        let colors = self.colors;
+        let dark = self.mode == ThemeMode::Dark;
+        ControlColors {
+            background: if dark {
+                colors.input.opacity(0.30)
+            } else {
+                colors.background.opacity(0.)
+            },
+            border: colors.input,
+            hover: if dark {
+                colors.input.opacity(0.50)
+            } else {
+                colors.muted
+            },
+            ghost_hover: if dark {
+                colors.muted.opacity(0.50)
+            } else {
+                colors.muted
+            },
+            pressed: colors.muted,
+            track: if dark {
+                colors.input.opacity(0.80)
+            } else {
+                colors.input
+            },
+            thumb: if dark {
+                colors.foreground
+            } else {
+                colors.background
+            },
+            thumb_checked: if dark {
+                colors.primary_foreground
+            } else {
+                colors.background
+            },
+            destructive_background: colors.destructive.opacity(if dark { 0.20 } else { 0.10 }),
+            destructive_hover: colors.destructive.opacity(if dark { 0.30 } else { 0.20 }),
+            destructive_border: colors.destructive.opacity(0.20),
+            ring: colors.ring.opacity(0.50),
+            invalid_ring: colors.destructive.opacity(0.20),
+            surface_border: colors.foreground.opacity(0.10),
+        }
+    }
+
+    /// A step of the type scale multiplied by `text_scale`.
+    pub fn text_style(&self, style: UiTextStyle) -> UiTextStyle {
+        UiTextStyle {
+            size: style.size * self.text_scale,
+            line_height: style.line_height * self.text_scale,
         }
     }
 }
@@ -551,20 +860,69 @@ fn sync_component_theme(cx: &mut App, theme: UiTheme) {
     component.muted_foreground = colors.muted_foreground.into();
     component.accent = colors.accent.into();
     component.accent_foreground = colors.accent_foreground.into();
-    component.danger = colors.destructive.into();
+    component.primary_hover = colors.primary.opacity(0.9).into();
+    component.primary_active = colors.primary.opacity(0.8).into();
+    component.secondary_hover = colors.secondary.opacity(0.8).into();
+    component.secondary_active = colors.secondary.opacity(0.7).into();
     component.border = colors.border.into();
     component.input = colors.input.into();
     component.ring = colors.ring.into();
     component.overlay = colors.overlay.into();
+    component.caret = colors.foreground.into();
+    component.window_border = colors.border.into();
+    component.danger = colors.destructive.into();
+    component.danger_foreground = colors.destructive_foreground.into();
+    component.danger_hover = colors.destructive.opacity(0.9).into();
+    component.danger_active = colors.destructive.opacity(0.8).into();
+    component.success = colors.success.into();
+    component.success_foreground = colors.success_foreground.into();
+    component.success_hover = colors.success.opacity(0.9).into();
+    component.success_active = colors.success.opacity(0.8).into();
+    component.warning = colors.warning.into();
+    component.warning_foreground = colors.warning_foreground.into();
+    component.warning_hover = colors.warning.opacity(0.9).into();
+    component.warning_active = colors.warning.opacity(0.8).into();
+    component.info = colors.info.into();
+    component.info_foreground = colors.info_foreground.into();
+    component.info_hover = colors.info.opacity(0.9).into();
+    component.info_active = colors.info.opacity(0.8).into();
     component.chart_1 = colors.chart_1.into();
     component.chart_2 = colors.chart_2.into();
     component.chart_3 = colors.chart_3.into();
     component.chart_4 = colors.chart_4.into();
     component.chart_5 = colors.chart_5.into();
+    component.chart_bullish = colors.success.into();
+    component.chart_bearish = colors.destructive.into();
+    component.chart_grid = colors.border.opacity(0.6).into();
+    // Buttons: Kit's plain button is shadcn `outline`; the variants follow their token.
     component.button = colors.background.into();
     component.button_foreground = colors.foreground.into();
     component.button_hover = colors.accent.into();
     component.button_active = colors.muted.into();
+    component.button_primary = component.primary;
+    component.button_primary_foreground = component.primary_foreground;
+    component.button_primary_hover = component.primary_hover;
+    component.button_primary_active = component.primary_active;
+    component.button_secondary = component.secondary;
+    component.button_secondary_foreground = component.secondary_foreground;
+    component.button_secondary_hover = component.secondary_hover;
+    component.button_secondary_active = component.secondary_active;
+    component.button_danger = component.danger;
+    component.button_danger_foreground = component.danger_foreground;
+    component.button_danger_hover = component.danger_hover;
+    component.button_danger_active = component.danger_active;
+    component.button_success = component.success;
+    component.button_success_foreground = component.success_foreground;
+    component.button_success_hover = component.success_hover;
+    component.button_success_active = component.success_active;
+    component.button_warning = component.warning;
+    component.button_warning_foreground = component.warning_foreground;
+    component.button_warning_hover = component.warning_hover;
+    component.button_warning_active = component.warning_active;
+    component.button_info = component.info;
+    component.button_info_foreground = component.info_foreground;
+    component.button_info_hover = component.info_hover;
+    component.button_info_active = component.info_active;
     // Nova scrollbars float over content with no track.
     component.scrollbar = gpui_kit::transparent_black();
     component.scrollbar_thumb = colors.border.into();
@@ -574,13 +932,53 @@ fn sync_component_theme(cx: &mut App, theme: UiTheme) {
     component.sidebar_border = colors.sidebar_border.into();
     component.sidebar_accent = colors.sidebar_accent.into();
     component.sidebar_accent_foreground = colors.sidebar_accent_foreground.into();
+    component.sidebar_primary = colors.sidebar_primary.into();
+    component.sidebar_primary_foreground = colors.sidebar_primary_foreground.into();
     component.title_bar = colors.sidebar.into();
     component.title_bar_border = colors.border.into();
+    component.status_bar = colors.sidebar.into();
+    component.status_bar_border = colors.border.into();
     // Rich text: links, selection, table headings and code highlighting.
     component.link = colors.primary.into();
+    component.link_hover = colors.primary.opacity(0.9).into();
+    component.link_active = colors.primary.opacity(0.8).into();
     component.selection = colors.ring.opacity(0.3).into();
+    component.description_list_label = colors.muted.into();
+    component.description_list_label_foreground = colors.muted_foreground.into();
+    component.group_box = colors.card.into();
+    component.group_box_foreground = colors.card_foreground.into();
+    component.accordion = colors.card.into();
+    // Lists and tables share the `muted` zebra and the `accent` hover of menus.
+    component.colors.list = colors.background.into();
+    component.list_even = colors.muted.opacity(0.5).into();
+    component.list_head = colors.muted.into();
+    component.list_hover = colors.accent.into();
+    component.list_active = colors.accent.into();
+    component.list_active_border = colors.ring.into();
+    component.table = colors.background.into();
+    component.table_even = colors.muted.opacity(0.5).into();
+    component.table_hover = colors.muted.opacity(0.5).into();
+    component.table_active = colors.accent.into();
+    component.table_active_border = colors.ring.into();
+    component.table_row_border = colors.border.into();
     component.table_head = colors.muted.into();
     component.table_head_foreground = colors.foreground.into();
+    component.table_foot = colors.muted.opacity(0.5).into();
+    component.table_foot_foreground = colors.foreground.into();
+    // Controls: shadcn tracks are `input`, thumbs and active tabs are `background`.
+    component.switch = colors.input.into();
+    component.switch_thumb = colors.background.into();
+    component.slider_bar = colors.primary.into();
+    component.slider_thumb = colors.background.into();
+    component.progress_bar = colors.primary.into();
+    component.skeleton = colors.accent.into();
+    component.tab_bar = colors.muted.into();
+    component.tab_bar_segmented = colors.muted.into();
+    component.tab_foreground = colors.muted_foreground.into();
+    component.tab_active = colors.background.into();
+    component.tab_active_foreground = colors.foreground.into();
+    component.drag_border = colors.ring.into();
+    component.drop_target = colors.ring.opacity(0.15).into();
     component.highlight_theme = match theme.mode {
         ThemeMode::Light => gpui_kit::component::highlighter::HighlightTheme::default_light(),
         ThemeMode::Dark => gpui_kit::component::highlighter::HighlightTheme::default_dark(),
@@ -603,7 +1001,8 @@ impl std::fmt::Display for ThemeCssError {
 impl std::error::Error for ThemeCssError {}
 
 impl UiColors {
-    fn slot(&mut self, variable: &str) -> Option<&mut Rgba> {
+    #[doc(hidden)]
+    pub fn slot(&mut self, variable: &str) -> Option<&mut Rgba> {
         Some(match variable {
             "background" => &mut self.background,
             "foreground" => &mut self.foreground,
@@ -620,6 +1019,13 @@ impl UiColors {
             "accent" => &mut self.accent,
             "accent-foreground" => &mut self.accent_foreground,
             "destructive" => &mut self.destructive,
+            "destructive-foreground" => &mut self.destructive_foreground,
+            "success" => &mut self.success,
+            "success-foreground" => &mut self.success_foreground,
+            "warning" => &mut self.warning,
+            "warning-foreground" => &mut self.warning_foreground,
+            "info" => &mut self.info,
+            "info-foreground" => &mut self.info_foreground,
             "border" => &mut self.border,
             "input" => &mut self.input,
             "ring" => &mut self.ring,
@@ -825,6 +1231,13 @@ fn neutral_light_colors() -> UiColors {
         accent: neutral(0.97),
         accent_foreground: neutral(0.205),
         destructive: srgb(0xdc, 0x26, 0x26),
+        destructive_foreground: neutral(0.985),
+        success: srgb(0x16, 0xa3, 0x4a),
+        success_foreground: neutral(0.985),
+        warning: srgb(0xd9, 0x77, 0x06),
+        warning_foreground: neutral(0.985),
+        info: srgb(0x25, 0x63, 0xeb),
+        info_foreground: neutral(0.985),
         border: neutral(0.922),
         input: neutral(0.922),
         ring: neutral(0.708),
@@ -862,6 +1275,13 @@ fn neutral_dark_colors() -> UiColors {
         accent: neutral(0.269),
         accent_foreground: neutral(0.985),
         destructive: srgb(0xff, 0x64, 0x67),
+        destructive_foreground: neutral(0.985),
+        success: srgb(0x4a, 0xde, 0x80),
+        success_foreground: neutral(0.145),
+        warning: srgb(0xfb, 0xbf, 0x24),
+        warning_foreground: neutral(0.145),
+        info: srgb(0x60, 0xa5, 0xfa),
+        info_foreground: neutral(0.145),
         border: neutral_alpha(1.0, 0.10),
         input: neutral_alpha(1.0, 0.15),
         ring: neutral(0.556),

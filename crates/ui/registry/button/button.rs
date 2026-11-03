@@ -12,7 +12,10 @@ use gpui_kit::{
     SharedString, Styled, Window, px,
 };
 
-use super::theme::{ThemeMode, UiRadius, UiTheme};
+use super::theme::{
+    UiRadius, UiTheme,
+    primitives::{disabled as disabled_style, focus},
+};
 
 type ButtonClickHandler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 type ButtonStyleHandler = Rc<dyn Fn(BaseButton) -> BaseButton>;
@@ -221,11 +224,10 @@ pub fn style_button<T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude
     theme: &UiTheme,
 ) -> T {
     let colors = theme.colors;
+    let control = theme.control();
     let metrics = size.metrics(theme.radius);
-    let focus_border = match variant {
-        ButtonVariant::Destructive => colors.destructive.opacity(0.40),
-        _ => colors.ring,
-    };
+    let invalid_ring = variant == ButtonVariant::Destructive;
+    let focus_theme = theme.clone();
 
     let base = base
         .flex()
@@ -241,7 +243,7 @@ pub fn style_button<T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude
         .font_family(theme.fonts.body.clone())
         .font_weight(FontWeight::MEDIUM)
         .text_size(theme.text(metrics.text_size))
-        .focus_visible(move |style| style.border_color(focus_border))
+        .focus_visible(move |style| focus::ring_for(style, &focus_theme, invalid_ring))
         .when(metrics.icon_only, |base| {
             base.w(theme.space(metrics.height / 4.)).p_0()
         })
@@ -256,26 +258,13 @@ pub fn style_button<T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude
             .when(!disabled, |base| {
                 base.hover(move |style| style.bg(colors.primary.opacity(0.80)))
             }),
-        ButtonVariant::Outline => {
-            let background = match theme.mode {
-                ThemeMode::Light => colors.background,
-                ThemeMode::Dark => colors.input.opacity(0.30),
-            };
-            let border = match theme.mode {
-                ThemeMode::Light => colors.border,
-                ThemeMode::Dark => colors.input,
-            };
-            let hover = match theme.mode {
-                ThemeMode::Light => colors.muted,
-                ThemeMode::Dark => colors.input.opacity(0.50),
-            };
-            base.bg(background)
-                .text_color(colors.foreground)
-                .border_color(border)
-                .when(!disabled, |base| {
-                    base.hover(move |style| style.bg(hover).text_color(colors.foreground))
-                })
-        }
+        ButtonVariant::Outline => base
+            .bg(control.background)
+            .text_color(colors.foreground)
+            .border_color(control.border)
+            .when(!disabled, |base| {
+                base.hover(move |style| style.bg(control.hover).text_color(colors.foreground))
+            }),
         ButtonVariant::Secondary => {
             let hover = colors
                 .secondary
@@ -284,40 +273,25 @@ pub fn style_button<T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude
                 .text_color(colors.secondary_foreground)
                 .when(!disabled, |base| base.hover(move |style| style.bg(hover)))
         }
-        ButtonVariant::Ghost => {
-            let hover = match theme.mode {
-                ThemeMode::Light => colors.muted,
-                ThemeMode::Dark => colors.muted.opacity(0.50),
-            };
-            base.bg(colors.background.opacity(0.0))
-                .text_color(colors.foreground)
-                .when(!disabled, |base| {
-                    base.hover(move |style| style.bg(hover).text_color(colors.foreground))
-                })
-        }
-        ButtonVariant::Destructive => {
-            let background_alpha = match theme.mode {
-                ThemeMode::Light => 0.10,
-                ThemeMode::Dark => 0.20,
-            };
-            let hover_alpha = match theme.mode {
-                ThemeMode::Light => 0.20,
-                ThemeMode::Dark => 0.30,
-            };
-            base.bg(colors.destructive.opacity(background_alpha))
-                .text_color(colors.destructive)
-                .when(!disabled, |base| {
-                    base.hover(move |style| style.bg(colors.destructive.opacity(hover_alpha)))
-                })
-        }
+        ButtonVariant::Ghost => base
+            .bg(colors.background.opacity(0.0))
+            .text_color(colors.foreground)
+            .when(!disabled, |base| {
+                base.hover(move |style| style.bg(control.ghost_hover).text_color(colors.foreground))
+            }),
+        ButtonVariant::Destructive => base
+            .bg(control.destructive_background)
+            .text_color(colors.destructive)
+            .when(!disabled, |base| {
+                base.hover(move |style| style.bg(control.destructive_hover))
+            }),
         ButtonVariant::Link => base
             .bg(colors.background.opacity(0.0))
             .text_color(colors.primary)
             .when(!disabled, |base| base.hover(|style| style.underline())),
     };
 
-    base.when(!disabled, |base| base.cursor_pointer())
-        .when(disabled, |base| base.opacity(0.50).cursor_not_allowed())
+    disabled_style::interactive(base, disabled)
 }
 
 impl gpui_kit::Styled for Button {

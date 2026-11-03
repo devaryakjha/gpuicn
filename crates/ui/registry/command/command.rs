@@ -17,7 +17,10 @@ use gpui_kit::{
 
 use super::input::{Input, InputEvent, InputState};
 use super::kbd::{format_shortcut, key_label};
-use super::theme::{UiTheme, apply_style};
+use super::theme::{
+    UiTheme, apply_style,
+    primitives::{disabled, surface},
+};
 
 /// One command or destination in the palette.
 #[derive(Clone, Debug)]
@@ -382,9 +385,7 @@ impl Render for CommandState {
                                 .aria_selected(selected)
                                 .when(selected, |row| row.aria_active_descendant())
                                 .when(item.disabled, |row| {
-                                    row.aria_description("Unavailable")
-                                        .opacity(0.5)
-                                        .cursor_not_allowed()
+                                    disabled::style(row.aria_description("Unavailable"))
                                 })
                                 .w_full()
                                 .h(row_theme.space(ROW))
@@ -570,17 +571,16 @@ impl Styled for Command {
 impl RenderOnce for Command {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx);
-        let root = div()
-            .w_full()
-            .overflow_hidden()
-            .rounded(theme.radius.xl)
-            // GPUI clips children to a rectangle, so the surface color lives
-            // on the rounded root rather than on the square palette inside.
-            .bg(theme.colors.popover)
-            .when(self.bordered, |root| {
-                root.border_1().border_color(theme.colors.border)
-            })
-            .child(self.state);
+        // GPUI clips children to a rectangle, so the surface lives on the
+        // rounded root rather than on the square palette inside; unbordered
+        // palettes sit inside a dialog that already draws the surface.
+        let root = div().w_full().overflow_hidden().rounded(theme.radius.xl);
+        let root = if self.bordered {
+            surface::popover(root, theme).rounded(theme.radius.xl)
+        } else {
+            root
+        }
+        .child(self.state);
         apply_style(root, &self.style)
     }
 }
@@ -593,20 +593,15 @@ pub fn command_dialog_popup(
     cx: &App,
 ) -> gpui_kit::Stateful<gpui_kit::Div> {
     let theme = UiTheme::read(cx);
-    div()
+    let root = div()
         .id(id)
         .aria_label("Command palette")
         .occlude()
         .w_full()
         .min_w(px(0.))
         .max_w(theme.space(120.))
-        .overflow_hidden()
-        .rounded(theme.radius.xl)
-        .border_1()
-        .border_color(theme.colors.foreground.opacity(0.1))
-        .bg(theme.colors.popover)
-        .shadow(theme.shadows.lg.clone())
-        .child(Command::new(state).bordered(false))
+        .overflow_hidden();
+    surface::modal(root, theme).child(Command::new(state).bordered(false))
 }
 
 #[cfg(test)]
