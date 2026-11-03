@@ -63,19 +63,19 @@ too when you pass them its types.
 
 ## Manual setup
 
-gpuicn v0.7.1 supports GPUI Kit 0.8.1 on its pinned `gpui-pre` 0.3.10
+gpuicn v0.7.1 supports GPUI Kit 0.9.0 on its pinned `gpui-pre` 0.3.11
 runtime. Keep these dependency pins together. Apps using another GPUI revision
 must migrate to this runtime before installing the components.
 
 ```toml
 [dependencies]
 web-time = "1.1"
-gpui_platform = { package = "gpui-pre-platform", version = "=0.3.10", features = ["font-kit"] }
-gpui-icons = "=0.5.0"
-gpui-kit = { version = "=0.8.1", default-features = false, features = ["component"] }
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.11", features = ["font-kit"] }
+gpui-icons = "=0.6.0"
+gpui-kit = { version = "=0.9.0", default-features = false, features = ["component"] }
 
 [dev-dependencies]
-gpui-kit = { version = "=0.8.1", default-features = false, features = ["component", "test-support"] }
+gpui-kit = { version = "=0.9.0", default-features = false, features = ["component", "test-support"] }
 ```
 
 Import GPUI types through `gpui_kit` so the application and installed components

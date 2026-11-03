@@ -95,10 +95,17 @@ fn main() {
 }
 
 fn application() -> Application {
+    // gpui-pre 0.3.11 no longer installs a Fetch client on the web, so image
+    // URLs need one passed in.
     #[cfg(target_family = "wasm")]
-    let app = gpui_kit::platform::application_with_web_backend(
-        gpui_kit::platform::WebBackendPreference::WebGpu,
-    );
+    let app = {
+        let platform = gpui_kit::web::WebPlatform::new_with_backend(
+            true,
+            gpui_kit::platform::WebBackendPreference::WebGpu,
+        );
+        let http_client = std::sync::Arc::new(platform.fetch_http_client());
+        Application::with_platform(std::rc::Rc::new(platform)).with_http_client(http_client)
+    };
     #[cfg(not(target_family = "wasm"))]
     let app = gpui_kit::application();
 

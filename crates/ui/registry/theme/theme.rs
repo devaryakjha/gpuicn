@@ -80,11 +80,9 @@ fn seed_component_fonts(cx: &mut App) {
     } else {
         UiTheme::neutral_light().fonts
     };
-    let component = Theme {
-        font_family: fonts.body,
-        mono_font_family: fonts.mono,
-        ..Theme::default()
-    };
+    let mut component = Theme::default();
+    component.font_family = fonts.body;
+    component.mono_font_family = fonts.mono;
     cx.set_global(component);
 }
 
