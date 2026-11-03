@@ -1384,7 +1384,10 @@ impl Showcase {
             .overflow_hidden()
             .bg(theme.colors.background)
             .child(
+                // GPUI clips children to a rectangle, so the bar takes the
+                // frame's inner radius.
                 TitleBar::new()
+                    .rounded_t(theme.radius.xl - px(1.))
                     .child(
                         div()
                             .flex()

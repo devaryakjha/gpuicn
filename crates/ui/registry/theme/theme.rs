@@ -529,6 +529,12 @@ fn sync_component_theme(cx: &mut App, theme: UiTheme) {
         ThemeMode::Light => gpui_kit::component::ThemeMode::Light,
         ThemeMode::Dark => gpui_kit::component::ThemeMode::Dark,
     };
+    // Start from Kit's palette for this mode, so colors gpuicn doesn't set
+    // below, such as scrollbar tracks, never keep the other mode's values.
+    component.colors = *match theme.mode {
+        ThemeMode::Light => gpui_kit::component::ThemeColor::light(),
+        ThemeMode::Dark => gpui_kit::component::ThemeColor::dark(),
+    };
     component.font_family = theme.fonts.body;
     component.mono_font_family = theme.fonts.mono;
     component.radius = theme.radius.md;
@@ -559,6 +565,17 @@ fn sync_component_theme(cx: &mut App, theme: UiTheme) {
     component.button_foreground = colors.foreground.into();
     component.button_hover = colors.accent.into();
     component.button_active = colors.muted.into();
+    // Nova scrollbars float over content with no track.
+    component.scrollbar = gpui_kit::transparent_black();
+    component.scrollbar_thumb = colors.border.into();
+    component.scrollbar_thumb_hover = colors.muted_foreground.opacity(0.72).into();
+    component.sidebar = colors.sidebar.into();
+    component.sidebar_foreground = colors.sidebar_foreground.into();
+    component.sidebar_border = colors.sidebar_border.into();
+    component.sidebar_accent = colors.sidebar_accent.into();
+    component.sidebar_accent_foreground = colors.sidebar_accent_foreground.into();
+    component.title_bar = colors.sidebar.into();
+    component.title_bar_border = colors.border.into();
     // Rich text: links, selection, table headings and code highlighting.
     component.link = colors.primary.into();
     component.selection = colors.ring.opacity(0.3).into();
