@@ -3234,7 +3234,7 @@ checksum = "99b18b06f5026b3d312488eacfdddbe78f82b4bf32bb2d2bc3186e31e552b797"
 
 [[package]]
 name = "gpuicn"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "gpui-icons",
  "gpui-kit",
@@ -3244,7 +3244,7 @@ dependencies = [
 
 [[package]]
 name = "gpuicn-cli"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -3261,7 +3261,7 @@ dependencies = [
 
 [[package]]
 name = "gpuicn-showcase"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "gpui-icons",
  "gpui-kit",

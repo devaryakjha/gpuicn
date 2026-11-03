@@ -4,6 +4,30 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.8.0
+
+[Notes](docs/releases/v0.8.0.md)
+
+### Added
+
+- Emoji Picker: `EmojiPickerState::open`, which applies recents held since
+  the last pick.
+- Kbd: `key_label` for shortcut hints outside a key cap.
+
+### Changed
+
+- GPUI Kit 0.9.0 on `gpui-pre` 0.3.11, and gpui-icons 0.6.0.
+- The dark modal scrim is 50% black.
+- Kbd and Command draw modifier and arrow symbols as icons.
+
+### Fixed
+
+- Rounded frames in Command, Emoji Picker, Attachment, Markdown images and
+  thumbnails no longer show square corners or lose their borders.
+- Dialogs and the mobile sidebar close on a backdrop press.
+- Kit colors gpuicn doesn't set, such as scrollbar tracks, follow dark mode.
+- Message continuation rows don't grow when the hover time shows.
+
 ## 0.7.1
 
 [Notes](docs/releases/v0.7.1.md)
