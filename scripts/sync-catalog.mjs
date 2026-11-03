@@ -6,7 +6,8 @@ import { dirname } from "node:path";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const read = (path) => readFileSync(`${root}${path}`, "utf8");
-const showcase = read("site/src/main.rs");
+// One preview file per component; `cargo xtask new-component` writes it.
+const previewSource = (module) => read(`site/src/previews/${module}.rs`);
 const usageExamples = read("crates/ui/examples/usage.rs");
 const registry = JSON.parse(read("registry.json"));
 const componentByModule = new Map(registry.items.map((item) => [item.name.replaceAll("-", "_"), item]));
@@ -30,7 +31,8 @@ writeFileSync(`${root}web/src/generated/setup.json`, JSON.stringify({
 for (const item of registry.items.filter((item) => item.name !== "theme")) {
   const module = item.name.replaceAll("-", "_");
   const source = read(`crates/ui/registry/${module}/${module}.rs`);
-  const preview = showcase.match(new RegExp(`^    fn ${module}_preview\\([\\s\\S]*?^    \\}`, "m"))?.[0];
+  const showcase = previewSource(module);
+  const preview = showcase.match(new RegExp(`^    pub\\(crate\\) fn ${module}_preview\\([\\s\\S]*?^    \\}`, "m"))?.[0]?.replace("pub(crate) fn", "fn");
   assert(preview, `Missing compiled preview for ${item.name}`);
   const usage = usageExamples.match(new RegExp(`^mod ${module} \\{\\n([\\s\\S]*?)^\\}`, "m"))?.[1].replace(/^    /gm, "").trim();
   assert(usage?.includes("fn example("), `Missing compile-checked usage for ${item.name}`);
@@ -64,7 +66,7 @@ for (const item of registry.items.filter((item) => item.name !== "theme")) {
   assert(parityName, `Missing platform notes for ${item.name}`);
   const parity = read(`docs/parity/${parityName}`);
   const sidebarExample = (name) => {
-    const method = showcase.match(new RegExp(`^    fn sidebar_${name}_preview\\([\\s\\S]*?^    \\}`, "m"))?.[0];
+    const method = showcase.match(new RegExp(`^    (?:pub\\(crate\\) )?fn sidebar_${name}_preview\\([\\s\\S]*?^    \\}`, "m"))?.[0]?.replace("pub(crate) fn", "fn");
     assert(method, `Missing Sidebar ${name} example`);
     return method.replace(/^    /gm, "");
   };
@@ -90,7 +92,8 @@ for (const item of registry.items.filter((item) => item.name !== "theme")) {
 }
 
 mkdirSync(`${root}web/public/examples`, { recursive: true });
-copyFileSync(`${root}site/src/main.rs`, `${root}web/public/examples/showcase.rs`);
+// The downloadable showcase source: the shell plus every preview file.
+writeFileSync(`${root}web/public/examples/showcase.rs`, [read("site/src/main.rs"), ...readdirSync(`${root}site/src/previews`).sort().map((file) => `// ---- site/src/previews/${file} ----\n${read(`site/src/previews/${file}`)}`)].join("\n"));
 copyFileSync(`${root}fixtures/registry-install/src/main.rs`, `${root}web/public/examples/hello.rs`);
 mkdirSync(`${root}web/public/fonts`, { recursive: true });
 mkdirSync(`${root}fixtures/registry-install/assets/fonts`, { recursive: true });

@@ -1,0 +1,3 @@
+[alias]
+# `cargo xtask new-component <name>` scaffolds a component across the repository.
+xtask = "run -q -p xtask --"

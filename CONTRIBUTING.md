@@ -12,7 +12,8 @@ requests are welcome; say which checks you ran.
 | `registry.toml` | Component titles, descriptions and source dependencies. |
 | `crates/ui` | The `gpuicn` crate: compiles the registry via `#[path]` modules, plus tests and examples. It is published for crate mode. |
 | `crates/cli` | The `gpuicn` CLI (`init`, `new`, `add`, `status`, `diff`, `remove`, `build`). |
-| `site/` | The GPUI/WASM previews and the gpuicn Workspace example app. |
+| `site/` | The GPUI/WASM previews (one file per component under `site/src/previews/`) and the gpuicn Workspace example app. |
+| `xtask/` | `cargo xtask new-component <name>` scaffolds a component in every place above. |
 | `web/` | The catalog website (TanStack, Bun). |
 | `fixtures/registry-install` | A consumer app CI installs every component into. |
 | `docs/` | User docs; `docs/internal/` holds plans and validation records. |
