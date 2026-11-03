@@ -58,7 +58,8 @@ jobs:
       # Crate mode depends on the published crate, so its component source must package.
       - run: cargo package -p gpuicn --list --locked > /dev/null
 
-  web:
+  wasm:
+    # Named wasm so branch protection that requires the old check keeps working.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
