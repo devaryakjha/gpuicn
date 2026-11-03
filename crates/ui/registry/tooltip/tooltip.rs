@@ -2,9 +2,9 @@
 use super::theme::{UiTheme, primitives::surface};
 use gpui_kit::base::{Button, ElementExt as _, Tooltip, TooltipOverlay, TooltipRequest};
 use gpui_kit::{
-    App, AppContext as _, Bounds, Context, ElementId, Entity, FocusHandle, InteractiveElement as _,
-    ParentElement as _, Pixels, SharedString, StatefulInteractiveElement as _, Subscription,
-    Window, div,
+    AnyWindowHandle, App, AppContext as _, Bounds, Context, ElementId, Entity, FocusHandle, Global,
+    InteractiveElement as _, ParentElement as _, Pixels, SharedString,
+    StatefulInteractiveElement as _, Subscription, WeakEntity, Window, div,
 };
 
 /// Adds a tooltip to one existing button, preserving a single focus target.
@@ -47,33 +47,76 @@ struct TooltipState {
     hovered: bool,
     active: bool,
     dismissed: bool,
-    _subscriptions: [Subscription; 3],
+    _subscriptions: [Subscription; 2],
 }
+
+/// One Escape interceptor for every tooltip in the application, instead of
+/// one keystroke hook per tooltip. Active tooltips register here while shown.
+#[derive(Default)]
+struct EscapeDismissal {
+    shown: Vec<(AnyWindowHandle, WeakEntity<TooltipState>)>,
+    _subscription: Option<Subscription>,
+}
+impl Global for EscapeDismissal {}
+impl EscapeDismissal {
+    fn install(cx: &mut App) {
+        if cx.default_global::<Self>()._subscription.is_some() {
+            return;
+        }
+        let subscription = cx.intercept_keystrokes(|event, window, cx| {
+            if event.keystroke.key != "escape" {
+                return;
+            }
+            let handle = window.window_handle();
+            let shown = std::mem::take(&mut cx.global_mut::<Self>().shown);
+            let mut dismissed = false;
+            for (owner, state) in shown {
+                if owner != handle {
+                    cx.global_mut::<Self>().shown.push((owner, state));
+                    continue;
+                }
+                state
+                    .update(cx, |state, cx| {
+                        if state.active {
+                            state.overlay.update(cx, |overlay, cx| overlay.hide(cx));
+                            state.active = false;
+                            state.dismissed = true;
+                            dismissed = true;
+                        }
+                    })
+                    .ok();
+            }
+            if dismissed {
+                cx.stop_propagation();
+            }
+        });
+        cx.global_mut::<Self>()._subscription = Some(subscription);
+    }
+    fn shown(window: &Window, state: WeakEntity<TooltipState>, cx: &mut App) {
+        let handle = window.window_handle();
+        let shown = &mut cx.global_mut::<Self>().shown;
+        shown.retain(|(_, other)| {
+            other.upgrade().is_some() && other.entity_id() != state.entity_id()
+        });
+        shown.push((handle, state));
+    }
+    fn hidden(state: &WeakEntity<TooltipState>, cx: &mut App) {
+        cx.global_mut::<Self>()
+            .shown
+            .retain(|(_, other)| other.entity_id() != state.entity_id());
+    }
+}
+
 impl TooltipState {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+        EscapeDismissal::install(cx);
         let focus = cx.focus_handle();
-        let owner = window.window_handle();
-        let state = cx.weak_entity();
         let subscriptions = [
             cx.on_focus(&focus, window, |state, window, cx| {
                 state.update_visibility(window, cx)
             }),
             cx.on_blur(&focus, window, |state, window, cx| {
                 state.update_visibility(window, cx)
-            }),
-            cx.intercept_keystrokes(move |event, window, cx| {
-                if window.window_handle() == owner && event.keystroke.key == "escape" {
-                    state
-                        .update(cx, |state, cx| {
-                            if state.active {
-                                state.overlay.update(cx, |overlay, cx| overlay.hide(cx));
-                                state.active = false;
-                                state.dismissed = true;
-                                cx.stop_propagation();
-                            }
-                        })
-                        .ok();
-                }
             }),
         ];
         Self {
@@ -103,8 +146,10 @@ impl TooltipState {
                 TooltipRequest::new(self.bounds, move |_, cx| text_tooltip(label.clone(), cx));
             self.overlay
                 .update(cx, |overlay, cx| overlay.request_show(request, window, cx));
+            EscapeDismissal::shown(window, cx.weak_entity(), cx);
         } else {
             self.overlay.update(cx, |overlay, cx| overlay.hide(cx));
+            EscapeDismissal::hidden(&cx.weak_entity(), cx);
         }
     }
 }

@@ -234,12 +234,21 @@ fn untested_files(files: &BTreeMap<String, String>) -> Vec<String> {
         .iter()
         .filter(|(file, source)| {
             let module = file.split('/').next().unwrap();
-            !source.contains("#[cfg(test)]")
-                && !integration.contains(&format!("::{module}::"))
-                && !integration.contains(&format!("::{module};"))
+            !source.contains("#[cfg(test)]") && !names_module(&integration, module)
         })
         .map(|(file, _)| file.clone())
         .collect()
+}
+
+/// Whether `text` uses `module::` or `module;` as a path segment, as in
+/// `gpuicn::module::Item` or the `module::{..}` entries of a `use` list.
+fn names_module(text: &str, module: &str) -> bool {
+    text.match_indices(module).any(|(start, _)| {
+        let before = text[..start].chars().next_back();
+        let after = &text[start + module.len()..];
+        !before.is_some_and(|c| c.is_alphanumeric() || c == '_')
+            && (after.starts_with("::") || after.starts_with(';'))
+    })
 }
 
 #[test]

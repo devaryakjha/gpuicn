@@ -50,60 +50,116 @@ impl Notice {
         self
     }
 }
+/// Poll interval while a hovered stack holds its timers, the only state the
+/// manager cannot announce ahead of time.
+const PAUSED_POLL: Duration = Duration::from_millis(100);
+
 /// Own this entity in the application and mount it once above the page content.
 pub struct ToastState {
     manager: ToastManager<SharedString, Notice>,
+    motion: ToastMotion,
     stack: ToastStackState,
     focus: FocusHandle,
+    /// When each mounted toast next changes phase, by ID. Entry and exit
+    /// transitions end after the motion durations; a shown toast ends when its
+    /// timeout runs out, which a hovered stack pushes back.
+    deadlines: Vec<(SharedString, Instant)>,
     timer: Option<Task<()>>,
 }
 impl ToastState {
     /// Creates an empty notification queue and its focus handle.
     pub fn new(cx: &mut Context<Self>) -> Self {
+        let motion = ToastMotion::sonner();
         Self {
-            manager: ToastManager::new(ToastMotion::sonner()),
+            manager: ToastManager::new(motion),
+            motion,
             stack: Default::default(),
             focus: cx.focus_handle(),
+            deadlines: Vec::new(),
             timer: None,
         }
     }
     /// Replaces an existing ID or adds a new notification.
     pub fn push(&mut self, id: impl Into<SharedString>, notice: Notice, cx: &mut Context<Self>) {
-        let empty = self.manager.is_empty();
+        let id = id.into();
         let timeout = notice.timeout;
+        let now = Instant::now();
         self.manager
-            .push(id.into(), notice, ToastOptions { timeout }, Instant::now());
-        if empty {
-            self.timer = Some(cx.spawn(async move |this, cx| {
-                loop {
-                    cx.background_executor()
-                        .timer(Duration::from_millis(50))
-                        .await;
-                    let active = this
-                        .update(cx, |state, cx| {
-                            if state
-                                .manager
-                                .advance(Instant::now(), state.stack.is_expanded())
-                                .changed
-                            {
-                                cx.notify();
-                            }
-                            !state.manager.is_empty()
-                        })
-                        .unwrap_or(false);
-                    if !active {
-                        break;
-                    }
-                }
-            }));
-        }
+            .push(id.clone(), notice, ToastOptions { timeout }, now);
+        self.set_deadline(id, now + self.motion.duration);
+        self.schedule(cx);
         cx.notify();
     }
     /// Removes the notification with this ID.
     pub fn dismiss(&mut self, id: &SharedString, cx: &mut Context<Self>) {
-        if self.manager.dismiss(id, Instant::now()) {
+        let now = Instant::now();
+        if self.manager.dismiss(id, now) {
+            self.set_deadline(id.clone(), now + self.motion.exit_duration);
+            self.schedule(cx);
             cx.notify();
         }
+    }
+    fn set_deadline(&mut self, id: SharedString, at: Instant) {
+        self.deadlines.retain(|(other, _)| *other != id);
+        self.deadlines.push((id, at));
+    }
+    /// Moves the manager's clock forward and records when it next needs to move.
+    fn advance(&mut self, now: Instant, cx: &mut Context<Self>) {
+        let paused = self.stack.is_expanded();
+        let advance = self.manager.advance(now, paused);
+        for id in advance.presented {
+            match self.manager.get(&id).and_then(|notice| notice.timeout) {
+                Some(timeout) => self.set_deadline(id, now + timeout),
+                None => self.deadlines.retain(|(other, _)| *other != id),
+            }
+        }
+        for id in advance.ending {
+            self.set_deadline(id, now + self.motion.exit_duration);
+        }
+        for (id, _) in &advance.removed {
+            self.deadlines.retain(|(other, _)| other != id);
+        }
+        if advance.changed {
+            cx.notify();
+        }
+    }
+    /// Sleeps until the next deadline, or polls while a hover pauses the timers.
+    fn schedule(&mut self, cx: &mut Context<Self>) {
+        let now = Instant::now();
+        let next = self.deadlines.iter().map(|(_, at)| *at).min();
+        let Some(next) = next else {
+            self.timer = None;
+            return;
+        };
+        let wait = if self.stack.is_expanded() {
+            PAUSED_POLL
+        } else {
+            next.saturating_duration_since(now) + Duration::from_millis(1)
+        };
+        self.timer = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(wait).await;
+            this.update(cx, |state, cx| {
+                let now = Instant::now();
+                if state.stack.is_expanded() {
+                    // Shown toasts hold their remaining time while hovered; keep
+                    // their deadlines moving with the clock.
+                    let shown: Vec<SharedString> = state
+                        .manager
+                        .iter()
+                        .filter(|(_, _, phase)| *phase == ToastTransitionStatus::Present)
+                        .map(|(id, _, _)| id.clone())
+                        .collect();
+                    for (id, at) in &mut state.deadlines {
+                        if shown.contains(id) {
+                            *at += wait;
+                        }
+                    }
+                }
+                state.advance(now, cx);
+                state.schedule(cx);
+            })
+            .ok();
+        }));
     }
     /// Returns whether the notification queue is empty.
     pub fn is_empty(&self) -> bool {
@@ -175,5 +231,68 @@ impl Render for ToastState {
                 .child(div().w(viewport.width).h(viewport.height).child(stack)),
         )
         .with_priority(20)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui_kit::{AppContext as _, TestAppContext};
+
+    fn phases(state: &ToastState) -> Vec<(SharedString, ToastTransitionStatus)> {
+        state
+            .manager
+            .iter()
+            .map(|(id, _, phase)| (id.clone(), phase))
+            .collect()
+    }
+
+    #[gpui_kit::test]
+    fn notices_present_time_out_and_leave_on_their_deadlines(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let state = cx.update(|cx| cx.new(ToastState::new));
+        let start = Instant::now();
+        state.update(cx, |state, cx| {
+            state.push(
+                "saved",
+                Notice::new("Saved").timeout(Duration::from_secs(2)),
+                cx,
+            );
+            state.push("pinned", Notice::new("Pinned").persistent(), cx);
+            assert_eq!(state.deadlines.len(), 2, "both wait for their entry motion");
+            assert!(state.timer.is_some());
+
+            state.advance(start + Duration::from_millis(401), cx);
+            assert!(
+                phases(state)
+                    .iter()
+                    .all(|(_, phase)| *phase == ToastTransitionStatus::Present)
+            );
+            // Only the timed notice still has a deadline.
+            assert_eq!(state.deadlines.len(), 1);
+            assert_eq!(state.deadlines[0].0, "saved");
+
+            state.advance(start + Duration::from_millis(2402), cx);
+            assert_eq!(
+                phases(state),
+                [
+                    ("saved".into(), ToastTransitionStatus::Ending),
+                    ("pinned".into(), ToastTransitionStatus::Present)
+                ]
+            );
+            state.advance(start + Duration::from_millis(2603), cx);
+            assert_eq!(
+                phases(state),
+                [("pinned".into(), ToastTransitionStatus::Present)]
+            );
+            assert!(state.deadlines.is_empty());
+
+            state.dismiss(&"pinned".into(), cx);
+            assert_eq!(state.deadlines.len(), 1);
+            state.advance(start + Duration::from_millis(2804), cx);
+            assert!(state.is_empty());
+            state.schedule(cx);
+            assert!(state.timer.is_none(), "nothing left to wait for");
+        });
     }
 }
