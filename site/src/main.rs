@@ -943,6 +943,12 @@ impl Showcase {
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let owner = cx.entity().downgrade();
+        // Shown like a reaction popover: picks keep it open, and Escape
+        // closes it. Recents picked while open show from the next open.
+        let shown = window
+            .use_keyed_state("emoji-picker.shown", cx, |_, _| true)
+            .clone();
+        let hide = shown.clone();
         let avatar = "https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png";
         let state = window
             .use_keyed_state("emoji-picker.state", cx, |window, cx| {
@@ -972,7 +978,13 @@ impl Showcase {
                                 state.update(cx, |state, cx| state.set_recents(list, cx));
                                 format!("Picked :{name}:")
                             }
-                            EmojiPickerEvent::Cancel => "Closed".into(),
+                            EmojiPickerEvent::Cancel => {
+                                hide.update(cx, |shown, cx| {
+                                    *shown = false;
+                                    cx.notify();
+                                });
+                                "Closed".into()
+                            }
                             EmojiPickerEvent::SkinTone(tone) => match tone {
                                 Some(tone) => format!("Skin tone {}", tone + 1),
                                 None => "Default skin tone".into(),
@@ -988,7 +1000,29 @@ impl Showcase {
             .read(cx)
             .0
             .clone();
-        EmojiPicker::new(&state)
+        let open = *shown.read(cx);
+        let toggle = state.clone();
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(12.))
+            .child(
+                Button::new("emoji-picker.toggle")
+                    .variant(ButtonVariant::Outline)
+                    .on_click(move |_, window, cx| {
+                        let open = !*shown.read(cx);
+                        shown.update(cx, |shown, cx| {
+                            *shown = open;
+                            cx.notify();
+                        });
+                        if open {
+                            toggle.update(cx, |state, cx| state.open(window, cx));
+                        }
+                    })
+                    .child(if open { "Close picker" } else { "Add reaction" }),
+            )
+            .when(open, |preview| preview.child(EmojiPicker::new(&state)))
     }
 
     fn lightbox_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {

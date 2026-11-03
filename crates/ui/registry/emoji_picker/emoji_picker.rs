@@ -151,6 +151,9 @@ struct Section {
 pub struct EmojiPickerState {
     categories: Vec<EmojiCategory>,
     recents: Vec<SharedString>,
+    /// Recents set after a pick, shown from the next `open`.
+    pending_recents: Option<Vec<SharedString>>,
+    picked: bool,
     frequent: Vec<SharedString>,
     skin_tone: Option<usize>,
     input: Entity<InputState>,
@@ -209,6 +212,8 @@ impl EmojiPickerState {
         let mut state = Self {
             categories: categories.into_iter().collect(),
             recents: Vec::new(),
+            pending_recents: None,
+            picked: false,
             frequent: Vec::new(),
             skin_tone: None,
             input,
@@ -252,14 +257,37 @@ impl EmojiPickerState {
     }
 
     /// Shows these shortcodes first, as "Recently used". The application owns
-    /// the list and updates it after each `EmojiPickerEvent::Pick`.
+    /// the list and updates it after each `EmojiPickerEvent::Pick`. A list set
+    /// after a pick shows from the next `open`, so the grid doesn't shift while
+    /// someone picks several emoji.
     pub fn set_recents(
         &mut self,
         recents: impl IntoIterator<Item = impl Into<SharedString>>,
         cx: &mut Context<Self>,
     ) {
-        self.recents = recents.into_iter().map(Into::into).collect();
-        self.rebuild(cx);
+        let recents = recents.into_iter().map(Into::into).collect();
+        if self.picked {
+            self.pending_recents = Some(recents);
+        } else {
+            self.recents = recents;
+            self.rebuild(cx);
+        }
+    }
+
+    /// Call each time the picker is shown: applies recents set since the last
+    /// pick and focuses the search field.
+    pub fn open(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.picked = false;
+        if let Some(recents) = self.pending_recents.take() {
+            self.recents = recents;
+            self.rebuild(cx);
+        }
+        self.focus(window, cx);
+    }
+
+    fn pick(&mut self, name: SharedString, cx: &mut Context<Self>) {
+        self.picked = true;
+        cx.emit(EmojiPickerEvent::Pick(name));
     }
 
     /// Shows these shortcodes first, as "Frequently used", for example the
@@ -440,7 +468,7 @@ impl EmojiPickerState {
             "down" => self.step_row(1, cx),
             "enter" => {
                 if let Some(emoji) = self.highlighted().map(|emoji| emoji.name.clone()) {
-                    cx.emit(EmojiPickerEvent::Pick(emoji));
+                    self.pick(emoji, cx);
                 }
             }
             "escape" => {
@@ -665,8 +693,8 @@ impl Render for EmojiPickerState {
                                             cx.notify();
                                         }
                                     }))
-                                    .on_click(cx.listener(move |_, _, _, cx| {
-                                        cx.emit(EmojiPickerEvent::Pick(name.clone()))
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.pick(name.clone(), cx)
                                     }))
                                     .child(emoji_face(emoji, row_theme.space(5.5)))
                             }))

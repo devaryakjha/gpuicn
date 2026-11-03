@@ -506,6 +506,15 @@ fn emoji_picker_searches_navigates_and_picks(cx: &mut TestAppContext) {
     cx.update(|_, cx| assert!(state.read(cx).query(cx).is_empty()));
     cx.simulate_keystrokes("escape");
     assert_eq!(events.borrow().last(), Some(&EmojiPickerEvent::Cancel));
+
+    // Recents set after a pick wait for the next open, so the grid holds still.
+    cx.update(|_, cx| state.update(cx, |state, cx| state.set_recents(["tada", "smile_0"], cx)));
+    cx.update(|_, cx| assert_eq!(state.read(cx).visible_count(), 1 + COLUMNS + 3 + 1 + 1));
+    cx.update(|window, cx| state.update(cx, |state, cx| state.open(window, cx)));
+    cx.update(|_, cx| assert_eq!(state.read(cx).visible_count(), 2 + COLUMNS + 3 + 1 + 1));
+    // Before any pick, recents apply at once.
+    cx.update(|_, cx| state.update(cx, |state, cx| state.set_recents(["tada"], cx)));
+    cx.update(|_, cx| assert_eq!(state.read(cx).visible_count(), 1 + COLUMNS + 3 + 1 + 1));
 }
 
 struct ViewerView {
