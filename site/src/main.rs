@@ -1061,8 +1061,10 @@ impl Showcase {
                         open.open(window, cx);
                     })
                     .child(
+                        // GPUI clips to a rectangle, so the image takes the inner radius.
                         gpui_kit::img(image.source)
                             .size_full()
+                            .rounded(theme.radius.lg - px(1.))
                             .object_fit(gpui_kit::ObjectFit::Cover),
                     )
             }))
