@@ -1,12 +1,11 @@
 name: CI
 
+# Pushes to main run CI from release.yml, which releases when it passes.
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_call:
 
-# A new push to a pull request cancels its older run; main always finishes,
-# because a passing run on main is what starts a release.
+# A new push to a pull request cancels its older run.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -114,6 +113,13 @@ jobs:
         env:
           CARGO_UNSTABLE_BUILD_STD: std,panic_abort
         run: trunk build --release --public-url /demo/ --dist ../web/public/demo
+      - name: Check every file fits Cloudflare's 25 MiB asset limit
+        run: |
+          ls -lS web/public/demo | head -n 5
+          if find web/public/demo -type f -size +25M | grep .; then
+            echo "::error::These files exceed Cloudflare Workers' 25 MiB asset limit, so the site can't deploy."
+            exit 1
+          fi
       - name: Upload WASM preview
         uses: actions/upload-artifact@v4
         with:
