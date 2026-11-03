@@ -20,7 +20,7 @@ use gpuicn::{
     carousel::*,
     checkbox_group::*,
     collapsible::*,
-    command::{Command, CommandEvent, CommandState, command_dialog_popup},
+    command::{CommandEvent, CommandState, command_dialog_popup},
     composer::{Composer, ComposerEvent, ComposerState, ComposerSuggestion},
     dialog::*,
     drawer::{
@@ -714,29 +714,7 @@ impl Showcase {
             .clone();
         let state = window
             .use_keyed_state("command.state", cx, |window, cx| {
-                let state = cx.new(|cx| CommandState::new(command_items(), window, cx));
-                let handle = handle.clone();
-                let subscription =
-                    cx.subscribe_in(&state, window, move |_, _, event, window, cx| {
-                        let action = match event {
-                            CommandEvent::Confirm(value) => format!("Opened {value}"),
-                            CommandEvent::Cancel => "Closed".into(),
-                            CommandEvent::Query(_) => return,
-                        };
-                        handle.close(window, cx);
-                        let _ = owner.update(cx, |this, cx| {
-                            this.demo_action = action;
-                            cx.notify();
-                        });
-                    });
-                (state, subscription)
-            })
-            .read(cx)
-            .0
-            .clone();
-        let inline = window
-            .use_keyed_state("command.inline", cx, |window, cx| {
-                cx.new(|cx| {
+                let state = cx.new(|cx| {
                     let mut state = CommandState::new(command_items(), window, cx);
                     // Direct messages lead with an avatar; channels with unread
                     // messages end with a count.
@@ -767,9 +745,25 @@ impl Showcase {
                         cx,
                     );
                     state
-                })
+                });
+                let handle = handle.clone();
+                let subscription =
+                    cx.subscribe_in(&state, window, move |_, _, event, window, cx| {
+                        let action = match event {
+                            CommandEvent::Confirm(value) => format!("Opened {value}"),
+                            CommandEvent::Cancel => "Closed".into(),
+                            CommandEvent::Query(_) => return,
+                        };
+                        handle.close(window, cx);
+                        let _ = owner.update(cx, |this, cx| {
+                            this.demo_action = action;
+                            cx.notify();
+                        });
+                    });
+                (state, subscription)
             })
             .read(cx)
+            .0
             .clone();
         let open = handle.clone();
         let focus = state.clone();
@@ -778,6 +772,7 @@ impl Showcase {
             .max_w(px(420.))
             .flex()
             .flex_col()
+            .items_center()
             .gap(px(12.))
             .child(
                 Button::new("command.open")
@@ -789,7 +784,6 @@ impl Showcase {
                     .child("Quick switcher")
                     .child(Kbd::shortcut("secondary-k")),
             )
-            .child(Command::new(&inline))
             .child(dialog(
                 "command.dialog",
                 &handle,

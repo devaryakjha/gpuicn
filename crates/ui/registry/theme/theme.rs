@@ -863,7 +863,9 @@ fn neutral_dark_colors() -> UiColors {
         sidebar_accent_foreground: neutral(0.985),
         sidebar_border: neutral_alpha(1.0, 0.10),
         sidebar_ring: neutral(0.556),
-        overlay: black().alpha(0.10).into(),
+        // shadcn pairs black/10 with a backdrop blur GPUI lacks; without it a
+        // 10% scrim disappears on a near-black page.
+        overlay: black().alpha(0.50).into(),
     }
 }
 

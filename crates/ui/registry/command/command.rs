@@ -16,7 +16,7 @@ use gpui_kit::{
 };
 
 use super::input::{Input, InputEvent, InputState};
-use super::kbd::format_shortcut;
+use super::kbd::{format_shortcut, key_label};
 use super::theme::{UiTheme, apply_style};
 
 /// One command or destination in the palette.
@@ -439,11 +439,13 @@ impl Render for CommandState {
                                 })
                                 .when_some(item.shortcut.clone(), |row, shortcut| {
                                     row.child(
-                                        div()
-                                            .flex_shrink_0()
-                                            .text_size(row_theme.text(12.))
-                                            .text_color(row_theme.colors.muted_foreground)
-                                            .child(format_shortcut(&shortcut, os)),
+                                        key_label(
+                                            &format_shortcut(&shortcut, os),
+                                            row_theme.text(12.),
+                                            row_theme.colors.muted_foreground.into(),
+                                        )
+                                        .flex_shrink_0()
+                                        .text_size(row_theme.text(12.)),
                                     )
                                 })
                                 .into_any_element()
