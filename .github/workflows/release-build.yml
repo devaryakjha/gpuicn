@@ -1,31 +1,93 @@
 name: Build release downloads
 
+# Builds the macOS and Linux example apps. The release workflow calls this; run
+# it by hand to test a build without releasing anything.
 on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to build
+        required: true
+        type: string
   workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
-  CARGO_BUILD_JOBS: "2"
   CARGO_INCREMENTAL: "0"
 
 jobs:
   macos:
     runs-on: macos-14
+    # Holds the Apple signing secrets. Without them the app is ad-hoc signed.
+    environment: release
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.99.1
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --locked -p gpuicn-showcase --features gpui_platform/runtime_shaders
+        with:
+          shared-key: release-macos
+      - name: Import the Developer ID certificate
+        id: signing
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          if [ -z "$MACOS_CERT_P12" ]; then
+            echo "::warning::MACOS_CERT_P12 is not set, so the macOS app is ad-hoc signed and not notarized."
+            exit 0
+          fi
+          keychain="$RUNNER_TEMP/release.keychain-db"
+          password="$(openssl rand -hex 24)"
+          printf '%s' "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$MACOS_CERT_PASSWORD" -t cert -f pkcs12 -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/cert.p12"
+          identity="$(security find-identity -v -p codesigning "$keychain" | sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p' | head -n 1)"
+          if [ -z "$identity" ]; then
+            echo "::error::MACOS_CERT_P12 holds no 'Developer ID Application' identity."
+            exit 1
+          fi
+          echo "identity=$identity" >> "$GITHUB_OUTPUT"
+      - name: Write the notarization key
+        id: notary
+        if: steps.signing.outputs.identity != ''
+        env:
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          if [ -z "$APPLE_API_KEY_P8" ]; then
+            echo "::warning::APPLE_API_KEY_P8 is not set, so the macOS app is signed but not notarized."
+            exit 0
+          fi
+          printf '%s\n' "$APPLE_API_KEY_P8" > "$RUNNER_TEMP/notary.p8"
+          echo "key=$RUNNER_TEMP/notary.p8" >> "$GITHUB_OUTPUT"
+      - name: Build, sign and package the app
+        env:
+          SHOWCASE_SIGN_IDENTITY: ${{ steps.signing.outputs.identity || '-' }}
+          SHOWCASE_NOTARY_KEY: ${{ steps.notary.outputs.key }}
+          SHOWCASE_NOTARY_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          SHOWCASE_NOTARY_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: python3 scripts/package-showcase.py --output dist
       - uses: actions/upload-artifact@v4
         with:
-          name: showcase-macos-arm64
-          path: target/release/showcase
+          name: showcase-macos
+          path: dist/*
           if-no-files-found: error
           retention-days: 7
+      - name: Remove signing material
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/notary.p8"
+          security delete-keychain "$RUNNER_TEMP/release.keychain-db" 2>/dev/null || true
 
   linux:
     strategy:
@@ -39,6 +101,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
@@ -49,7 +113,7 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
-          key: release-${{ matrix.target }}
+          shared-key: release-${{ matrix.target }}
       - run: python3 scripts/package-showcase-linux.py --target ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         with:

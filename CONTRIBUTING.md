@@ -78,14 +78,36 @@ compares the copies byte for byte, and builds the WASM catalog.
 
 ## Releases
 
-1. Bump `workspace.package.version` in `Cargo.toml`. The CLI's default
-   registry, fonts and dependency pins all come from tag `v<version>`.
-2. Update `release-pins.toml`, `crates/cli/templates/dependencies.toml` and the
+Merging a version bump to `main` is the release; nothing runs on a laptop.
+
+1. Run `python3 scripts/release-version.py bump <version>`. It rewrites every
+   place the version is written (Cargo.toml, the install lines, the registry
+   URLs in the docs and the site's `release` constant) and updates Cargo.lock.
+   CI fails while any of them disagree.
+2. Write `docs/releases/v<version>.md` (the GitHub release notes) and the
+   `## <version>` entry in `CHANGELOG.md`, then run
+   `cargo run -p gpuicn-cli --locked -- build`.
+3. Update `release-pins.toml`, `crates/cli/templates/dependencies.toml` and the
    fixture together when an upstream pin moves; the CLI tests fail if they drift.
-3. Update the `cargo install gpuicn-cli --version` lines in `README.md`,
-   `crates/ui/README.md`, `docs/registry.md` and the `release` constant in
-   `web/src/routes/installation.tsx`.
-4. Add the entry to `CHANGELOG.md` and notes in `docs/releases/`.
-5. Merge, then tag `v<version>` on that commit.
-6. From that commit, publish the library first and then the CLI:
-   `cargo publish -p gpuicn --locked`, then `cargo publish -p gpuicn-cli --locked`.
+   A new gpui-icons version must be released from its own repository first.
+4. Merge. When CI passes on `main`, the **Release** workflow:
+   - tags the commit `v<version>`;
+   - publishes `gpuicn` and then `gpuicn-cli` to crates.io;
+   - builds the macOS app (signed and notarized when the Apple secrets exist)
+     and the Linux x86-64 and ARM64 archives;
+   - publishes the GitHub release with every download and checksum;
+   - deploys ui.imajha.com from that release.
+
+A merge that doesn't change the version releases nothing. If a job fails,
+fix the cause and use **Re-run failed jobs**; every step skips what is already
+done. **Release** can also be started by hand on `main`.
+
+The `release` environment holds the secrets:
+
+| Secret | Used for |
+|---|---|
+| none (crates.io Trusted Publishing) or `CARGO_REGISTRY_TOKEN` | Publishing the crates |
+| `MACOS_CERT_P12`, `MACOS_CERT_PASSWORD` | The Developer ID Application certificate, as base64 .p12 |
+| `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID` | Notarization with an App Store Connect API key |
+| `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` | Deploying ui.imajha.com |
+
