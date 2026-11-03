@@ -523,7 +523,7 @@ mod tests {
     /// measured (devaryakjha/gpuicn#83).
     #[gpui_kit::test]
     fn the_scrollbar_tracks_position_through_unmeasured_rows(cx: &mut TestAppContext) {
-        cx.update(crate::init);
+        cx.update(super::super::theme::init);
         let scrollbar = MessageListScrollbar::new();
         let handle = scrollbar.clone();
         let (view, cx) = cx.add_window_view(move |_, cx| Transcript {
