@@ -1,9 +1,9 @@
 // Shoots every catalog preview in light and dark mode from the built WASM
 // site, and writes a Markdown sheet that pull requests and release notes link.
 //
-//   node scripts/screenshots.mjs --dist web/public/demo --out docs/screenshots/v0.9.0 [--only button,dialog] [--compare docs/screenshots/v0.8.0]
+//   bun scripts/screenshots.mjs --dist web/public/demo --out docs/screenshots/v0.9.0 [--only button,dialog] [--compare docs/screenshots/v0.8.0]
 //
-// Needs the site built first (`trunk build --release --public-url /demo/ --dist
+// Needs `bun add playwright` somewhere on NODE_PATH, the site built first (`trunk build --release --public-url /demo/ --dist
 // ../web/public/demo` in `site/`), Chromium through Playwright, and no network.
 // Headless Chromium has no WebGPU, so the page is loaded with `?backend=webgl`,
 // which the showcase honors, and SwiftShader draws the frames. With --compare,

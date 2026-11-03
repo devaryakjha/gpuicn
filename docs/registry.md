@@ -163,7 +163,7 @@ Bun/Node dependencies are separate from Rust component installation.
 The existing published registry also supports:
 
 ```sh
-npx -y shadcn@4.19.0 add https://ui.imajha.com/r/button.json
+bunx shadcn@4.19.0 add https://ui.imajha.com/r/button.json
 ```
 
 This legacy route needs Node.js and the `components.json` / `tsconfig.json`

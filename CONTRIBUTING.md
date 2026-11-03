@@ -77,7 +77,7 @@ how anything looks:
 
 ```sh
 (cd site && trunk build --release --public-url /demo/ --dist ../web/public/demo)
-node scripts/screenshots.mjs --dist web/public/demo --out docs/screenshots/v<next> --compare docs/screenshots/v<previous>
+bun scripts/screenshots.mjs --dist web/public/demo --out docs/screenshots/v<next> --compare docs/screenshots/v<previous>
 ```
 
 ## Add a component
