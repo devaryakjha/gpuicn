@@ -119,3 +119,16 @@ jobs:
             echo "::error::These files exceed Cloudflare Workers' 25 MiB asset limit, so the site can't deploy."
             exit 1
           fi
+      - name: Shoot every preview in light and dark mode
+        # The sheet is the before/after evidence for release notes and pull
+        # requests. It compares against the newest folder under docs/screenshots.
+        run: |
+          npm --prefix "$RUNNER_TEMP/playwright" install playwright@1.56.1
+          npx --prefix "$RUNNER_TEMP/playwright" playwright install --with-deps chromium
+          previous=$(ls -d docs/screenshots/v* | sort -V | tail -n 1)
+          NODE_PATH="$RUNNER_TEMP/playwright/node_modules" node scripts/screenshots.mjs --dist web/public/demo --out screenshots --compare "$previous" || echo "::warning::Some previews changed or failed; see the screenshots artifact."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots
+          retention-days: 30

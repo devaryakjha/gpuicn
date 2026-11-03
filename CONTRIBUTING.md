@@ -57,6 +57,29 @@ rebuilt `registry.json` and `site/pages/r`. CI also installs every component
 into `fixtures/registry-install` with the native CLI and the stock shadcn CLI,
 compares the copies byte for byte, and builds the WASM catalog.
 
+## Design rules are checked
+
+`cargo test -p gpuicn --test registry_lint` reads every file under
+`crates/ui/registry` and fails on patterns the shared primitives replace:
+raw colors, raw text sizes, `opacity(0.5)` for disabled, `ThemeMode::Dark`
+branches outside the theme, hand-written popover surfaces, `img` inside a
+rounded clip, hover state kept in `use_keyed_state`, key glyph literals, and
+components without any test. `crates/ui/tests/registry_lint_baseline.txt`
+lists what was allowed when a rule was added; counts may only go down, and the
+test tells you which baseline lines to lower. After adding a rule, run the test
+once with `REGISTRY_LINT_WRITE_BASELINE=1` to record the current state.
+
+`scripts/screenshots.mjs` shoots every preview in light and dark mode from the
+built site and writes a Markdown sheet, comparing against the newest folder in
+`docs/screenshots/`. The release verification runs it and uploads the sheet as
+the `screenshots` artifact; run it locally for a pull request that changes
+how anything looks:
+
+```sh
+(cd site && trunk build --release --public-url /demo/ --dist ../web/public/demo)
+node scripts/screenshots.mjs --dist web/public/demo --out docs/screenshots/v<next> --compare docs/screenshots/v<previous>
+```
+
 ## Add a component
 
 `scripts/sync-catalog.mjs` fails until every piece below exists.

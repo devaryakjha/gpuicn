@@ -99,10 +99,13 @@ fn application() -> Application {
     // URLs need one passed in.
     #[cfg(target_family = "wasm")]
     let app = {
-        let platform = gpui_kit::web::WebPlatform::new_with_backend(
-            true,
-            gpui_kit::platform::WebBackendPreference::WebGpu,
-        );
+        // Headless browsers used for screenshots have no WebGPU; `?backend=webgl`
+        // selects WebGL so SwiftShader can draw the preview.
+        let backend = match requested_value("backend").as_deref() {
+            Some("webgl") => gpui_kit::platform::WebBackendPreference::WebGl,
+            _ => gpui_kit::platform::WebBackendPreference::WebGpu,
+        };
+        let platform = gpui_kit::web::WebPlatform::new_with_backend(true, backend);
         let http_client = std::sync::Arc::new(platform.fetch_http_client());
         Application::with_platform(std::rc::Rc::new(platform)).with_http_client(http_client)
     };
@@ -4320,7 +4323,7 @@ mod audit_tests {
         use gpui_kit::VisualTestContext;
         let mut custom = UiTheme::neutral_dark();
         custom.spacing.unit = px(5.);
-        custom.text_scale = 1.1;
+        custom.text_scale = 1.25;
         custom.radius = gpuicn::theme::UiRadius::new(px(4.));
         for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark(), custom] {
             for width in [360., 960.] {
@@ -4422,7 +4425,7 @@ mod audit_tests {
         let mut custom = UiTheme::neutral_light();
         custom.spacing.unit = px(5.);
         custom.radius = gpuicn::theme::UiRadius::new(px(4.));
-        custom.text_scale = 1.1;
+        custom.text_scale = 1.25;
         custom.colors.primary = gpui_kit::rgb(0x2563eb);
         for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark(), custom] {
             for active in [false, true] {
