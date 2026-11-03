@@ -110,6 +110,22 @@ impl Showcase {
                     .on_delete(|_, _, _| {})
                     .child("On it."),
             )
+            .child(day_divider("message.compact-day", "Compact", cx))
+            .child(
+                Message::new("message.compact")
+                    .density(MessageDensity::Compact)
+                    .author("Sam")
+                    .timestamp("11:07")
+                    .actions(actions("message.compact", cx))
+                    .child("Compact density keeps one line per post."),
+            )
+            .child(
+                Message::new("message.compact-follow")
+                    .density(MessageDensity::Compact)
+                    .continuation(true)
+                    .gutter_time("11:08")
+                    .child("The time stays in the gutter."),
+            )
     }
 }
 

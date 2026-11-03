@@ -39,6 +39,17 @@ pub enum MessageHighlight {
     Permalink,
 }
 
+/// How much room a row takes.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum MessageDensity {
+    #[default]
+    /// Avatar gutter, a header line with the name and time, then the body.
+    Standard,
+    /// One line per post, as Mattermost's compact display: the time always
+    /// sits in the gutter, the name starts the body line, and rows are tighter.
+    Compact,
+}
+
 /// Delivery state of the reader's own message.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum MessageStatus {
@@ -117,6 +128,7 @@ pub struct Message {
     actions: Option<AnyElement>,
     description: Option<SharedString>,
     continuation: bool,
+    density: MessageDensity,
     highlight: MessageHighlight,
     status: MessageStatus,
     on_retry: Option<Handler>,
@@ -142,11 +154,17 @@ impl Message {
             actions: None,
             description: None,
             continuation: false,
+            density: MessageDensity::Standard,
             highlight: MessageHighlight::None,
             status: MessageStatus::Sent,
             on_retry: None,
             on_delete: None,
         }
+    }
+    /// Chooses the standard or compact row layout.
+    pub fn density(mut self, density: MessageDensity) -> Self {
+        self.density = density;
+        self
     }
     /// Sets the sender's avatar, usually an `Avatar`.
     pub fn avatar(mut self, avatar: impl IntoElement) -> Self {
@@ -268,9 +286,29 @@ impl RenderOnce for Message {
         let colors = theme.colors;
         let group: SharedString = format!("message-{}", self.id).into();
         let selected = self.highlight == MessageHighlight::Selected;
-        let gutter = theme.space(8.);
+        let compact = self.density == MessageDensity::Compact;
+        let gutter = if compact {
+            theme.space(11.)
+        } else {
+            theme.space(8.)
+        };
 
-        let gutter_content = if self.continuation {
+        let gutter_content = if compact {
+            // Compact rows always show the time, so the gutter has a fixed
+            // width and the body lines up from row to row.
+            div().w(gutter).flex_shrink_0().pt(px(2.)).children(
+                self.gutter_time
+                    .clone()
+                    .or(self.timestamp.clone())
+                    .map(|time| {
+                        text::xs(div(), &theme)
+                            .line_height(theme.text(20.))
+                            .text_color(colors.muted_foreground)
+                            .whitespace_nowrap()
+                            .child(time)
+                    }),
+            )
+        } else if self.continuation {
             // The hover time floats in the gutter so showing it never changes
             // the row's height.
             div().w(gutter).flex_shrink_0().relative().children(
@@ -301,7 +339,8 @@ impl RenderOnce for Message {
                 .children(self.avatar)
         };
 
-        let header = (!self.continuation).then(|| {
+        let mut header_children = self.header;
+        let header = (!self.continuation && !compact).then(|| {
             div()
                 .flex()
                 .items_baseline()
@@ -324,7 +363,7 @@ impl RenderOnce for Message {
                         .text_color(colors.muted_foreground)
                         .child(time)
                 }))
-                .children(self.header)
+                .children(std::mem::take(&mut header_children))
         });
 
         let failed = (self.status == MessageStatus::Failed).then(|| {
@@ -391,6 +430,26 @@ impl RenderOnce for Message {
                 })
         });
 
+        // Compact rows start the body line with the name; continuation rows
+        // keep only the time in the gutter.
+        let inline_author = (compact && !self.continuation)
+            .then(|| self.author.clone())
+            .flatten()
+            .map(|author| {
+                div()
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_color(colors.foreground)
+                    .whitespace_nowrap()
+                    .child(author)
+            });
+        let inline_header =
+            (compact && !self.continuation && !header_children.is_empty()).then(|| {
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(theme.space(1.))
+                    .children(header_children)
+            });
         let body = div()
             .flex_1()
             .min_w_0()
@@ -403,6 +462,15 @@ impl RenderOnce for Message {
                     .text_size(theme.text(14.))
                     .line_height(relative(1.45))
                     .text_color(colors.foreground)
+                    .when(compact, |content| {
+                        content
+                            .flex()
+                            .flex_wrap()
+                            .items_baseline()
+                            .gap(theme.space(1.5))
+                    })
+                    .children(inline_author)
+                    .children(inline_header)
                     .children(self.children),
             )
             .children(failed)
@@ -418,8 +486,10 @@ impl RenderOnce for Message {
             .flex()
             .gap(theme.space(2.))
             .px(theme.space(4.))
-            .py(theme.space(0.5))
-            .when(!self.continuation, |row| row.pt(theme.space(2.)))
+            .py(theme.space(if compact { 0.25 } else { 0.5 }))
+            .when(!self.continuation && !compact, |row| {
+                row.pt(theme.space(2.))
+            })
             .border_l_2()
             .border_color(colors.primary.opacity(0.))
             .when(!selected, |row| {
@@ -625,4 +695,67 @@ pub fn new_messages_divider(
                 .text_color(theme.colors.destructive)
                 .child(label.into()),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gpui_kit::{Context, Pixels, Render, TestAppContext, VisualTestContext};
+
+    struct Probe(MessageDensity);
+
+    impl Render for Probe {
+        fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+            div()
+                .flex()
+                .flex_col()
+                .w(px(600.))
+                .child(
+                    div().debug_selector(|| "post".into()).child(
+                        Message::new("post")
+                            .density(self.0)
+                            .author("Arya")
+                            .timestamp("10:42")
+                            .header_child(div().child("Bot"))
+                            .child("First line"),
+                    ),
+                )
+                .child(
+                    div().debug_selector(|| "follow".into()).child(
+                        Message::new("follow")
+                            .density(self.0)
+                            .continuation(true)
+                            .gutter_time("10:43")
+                            .child("Second"),
+                    ),
+                )
+        }
+    }
+
+    fn row_heights(cx: &mut TestAppContext, density: MessageDensity) -> (Pixels, Pixels) {
+        let window = cx.add_window(|_, _| Probe(density));
+        let mut cx = VisualTestContext::from_window(window.into(), cx);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let height = |cx: &mut VisualTestContext, id: &'static str| {
+            cx.debug_bounds(id)
+                .unwrap_or_else(|| panic!("{id} drew"))
+                .size
+                .height
+        };
+        (height(&mut cx, "post"), height(&mut cx, "follow"))
+    }
+
+    #[gpui_kit::test]
+    fn compact_rows_are_one_line_and_shorter(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let (standard_first, standard_follow) = row_heights(cx, MessageDensity::Standard);
+        let (compact_first, compact_follow) = row_heights(cx, MessageDensity::Compact);
+        assert!(
+            compact_first < standard_first,
+            "compact first row {compact_first:?} should be shorter than {standard_first:?}"
+        );
+        assert!(compact_follow < standard_follow);
+        // One line: the name sits inline, so the first row is as tall as a continuation row.
+        assert_eq!(compact_first, compact_follow);
+    }
 }

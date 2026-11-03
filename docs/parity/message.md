@@ -9,6 +9,10 @@ layout. Implementation: `crates/ui/registry/message/message.rs`.
   children such as a Bot tag, and body content at 14px with a 1.45 line height.
 - `continuation(true)` hides the avatar and header for consecutive messages from
   one sender; hovering shows `gutter_time` in the gutter instead.
+- `density(MessageDensity::Compact)` is Mattermost's compact display: no
+  avatar, the time always in a fixed 44px gutter, the semibold name starting
+  the body line (continuation rows drop it), and half the row padding.
+  Reactions, the failed notice and hover actions behave as in standard rows.
 - Hover tints the row and shows the `actions` bar at the top trailing edge.
   `MessageHighlight::Selected` keeps the bar visible, so a keyboard selection
   model can expose the same actions.

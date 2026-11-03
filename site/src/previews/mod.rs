@@ -42,8 +42,8 @@ pub(crate) mod prelude {
         menu::{Menu, MenuItem, MenuState},
         menubar::Menubar,
         message::{
-            Message, MessageHighlight, MessageStatus, Reaction, day_divider, message_action,
-            message_actions, new_messages_divider,
+            Message, MessageDensity, MessageHighlight, MessageStatus, Reaction, day_divider,
+            message_action, message_actions, new_messages_divider,
         },
         message_list::{MessageList, MessageListState},
         meter::Meter,
