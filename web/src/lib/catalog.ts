@@ -2,6 +2,19 @@ export type CatalogComponent = {
   slug: string
   name: string
   description: string
+  /** The release that added the component, such as "0.7.0". */
+  added?: string
+}
+
+/**
+ * Components added in these releases show a "New" badge in the sidebar and
+ * search. Keep the latest two releases here and drop the oldest when a
+ * release is cut.
+ */
+export const newReleases = ["0.6.0", "0.7.0"]
+
+export function isNew(component: CatalogComponent) {
+  return component.added !== undefined && newReleases.includes(component.added)
 }
 
 export const components: CatalogComponent[] = [
@@ -21,6 +34,7 @@ export const components: CatalogComponent[] = [
     name: "Attachment",
     description:
       "File and image cards with upload progress, retry, and remove.",
+    added: "0.6.0",
   },
   {
     slug: "autocomplete",
@@ -36,6 +50,7 @@ export const components: CatalogComponent[] = [
     slug: "badge",
     name: "Badge",
     description: "Labels and unread or mention counts in a compact pill.",
+    added: "0.6.0",
   },
   {
     slug: "button",
@@ -72,12 +87,14 @@ export const components: CatalogComponent[] = [
     slug: "command",
     name: "Command",
     description: "A searchable command palette and quick switcher.",
+    added: "0.6.0",
   },
   {
     slug: "composer",
     name: "Composer",
     description:
       "A chat message box with autocomplete for mentions, channels and emoji.",
+    added: "0.7.0",
   },
   {
     slug: "context-menu",
@@ -99,6 +116,7 @@ export const components: CatalogComponent[] = [
     name: "Emoji Picker",
     description:
       "A searchable emoji grid with categories, recents and custom emoji.",
+    added: "0.7.0",
   },
   {
     slug: "empty",
@@ -136,18 +154,21 @@ export const components: CatalogComponent[] = [
     name: "Kbd",
     description:
       "Shows a keyboard key or shortcut with platform modifier names.",
+    added: "0.6.0",
   },
   {
     slug: "lightbox",
     name: "Lightbox",
     description:
       "A full-window image viewer with zoom, pan and previous and next.",
+    added: "0.7.0",
   },
   {
     slug: "markdown",
     name: "Markdown",
     description:
       "Renders Markdown with themed code blocks and inline entity chips.",
+    added: "0.6.0",
   },
   {
     slug: "menu",
@@ -164,12 +185,14 @@ export const components: CatalogComponent[] = [
     name: "Message",
     description:
       "A chat message row with grouping, reactions, and hover actions.",
+    added: "0.6.0",
   },
   {
     slug: "message-list",
     name: "Message List",
     description:
       "A chat transcript that only renders visible rows and follows new messages.",
+    added: "0.6.0",
   },
   {
     slug: "meter",
@@ -241,6 +264,7 @@ export const components: CatalogComponent[] = [
     slug: "skeleton",
     name: "Skeleton",
     description: "A placeholder that stands in for content while it loads.",
+    added: "0.6.0",
   },
   {
     slug: "slider",
@@ -251,6 +275,7 @@ export const components: CatalogComponent[] = [
     slug: "spinner",
     name: "Spinner",
     description: "An animated indicator that shows work in progress.",
+    added: "0.6.0",
   },
   {
     slug: "switch",
@@ -266,6 +291,7 @@ export const components: CatalogComponent[] = [
     slug: "tag",
     name: "Tag",
     description: "A compact chip for a status, role, or removable filter.",
+    added: "0.6.0",
   },
   {
     slug: "textarea",
@@ -276,6 +302,7 @@ export const components: CatalogComponent[] = [
     slug: "title-bar",
     name: "Title Bar",
     description: "A draggable custom window title bar with window controls.",
+    added: "0.6.0",
   },
   {
     slug: "toast",

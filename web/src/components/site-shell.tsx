@@ -33,7 +33,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { components, sections } from "@/lib/catalog"
+import { components, isNew, sections } from "@/lib/catalog"
 import { cn } from "@/lib/utils"
 
 export function SiteShell() {
@@ -227,6 +227,7 @@ function CatalogSidebar() {
                   params={{ slug: component.slug }}
                   label={component.name}
                   active={pathname === `/components/${component.slug}`}
+                  isNew={isNew(component)}
                 />
               ))}
             </SidebarMenu>
@@ -243,11 +244,13 @@ function SidebarEntry({
   params,
   label,
   active,
+  isNew = false,
 }: {
   to: string
   params?: { slug: string }
   label: string
   active: boolean
+  isNew?: boolean
 }) {
   const { setOpenMobile } = useSidebar()
 
@@ -255,13 +258,30 @@ function SidebarEntry({
     <SidebarMenuItem>
       <SidebarMenuButton
         isActive={active}
+        className={isNew ? "pr-12" : undefined}
         render={
           <Link to={to} params={params} onClick={() => setOpenMobile(false)} />
         }
       >
         {label}
       </SidebarMenuButton>
+      {isNew && (
+        <NewBadge className="pointer-events-none absolute top-1.5 right-1 group-data-[collapsible=icon]:hidden" />
+      )}
     </SidebarMenuItem>
+  )
+}
+
+function NewBadge({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-5 items-center rounded-full bg-primary/10 px-1.5 text-[0.625rem] font-medium tracking-wide text-primary uppercase",
+        className
+      )}
+    >
+      New
+    </span>
   )
 }
 
@@ -322,7 +342,10 @@ function CatalogSearch({
                 onSelect={() => select(component.slug)}
               >
                 <span className="flex min-w-0 flex-col gap-0.5">
-                  <span>{component.name}</span>
+                  <span className="flex items-center gap-2">
+                    {component.name}
+                    {isNew(component) && <NewBadge />}
+                  </span>
                   <span className="truncate text-xs text-muted-foreground">
                     {component.description}
                   </span>
