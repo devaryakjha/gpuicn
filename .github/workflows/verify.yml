@@ -1,0 +1,121 @@
+name: Verify release
+
+# The slow end-to-end checks. release.yml runs them before it tags or
+# publishes anything; run this by hand to try them on any branch.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to verify
+        required: true
+        type: string
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_BUILD_JOBS: "2"
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  registry-install:
+    # Installs every component into a fixture app with the gpuicn CLI and with
+    # the stock shadcn CLI, then builds it.
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install with the gpuicn CLI
+        run: |
+          cargo run -p gpuicn-cli --locked -- build
+          node scripts/sync-catalog.mjs
+          GPUICN_RELEASE="$PWD" cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
+          cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml add --all
+          cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
+          cargo test --manifest-path fixtures/registry-install/Cargo.toml --bin registry-install-fixture --locked --features gpui_platform/runtime_shaders
+      - name: Install with the stock shadcn CLI
+        run: |
+          git diff --exit-code -- registry.json site/pages/r
+          items=()
+          for item in "$PWD"/site/pages/r/*.json; do
+            [[ "$item" == */registry.json ]] || items+=("$item")
+          done
+          npx -y shadcn@4.19.0 add "${items[@]}" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
+          for source in crates/ui/registry/*/*.rs; do
+            cmp "$source" "fixtures/registry-install/src/ui/$(basename "$source")"
+          done
+          perl -0pi -e 's/Nova modal surfaces[^\n]+/Changed by the overwrite gate/' fixtures/registry-install/src/ui/dialog.rs
+          npx -y shadcn@4.19.0 add "$PWD/site/pages/r/dialog.json" --cwd "$PWD/fixtures/registry-install" --yes --overwrite
+          cmp crates/ui/registry/dialog/dialog.rs fixtures/registry-install/src/ui/dialog.rs
+          cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
+
+  new-apps:
+    # Fresh apps in both modes, the way a new user sets them up.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: dtolnay/rust-toolchain@1.98.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install GPUI build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
+      - name: Set up and check a new app
+        run: |
+          cargo build -p gpuicn-cli --locked
+          GPUICN_RELEASE="$PWD" target/debug/gpuicn --registry "$PWD/site/pages/r" new "$RUNNER_TEMP/my-app"
+          target/debug/gpuicn --config "$RUNNER_TEMP/my-app/gpuicn.toml" add alert_dialog select
+          # Both throwaway apps share one GPUI build.
+          CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/my-app/Cargo.toml" --features gpui_platform/runtime_shaders
+      - name: Set up a crate-mode app and eject every component
+        run: |
+          GPUICN_RELEASE="$PWD" target/debug/gpuicn --registry "$PWD/site/pages/r" new --crate "$RUNNER_TEMP/crate-app"
+          cargo add --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" gpuicn --path "$PWD/crates/ui"
+          CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" --features gpui_platform/runtime_shaders
+          target/debug/gpuicn --config "$RUNNER_TEMP/crate-app/gpuicn.toml" eject --all
+          CARGO_TARGET_DIR="$RUNNER_TEMP/apps-target" cargo check --manifest-path "$RUNNER_TEMP/crate-app/Cargo.toml" --features gpui_platform/runtime_shaders
+
+  wasm-size:
+    # The full release build of the site preview; Cloudflare rejects any asset
+    # over 25 MiB.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-08-17
+          targets: wasm32-unknown-unknown
+          components: rust-src
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: wasm-release
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: jetli/trunk-action@v0.5.0
+        with:
+          version: "v0.21.14"
+      - name: Build the WASM preview
+        working-directory: site
+        env:
+          CARGO_UNSTABLE_BUILD_STD: std,panic_abort
+        run: trunk build --release --public-url /demo/ --dist ../web/public/demo
+      - name: Check every file fits Cloudflare's 25 MiB asset limit
+        run: |
+          ls -lS web/public/demo | head -n 5
+          if find web/public/demo -type f -size +25M | grep .; then
+            echo "::error::These files exceed Cloudflare Workers' 25 MiB asset limit, so the site can't deploy."
+            exit 1
+          fi

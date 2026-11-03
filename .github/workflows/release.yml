@@ -1,12 +1,13 @@
 name: Release
 
-# Merging a version bump to main is the release. Every push to main runs CI
-# here, and the release jobs start only when it passes. When v<version> is
-# already fully released, the version wasn't bumped and nothing happens. When
-# an earlier run tagged it and then failed, this run finishes that release
-# from the tagged commit. Otherwise it tags the commit, publishes gpuicn and
-# then gpuicn-cli, builds the example apps, publishes the GitHub release and
-# deploys ui.imajha.com. Every step skips work that is already done, so "Re-run failed
+# Merging a version bump to main is the release. Every push to main runs the
+# quick CI checks here, and the release jobs start only when they pass. When
+# v<version> is already fully released, the version wasn't bumped and nothing
+# more happens. When an earlier run tagged it and then failed, this run
+# finishes that release from the tagged commit. Otherwise it runs the slow
+# end-to-end checks in verify.yml, tags the commit, publishes gpuicn and then
+# gpuicn-cli, builds the example apps, publishes the GitHub release and deploys
+# ui.imajha.com. Every step skips work that is already done, so "Re-run failed
 # jobs" is always safe. It runs CI itself first instead of listening for CI's
 # workflow_run event: crates.io Trusted Publishing refuses tokens to
 # workflow_run triggers.
@@ -80,8 +81,15 @@ jobs:
           echo "Releasing $tag from $sha"
           echo "release=true" >> "$GITHUB_OUTPUT"
 
-  tag:
+  verify:
     needs: plan
+    if: needs.plan.outputs.release == 'true'
+    uses: ./.github/workflows/verify.yml
+    with:
+      ref: ${{ needs.plan.outputs.sha }}
+
+  tag:
+    needs: [plan, verify]
     if: needs.plan.outputs.release == 'true'
     runs-on: ubuntu-latest
     permissions:
