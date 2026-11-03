@@ -1,12 +1,11 @@
 name: CI
 
+# Pushes to main run CI from release.yml, which releases when it passes.
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_call:
 
-# A new push to a pull request cancels its older run; main always finishes,
-# because a passing run on main is what starts a release.
+# A new push to a pull request cancels its older run.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

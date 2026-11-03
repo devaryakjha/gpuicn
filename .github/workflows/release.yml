@@ -1,15 +1,16 @@
 name: Release
 
-# Merging a version bump to main is the release. This runs after CI passes on
-# a push to main. When tag v<version> already points at an older commit, the
-# version wasn't bumped and nothing happens. Otherwise it tags the commit,
-# publishes gpuicn and then gpuicn-cli, builds the example apps, publishes the
-# GitHub release and deploys ui.imajha.com. Every step skips work that is
-# already done, so "Re-run failed jobs" is always safe.
+# Merging a version bump to main is the release. Every push to main runs CI
+# here, and the release jobs start only when it passes. When tag v<version>
+# already points at an older commit, the version wasn't bumped and nothing
+# happens. Otherwise it tags the commit, publishes gpuicn and then gpuicn-cli,
+# builds the example apps, publishes the GitHub release and deploys
+# ui.imajha.com. Every step skips work that is already done, so "Re-run failed
+# jobs" is always safe. It runs CI itself first instead of listening for CI's
+# workflow_run event: crates.io Trusted Publishing refuses tokens to
+# workflow_run triggers.
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  push:
     branches: [main]
   workflow_dispatch:
 
@@ -24,8 +25,11 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   plan:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    needs: ci
     runs-on: ubuntu-latest
     outputs:
       release: ${{ steps.plan.outputs.release }}
@@ -35,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
       - id: plan
         env:
           GH_TOKEN: ${{ github.token }}
