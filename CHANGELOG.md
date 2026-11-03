@@ -4,6 +4,15 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.7.1
+
+[Notes](docs/releases/v0.7.1.md)
+
+### Changed
+
+- No component, API or CLI changes. The website preview is smaller, so the
+  0.7.0 components can deploy, and releases now run entirely in CI.
+
 ## 0.7.0
 
 [Notes](docs/releases/v0.7.0.md)
