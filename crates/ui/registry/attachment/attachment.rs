@@ -224,6 +224,10 @@ impl RenderOnce for Attachment {
                 .child(
                     img(source)
                         .size_full()
+                        // An image's aspect ratio sets a minimum size, so
+                        // non-square images would overflow the thumbnail.
+                        .min_w_0()
+                        .min_h_0()
                         .rounded(inner_radius)
                         .object_fit(ObjectFit::Cover)
                         .when(progress.is_some() || failed, |image| image.opacity(0.5)),
