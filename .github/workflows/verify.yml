@@ -33,15 +33,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: oven-sh/setup-bun@v2
       - name: Install with the gpuicn CLI
         run: |
           cargo run -p gpuicn-cli --locked -- build
-          node scripts/sync-catalog.mjs
+          bun scripts/sync-catalog.mjs
           GPUICN_RELEASE="$PWD" cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml --registry ../../site/pages/r init
           cargo run -p gpuicn-cli --locked -- --config fixtures/registry-install/gpuicn.toml add --all
           cargo check --manifest-path fixtures/registry-install/Cargo.toml --bins --locked --features gpui_platform/runtime_shaders
           cargo test --manifest-path fixtures/registry-install/Cargo.toml --bin registry-install-fixture --locked --features gpui_platform/runtime_shaders
-      - uses: oven-sh/setup-bun@v2
       - name: Install with the stock shadcn CLI
         run: |
           git diff --exit-code -- registry.json site/pages/r

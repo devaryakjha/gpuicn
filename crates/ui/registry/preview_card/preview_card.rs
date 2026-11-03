@@ -21,5 +21,5 @@ pub fn preview_card_popup(id: impl Into<ElementId>, cx: &App) -> Stateful<Div> {
         .text_color(t.colors.popover_foreground)
         .font_family(t.fonts.body.clone())
         .text_size(t.text(14.))
-        .shadow(t.shadows.md.clone())
+        .shadow(t.shadows.md.to_vec())
 }

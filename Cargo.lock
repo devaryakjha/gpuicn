@@ -3239,6 +3239,7 @@ dependencies = [
  "gpui-icons",
  "gpui-kit",
  "gpui-pre-platform",
+ "serde_json",
  "web-time",
 ]
 

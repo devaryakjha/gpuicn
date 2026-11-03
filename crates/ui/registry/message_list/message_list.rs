@@ -238,7 +238,7 @@ impl RenderOnce for MessageList {
                                 })
                                 .size(ButtonSize::Sm)
                                 .rounded_full()
-                                .shadow(theme.shadows.md.clone())
+                                .shadow(theme.shadows.md.to_vec())
                                 .on_click(move |_, _, cx| {
                                     state.update(cx, |state, cx| state.scroll_to_end(cx))
                                 })

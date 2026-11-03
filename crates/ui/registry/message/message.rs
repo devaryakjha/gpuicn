@@ -547,7 +547,7 @@ pub fn message_actions(cx: &App) -> gpui_kit::Div {
         .border_1()
         .border_color(theme.colors.border)
         .bg(theme.colors.background)
-        .shadow(theme.shadows.sm.clone())
+        .shadow(theme.shadows.sm.to_vec())
 }
 
 /// An icon button for `message_actions`, named for assistive technology.

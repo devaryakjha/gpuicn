@@ -48,7 +48,7 @@ cargo fmt --all -- --check
 cargo test --workspace --locked --features gpui_platform/runtime_shaders
 cargo clippy --workspace --all-targets --locked --features gpui_platform/runtime_shaders -- -D warnings
 cargo run -p gpuicn-cli --locked -- build   # regenerate registry.json and site/pages/r
-node scripts/sync-catalog.mjs               # checks previews, usage, API docs and platform notes
+bun scripts/sync-catalog.mjs               # checks previews, usage, API docs and platform notes
 git diff --exit-code -- registry.json site/pages/r
 ```
 

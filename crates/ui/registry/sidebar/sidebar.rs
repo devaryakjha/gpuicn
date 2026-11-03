@@ -622,7 +622,7 @@ impl RenderOnce for SidebarLayout {
                         el.mr(px(0.))
                     })
                     .rounded(theme.radius.xl)
-                    .shadow(theme.shadows.sm.clone())
+                    .shadow(theme.shadows.sm.to_vec())
             })
             .child(self.content);
         let mut shell = div()
@@ -720,7 +720,7 @@ impl RenderOnce for SidebarLayout {
                                 el.rounded(theme.radius.lg)
                                     .border_1()
                                     .border_color(theme.colors.sidebar_border)
-                                    .shadow(theme.shadows.sm.clone())
+                                    .shadow(theme.shadows.sm.to_vec())
                             })
                             .child(self.sidebar),
                     )

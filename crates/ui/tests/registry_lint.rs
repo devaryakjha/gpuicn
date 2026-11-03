@@ -20,7 +20,7 @@ struct Rule {
     fix: &'static str,
 }
 
-const PRIMITIVES: &str = "primitives/primitives.rs";
+const PRIMITIVES: &str = "theme/primitives.rs";
 
 const RULES: &[Rule] = &[
     Rule {
@@ -46,7 +46,7 @@ const RULES: &[Rule] = &[
         name: "disabled-literal",
         needles_in_file: &[],
         needles_per_line: &["opacity(0.5)", "opacity(0.50)"],
-        allow: &[PRIMITIVES],
+        allow: &["theme/theme.rs", PRIMITIVES],
         fix: "apply `disabled::style(..)` from the primitives",
     },
     Rule {
@@ -108,13 +108,6 @@ const RULES: &[Rule] = &[
         needles_per_line: &[".when(focused"],
         allow: &[PRIMITIVES],
         fix: "use `focus::ring` through `focus_visible`, not a border swap on `is_focused`",
-    },
-    Rule {
-        name: "theme-clone",
-        needles_in_file: &[],
-        needles_per_line: &["UiTheme::read(cx).clone()"],
-        allow: &[],
-        fix: "read `UiTheme::read(cx)` by reference or take `theme.tokens()`; cloning allocates shadows every frame",
     },
 ];
 

@@ -388,7 +388,7 @@ impl Render for MenuState {
                 .text_color(t.colors.popover_foreground)
                 .font_family(t.fonts.body.clone())
                 .text_size(t.text(14.))
-                .shadow(t.shadows.md.clone())
+                .shadow(t.shadows.md.to_vec())
                 .on_prepaint(move |bounds, _, cx| {
                     entity.update(cx, |this, _| this.popup_bounds[depth] = bounds)
                 })

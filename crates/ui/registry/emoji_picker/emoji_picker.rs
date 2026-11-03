@@ -937,7 +937,7 @@ impl RenderOnce for EmojiPicker {
             .when(self.bordered, |root| {
                 root.border_1()
                     .border_color(theme.colors.border)
-                    .shadow(theme.shadows.md.clone())
+                    .shadow(theme.shadows.md.to_vec())
             })
             .child(self.state);
         apply_style(root, &self.style)

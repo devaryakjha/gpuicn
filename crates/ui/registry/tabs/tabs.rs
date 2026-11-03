@@ -153,7 +153,7 @@ impl RenderOnce for Tabs {
                             .border_1()
                             .border_color(colors.background.opacity(0.))
                             .when(active, |tab| {
-                                tab.bg(colors.background).shadow(theme.shadows.sm.clone())
+                                tab.bg(colors.background).shadow(theme.shadows.sm.to_vec())
                             })
                     })
                     .when(self.variant == TabsVariant::Line, |tab| {

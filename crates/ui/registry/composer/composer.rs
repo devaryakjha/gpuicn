@@ -603,7 +603,7 @@ impl Render for ComposerState {
                                 .font_family(theme.fonts.body.clone())
                                 .text_color(colors.popover_foreground)
                                 .text_size(theme.text(14.))
-                                .shadow(theme.shadows.md.clone())
+                                .shadow(theme.shadows.md.to_vec())
                                 .children(rows),
                         ),
                 )

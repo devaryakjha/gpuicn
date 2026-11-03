@@ -605,7 +605,7 @@ pub fn command_dialog_popup(
         .border_1()
         .border_color(theme.colors.foreground.opacity(0.1))
         .bg(theme.colors.popover)
-        .shadow(theme.shadows.lg.clone())
+        .shadow(theme.shadows.lg.to_vec())
         .child(Command::new(state).bordered(false))
 }
 

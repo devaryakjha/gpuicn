@@ -468,7 +468,7 @@ impl Render for SelectState {
                 .bg(colors.popover)
                 .text_color(colors.popover_foreground)
                 .p(theme.space(1.))
-                .shadow(theme.shadows.md.clone())
+                .shadow(theme.shadows.md.to_vec())
                 .on_mouse_down_out(cx.listener(|this, _, window, cx| {
                     this.set_open(false, window, cx);
                 }));
