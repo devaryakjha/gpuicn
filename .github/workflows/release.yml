@@ -1,11 +1,12 @@
 name: Release
 
 # Merging a version bump to main is the release. Every push to main runs CI
-# here, and the release jobs start only when it passes. When tag v<version>
-# already points at an older commit, the version wasn't bumped and nothing
-# happens. Otherwise it tags the commit, publishes gpuicn and then gpuicn-cli,
-# builds the example apps, publishes the GitHub release and deploys
-# ui.imajha.com. Every step skips work that is already done, so "Re-run failed
+# here, and the release jobs start only when it passes. When v<version> is
+# already fully released, the version wasn't bumped and nothing happens. When
+# an earlier run tagged it and then failed, this run finishes that release
+# from the tagged commit. Otherwise it tags the commit, publishes gpuicn and
+# then gpuicn-cli, builds the example apps, publishes the GitHub release and
+# deploys ui.imajha.com. Every step skips work that is already done, so "Re-run failed
 # jobs" is always safe. It runs CI itself first instead of listening for CI's
 # workflow_run event: crates.io Trusted Publishing refuses tokens to
 # workflow_run triggers.
@@ -48,28 +49,29 @@ jobs:
           version="$(python3 scripts/release-version.py current)"
           tag="v$version"
           sha="$(git rev-parse HEAD)"
-          {
-            echo "version=$version"
-            echo "tag=$tag"
-            echo "sha=$sha"
-          } >> "$GITHUB_OUTPUT"
           published() {
             curl -fsS -o /dev/null -A "gpuicn-release (https://github.com/devaryakjha/gpuicn)" \
               "https://crates.io/api/v1/crates/$1/$2"
           }
           # The peeled line (^{}) of an annotated tag comes last.
           tagged="$(git ls-remote origin "refs/tags/$tag" "refs/tags/$tag^{}" | tail -n 1 | cut -f 1)"
-          if [ -n "$tagged" ] && [ "$tagged" != "$sha" ]; then
-            echo "$tag is already released from ${tagged:0:7}; bump the version to release again."
-            echo "release=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
           if [ -n "$tagged" ] && published gpuicn "$version" && published gpuicn-cli "$version" \
             && [ "$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null)" = "false" ]; then
-            echo "$tag is fully released already."
+            echo "$tag is fully released already; bump the version to release again."
             echo "release=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          if [ -n "$tagged" ] && [ "$tagged" != "$sha" ]; then
+            # An earlier run tagged this version and then failed. Finish that
+            # release from the tagged commit, with this commit's workflow fixes.
+            echo "Finishing $tag from ${tagged:0:7}, where it was tagged."
+            sha="$tagged"
+          fi
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "sha=$sha"
+          } >> "$GITHUB_OUTPUT"
           icons="$(python3 -c 'import tomllib; print(next(p["version"] for p in tomllib.load(open("Cargo.lock", "rb"))["package"] if p["name"] == "gpui-icons"))')"
           if ! published gpui-icons "$icons"; then
             echo "::error::gpuicn needs gpui-icons $icons, which is not on crates.io yet. Release gpui-icons first."
@@ -158,6 +160,8 @@ jobs:
           ref: ${{ needs.plan.outputs.sha }}
       - uses: actions/download-artifact@v4
         with:
+          # Only the app downloads; CI's wasm-preview artifact is in this run too.
+          pattern: showcase-*
           path: dist
           merge-multiple: true
       - name: Publish the GitHub release
@@ -166,6 +170,11 @@ jobs:
           TAG: ${{ needs.plan.outputs.tag }}
         run: |
           ls -l dist
+          # A draft left by a failed run may hold stray files; nobody can see
+          # it yet, so start it again. The tag stays.
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = "true" ]; then
+            gh release delete "$TAG" --yes
+          fi
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" dist/* --clobber
           else
