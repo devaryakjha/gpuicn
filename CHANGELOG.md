@@ -4,6 +4,43 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.9.0
+
+[Notes](docs/releases/v0.9.0.md)
+
+### Added
+
+- `app::run` and `AppConfig`: one-call application start with icons, fonts,
+  a theme pair and the first window.
+- `Appearance`, `UiTheme::set_pair`, `UiTheme::set_appearance` and
+  `theme::follow_system`.
+- CLI: shadcn base colors, `init --base-color/--radius/--appearance/--theme/--all`,
+  `theme set|import|preview`, `update`, `doctor`, `remove --unused`; config
+  version 2 with a `[theme]` table.
+- `theme::primitives` (text, icon, focus, disabled, surface, control,
+  clipped_image, dismiss, hover_reveal_in_group), status colors, typography
+  and breakpoint tokens, `transition_with`, `presence_with`, `UiEasing::Emphasized`.
+- `MessageListScrollbar` and `MessageList::scrollbar_handle`.
+- `MessageDensity::Compact` for Message.
+- `cargo xtask new-component`, `docs/design.md`, the registry lint and the
+  catalog screenshot sheet in every release.
+
+### Changed
+
+- Every component reads colors, sizes, radii, shadows and motion from the
+  theme through the primitives; focus is one 3px outer ring everywhere.
+- Input and Textarea share `InputCore`; dialogs fade in and let the host
+  viewport scroll.
+- Toast uses deadlines instead of a 50ms poll; one Escape interceptor serves
+  every tooltip.
+- `UiTheme::shadows` entries are `Arc<[BoxShadow]>`; `sidebar_is_mobile`
+  takes the window.
+
+### Fixed
+
+- The MessageList scrollbar thumb tracks position through unmeasured rows (#83).
+- Every GPUI Kit component color follows a gpuicn token in both modes.
+
 ## 0.8.0
 
 [Notes](docs/releases/v0.8.0.md)
