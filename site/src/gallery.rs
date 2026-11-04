@@ -92,6 +92,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "A panel that slides from an edge of the window.",
     ),
     (
+        "embed",
+        "Embed",
+        "Link preview and message attachment cards under a chat message.",
+    ),
+    (
         "emoji-picker",
         "Emoji Picker",
         "A searchable emoji grid with categories, recents and custom emoji.",

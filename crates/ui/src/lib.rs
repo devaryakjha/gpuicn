@@ -41,6 +41,8 @@ pub mod context_menu;
 pub mod dialog;
 #[path = "../registry/drawer/drawer.rs"]
 pub mod drawer;
+#[path = "../registry/embed/embed.rs"]
+pub mod embed;
 #[path = "../registry/emoji_picker/emoji_picker.rs"]
 pub mod emoji_picker;
 #[path = "../registry/empty/empty.rs"]

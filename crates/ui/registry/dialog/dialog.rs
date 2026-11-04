@@ -165,6 +165,10 @@ pub fn dialog(
         .on_ok(|_, _, _| false)
 }
 /// Keeps a modal's full content reachable even in a short window.
+///
+/// The wheel reaches this viewport only through surfaces that use
+/// `block_mouse_except_scroll()`, as `dialog_popup` does; a custom surface
+/// that calls `occlude()` hides the wheel from it and stays clipped.
 #[doc(hidden)]
 pub fn modal_viewport(
     id: impl Into<ElementId>,
@@ -234,7 +238,9 @@ pub fn dialog_popup(
     let popup = div()
         .id(id)
         .aria_label(label)
-        .occlude()
+        // Blocks clicks and hover behind the surface but lets the wheel reach
+        // the host's `modal_viewport`, which `occlude` would hide it from.
+        .block_mouse_except_scroll()
         .w_full()
         .min_w(px(0.))
         .max_w(t.space(96.))
@@ -450,5 +456,72 @@ mod tests {
         assert_eq!(second_count.get(), 1);
         assert!(first_handle.is_open());
         assert!(!second_handle.is_open());
+    }
+
+    struct TallDialog {
+        handle: DialogHandle,
+    }
+
+    impl Render for TallDialog {
+        fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            let popup = dialog_popup("tall-popup", "Preferences", cx)
+                .child(div().h(px(1200.)).flex_shrink_0().child("Settings"))
+                .child(
+                    div()
+                        .h(px(32.))
+                        .flex_shrink_0()
+                        .debug_selector(|| "tall-footer".into())
+                        .child("Save"),
+                );
+            div()
+                .size_full()
+                .child(
+                    div().id("page").size_full().overflow_y_scroll().child(
+                        div()
+                            .h(px(4000.))
+                            .debug_selector(|| "page-content".into())
+                            .child("Page"),
+                    ),
+                )
+                .child(dialog("tall", &self.handle, popup, window, cx))
+        }
+    }
+
+    #[gpui_kit::test]
+    fn a_tall_dialog_scrolls_under_the_pointer(cx: &mut TestAppContext) {
+        use gpui_kit::{ScrollDelta, ScrollEvent};
+        cx.update(super::super::theme::init);
+        let handle = DialogHandle::new(true);
+        let (_, cx) = cx.add_window_view({
+            let handle = handle.clone();
+            move |_, _| TallDialog { handle }
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let viewport = cx.update(|window, _| window.viewport_size());
+        let footer = cx.debug_bounds("tall-footer").unwrap();
+        assert!(
+            footer.bottom() > viewport.height,
+            "the footer starts below the fold"
+        );
+
+        let page = cx.debug_bounds("page-content").unwrap();
+        let center = point(viewport.width / 2., viewport.height / 2.);
+        cx.simulate_mouse_move(center, None, Default::default());
+        cx.simulate_event(ScrollEvent {
+            position: center,
+            delta: ScrollDelta::Pixels(point(px(0.), px(-1400.))),
+            ..Default::default()
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let footer = cx.debug_bounds("tall-footer").unwrap();
+        assert!(
+            footer.bottom() <= viewport.height,
+            "the wheel over the surface scrolls the dialog: footer at {footer:?}"
+        );
+        assert_eq!(
+            cx.debug_bounds("page-content").unwrap(),
+            page,
+            "the backdrop keeps the wheel from the page behind the dialog"
+        );
     }
 }

@@ -556,6 +556,44 @@
       ]
     },
     {
+      "name": "embed",
+      "type": "registry:item",
+      "title": "Embed",
+      "description": "Link preview and message attachment cards under a chat message.",
+      "files": [
+        {
+          "path": "registry/theme/primitives.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/primitives.rs"
+        },
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/tooltip/tooltip.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/tooltip.rs"
+        },
+        {
+          "path": "registry/message/message.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/message.rs"
+        },
+        {
+          "path": "registry/embed/embed.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/embed.rs"
+        }
+      ]
+    },
+    {
       "name": "emoji-picker",
       "type": "registry:item",
       "title": "Emoji Picker",

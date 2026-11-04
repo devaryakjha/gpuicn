@@ -102,3 +102,7 @@ description = "A draggable custom window title bar with platform window controls
 
 [components.markdown]
 description = "Nova-styled Markdown with themed code blocks, tables, quotes and inline entity chips for mentions and channels."
+
+[components.embed]
+description = "Link preview and message attachment cards under a chat message."
+dependencies = ["button", "message"]
