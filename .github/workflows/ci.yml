@@ -77,6 +77,11 @@ jobs:
         env:
           CARGO_UNSTABLE_BUILD_STD: std,panic_abort
         run: cargo check --bin showcase --target wasm32-unknown-unknown --locked
+      # Astro runs on Node and refuses runner images older than its minimum
+      # (22.23.4), so pin a current one instead of the image's default.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - uses: oven-sh/setup-bun@v2
       - name: Build and lint the website
         working-directory: web
