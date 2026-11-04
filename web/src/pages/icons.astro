@@ -1,0 +1,301 @@
+---
+import Docs from "../layouts/Docs.astro"
+import Preview from "../components/Preview.astro"
+import { icons } from "../lib/docs"
+import { highlight } from "../lib/highlight"
+
+const initial = icons.find((icon) => icon.name === "house") ?? icons[0]!
+const variant = initial.rust.split("::")[1]!
+// Highlight once, then mark the variant token so the script can swap it.
+const snippet = (
+  await highlight(
+    `use gpui_kit::{Styled, px, rgb};\nuse gpui_icons::{lucide, LucideIcon};\n\nlucide(${initial.rust})\n    .size(px(24.))\n    .text_color(rgb(0x171717))`,
+    "rust"
+  )
+).replace(`>${variant}<`, ` data-icon-variant>${variant}<`)
+if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost its variant token")
+---
+
+<Docs
+  title="Icons"
+  eyebrow="gpui-icons"
+  description="The complete Lucide set for GPUI. Original SVGs, consistent strokes, and editable application code."
+>
+  <p class="meta mono">
+    {icons.length.toLocaleString("en")} icons · Lucide 1.63.0 · Native and WASM ·
+    <a href="https://github.com/devaryakjha/gpui-icons">Standalone Rust library</a>
+  </p>
+
+  <div class="icons" data-icons>
+    <section class="icons__catalog" aria-label="Icon catalog">
+      <label class="search">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m20 20-3.5-3.5"></path>
+        </svg>
+        <input id="icon-search" type="search" placeholder="Search names, tags, or aliases…" autocomplete="off" data-icon-search />
+      </label>
+      <p class="icons__count mono" role="status" data-icon-count>{icons.length.toLocaleString("en")} icons available</p>
+      <ul class="grid" data-icon-grid>
+        {
+          icons.map((icon) => (
+            <li>
+              <a
+                class="cell"
+                href={`?icon=${icon.name}`}
+                data-icon={icon.name}
+                aria-pressed={icon.name === initial.name ? "true" : undefined}
+              >
+                <img src={`/icons/lucide/${icon.name}.svg`} alt="" loading="lazy" decoding="async" />
+                <span>{icon.name}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="icons__empty" data-icon-empty hidden>
+        No icons match this search.
+        <button class="btn btn--ghost btn--sm" type="button" data-icon-clear>Clear search</button>
+      </p>
+    </section>
+
+    <aside class="detail" aria-label="Selected icon" tabindex="-1" data-icon-detail>
+      <a class="detail__back" href="#icon-search">↑ Back to the grid</a>
+      <h2 class="detail__name" data-icon-name>{initial.name}</h2>
+      <div class="window">
+        <div class="window__bar">
+          <span class="window__dots"><i></i><i></i><i></i></span>
+          <span class="window__title">16 · 24 · 32 · 48 px</span>
+        </div>
+        <Preview id="icon-preview" slug="icons" name="icon" icon={initial.name} height={200} />
+      </div>
+      <div class="code detail__code">
+        <pre tabindex="0"><code class="shiki" set:html={snippet} /></pre>
+        <button class="code__copy" type="button" data-copy aria-label="Copy code">
+          <svg class="icon icon--copy" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="9" y="9" width="12" height="12" rx="2"></rect>
+            <path d="M15 9V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4"></path>
+          </svg>
+          <svg class="icon icon--check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+        </button>
+        <p class="code__status" role="status" data-copy-status></p>
+      </div>
+      <p class="prose detail__notes">
+        Register <code>LucideAssetSource</code> on your application. Set the icon color explicitly with
+        your theme’s foreground color. Give icon-only controls a clear accessible label.
+      </p>
+      <a class="detail__download" href={`/icons/lucide/${initial.name}.svg`} download data-icon-download>Download the original SVG</a>
+      <p class="detail__license">
+        Original Lucide assets under <a href="/icons/LICENSE">ISC and Feather MIT terms</a>. gpui-icons is an independent port.
+      </p>
+    </aside>
+  </div>
+</Docs>
+
+<script>
+  // Search: terms are fetched once on first input, so the page stays small.
+  const root = document.querySelector<HTMLElement>("[data-icons]")!
+  const input = root.querySelector<HTMLInputElement>("[data-icon-search]")!
+  const count = root.querySelector<HTMLElement>("[data-icon-count]")!
+  const empty = root.querySelector<HTMLElement>("[data-icon-empty]")!
+  const cells = [...root.querySelectorAll<HTMLAnchorElement>(".cell")]
+  const detail = root.querySelector<HTMLElement>("[data-icon-detail]")!
+  const preview = document.getElementById("icon-preview")!
+  let terms: Record<string, string> | null = null
+
+  const filter = () => {
+    const words = input.value.toLowerCase().trim().split(/\s+/).filter(Boolean)
+    let shown = 0
+    for (const cell of cells) {
+      const name = cell.dataset.icon!
+      const text = terms?.[name] ?? name
+      const match = words.every((word) => text.includes(word))
+      cell.parentElement!.hidden = !match
+      if (match) shown++
+    }
+    count.textContent = `${shown.toLocaleString("en")} icons${input.value ? ` matching “${input.value}”` : " available"}`
+    empty.hidden = shown > 0
+  }
+  input.addEventListener("input", async () => {
+    if (!terms) {
+      terms = await fetch("/icons/search.json").then((response) => response.json()).catch(() => ({}))
+    }
+    filter()
+  })
+  root.querySelector("[data-icon-clear]")?.addEventListener("click", () => {
+    input.value = ""
+    filter()
+    input.focus()
+  })
+
+  // Selection: the URL carries the icon, the panel and the preview follow it.
+  // The Rust variant is the PascalCase slug: "a-arrow-down" -> LucideIcon::AArrowDown.
+  const variant = (name: string) =>
+    name.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")
+  const select = (name: string, scroll: boolean) => {
+    for (const cell of cells) {
+      if (cell.dataset.icon === name) cell.setAttribute("aria-pressed", "true")
+      else cell.removeAttribute("aria-pressed")
+    }
+    detail.querySelector("[data-icon-name]")!.textContent = name
+    detail.querySelector<HTMLElement>("[data-icon-variant]")!.textContent = variant(name)
+    detail.querySelector<HTMLAnchorElement>("[data-icon-download]")!.href = `/icons/lucide/${name}.svg`
+    preview.dataset.icon = name
+    preview.dispatchEvent(new CustomEvent("gpuicn:preview", { bubbles: true }))
+    if (scroll && matchMedia("(max-width: 63.9rem)").matches) {
+      detail.scrollIntoView({ block: "start" })
+      detail.focus({ preventScroll: true })
+    }
+  }
+  for (const cell of cells) {
+    cell.addEventListener("click", (event) => {
+      event.preventDefault()
+      history.replaceState(null, "", `?icon=${cell.dataset.icon}`)
+      select(cell.dataset.icon!, true)
+    })
+  }
+  const requested = new URLSearchParams(location.search).get("icon")
+  const initial = requested && cells.find((cell) => cell.dataset.icon === requested)
+  if (initial) select(initial.dataset.icon!, false)
+</script>
+
+<style>
+  .meta {
+    padding-bottom: 1.5rem;
+  }
+  .meta a {
+    color: var(--accent-ink);
+  }
+  .icons {
+    display: grid;
+    gap: 2.5rem;
+    align-items: start;
+  }
+  @media (min-width: 64rem) {
+    .icons {
+      grid-template-columns: minmax(0, 1fr) 18rem;
+    }
+  }
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    height: 2.75rem;
+    padding: 0 1rem;
+    border: 1px solid var(--rule-strong);
+    border-radius: 999px;
+    color: var(--ink-2);
+    background: var(--surface);
+  }
+  .search:focus-within {
+    border-color: var(--accent);
+  }
+  .search input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    outline: 0;
+  }
+  .search input::-webkit-search-cancel-button {
+    display: none;
+  }
+  .icons__count {
+    padding: 0.75rem 0;
+  }
+  .grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+  .grid li[hidden] {
+    display: none;
+  }
+  .cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.9rem 0.4rem 0.7rem;
+    background: var(--surface);
+    transition: background-color 100ms;
+  }
+  .cell:hover {
+    background: var(--paper-2);
+  }
+  .cell[aria-pressed="true"] {
+    background: var(--accent-soft);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .cell:focus-visible {
+    outline-offset: -3px;
+  }
+  .cell span {
+    width: 100%;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-2);
+  }
+  :global([data-theme="dark"]) .cell img {
+    filter: invert(1);
+  }
+  .icons__empty {
+    display: grid;
+    gap: 1rem;
+    justify-items: center;
+    padding: 3rem 1rem;
+    font-size: 0.875rem;
+    color: var(--ink-2);
+  }
+  .detail {
+    display: grid;
+    gap: 1rem;
+    position: sticky;
+    top: calc(var(--header) + 1.5rem);
+    scroll-margin-top: calc(var(--header) + 1rem);
+  }
+  .detail__back {
+    font-size: 0.8125rem;
+    color: var(--ink-2);
+  }
+  @media (min-width: 64rem) {
+    .detail__back {
+      display: none;
+    }
+  }
+  .detail__name {
+    font-family: var(--mono);
+    font-size: 1.125rem;
+    letter-spacing: -0.01em;
+  }
+  .detail__notes {
+    font-size: 0.8125rem;
+  }
+  .detail__download {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--accent-ink);
+  }
+  .detail__license {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ink-3);
+  }
+  .detail__license a {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+</style>

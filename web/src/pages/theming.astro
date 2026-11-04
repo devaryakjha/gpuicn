@@ -1,0 +1,112 @@
+---
+import Docs from "../layouts/Docs.astro"
+import Code from "../components/Code.astro"
+import { setup } from "../lib/docs"
+
+const switchSource = `use crate::ui::theme::{ThemeMode, UiTheme};\n\n// Install the default dark palette.\nUiTheme::switch(cx, ThemeMode::Dark);`
+const customSource = `use gpui_kit::{px, rgb};\nuse crate::ui::theme::{UiRadius, UiTheme};\n\nlet mut theme = UiTheme::neutral_light();\ntheme.colors.primary = rgb(0x2563eb);\ntheme.colors.primary_foreground = rgb(0xffffff);\ntheme.radius = UiRadius::new(px(4.));\ntheme.spacing.unit = px(4.5);\ntheme.text_scale = 1.0;\ntheme.motion.reduced = false;\nUiTheme::set(cx, theme);`
+const toc = [
+  { href: "#switch", label: "Switch palettes" },
+  { href: "#customize", label: "Customize the tokens" },
+  { href: "#values", label: "Shared design values" },
+  { href: "#all-tokens", label: "All tokens" },
+]
+---
+
+<Docs
+  title="Theming"
+  eyebrow="Guide"
+  description="gpuicn uses editable semantic tokens for color, radius, density, typography, and motion."
+  toc={toc}
+>
+  <section class="section" id="switch">
+    <h2 class="h2">Switch palettes</h2>
+    <Code code={switchSource} />
+    <p class="prose">
+      Components consume the same semantic tokens. Own the theme in your app and switch it without
+      changing component source.
+    </p>
+  </section>
+
+  <section class="section" id="customize">
+    <h2 class="h2">Customize the tokens</h2>
+    <p class="prose">
+      Start with a palette, change the values you need, then install it. Theme updates repaint existing
+      windows. Calling <code>UiTheme::switch</code> replaces the color palette while preserving fonts,
+      radii, spacing, type scale, and motion.
+    </p>
+    <Code code={customSource} />
+  </section>
+
+  <section class="section" id="values">
+    <h2 class="h2">Shared design values</h2>
+    <dl class="values">
+      <div><dt>Color</dt><dd>Semantic colors for surfaces, content, controls, borders, and focus.</dd></div>
+      <div><dt>Type</dt><dd>Geist body and heading fonts, plus Geist Mono for code. An independent type scale.</dd></div>
+      <div><dt>Shape</dt><dd>Corner radii, spacing, shadows, and focus borders.</dd></div>
+      <div><dt>Motion</dt><dd>Durations, easing, and a reduced-motion preference.</dd></div>
+    </dl>
+    <p class="prose">
+      Wrapped controls support GPUI Styled overrides after their defaults. Base composition helpers
+      expose <code>style_with_state</code>, which replaces their style callback. Shared motion covers
+      the switch thumb, disclosure icons, and caller-driven sidebar width. Exit animation and automatic
+      OS reduced-motion wiring remain limited by the pinned platform; set the preference in your app.
+    </p>
+  </section>
+
+  <section class="section" id="all-tokens">
+    <h2 class="h2">All tokens</h2>
+    <p class="prose">
+      The theme module you install. Every field is public and editable.
+    </p>
+    <details class="fold">
+      <summary>View theme.rs ({setup.theme.split("\n").length} lines)</summary>
+      <div class="fold__body">
+        <Code code={setup.theme} />
+      </div>
+    </details>
+  </section>
+</Docs>
+
+<style>
+  .section {
+    display: grid;
+    gap: 1rem;
+    padding-top: 2.5rem;
+    scroll-margin-top: calc(var(--header) + 1rem);
+  }
+  .values {
+    display: grid;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+  @media (min-width: 40rem) {
+    .values {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  .values div {
+    background: var(--surface);
+    padding: 1rem 1.125rem;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .values dt {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+  .values dd {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+  .fold__body {
+    padding-top: 0.75rem;
+  }
+</style>

@@ -1,0 +1,87 @@
+---
+import Docs from "../layouts/Docs.astro"
+import Code from "../components/Code.astro"
+import { components, componentHref } from "../lib/catalog"
+import { registry } from "../lib/release"
+---
+
+<Docs
+  title="Registry"
+  eyebrow="Reference"
+  description="The public registry powers the installer. Each component is one JSON file with its source files and dependencies; this page is the human-readable catalog."
+>
+  <div class="section">
+    <p class="prose">
+      <code>gpuicn add</code> reads the registry pinned in <code>gpuicn.toml</code>. The same files are
+      served from this site under <code>/r/</code>, and from the release tag on GitHub:
+    </p>
+    <Code code={`gpuicn --registry ${registry} init\ngpuicn add button`} lang="bash" />
+  </div>
+  <ul class="files">
+    {
+      components.map((component) => (
+        <li>
+          <a class="files__row" href={componentHref(component.slug)}>
+            <span class="files__name">{component.name}</span>
+            <code class="files__path">/r/{component.slug}.json</code>
+          </a>
+          <a class="files__raw" href={`/r/${component.slug}.json`} aria-label={`Raw registry entry for ${component.name}`}>
+            JSON
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Docs>
+
+<style>
+  .section {
+    display: grid;
+    gap: 1rem;
+    padding: 1.5rem 0 2rem;
+  }
+  .files {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .files li {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .files__row {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+    padding: 0.7rem 0.25rem;
+    border-radius: 0.25rem;
+  }
+  .files__row:hover {
+    background: var(--paper-2);
+  }
+  .files__name {
+    font-weight: 500;
+  }
+  .files__path {
+    font-size: 0.75rem;
+    color: var(--ink-2);
+    background: none;
+    padding: 0;
+  }
+  .files__raw {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    color: var(--accent-ink);
+    padding: 0.2rem 0.4rem;
+    border: 1px solid currentColor;
+    border-radius: 0.25rem;
+  }
+</style>

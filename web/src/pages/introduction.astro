@@ -1,0 +1,61 @@
+---
+import Docs from "../layouts/Docs.astro"
+import Notice from "../components/Notice.astro"
+import { components, componentHref, componentNumber, isNew } from "../lib/catalog"
+---
+
+<Docs
+  title="Introduction"
+  eyebrow="GPUI Kit"
+  description="Editable shadcn visual ports backed by native GPUI behavior. Add the source you need, then own it in your application."
+>
+  <Notice />
+  <div class="prose intro">
+    <h2>What you get</h2>
+    <p>
+      gpuicn is a catalog of components for <a href="https://github.com/zed-industries/zed/tree/main/crates/gpui">GPUI</a>,
+      the GPU-accelerated UI framework behind Zed. Each component follows the shadcn/ui design and
+      behaves like a native control: pointer, keyboard and accessibility activation come from GPUI Kit,
+      not from a browser.
+    </p>
+    <p>
+      You install components as source. <code>gpuicn add button</code> copies the Rust module into your
+      app, where you can read it, change it and keep it. If you would rather depend on a crate, the
+      <code>gpuicn</code> crate compiles the same registry and <code>gpuicn eject</code> turns any
+      component back into editable source.
+    </p>
+    <h2>How to read a component page</h2>
+    <ul>
+      <li><strong>Preview</strong> runs the real component in your browser through WebAssembly.</li>
+      <li><strong>Installation</strong> gives the command and the module declarations it maintains.</li>
+      <li><strong>Usage</strong> is a compile-checked example to paste into a view.</li>
+      <li><strong>API reference</strong> lists every public function from the installed source.</li>
+      <li><strong>Platform notes</strong> record parity gaps and interaction limits on this GPUI revision.</li>
+    </ul>
+  </div>
+  <h2 class="h2 intro__catalog" id="components">Components</h2>
+  <ol class="index">
+    {
+      components.map((component) => (
+        <li class="index__item">
+          <a class="index__link" href={componentHref(component.slug)}>
+            <span class="index__num">{componentNumber(component.slug)}</span>
+            <span class="index__name">{component.name}</span>
+            <span>{isNew(component) && <span class="tag">New</span>}</span>
+            <span class="index__desc">{component.description}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ol>
+</Docs>
+
+<style>
+  .intro {
+    padding-top: 1.5rem;
+  }
+  .intro__catalog {
+    margin: 3rem 0 1rem;
+    scroll-margin-top: calc(var(--header) + 1rem);
+  }
+</style>

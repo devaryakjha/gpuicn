@@ -1,0 +1,147 @@
+---
+import { components, componentHref, isNew, sections } from "../lib/catalog"
+---
+
+<!-- Search and navigation in one native dialog. The list is static HTML; a few lines of script filter it. -->
+<dialog class="palette" data-palette aria-label="Search gpuicn">
+  <form method="dialog" class="palette__form">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="11" cy="11" r="7"></circle>
+      <path d="m20 20-3.5-3.5"></path>
+    </svg>
+    <input
+      class="palette__input"
+      type="search"
+      placeholder="Search components and docs…"
+      autocomplete="off"
+      aria-label="Search"
+      data-palette-input
+    />
+    <button class="palette__close" type="submit" aria-label="Close">Esc</button>
+  </form>
+  <div class="palette__list" data-palette-list>
+    <p class="mono palette__group">Docs</p>
+    {
+      sections.map((section) => (
+        <a class="palette__item" href={section.to} data-terms={`${section.label} ${section.blurb}`.toLowerCase()}>
+          <span class="palette__name">{section.label}</span>
+          <span class="palette__desc">{section.blurb}</span>
+        </a>
+      ))
+    }
+    <p class="mono palette__group">Components</p>
+    {
+      components.map((component) => (
+        <a
+          class="palette__item"
+          href={componentHref(component.slug)}
+          data-terms={`${component.name} ${component.slug} ${component.description}`.toLowerCase()}
+        >
+          <span class="palette__name">
+            {component.name}
+            {isNew(component) && <span class="tag">New</span>}
+          </span>
+          <span class="palette__desc">{component.description}</span>
+        </a>
+      ))
+    }
+    <p class="palette__empty" data-palette-empty hidden>Nothing matches.</p>
+  </div>
+</dialog>
+
+<style>
+  .palette {
+    width: min(40rem, calc(100vw - 2rem));
+    max-height: min(32rem, calc(100vh - 4rem));
+    margin: 4rem auto 0;
+    padding: 0;
+    border: 1px solid var(--rule);
+    border-radius: 0.875rem;
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 30px 80px rgb(0 0 0 / 0.25);
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+  }
+  .palette[open] {
+    display: flex;
+  }
+  .palette::backdrop {
+    background: rgb(21 18 15 / 0.45);
+    backdrop-filter: blur(2px);
+  }
+  .palette__form {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--rule);
+    color: var(--ink-2);
+  }
+  .palette__input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 1rem;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    outline: 0;
+  }
+  .palette__input::-webkit-search-cancel-button {
+    display: none;
+  }
+  .palette__close {
+    font-family: var(--mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.4rem;
+    border: 1px solid var(--rule);
+    border-radius: 0.25rem;
+    color: var(--ink-3);
+  }
+  .palette__list {
+    overflow: auto;
+    padding: 0.5rem;
+    overscroll-behavior: contain;
+  }
+  .palette__group {
+    padding: 0.75rem 0.75rem 0.35rem;
+  }
+  .palette__group[hidden],
+  .palette__item[hidden] {
+    display: none;
+  }
+  .palette__item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+  }
+  .palette__item:hover,
+  .palette__item[data-active] {
+    background: var(--paper-2);
+  }
+  .palette__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9375rem;
+  }
+  .palette__desc {
+    font-size: 0.8125rem;
+    color: var(--ink-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .palette__empty {
+    padding: 1.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--ink-2);
+  }
+</style>

@@ -85,7 +85,7 @@ jobs:
             echo "::error::These files exceed Cloudflare Workers' 25 MiB asset limit, so the site can't deploy."
             exit 1
           fi
-      - name: Build TanStack catalog
+      - name: Build the Astro site
         working-directory: web
         run: |
           bun install --frozen-lockfile

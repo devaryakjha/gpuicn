@@ -1,0 +1,136 @@
+---
+import Docs from "../layouts/Docs.astro"
+import Code from "../components/Code.astro"
+import Notice from "../components/Notice.astro"
+import { setup } from "../lib/docs"
+import { registry, release, releaseSource } from "../lib/release"
+
+const steps = [
+  "Create a Rust app",
+  "Configure the source installer",
+  "Install your first component",
+  "Add the fonts",
+  "Open a window",
+]
+const toc = steps.map((label, index) => ({ href: `#step-${index + 1}`, label }))
+---
+
+<Docs
+  title="Installation"
+  eyebrow="Getting started"
+  description="Add editable Rust components to a GPUI app. Start with one button, then install only what you need."
+  toc={toc}
+>
+  <Notice />
+  <ol class="steps">
+    <li class="step" id="step-1">
+      <p class="mono step__num">Step 1</p>
+      <h2 class="h2">Create a Rust app</h2>
+      <p class="prose">
+        Use Rust 1.98 or newer and the native build tools for your platform. This release supports GPUI
+        Kit 0.8.1 on its pinned gpui-pre 0.3.10 runtime. Import GPUI types through <code>gpui_kit</code>
+        so your app and the components use the same types. Apps on another GPUI revision must migrate to
+        this runtime before installing the components.
+      </p>
+      <Code code={"cargo new my-app\ncd my-app"} lang="bash" />
+      <p class="prose">Add these dependencies to <code>Cargo.toml</code>:</p>
+      <Code code={`[dependencies]\n${setup.dependencies}`} lang="toml" />
+    </li>
+
+    <li class="step" id="step-2">
+      <p class="mono step__num">Step 2</p>
+      <h2 class="h2">Configure the source installer</h2>
+      <p class="prose">
+        Install the native CLI for the current published release from crates.io. No Node.js or gpuicn
+        checkout is required.
+      </p>
+      <Code code={`cargo install gpuicn-cli --version ${release.slice(1)} --locked`} lang="bash" />
+      <p class="prose">
+        From your app root, create <code>gpuicn.toml</code> against the same release snapshot. This pins
+        the CLI and component source to one release; keep the dependency versions above together with it.
+      </p>
+      <Code code={`gpuicn --registry ${registry} init`} lang="bash" />
+      <Code
+        code={`version = 2\nregistry = "${registry}"\noutput = "src/ui"\n\n[theme]\nbase_color = "neutral"\nappearance = "system"`}
+        lang="toml"
+      />
+      <p class="prose">
+        {release} is the current published release. Fixes made after that tag are not included in this
+        snapshot.
+      </p>
+    </li>
+
+    <li class="step" id="step-3">
+      <p class="mono step__num">Step 3</p>
+      <h2 class="h2">Install your first component</h2>
+      <Code code="gpuicn add button" lang="bash" />
+      <p class="prose">This installs Button and its shared theme, and maintains <code>src/ui/mod.rs</code>:</p>
+      <Code code={"pub mod button;\npub mod theme;"} />
+      <p class="prose">
+        Add <code>mod ui;</code> to your crate root. Existing edits are kept by default. Your installed
+        files belong to your app. Review local edits before using the installer’s
+        <code>--overwrite</code> option.
+      </p>
+      <p class="prose">
+        To update, install the CLI with <code>--force</code> and change the registry URL to the same
+        newer release. Commit your current app-specific edits first. A dry run reports which files would
+        change; after opting into <code>--overwrite</code>, review the resulting source diff and reapply
+        the edits you still need.
+      </p>
+      <Code
+        code={"gpuicn add button --dry-run --overwrite\ngpuicn add button --overwrite\ngit diff -- src/ui"}
+        lang="bash"
+      />
+    </li>
+
+    <li class="step" id="step-4">
+      <p class="mono step__num">Step 4</p>
+      <h2 class="h2">Add the fonts</h2>
+      <p class="prose">
+        The default style uses Geist. Download the pinned font files and their license, or load your own
+        fonts and change the theme’s font families.
+      </p>
+      <Code
+        code={`mkdir -p assets/fonts\nfor file in Geist-Regular.ttf Geist-Medium.ttf Geist-SemiBold.ttf GeistMono-Regular.ttf; do\n  curl -fL "${releaseSource}/site/assets/fonts/$file" -o "assets/fonts/$file"\ndone\ncurl -fL "${releaseSource}/LICENSES/Geist-OFL-1.1" -o assets/fonts/OFL.txt`}
+        lang="bash"
+      />
+    </li>
+
+    <li class="step" id="step-5">
+      <p class="mono step__num">Step 5</p>
+      <h2 class="h2">Open a window</h2>
+      <p class="prose">
+        Replace <code>src/main.rs</code> with this starter. <code>ui::app::run</code> opens the window
+        with the Lucide icons and the Geist fonts, installs the light and dark themes generated from
+        <code>assets/theme.css</code>, follows the system appearance, and renders a working counter
+        button. <code>gpuicn theme set</code> changes the base color, radius and appearance.
+      </p>
+      <Code code={setup.starter} />
+      <p class="prose">
+        <a href="/examples/hello.rs" download>Download the starter source</a>, then run it:
+      </p>
+      <Code code="cargo run" lang="bash" />
+    </li>
+  </ol>
+</Docs>
+
+<style>
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .step {
+    display: grid;
+    gap: 1rem;
+    padding: 2.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    scroll-margin-top: calc(var(--header) + 1rem);
+  }
+  .step:last-child {
+    border-bottom: 0;
+  }
+  .step__num {
+    color: var(--accent-ink);
+  }
+</style>

@@ -1,0 +1,47 @@
+---
+import { previewHeight } from "../lib/catalog"
+
+interface Props {
+  slug: string
+  name: string
+  icon?: string
+  example?: string
+  height?: number
+  id?: string
+}
+
+const { slug, name, icon, example, id, height = previewHeight(slug) } = Astro.props
+---
+
+<div
+  class="gpu"
+  id={id}
+  data-demo={slug}
+  data-name={name}
+  data-icon={icon}
+  data-example={example}
+  data-height={height}
+  data-status="loading"
+  style={`height:${height}px`}
+>
+  <div class="gpu__status" role="status">
+    <span class="gpu__pulse" aria-hidden="true"></span>
+    <p data-status-text>
+      <span data-when="loading">Starting the native preview…</span>
+      <span data-when="unsupported">Interactive previews need a browser with WebGPU. The Rust code below still works everywhere.</span>
+      <span data-when="failed">The preview could not start.</span>
+    </p>
+    <button class="btn btn--ghost btn--sm" type="button" data-retry>Retry</button>
+  </div>
+</div>
+
+<style>
+  .gpu [data-when] {
+    display: none;
+  }
+  .gpu[data-status="loading"] [data-when="loading"],
+  .gpu[data-status="unsupported"] [data-when="unsupported"],
+  .gpu[data-status="failed"] [data-when="failed"] {
+    display: inline;
+  }
+</style>

@@ -1,0 +1,259 @@
+---
+import Docs from "../../layouts/Docs.astro"
+import Code from "../../components/Code.astro"
+import Preview from "../../components/Preview.astro"
+import Tabs from "../../components/Tabs.astro"
+import { components, componentHref, componentNumber, isNew } from "../../lib/catalog"
+import { componentDocs } from "../../lib/docs"
+
+export function getStaticPaths() {
+  return components.map((component) => ({ params: { slug: component.slug }, props: { component } }))
+}
+
+const { component } = Astro.props
+const docs = componentDocs(component.slug)
+const index = components.findIndex((item) => item.slug === component.slug)
+const previous = components[index - 1]
+const next = components[index + 1]
+const sidebarExamples = [
+  ["workspace", "Workspace", "Inset layout with a team switcher, nested projects, a toggle rail, and an account menu."],
+  ["docs", "Documentation", "Searchable documentation tree with independent sections and off-canvas navigation."],
+  ["mail", "Mail", "A folder rail beside a searchable message list. Filter unread mail and open a message."],
+  ["floating", "Floating right", "A rounded sidebar on the right, with an icon-only collapsed state."],
+  ["mobile", "Mobile sheet", "Modal navigation with its own open state, focus containment, and Escape dismissal."],
+  ["loading", "Loading", "Fixed navigation with stable placeholders. Load the menu to replace them with working controls."],
+] as const
+const isSidebar = component.slug === "sidebar"
+const command = `gpuicn add ${docs.installComponents.join(" ")}`
+const manual = `// src/ui/mod.rs\n${docs.modules.map((module) => `pub mod ${module};`).join("\n")}\n\n// src/main.rs\nmod ui;`
+const toc = [
+  { href: "#preview", label: "Preview" },
+  { href: "#installation", label: "Installation" },
+  { href: "#usage", label: "Usage" },
+  { href: "#api-reference", label: "API reference" },
+  { href: "#platform-notes", label: "Platform notes" },
+]
+---
+
+<Docs
+  title={component.name}
+  description={component.description}
+  eyebrow={`Component ${componentNumber(component.slug)} / ${components.length}`}
+  toc={toc}
+>
+  <nav class="pager" slot="head" aria-label="Component pages">
+    {
+      previous && (
+        <a class="chip" href={componentHref(previous.slug)} rel="prev">
+          ← {previous.name}
+        </a>
+      )
+    }
+    {
+      next && (
+        <a class="chip" href={componentHref(next.slug)} rel="next">
+          {next.name} →
+        </a>
+      )
+    }
+    {isNew(component) && <span class="tag">New in {component.added}</span>}
+  </nav>
+
+  <section id="preview" class="section section--first">
+    <div class="window" data-tabs>
+      <div class="window__bar">
+        <span class="window__dots"><i></i><i></i><i></i></span>
+        <div class="tabs__list window__tabs" role="tablist" aria-label="Preview or code">
+          <button class="tabs__tab" type="button" role="tab" id="tab-preview" aria-controls="panel-preview" aria-selected="true" tabindex="0">Preview</button>
+          <button class="tabs__tab" type="button" role="tab" id="tab-code" aria-controls="panel-code" aria-selected="false" tabindex="-1">Demo code</button>
+        </div>
+        <span class="window__spacer"></span>
+        <span class="window__title">{component.slug}.rs</span>
+      </div>
+      <div class="tabs__panel" role="tabpanel" id="panel-preview" aria-labelledby="tab-preview">
+        {
+          isSidebar && (
+            <div class="examples" data-sidebar-examples>
+              <div class="examples__chips" role="group" aria-label="Sidebar examples">
+                {sidebarExamples.map(([value, label]) => (
+                  <button class="chip" type="button" data-example={value} aria-pressed={value === "workspace" ? "true" : "false"}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {sidebarExamples.map(([value, , blurb]) => (
+                <p class="examples__blurb" data-example-blurb={value} hidden={value !== "workspace"}>
+                  {blurb}
+                </p>
+              ))}
+            </div>
+          )
+        }
+        <Preview id="component-preview" slug={component.slug} name={component.name} example={isSidebar ? "workspace" : undefined} />
+      </div>
+      <div class="tabs__panel" role="tabpanel" id="panel-code" aria-labelledby="tab-code" hidden>
+        <p class="window__note">
+          The full preview, including its layout and demo state. For a small example see
+          <a href="#usage">Usage</a>. <a href="/examples/showcase.rs" download>Download the complete showcase</a> for its imports and helpers.
+        </p>
+        {
+          isSidebar && docs.examples ? (
+            Object.entries(docs.examples).map(([value, source]) => (
+              <div data-example-code={value} hidden={value !== "workspace"}>
+                <Code code={source} class="code--flush" />
+              </div>
+            ))
+          ) : (
+            <Code code={docs.preview} class="code--flush" />
+          )
+        }
+      </div>
+    </div>
+  </section>
+
+  <section id="installation" class="section">
+    <h2 class="h2">Installation</h2>
+    <p class="prose">
+      Complete the <a href="/installation/">one-time Rust setup</a>, then add the source. The native CLI
+      maintains the installed module declarations.
+    </p>
+    <Tabs tabs={[{ id: "command", label: "Command" }, { id: "modules", label: "Modules" }]} label="Installation method" class="section__tabs">
+      <Code slot="command" code={command} lang="bash" />
+      <Code slot="modules" code={manual} />
+    </Tabs>
+  </section>
+
+  <section id="usage" class="section">
+    <h2 class="h2">Usage</h2>
+    <p class="prose">
+      Copy this into your view module and return <code>{docs.usageCall}</code> from its
+      <code>render</code> method. Complete the <a href="/installation/">app setup</a> once, and keep IDs
+      unique among siblings.
+    </p>
+    <Code code={docs.usage} />
+  </section>
+
+  <section id="api-reference" class="section">
+    <h2 class="h2">API reference</h2>
+    <p class="prose">
+      Public constructors and methods from the source you install. Functions that return GPUI Kit parts
+      also support those parts’ builder methods.
+    </p>
+    <div class="api">
+      {
+        docs.api.map((entry) => (
+          <div class="api__row">
+            <pre><code>{entry.signature}</code></pre>
+            {entry.description && <p>{entry.description}</p>}
+          </div>
+        ))
+      }
+    </div>
+    <details class="fold">
+      <summary>View the editable Rust source ({docs.source.split("\n").length} lines)</summary>
+      <div class="fold__body">
+        <Code code={docs.source} />
+      </div>
+    </details>
+  </section>
+
+  <section id="platform-notes" class="section">
+    <h2 class="h2">Platform notes</h2>
+    <p class="prose">
+      GPUI handles rendering and input. These notes record the current platform differences, including
+      accessibility and interaction limits.
+    </p>
+    <div class="prose platform-notes" set:html={docs.parityHtml} />
+  </section>
+</Docs>
+
+<script>
+  // Sidebar examples: switch the preview and the demo code together.
+  const group = document.querySelector<HTMLElement>("[data-sidebar-examples]")
+  const preview = document.getElementById("component-preview")
+  if (group && preview) {
+    for (const chip of group.querySelectorAll<HTMLButtonElement>("[data-example]")) {
+      chip.addEventListener("click", () => {
+        const value = chip.dataset.example!
+        for (const other of group.querySelectorAll<HTMLButtonElement>("[data-example]")) {
+          other.setAttribute("aria-pressed", String(other === chip))
+        }
+        for (const blurb of group.querySelectorAll<HTMLElement>("[data-example-blurb]")) {
+          blurb.hidden = blurb.dataset.exampleBlurb !== value
+        }
+        for (const code of document.querySelectorAll<HTMLElement>("[data-example-code]")) {
+          code.hidden = code.dataset.exampleCode !== value
+        }
+        preview.dataset.example = value
+        preview.dispatchEvent(new CustomEvent("gpuicn:preview", { bubbles: true, detail: "remount" }))
+      })
+    }
+  }
+</script>
+
+<style>
+  .pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding-top: 0.25rem;
+  }
+  .pager .tag {
+    margin-left: 0.25rem;
+  }
+  .section {
+    display: grid;
+    gap: 1rem;
+    padding-top: 3rem;
+    scroll-margin-top: calc(var(--header) + 1rem);
+  }
+  .section--first {
+    padding-top: 0.5rem;
+  }
+  .section__tabs {
+    display: grid;
+    gap: 0.75rem;
+    justify-items: start;
+  }
+  .section__tabs :global(.tabs__panel) {
+    width: 100%;
+  }
+  .window__tabs {
+    background: transparent;
+    padding: 0;
+  }
+  .window__note {
+    padding: 0.85rem 1rem;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--ink-2);
+    border-bottom: 1px solid var(--rule);
+  }
+  .window__note a {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    color: var(--ink);
+  }
+  :global(.code--flush) {
+    border-radius: 0;
+  }
+  .examples {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--rule);
+    display: grid;
+    gap: 0.5rem;
+  }
+  .examples__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+  .examples__blurb {
+    font-size: 0.8125rem;
+    color: var(--ink-2);
+  }
+  .fold__body {
+    padding-top: 0.75rem;
+  }
+</style>

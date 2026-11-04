@@ -1,0 +1,443 @@
+---
+import Base from "../layouts/Base.astro"
+import Code from "../components/Code.astro"
+import Preview from "../components/Preview.astro"
+import { components, componentHref, componentNumber, isNew } from "../lib/catalog"
+import { icons } from "../lib/docs"
+import { release } from "../lib/release"
+
+const featured = ["button", "input", "slider", "checkbox"].map(
+  (slug) => components.find((component) => component.slug === slug)!
+)
+const strip = [
+  "house", "search", "bell", "settings", "folder-open", "calendar", "message-square", "paperclip",
+  "command", "terminal", "cpu", "layers", "palette", "moon", "sun", "zap", "git-branch", "package",
+  "mouse-pointer-2", "keyboard", "monitor", "smartphone", "check", "x",
+].filter((name) => icons.some((icon) => icon.name === name))
+const stats = [
+  [String(components.length), "components", "Editable Rust, one module each."],
+  [icons.length.toLocaleString("en"), "Lucide icons", "The complete set, native and WASM."],
+  ["0", "runtime deps", "No JS, no bridge. GPUI draws every pixel."],
+  [release, "current release", "Pinned CLI, registry and fonts."],
+]
+---
+
+<Base>
+  <!-- Hero -------------------------------------------------------------- -->
+  <section class="wrap hero">
+    <div class="hero__copy">
+      <p class="mono hero__eyebrow">
+        <span class="tag">Experimental</span>
+        Components for GPUI, written in Rust
+      </p>
+      <h1 class="display hero__title">
+        Native components.<br />
+        <span class="hero__accent">Your</span> source code.
+      </h1>
+      <p class="lede">
+        Familiar shadcn design, native GPUI behavior. Install the source into your app with one
+        command, read it, change it, and ship an interface that feels like yours.
+      </p>
+      <div class="hero__actions">
+        <a class="btn" href="/installation/">
+          Get started
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+        </a>
+        <a class="btn btn--ghost" href="/showcase/">Download the example app</a>
+      </div>
+      <div class="hero__install">
+        <Code code={`cargo install gpuicn-cli --version ${release.slice(1)} --locked\ngpuicn add button`} lang="bash" />
+      </div>
+    </div>
+    <dl class="hero__stats">
+      {
+        stats.map(([value, label, note]) => (
+          <div class="stat">
+            <dt class="mono">{label}</dt>
+            <dd class="stat__value">{value}</dd>
+            <dd class="stat__note">{note}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <!-- Ticker ------------------------------------------------------------ -->
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker__track">
+      {[0, 1].map(() => components.map((component) => <span>{component.name}</span>))}
+    </div>
+  </div>
+
+  <!-- Live preview ------------------------------------------------------ -->
+  <section class="wrap live" aria-labelledby="live-title">
+    <div class="live__head">
+      <h2 class="display live__title" id="live-title">Running GPUI, in your browser.</h2>
+      <p class="lede">
+        Every preview on this site is the real component, compiled to WebAssembly and drawn by GPUI.
+        Click, type, tab through it.
+      </p>
+    </div>
+    <div class="window live__window" data-tabs>
+      <div class="window__bar">
+        <span class="window__dots"><i></i><i></i><i></i></span>
+        <div class="tabs__list" role="tablist" aria-label="Featured components">
+          {
+            featured.map((component, index) => (
+              <button
+                class="tabs__tab"
+                type="button"
+                role="tab"
+                id={`live-tab-${component.slug}`}
+                aria-controls={`live-panel-${component.slug}`}
+                aria-selected={index === 0 ? "true" : "false"}
+                tabindex={index === 0 ? 0 : -1}
+              >
+                {component.name}
+              </button>
+            ))
+          }
+        </div>
+        <span class="window__spacer"></span>
+        <span class="window__title">Live · WebGPU</span>
+      </div>
+      {
+        featured.map((component, index) => (
+          <div
+            class="tabs__panel"
+            role="tabpanel"
+            id={`live-panel-${component.slug}`}
+            aria-labelledby={`live-tab-${component.slug}`}
+            hidden={index !== 0}
+          >
+            <Preview slug={component.slug} name={component.name} height={288} />
+            <div class="live__foot">
+              <p>{component.description}</p>
+              <a href={componentHref(component.slug)}>
+                View code
+                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"></path></svg>
+              </a>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Three ways in ----------------------------------------------------- -->
+  <section class="wrap ways" aria-labelledby="ways-title">
+    <h2 class="sr-only" id="ways-title">How gpuicn fits your app</h2>
+    <div class="way">
+      <p class="mono">01 · Install the source</p>
+      <h3 class="way__title">Own every line.</h3>
+      <p>
+        <code>gpuicn add</code> copies a component into <code>src/ui</code>. It is plain Rust in your
+        repo: edit it, lint it, review it in pull requests.
+      </p>
+      <a class="way__link" href="/installation/">Installation guide</a>
+    </div>
+    <div class="way">
+      <p class="mono">02 · Or use the crate</p>
+      <h3 class="way__title">Depend first, eject later.</h3>
+      <p>
+        Add the <code>gpuicn</code> crate for the whole catalog behind one dependency, then
+        <code>gpuicn eject</code> the components you want to change.
+      </p>
+      <a class="way__link" href="https://docs.rs/gpuicn">Crate documentation</a>
+    </div>
+    <div class="way">
+      <p class="mono">03 · Theme it once</p>
+      <h3 class="way__title">Semantic tokens, native repaint.</h3>
+      <p>
+        Color, radius, density, type scale and motion live in one editable theme. Switch palettes at
+        runtime and every window repaints.
+      </p>
+      <a class="way__link" href="/theming/">Theming</a>
+    </div>
+  </section>
+
+  <!-- Index -------------------------------------------------------------- -->
+  <section class="wrap catalog" aria-labelledby="catalog-title">
+    <div class="catalog__head">
+      <h2 class="display catalog__title" id="catalog-title">The catalog.</h2>
+      <p class="lede">
+        {components.length} component families, from a button to a command palette, a chat composer and
+        a virtualized list. Each one has a live preview, a usage example, its full API and platform notes.
+      </p>
+    </div>
+    <ol class="index catalog__list">
+      {
+        components.map((component) => (
+          <li class="index__item">
+            <a class="index__link" href={componentHref(component.slug)}>
+              <span class="index__num">{componentNumber(component.slug)}</span>
+              <span class="index__name">{component.name}</span>
+              <span>{isNew(component) && <span class="tag">New</span>}</span>
+              <span class="index__desc">{component.description}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <!-- Icons -------------------------------------------------------------- -->
+  <section class="wrap icons-teaser" aria-labelledby="icons-title">
+    <div class="icons-teaser__grid" aria-hidden="true">
+      {strip.map((name) => <img src={`/icons/lucide/${name}.svg`} width="24" height="24" alt="" />)}
+    </div>
+    <div class="icons-teaser__copy">
+      <h2 class="display icons-teaser__title" id="icons-title">
+        {icons.length.toLocaleString("en")} icons, one visual language.
+      </h2>
+      <p class="lede">
+        The complete Lucide set as a Rust library, rendered by GPUI with consistent strokes. Browse,
+        search, copy the code.
+      </p>
+      <a class="btn btn--ghost" href="/icons/">Browse the icons</a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3rem;
+    padding: clamp(3rem, 8vw, 7rem) var(--gutter) clamp(3rem, 6vw, 5rem);
+  }
+  @media (min-width: 64rem) {
+    .hero {
+      grid-template-columns: minmax(0, 1.5fr) minmax(16rem, 1fr);
+      align-items: end;
+    }
+  }
+  .hero__copy {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.75rem;
+  }
+  .hero__eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+  }
+  .hero__title {
+    font-size: clamp(3rem, 9.5vw, 8rem);
+  }
+  .hero__accent {
+    color: var(--accent);
+  }
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .hero__actions .btn {
+    white-space: normal;
+    text-align: center;
+  }
+  .hero__install {
+    max-width: 36rem;
+  }
+
+  .hero__stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-top: 1px solid var(--rule);
+    border-left: 1px solid var(--rule);
+  }
+  .stat {
+    padding: 1.25rem 1.25rem 1.25rem 1rem;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    display: grid;
+    gap: 0.35rem;
+    align-content: start;
+  }
+  .stat__value {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .stat__note {
+    font-size: 0.8125rem;
+    color: var(--ink-2);
+    line-height: 1.45;
+  }
+
+  .ticker {
+    overflow: hidden;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.6rem 0;
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .ticker__track {
+    display: flex;
+    gap: 2.5rem;
+    width: max-content;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .ticker__track span::after {
+    content: "·";
+    margin-left: 2.5rem;
+    color: var(--accent);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ticker__track {
+      animation: ticker 120s linear infinite;
+    }
+  }
+  @keyframes ticker {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .live {
+    padding-top: clamp(3rem, 7vw, 6rem);
+    display: grid;
+    gap: 2rem;
+  }
+  .live__head {
+    display: grid;
+    gap: 1rem;
+    max-width: 50rem;
+  }
+  .live__title,
+  .catalog__title,
+  .icons-teaser__title {
+    font-size: clamp(2.25rem, 5.5vw, 4.5rem);
+  }
+  .live__window .window__bar {
+    flex-wrap: wrap;
+  }
+  .live__window .tabs__list {
+    background: transparent;
+    padding: 0;
+  }
+  .live__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.875rem;
+    color: var(--ink-2);
+  }
+  .live__foot a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--ink);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .live__foot a:hover {
+    color: var(--accent-ink);
+  }
+
+  .ways {
+    display: grid;
+    gap: 2rem;
+    padding-top: clamp(3rem, 7vw, 6rem);
+  }
+  @media (min-width: 48rem) {
+    .ways {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 3rem;
+    }
+  }
+  .way {
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+    padding-top: 1rem;
+    border-top: 1px solid var(--ink);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .way__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+  .way__link {
+    color: var(--accent-ink);
+    font-weight: 500;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .catalog {
+    padding-top: clamp(4rem, 8vw, 7rem);
+    display: grid;
+    gap: 2rem;
+  }
+  .catalog__head {
+    display: grid;
+    gap: 1rem;
+    max-width: 50rem;
+  }
+  @media (min-width: 64rem) {
+    .catalog__list {
+      columns: 2;
+      column-gap: 3rem;
+      border-top: 0;
+    }
+    .catalog__list .index__item {
+      break-inside: avoid;
+    }
+    .catalog__list .index__item:first-child,
+    .catalog__list .index__item:nth-child(30) {
+      border-top: 1px solid var(--rule);
+    }
+  }
+
+  .icons-teaser {
+    display: grid;
+    gap: 2.5rem;
+    padding: clamp(4rem, 8vw, 7rem) var(--gutter) clamp(3rem, 6vw, 5rem);
+  }
+  @media (min-width: 64rem) {
+    .icons-teaser {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: center;
+    }
+  }
+  .icons-teaser__grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    border-top: 1px solid var(--rule);
+    border-left: 1px solid var(--rule);
+  }
+  .icons-teaser__grid img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    padding: 22%;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  :global([data-theme="dark"]) .icons-teaser__grid img {
+    filter: invert(1);
+  }
+  .icons-teaser__copy {
+    display: grid;
+    gap: 1.25rem;
+    justify-items: start;
+  }
+</style>

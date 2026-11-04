@@ -338,13 +338,22 @@ export const components: CatalogComponent[] = [
 ]
 
 export const sections = [
-  { to: "/introduction", label: "Introduction" },
-  { to: "/installation", label: "Installation" },
-  { to: "/showcase", label: "Example app" },
-  { to: "/theming", label: "Theming" },
-  { to: "/icons", label: "Icons" },
-  { to: "/registry", label: "Registry" },
+  { to: "/introduction/", label: "Introduction", blurb: "What gpuicn is and how it fits a GPUI app." },
+  { to: "/installation/", label: "Installation", blurb: "Create an app, install the CLI, add your first component." },
+  { to: "/showcase/", label: "Example app", blurb: "Download gpuicn Workspace for macOS and Linux." },
+  { to: "/theming/", label: "Theming", blurb: "Semantic tokens for color, radius, density, type and motion." },
+  { to: "/icons/", label: "Icons", blurb: "The complete Lucide set, rendered by GPUI." },
+  { to: "/registry/", label: "Registry", blurb: "The machine-readable catalog behind gpuicn add." },
 ] as const
+
+export function componentHref(slug: string) {
+  return `/components/${slug}/`
+}
+
+/** Zero-padded position in the catalog, such as "07". */
+export function componentNumber(slug: string) {
+  return String(components.findIndex((component) => component.slug === slug) + 1).padStart(2, "0")
+}
 
 export function findComponent(slug: string) {
   return components.find((component) => component.slug === slug)

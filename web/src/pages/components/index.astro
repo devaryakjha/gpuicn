@@ -1,0 +1,26 @@
+---
+import Docs from "../../layouts/Docs.astro"
+import { components, componentHref, componentNumber, isNew } from "../../lib/catalog"
+---
+
+<Docs
+  title="Components"
+  eyebrow="Catalog"
+  description={`${components.length} component families. Each page has a live GPUI preview, an install command, a usage example, the full API and platform notes.`}
+  current="/components/"
+>
+  <ol class="index">
+    {
+      components.map((component) => (
+        <li class="index__item">
+          <a class="index__link" href={componentHref(component.slug)}>
+            <span class="index__num">{componentNumber(component.slug)}</span>
+            <span class="index__name">{component.name}</span>
+            <span>{isNew(component) && <span class="tag">New</span>}</span>
+            <span class="index__desc">{component.description}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ol>
+</Docs>
