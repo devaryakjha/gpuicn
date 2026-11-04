@@ -28,7 +28,7 @@ const { slug, name, icon, example, id, height = previewHeight(slug) } = Astro.pr
     <span class="gpu__pulse" aria-hidden="true"></span>
     <p>
       <span data-when="loading">Starting the preview. GPUI compiles to WebAssembly, so the first load takes a few seconds.</span>
-      <span data-when="unsupported">This browser has no WebGPU, so the live preview cannot run. The code on this page still works.</span>
+      <span data-when="unsupported">This browser has neither WebGPU nor WebGL 2, so the live preview cannot run. The code on this page still works.</span>
       <span data-when="failed">The preview did not start.</span>
     </p>
     <button class="btn" type="button" data-retry>Try again</button>

@@ -82,7 +82,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
           <a href="/registry/">Registry</a>
         </nav>
         <div class="head__tools">
-          <button class="head__tool" type="button" data-open-palette aria-label="Search">
+          <button class="head__tool" type="button" data-open-palette>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="11" cy="11" r="7"></circle>
               <path d="m20 20-3.5-3.5"></path>
@@ -233,7 +233,15 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  .head__tool-label,
+  /* Below 48rem the label is visually hidden but still names the button. */
+  .head__tool-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   .head__kbd {
     display: none;
   }
@@ -246,7 +254,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
     padding: 0.05rem 0.25rem;
   }
   @media (min-width: 48rem) {
-    .head__tool-label,
+    .head__tool-label {
+      position: static;
+      width: auto;
+      height: auto;
+      overflow: visible;
+      clip-path: none;
+    }
     .head__kbd {
       display: inline;
     }
