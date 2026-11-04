@@ -21,17 +21,27 @@ impl Showcase {
         let moved = order.clone();
         let regrouped = order.clone();
         let current = order.read(cx);
-        div().w(px(260.)).child(
+        let theme = UiTheme::read(cx);
+        // A sidebar surface, as in a chat app's channel list.
+        div()
+            .w(px(260.))
+            .p(px(8.))
+            .rounded(theme.radius.lg)
+            .border_1()
+            .border_color(theme.colors.sidebar_border)
+            .bg(theme.colors.sidebar)
+            .child(
             Sortable::new("sortable.channels", "Channels")
                 .reorder_groups(true)
                 .groups(current.names.iter().zip(&current.groups).map(|(&name, rows)| {
                     SortableGroup::new(name, name).rows(rows.iter().map(|&channel| {
-                        SortableRow::new(channel, channel, move |_, _| {
+                        SortableRow::new(channel, channel, move |_, cx| {
+                            let color = UiTheme::read(cx).colors.sidebar_foreground;
                             gpuicn::sidebar::SidebarItem::new(
                                 gpui_kit::ElementId::from(format!("sortable.{channel}")),
                                 channel,
                             )
-                            .icon(lucide(LucideIcon::Hash).size(px(16.)))
+                            .icon(lucide(LucideIcon::Hash).size(px(16.)).text_color(color))
                         })
                     }))
                 }))
