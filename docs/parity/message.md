@@ -29,6 +29,11 @@ layout. Implementation: `crates/ui/registry/message/message.rs`.
   avatars.
 - `MessageHighlight::Permalink` tints the row amber with an amber gutter bar,
   for the message a followed link points at.
+- `on_author_click` draws the name as a link-styled button that takes focus,
+  underlines on hover and runs on click, Enter or Space; the handler gets the
+  name's bounds to anchor a profile popover. `author_element` puts the
+  application's own element, such as a `hover_popover` trigger, in place of
+  the name, with the name's weight and color.
 - `aria_description` sets what assistive technology reads for the row, such as
   the sender, time, reaction count and edited state.
 
