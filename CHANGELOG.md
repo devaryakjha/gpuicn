@@ -4,7 +4,9 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
-## Unreleased
+## 0.9.2
+
+[Notes](docs/releases/v0.9.2.md)
 
 ### Added
 
