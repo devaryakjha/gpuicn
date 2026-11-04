@@ -1,0 +1,112 @@
+---
+import Chapter from "../../layouts/Chapter.astro"
+import { components, componentHref, componentNumber, isNew } from "../../lib/catalog"
+import { componentDocs } from "../../lib/docs"
+
+const rows = components.map((component) => {
+  const docs = componentDocs(component.slug)
+  return {
+    ...component,
+    lines: docs.source.split("\n").length,
+    functions: docs.api.length,
+    modules: docs.modules.filter((module) => module !== "theme"),
+  }
+})
+---
+
+<Chapter
+  title="Components"
+  part="Reference"
+  kicker="Chapter 5"
+  lede={`All ${components.length} components in catalog order. Lines and functions are counted in the installed source at this release.`}
+  current="/components/"
+>
+  <table class="wide catalog">
+    <thead>
+      <tr>
+        <th scope="col">No.</th>
+        <th scope="col">Component</th>
+        <th scope="col" class="catalog__desc">Description</th>
+        <th scope="col" class="catalog__num">Lines</th>
+        <th scope="col" class="catalog__num">Public fns</th>
+        <th scope="col" class="catalog__mods">Modules</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((row) => (
+          <tr>
+            <td class="catalog__no">{componentNumber(row.slug)}</td>
+            <td>
+              <a href={componentHref(row.slug)}>{row.name}</a>
+              {isNew(row) && <span class="badge">New</span>}
+            </td>
+            <td class="catalog__desc">{row.description}</td>
+            <td class="catalog__num">{row.lines}</td>
+            <td class="catalog__num">{row.functions}</td>
+            <td class="catalog__mods">
+              <code>{row.modules.join(", ")}</code>
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</Chapter>
+
+<style>
+  .catalog {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  .catalog th {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 0.74rem;
+    color: var(--ink-2);
+    text-align: left;
+    padding: 0.4rem 0.75rem 0.4rem 0;
+    border-bottom: 1px solid var(--rule-2);
+    white-space: nowrap;
+  }
+  .catalog td {
+    padding: 0.5rem 0.75rem 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  .catalog a {
+    font-weight: 600;
+  }
+  .catalog a:hover {
+    color: var(--rubric);
+  }
+  .catalog .badge {
+    margin-left: 0.4rem;
+  }
+  .catalog__no {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--ink-3);
+    padding-top: 0.7rem;
+  }
+  .catalog__desc {
+    color: var(--ink-2);
+    font-size: 0.88rem;
+  }
+  .catalog__num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .catalog__mods code {
+    font-size: 0.72rem;
+    color: var(--ink-2);
+  }
+  @media (max-width: 48rem) {
+    .catalog__desc,
+    .catalog__mods,
+    .catalog__num {
+      display: none;
+    }
+  }
+</style>

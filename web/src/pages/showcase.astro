@@ -1,0 +1,224 @@
+---
+import Chapter from "../layouts/Chapter.astro"
+import Aside from "../components/Aside.astro"
+import Code from "../components/Code.astro"
+
+const views = [
+  ["light", "Tasks", "gpuicn Workspace showing a project's task list in the light theme"],
+  ["chat", "Local chat", "gpuicn Workspace showing a project's local chat"],
+  ["dark", "Dark", "gpuicn Workspace showing a project's task list in the dark theme"],
+] as const
+---
+
+<Chapter
+  title="Example app"
+  part="Guide"
+  kicker="Chapter 4"
+  lede="gpuicn Workspace is a small desktop app built from this catalog: projects, tasks, and notes, saved on your computer."
+>
+  <div class="downloads" slot="head" data-showcase>
+    <a class="btn btn--primary" href="#" hidden data-mac-download>Download for macOS</a>
+    <span class="small" data-mac-status>Checking the macOS download</span>
+    <details class="menu">
+      <summary class="btn">Download for Linux</summary>
+      <div class="menu__popup">
+        <a href="https://github.com/devaryakjha/gpuicn/releases/latest/download/gpuicn-workspace-linux-x86_64.tar.gz">
+          <span>x86-64</span>
+          <small>Started on Ubuntu 24.04</small>
+        </a>
+        <a href="https://github.com/devaryakjha/gpuicn/releases/latest/download/gpuicn-workspace-linux-aarch64.tar.gz">
+          <span>ARM64</span>
+          <small>Builds, not yet run on hardware</small>
+        </a>
+      </div>
+    </details>
+    <p class="small downloads__meta">macOS 12 or newer <span data-mac-arch></span>. Linux needs glibc 2.39 and a Vulkan driver.</p>
+    <p class="small downloads__warning" hidden data-mac-unsigned>
+      This macOS build is not notarized, so macOS may refuse to open it.
+    </p>
+  </div>
+
+  <figure class="figure wide views">
+    <div class="views__chips" role="group" aria-label="Views">
+      {
+        views.map(([value, label], index) => (
+          <>
+            <input class="sr-only" type="radio" name="view" id={`view-${value}`} value={value} checked={index === 0} />
+            <label class="chip" for={`view-${value}`}>{label}</label>
+          </>
+        ))
+      }
+    </div>
+    <div class="figure__frame">
+      {
+        views.map(([value, , alt]) => (
+          <a class="views__shot" data-view={value} href={`/workspace-${value}.jpg`} target="_blank" rel="noreferrer">
+            <img src={`/workspace-${value}.jpg`} width="1188" height="768" alt={alt} loading={value === "light" ? "eager" : "lazy"} />
+          </a>
+        ))
+      }
+    </div>
+    <figcaption class="figure__caption">
+      The native macOS app. Open the image for full size. Sidebar, Button, Input, Checkbox, Tabs, Dialog,
+      Menu, Message List, and Composer are all installed from the catalog.
+    </figcaption>
+  </figure>
+
+  <div class="text">
+    <h2 class="h2">What it does</h2>
+    <p>
+      Workspace keeps projects, tasks, and notes in a local file. There is no account and no network
+      access. Local chat is a message log per project. It does not connect to other people and does not
+      generate replies.
+    </p>
+  </div>
+  <Aside>
+    <p>
+      The x86-64 build has started on Ubuntu 24.04. The ARM64 build compiles but has not been run on
+      hardware. Wayland, other distributions, and graphics performance are untested.
+    </p>
+  </Aside>
+  <div class="text">
+    <p>
+      The macOS build is signed and notarized by the release workflow. The Linux builds are a preview
+      and need testing.
+    </p>
+
+    <h2 class="h2">Install</h2>
+    <p>On macOS, unzip the download, move gpuicn Workspace to Applications, and open it.</p>
+    <p class="small" data-mac-size hidden></p>
+    <p><code class="checksum" data-mac-sha hidden></code></p>
+    <p>
+      On Linux, extract the archive and run <code>./gpuicn-workspace</code> from its folder. The
+      <a href="https://github.com/devaryakjha/gpuicn/releases/latest">release page</a> lists the Linux
+      dependencies and checksums.
+    </p>
+
+    <h2 class="h2">Run from source</h2>
+    <p>From a checkout of the gpuicn repository, on macOS:</p>
+  </div>
+  <Code code="cargo run --release -p gpuicn-showcase --features gpui_platform/runtime_shaders" lang="bash" />
+  <div class="text">
+    <p>On Linux, with the build dependencies from <a href="/installation/">Installation</a>:</p>
+  </div>
+  <Code code="cargo run --release -p gpuicn-showcase --features gpui_platform/x11,gpui_platform/wayland" lang="bash" />
+</Chapter>
+
+<script>
+  // The release workflow writes /downloads/showcase.json beside the macOS
+  // archive. Validate every field before using it.
+  const root = document.querySelector<HTMLElement>("[data-showcase]")!
+  const link = root.querySelector<HTMLAnchorElement>("[data-mac-download]")!
+  const status = root.querySelector<HTMLElement>("[data-mac-status]")!
+  fetch("/downloads/showcase.json")
+    .then((response) => (response.ok ? response.json() : Promise.reject()))
+    .then((data) => {
+      if (
+        !/^\/downloads\/gpuicn-workspace-macos-(arm64|x86_64)\.zip$/.test(data.url) ||
+        !["arm64", "x86_64"].includes(data.architecture) ||
+        !Number.isSafeInteger(data.bytes) || data.bytes <= 0 ||
+        !/^[a-f0-9]{64}$/.test(data.sha256) || typeof data.build !== "string" ||
+        typeof data.notarized !== "boolean" || typeof data.version !== "string"
+      ) throw new Error("Invalid download")
+      link.href = data.url
+      link.hidden = false
+      status.hidden = true
+      root.querySelector<HTMLElement>("[data-mac-arch]")!.textContent = `on ${data.architecture === "arm64" ? "Apple silicon" : "Intel"}`
+      root.querySelector<HTMLElement>("[data-mac-unsigned]")!.hidden = data.notarized
+      const size = document.querySelector<HTMLElement>("[data-mac-size]")!
+      size.textContent = `macOS v${data.version}, ZIP, ${(data.bytes / 1024 / 1024).toFixed(1)} MB`
+      size.hidden = false
+      const sha = document.querySelector<HTMLElement>("[data-mac-sha]")!
+      sha.textContent = `SHA-256 ${data.sha256}`
+      sha.hidden = false
+    })
+    .catch(() => {
+      status.textContent = "No macOS download is published for this release yet."
+    })
+</script>
+
+<style>
+  .downloads {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .downloads [hidden] {
+    display: none;
+  }
+  .downloads__meta,
+  .downloads__warning {
+    flex-basis: 100%;
+  }
+  .downloads__warning {
+    color: var(--rubric);
+  }
+  .menu {
+    position: relative;
+  }
+  .menu summary {
+    list-style: none;
+    cursor: pointer;
+  }
+  .menu summary::-webkit-details-marker {
+    display: none;
+  }
+  .menu__popup {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    z-index: 10;
+    width: 16rem;
+    padding: 0.3rem;
+    background: var(--paper);
+    border: 1px solid var(--rule-2);
+    box-shadow: 0 12px 30px rgb(0 0 0 / 0.15);
+    font-family: var(--sans);
+  }
+  .menu__popup a {
+    display: grid;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    border-radius: 3px;
+  }
+  .menu__popup a:hover {
+    background: var(--paper-2);
+  }
+  .menu__popup small {
+    font-size: 0.74rem;
+    font-weight: 400;
+    color: var(--ink-2);
+  }
+  .views__chips {
+    display: flex;
+    gap: 0.35rem;
+    margin-bottom: 0.6rem;
+  }
+  .views__chips input:checked + .chip {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+  }
+  .views__chips input:focus-visible + .chip {
+    outline: 2px solid var(--rubric);
+    outline-offset: 2px;
+  }
+  .views__shot {
+    display: none;
+  }
+  .views__shot img {
+    width: 100%;
+    height: auto;
+  }
+  .views:has(#view-light:checked) .views__shot[data-view="light"],
+  .views:has(#view-chat:checked) .views__shot[data-view="chat"],
+  .views:has(#view-dark:checked) .views__shot[data-view="dark"] {
+    display: block;
+  }
+  .checksum {
+    overflow-wrap: anywhere;
+    font-size: 0.75rem;
+  }
+</style>

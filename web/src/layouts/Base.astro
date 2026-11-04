@@ -1,0 +1,293 @@
+---
+import "../styles/global.css"
+import Palette from "../components/Palette.astro"
+import Logo from "../components/Logo.astro"
+
+interface Props {
+  title?: string
+  description?: string
+  /** Running head: the part of the book this page belongs to. */
+  part?: string
+}
+
+const {
+  title,
+  description = "Components for GPUI, installed as Rust source you own. A catalog of 58 components, the complete Lucide icon library, and live previews rendered by GPUI.",
+  part,
+} = Astro.props
+const fullTitle = title ? `${title} · gpuicn` : "gpuicn · Components for GPUI, installed as source"
+const canonical = new URL(Astro.url.pathname, Astro.site)
+---
+
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-panels.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-panels.png" />
+    <link rel="preload" href="/fonts/Geist-Regular.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/fonts/Geist-Regular.ttf" as="font" type="font/ttf" crossorigin />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="gpuicn" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content="https://ui.imajha.com/og-gpuicn-beta.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="gpuicn beta. Native components. Your source code. Ivory and orange overlapping panels on a dark background."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content="https://ui.imajha.com/og-gpuicn-beta.jpg" />
+    <meta name="theme-color" content="#fdfdfb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#151514" media="(prefers-color-scheme: dark)" />
+    <script is:inline>
+      // Runs before paint so the stored theme never flashes.
+      ;(function () {
+        var stored = null
+        try {
+          stored = localStorage.getItem("gpuicn-theme")
+        } catch (_) {}
+        var dark =
+          stored === "dark" ||
+          (stored !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)
+        document.documentElement.dataset.theme = dark ? "dark" : "light"
+      })()
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="head">
+      <div class="head__row">
+        <a class="head__brand" href="/" aria-label="gpuicn home">
+          <Logo size={20} />
+          <span>gpuicn</span>
+        </a>
+        {part && <span class="head__part">{part}</span>}
+        <nav class="head__nav" aria-label="Main">
+          <a href="/introduction/">Guide</a>
+          <a href="/components/">Components</a>
+          <a href="/icons/">Icons</a>
+          <a href="/registry/">Registry</a>
+        </nav>
+        <div class="head__tools">
+          <button class="head__tool" type="button" data-open-palette aria-label="Search">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-3.5-3.5"></path>
+            </svg>
+            <span class="head__tool-label">Search</span>
+            <kbd class="head__kbd" aria-hidden="true">⌘K</kbd>
+          </button>
+          <button class="head__tool" type="button" data-theme-toggle aria-label="Switch color theme">
+            <svg class="icon--sun" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path
+                d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+              ></path>
+            </svg>
+            <svg class="icon--moon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path>
+            </svg>
+          </button>
+          <a class="head__tool" href="https://github.com/devaryakjha/gpuicn" aria-label="gpuicn on GitHub">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65S8.93 17.38 9 18v4"></path>
+              <path d="M9 18c-4.51 2-5-2-7-2"></path>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <main id="main" class="main">
+      <slot />
+    </main>
+
+    <footer class="colophon">
+      <div class="colophon__row">
+        <p>
+          gpuicn is open source under the MIT license. The site is static HTML built with Astro, set in Geist. Every preview is the real component, compiled to WebAssembly and drawn by
+          GPUI.
+        </p>
+        <nav class="colophon__links" aria-label="Footer">
+          <a href="https://github.com/devaryakjha/gpuicn">GitHub</a>
+          <a href="https://github.com/devaryakjha/gpuicn/releases">Releases</a>
+          <a href="https://crates.io/crates/gpuicn">crates.io</a>
+          <a href="https://github.com/devaryakjha/gpui-icons">gpui-icons</a>
+        </nav>
+      </div>
+    </footer>
+
+    <Palette />
+    <script src="../scripts/site.ts"></script>
+  </body>
+</html>
+
+<style>
+  .skip {
+    position: absolute;
+    top: -100%;
+    left: 1rem;
+    z-index: 100;
+    padding: 0.5rem 0.75rem;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--sans);
+    font-size: 0.85rem;
+  }
+  .skip:focus {
+    top: 0.5rem;
+  }
+
+  .head {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    height: var(--head);
+    background: var(--paper);
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--sans);
+    font-size: 0.88rem;
+  }
+  .head__row {
+    height: 100%;
+    max-width: calc(var(--spine) + var(--gap) + var(--measure) + var(--gap) + var(--margin) + 3rem);
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .head__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+  .head__part {
+    color: var(--ink-3);
+    display: none;
+  }
+  .head__part::before {
+    content: "/";
+    margin-right: 1rem;
+  }
+  .head__nav {
+    display: none;
+    gap: 1.25rem;
+    margin-left: auto;
+    color: var(--ink-2);
+  }
+  .head__nav a:hover {
+    color: var(--ink);
+  }
+  .head__tools {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  @media (min-width: 48rem) {
+    .head__part {
+      display: inline;
+    }
+    .head__nav {
+      display: flex;
+    }
+    .head__tools {
+      margin-left: 1.5rem;
+    }
+  }
+  .head__tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    height: 1.9rem;
+    padding: 0 0.5rem;
+    border-radius: 3px;
+    color: var(--ink-2);
+  }
+  .head__tool:hover {
+    color: var(--ink);
+    background: var(--paper-2);
+  }
+  .head__tool svg {
+    width: 1rem;
+    height: 1rem;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .head__tool-label,
+  .head__kbd {
+    display: none;
+  }
+  .head__kbd {
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--ink-3);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 0.05rem 0.25rem;
+  }
+  @media (min-width: 48rem) {
+    .head__tool-label,
+    .head__kbd {
+      display: inline;
+    }
+  }
+  .icon--sun {
+    display: none;
+  }
+  :global([data-theme="dark"]) .icon--sun {
+    display: block;
+  }
+  :global([data-theme="dark"]) .icon--moon {
+    display: none;
+  }
+
+  .main {
+    flex: 1;
+  }
+
+  .colophon {
+    border-top: 1px solid var(--rule);
+    font-family: var(--sans);
+    font-size: 0.84rem;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+  .colophon__row {
+    max-width: calc(var(--spine) + var(--gap) + var(--measure) + var(--gap) + var(--margin) + 3rem);
+    margin-inline: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+  }
+  .colophon p {
+    max-width: 36rem;
+  }
+  .colophon__links {
+    display: flex;
+    gap: 1.25rem;
+    align-self: flex-start;
+  }
+  .colophon__links a:hover {
+    color: var(--ink);
+  }
+</style>

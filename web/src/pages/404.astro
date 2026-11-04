@@ -1,0 +1,25 @@
+---
+import Base from "../layouts/Base.astro"
+import Spine from "../components/Spine.astro"
+---
+
+<Base title="Page not found">
+  <div class="page">
+    <Spine current="" />
+    <article class="body">
+      <p class="kicker">404</p>
+      <h1 class="h1">There is no page at this address.</h1>
+      <div class="text missing">
+        <p>
+          The contents are on the left, or start from the <a href="/">front page</a>. Press ⌘K to search.
+        </p>
+      </div>
+    </article>
+  </div>
+</Base>
+
+<style>
+  .h1 {
+    margin: 0.75rem 0 1rem;
+  }
+</style>

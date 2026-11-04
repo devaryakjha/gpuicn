@@ -1,0 +1,220 @@
+---
+import Base from "../layouts/Base.astro"
+import Spine from "../components/Spine.astro"
+import Figure from "../components/Figure.astro"
+import Preview from "../components/Preview.astro"
+import Code from "../components/Code.astro"
+import Aside from "../components/Aside.astro"
+import { components, componentHref, componentNumber, isNew, guide, reference } from "../lib/catalog"
+import { componentDocs, icons } from "../lib/docs"
+import { release } from "../lib/release"
+
+const button = componentDocs("button")
+const buttonLines = button.source.split("\n").length
+const newest = components.filter(isNew)
+---
+
+<Base>
+  <div class="page">
+    <Spine current="/" />
+    <article class="body">
+      <header class="front">
+        <p class="kicker">gpuicn {release} · experimental</p>
+        <h1 class="h1">Components for GPUI, installed as source.</h1>
+        <p class="lede">
+          A catalog of {components.length} user-interface components for GPUI, the Rust framework behind
+          Zed. Each one follows the shadcn/ui design. You copy the ones you need into your app and edit
+          them there.
+        </p>
+      </header>
+
+      <Aside>
+        <p>
+          GPUI draws every pixel itself and reads input from the operating system. There is no web view
+          and no bridge. Pointer, keyboard, and accessibility behavior come from GPUI Kit.
+        </p>
+      </Aside>
+      <div class="text">
+        <p>
+          <code>gpuicn add button</code> writes <code>src/ui/button.rs</code> ({buttonLines} lines) and
+          <code>src/ui/theme.rs</code> into your app, then adds both to <code>src/ui/mod.rs</code>. The
+          files are ordinary Rust. You can rename a variant or delete half the file, and the compiler
+          checks the result like any other code you own.
+        </p>
+        <p>
+          Every preview in this book is the same code you install, compiled to WebAssembly. The figure
+          below is a real Button. Click it.
+        </p>
+      </div>
+
+      <Figure caption="Button, drawn by GPUI in the browser. The counter is application state inside the preview.">
+        <Preview slug="button" name="Button" height={240} />
+      </Figure>
+
+      <h2 class="h2" id="start">Start</h2>
+      <Aside>
+        <p>
+          The CLI, the registry, and the fonts are pinned to one release, so the three commands always
+          agree with each other.
+        </p>
+        <p>
+          <a href="/installation/">Installation</a> covers each step, including the Cargo dependencies and
+          the starter window.
+        </p>
+      </Aside>
+      <div class="text">
+        <p>With Rust 1.98 or newer installed, these three commands produce a running window:</p>
+      </div>
+      <Code
+        code={`cargo install gpuicn-cli --version ${release.slice(1)} --locked\ngpuicn new my-app\ncd my-app && cargo run`}
+        lang="bash"
+        class="start-code"
+      />
+      <div class="text">
+        <p>
+          You should see a window titled "My App" with a button that counts clicks. The window follows
+          the system appearance.
+        </p>
+      </div>
+
+      <h2 class="h2" id="contents">Contents</h2>
+      <section class="wide toc">
+        <div class="toc__part">
+          <p class="toc__label">Guide</p>
+          <ol class="contents">
+            {
+              guide.map((chapter, index) => (
+                <li>
+                  <span class="num">{index + 1}</span>
+                  <a href={chapter.to}>
+                    <span class="title">{chapter.label}</span>
+                    <span class="leader"></span>
+                    <span class="desc">{chapter.blurb}</span>
+                  </a>
+                </li>
+              ))
+            }
+          </ol>
+          <p class="toc__label">Reference</p>
+          <ol class="contents">
+            {
+              reference.map((chapter, index) => (
+                <li>
+                  <span class="num">{guide.length + index + 1}</span>
+                  <a href={chapter.to}>
+                    <span class="title">{chapter.label}</span>
+                    <span class="leader"></span>
+                    <span class="desc">{chapter.blurb}</span>
+                  </a>
+                </li>
+              ))
+            }
+          </ol>
+        </div>
+        <div class="toc__part">
+          <p class="toc__label">Components</p>
+          <ol class="toc__components">
+            {
+              components.map((component) => (
+                <li>
+                  <a href={componentHref(component.slug)}>
+                    <span class="num">{componentNumber(component.slug)}</span>
+                    {component.name}
+                    {isNew(component) && <span class="badge">New</span>}
+                  </a>
+                </li>
+              ))
+            }
+          </ol>
+        </div>
+      </section>
+
+      <h2 class="h2" id="whats-new">New in {release}</h2>
+      <Aside>
+        <p>
+          The <a href="https://github.com/devaryakjha/gpuicn/releases">release notes</a> list every change,
+          including the ones that alter installed source.
+        </p>
+      </Aside>
+      <div class="text">
+        <p>
+          Recent releases added {newest.length} components:
+          {newest.map((component, index) => (
+            <>
+              <a href={componentHref(component.slug)}>{component.name}</a>{index < newest.length - 1 ? ", " : "."}
+            </>
+          ))}
+          The icon library has {icons.length.toLocaleString("en")} icons from Lucide 1.63.0, and the
+          <a href="/showcase/">example app</a> ships as a notarized macOS build and two Linux archives.
+        </p>
+      </div>
+    </article>
+  </div>
+</Base>
+
+<style>
+  .front {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 2.25rem;
+  }
+  .front .h1 {
+    font-size: clamp(2.5rem, 5.4vw, 4.2rem);
+  }
+  .h2 {
+    margin-top: 3rem;
+    margin-bottom: 0.75rem;
+  }
+  :global(.start-code) {
+    margin: 0.75rem 0;
+  }
+  .toc {
+    display: grid;
+    gap: 2rem;
+    margin-top: 1rem;
+  }
+  @media (min-width: 64rem) {
+    .toc {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 3rem;
+    }
+  }
+  .toc__label {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 1.25rem 0 0.4rem;
+  }
+  .toc__part .toc__label:first-child {
+    margin-top: 0;
+  }
+  .toc__components {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    columns: 2;
+    column-gap: 1.5rem;
+    font-size: 0.92rem;
+  }
+  .toc__components li {
+    break-inside: avoid;
+  }
+  .toc__components a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    padding: 0.18rem 0;
+  }
+  .toc__components a:hover {
+    color: var(--rubric);
+  }
+  .toc__components .num {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--ink-3);
+    width: 1.4rem;
+    flex: none;
+  }
+</style>

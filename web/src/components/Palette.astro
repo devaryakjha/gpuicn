@@ -1,0 +1,153 @@
+---
+import { components, componentHref, componentNumber, isNew, guide, reference } from "../lib/catalog"
+const chapters = [...guide, ...reference]
+---
+
+<!-- Search in a native dialog. The list is static HTML; the script only filters it. -->
+<dialog class="palette" data-palette aria-label="Search gpuicn">
+  <form method="dialog" class="palette__form">
+    <input
+      class="palette__input"
+      type="search"
+      placeholder="Search chapters and components"
+      autocomplete="off"
+      aria-label="Search"
+      data-palette-input
+    />
+    <button class="palette__close" type="submit" aria-label="Close">esc</button>
+  </form>
+  <div class="palette__list" data-palette-list>
+    <p class="palette__group">Chapters</p>
+    {
+      chapters.map((chapter, index) => (
+        <a class="palette__item" href={chapter.to} data-terms={`${chapter.label} ${chapter.blurb}`.toLowerCase()}>
+          <span class="palette__num">{index + 1}</span>
+          <span class="palette__name">{chapter.label}</span>
+          <span class="palette__desc">{chapter.blurb}</span>
+        </a>
+      ))
+    }
+    <p class="palette__group">Components</p>
+    {
+      components.map((component) => (
+        <a
+          class="palette__item"
+          href={componentHref(component.slug)}
+          data-terms={`${component.name} ${component.slug} ${component.description}`.toLowerCase()}
+        >
+          <span class="palette__num">{componentNumber(component.slug)}</span>
+          <span class="palette__name">
+            {component.name}
+            {isNew(component) && <span class="badge">New</span>}
+          </span>
+          <span class="palette__desc">{component.description}</span>
+        </a>
+      ))
+    }
+    <p class="palette__empty" data-palette-empty hidden>Nothing matches.</p>
+  </div>
+</dialog>
+
+<style>
+  .palette {
+    width: min(38rem, calc(100vw - 2rem));
+    max-height: min(30rem, calc(100vh - 4rem));
+    margin: 4rem auto 0;
+    padding: 0;
+    border: 1px solid var(--rule-2);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 24px 60px rgb(0 0 0 / 0.2);
+    display: none;
+    flex-direction: column;
+    font-family: var(--sans);
+  }
+  .palette[open] {
+    display: flex;
+  }
+  .palette::backdrop {
+    background: rgb(0 0 0 / 0.35);
+  }
+  .palette__form {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .palette__input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 1rem;
+    color: var(--ink);
+    background: none;
+    border: 0;
+    outline: 0;
+  }
+  .palette__input::-webkit-search-cancel-button {
+    display: none;
+  }
+  .palette__close {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    padding: 0.15rem 0.35rem;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--ink-3);
+  }
+  .palette__list {
+    overflow: auto;
+    padding: 0.4rem;
+    overscroll-behavior: contain;
+  }
+  .palette__group {
+    padding: 0.7rem 0.6rem 0.3rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .palette__group[hidden],
+  .palette__item[hidden] {
+    display: none;
+  }
+  .palette__item {
+    display: grid;
+    grid-template-columns: 1.6rem minmax(0, 1fr);
+    column-gap: 0.4rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 3px;
+    font-size: 0.85rem;
+  }
+  .palette__item:hover,
+  .palette__item[data-active] {
+    background: var(--paper-2);
+  }
+  .palette__num {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--ink-3);
+    padding-top: 0.15rem;
+  }
+  .palette__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+  }
+  .palette__desc {
+    grid-column: 2;
+    font-size: 0.78rem;
+    color: var(--ink-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .palette__empty {
+    padding: 1.5rem;
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--ink-2);
+  }
+</style>

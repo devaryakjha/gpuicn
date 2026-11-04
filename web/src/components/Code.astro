@@ -1,0 +1,26 @@
+---
+import { highlight, type CodeLanguage } from "../lib/highlight"
+
+interface Props {
+  code: string
+  lang?: CodeLanguage
+  class?: string
+}
+
+const { code, lang = "rust", class: className } = Astro.props
+const html = await highlight(code, lang)
+---
+
+<div class:list={["code", className]} data-lang={lang}>
+  <pre tabindex="0"><code class="shiki" set:html={html} /></pre>
+  <button class="code__copy" type="button" data-copy aria-label="Copy code">
+    <svg class="icon icon--copy" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="9" y="9" width="12" height="12" rx="2"></rect>
+      <path d="M15 9V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4"></path>
+    </svg>
+    <svg class="icon icon--check" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m5 12 5 5L20 7"></path>
+    </svg>
+  </button>
+  <p class="code__status" role="status" data-copy-status></p>
+</div>

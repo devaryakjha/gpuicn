@@ -1,0 +1,40 @@
+---
+import Base from "./Base.astro"
+import Spine from "../components/Spine.astro"
+
+interface Props {
+  title: string
+  /** Running head and spine section, such as "Guide" or "Reference". */
+  part: string
+  /** Small line above the title, such as "Chapter 7" */
+  kicker?: string
+  lede?: string
+  description?: string
+  current?: string
+}
+
+const { title, part, kicker, lede, description = lede, current = Astro.url.pathname } = Astro.props
+---
+
+<Base title={title} description={description} part={part}>
+  <div class="page">
+    <Spine current={current} />
+    <article class="body">
+      <header class="chapter-head">
+        {kicker && <p class="kicker">{kicker}</p>}
+        <h1 class="h1">{title}</h1>
+        {lede && <p class="lede">{lede}</p>}
+        <slot name="head" />
+      </header>
+      <slot />
+    </article>
+  </div>
+</Base>
+
+<style>
+  .chapter-head {
+    display: grid;
+    gap: 0.9rem;
+    margin-bottom: 2rem;
+  }
+</style>

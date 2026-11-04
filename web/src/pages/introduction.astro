@@ -1,0 +1,94 @@
+---
+import Chapter from "../layouts/Chapter.astro"
+import Aside from "../components/Aside.astro"
+import Code from "../components/Code.astro"
+import { components } from "../lib/catalog"
+import { componentDocs } from "../lib/docs"
+
+const button = componentDocs("button")
+---
+
+<Chapter
+  title="Introduction"
+  part="Guide"
+  kicker="Chapter 1"
+  lede="What gpuicn is, how installing source differs from adding a crate, and what the rest of this book expects you to know."
+>
+  <div class="text">
+    <h2 class="h2">What you install</h2>
+    <p>
+      gpuicn is a set of {components.length} components for GPUI. Visually they follow shadcn/ui.
+      Behaviorally they use GPUI Kit, which supplies pointer, keyboard, and accessibility handling on
+      top of GPUI's renderer. A Dialog traps focus and a Slider reads arrow keys. Neither behavior is
+      implemented in gpuicn's own files.
+    </p>
+  </div>
+  <Aside>
+    <p>
+      The pinned revisions are gpui-pre 0.3.10 and GPUI Kit 0.8.1. Apps on another GPUI revision must
+      move to these before installing components.
+    </p>
+  </Aside>
+  <div class="text">
+    <p>
+      You do not depend on gpuicn at runtime. The CLI copies a component's Rust module into your
+      crate, where it compiles against the same <code>gpui_kit</code> types your own views use. The
+      module is yours after that. Updates never touch it unless you ask with <code>--overwrite</code>.
+    </p>
+    <p>This is the Usage example for Button, which is the whole public API a view needs:</p>
+  </div>
+  <Code code={button.usage} />
+
+  <div class="text">
+    <h2 class="h2">Source or crate</h2>
+    <p>There are two ways to use the catalog. They are meant to be combined.</p>
+    <p>
+      <strong>Installed source</strong> is the default. <code>gpuicn add</code> writes modules under
+      <code>src/ui</code> and keeps <code>src/ui/mod.rs</code> current. Every change you make is a
+      normal commit in your repository, reviewed like any other code.
+    </p>
+  </div>
+  <Aside>
+    <p>
+      <code>gpuicn new --crate</code> and <code>gpuicn init --crate</code> set up crate mode;
+      <code>gpuicn eject button</code> turns one component back into editable source.
+    </p>
+  </Aside>
+  <div class="text">
+    <p>
+      <strong>The <code>gpuicn</code> crate</strong> compiles the same registry behind one Cargo
+      dependency. It suits an app that wants the whole catalog without files to maintain. When you
+      need to change one component, eject it. The ejected file is the same source the crate was built
+      from.
+    </p>
+
+    <h2 class="h2">How to read a component chapter</h2>
+    <p>Each of the {components.length} component chapters has the same five parts.</p>
+    <ol>
+      <li>
+        A numbered figure that runs the component. The preview is the component itself, compiled to
+        WebAssembly, so you can test the behavior before you install it.
+      </li>
+      <li>Installation, which gives the command and the module declarations the CLI maintains.</li>
+      <li>Usage, a compile-checked example to paste into a view.</li>
+      <li>API reference, every public function in the installed file, generated from the source.</li>
+      <li>
+        Platform notes, which record where behavior on this GPUI revision differs from the browser
+        original, including accessibility limits.
+      </li>
+    </ol>
+
+    <h2 class="h2">What this book assumes</h2>
+    <p>
+      You can read Rust and have built a GPUI window before. The <a href="/installation/">Installation</a>
+      chapter is a how-to, not a tutorial. It names each file it writes and what you should see, but it
+      does not explain GPUI's context or entity model. For that, read GPUI's own documentation.
+    </p>
+    <p>
+      gpuicn is experimental. Component APIs and visuals change between releases, and a release may
+      change installed source in ways a <code>--dry-run</code> shows before you accept them. Pin one
+      release, and read the <a href="https://github.com/devaryakjha/gpuicn/releases">release notes</a>
+      before moving to the next.
+    </p>
+  </div>
+</Chapter>

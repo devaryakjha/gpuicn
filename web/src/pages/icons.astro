@@ -1,0 +1,264 @@
+---
+import Chapter from "../layouts/Chapter.astro"
+import Preview from "../components/Preview.astro"
+import { icons } from "../lib/docs"
+import { highlight } from "../lib/highlight"
+
+const initial = icons.find((icon) => icon.name === "house") ?? icons[0]!
+const variant = initial.rust.split("::")[1]!
+// Highlight once, then mark the variant token so the script can swap it.
+const snippet = (
+  await highlight(
+    `use gpui_kit::{Styled, px, rgb};\nuse gpui_icons::{lucide, LucideIcon};\n\nlucide(${initial.rust})\n    .size(px(24.))\n    .text_color(rgb(0x171717))`,
+    "rust"
+  )
+).replace(`>${variant}<`, ` data-icon-variant>${variant}<`)
+if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost its variant token")
+---
+
+<Chapter
+  title="Icons"
+  part="Reference"
+  kicker="Chapter 6"
+  lede={`The ${icons.length.toLocaleString("en")} icons of Lucide 1.63.0, as Rust names. gpui-icons renders the original SVGs with GPUI, on native targets and in WebAssembly.`}
+>
+  <div class="text">
+    <p>
+      The Rust name is the icon name in PascalCase, so <code>a-arrow-down</code> is
+      <code>LucideIcon::AArrowDown</code>. Register <code>LucideAssetSource</code> on your application,
+      set the color from your theme, and give icon-only controls an accessible label.
+      <a href="https://github.com/devaryakjha/gpui-icons">gpui-icons</a> is a separate crate and works
+      without gpuicn.
+    </p>
+  </div>
+
+  <div class="wide icons" data-icons>
+    <section class="icons__catalog" aria-label="Icon catalog">
+      <label class="search">
+        <span class="sr-only">Search icons</span>
+        <input id="icon-search" type="search" placeholder="Search names, tags, and aliases" autocomplete="off" data-icon-search />
+      </label>
+      <p class="small icons__count" role="status" data-icon-count>{icons.length.toLocaleString("en")} icons</p>
+      <ul class="grid" data-icon-grid>
+        {
+          icons.map((icon) => (
+            <li>
+              <a class="cell" href={`?icon=${icon.name}`} data-icon={icon.name} aria-pressed={icon.name === initial.name ? "true" : undefined}>
+                <img src={`/icons/lucide/${icon.name}.svg`} alt="" loading="lazy" decoding="async" />
+                <span>{icon.name}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="small icons__empty" data-icon-empty hidden>
+        No icon matches. <button class="btn" type="button" data-icon-clear>Clear the search</button>
+      </p>
+    </section>
+
+    <aside class="detail" aria-label="Selected icon" tabindex="-1" data-icon-detail>
+      <a class="small detail__back" href="#icon-search">↑ Back to the grid</a>
+      <figure class="figure detail__figure">
+        <div class="figure__frame">
+          <Preview id="icon-preview" slug="icons" name="icon" icon={initial.name} height={180} />
+        </div>
+        <figcaption class="figure__caption"><span data-icon-name>{initial.name}</span> at 16, 24, 32, and 48 pixels, drawn by GPUI.</figcaption>
+      </figure>
+      <div class="code">
+        <pre tabindex="0"><code class="shiki" set:html={snippet} /></pre>
+        <button class="code__copy" type="button" data-copy aria-label="Copy code">
+          <svg class="icon--copy" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="9" y="9" width="12" height="12" rx="2"></rect>
+            <path d="M15 9V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4"></path>
+          </svg>
+          <svg class="icon--check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+        </button>
+        <p class="code__status" role="status" data-copy-status></p>
+      </div>
+      <p class="small">
+        <a href={`/icons/lucide/${initial.name}.svg`} download data-icon-download>Download the SVG</a>. Lucide
+        assets are under <a href="/icons/LICENSE">ISC and Feather MIT terms</a>.
+      </p>
+    </aside>
+  </div>
+</Chapter>
+
+<script>
+  // Search terms are fetched once, on the first keystroke, so the page stays small.
+  const root = document.querySelector<HTMLElement>("[data-icons]")!
+  const input = root.querySelector<HTMLInputElement>("[data-icon-search]")!
+  const count = root.querySelector<HTMLElement>("[data-icon-count]")!
+  const empty = root.querySelector<HTMLElement>("[data-icon-empty]")!
+  const cells = [...root.querySelectorAll<HTMLAnchorElement>(".cell")]
+  const detail = root.querySelector<HTMLElement>("[data-icon-detail]")!
+  const preview = document.getElementById("icon-preview")!
+  let terms: Record<string, string> | null = null
+
+  const filter = () => {
+    const words = input.value.toLowerCase().trim().split(/\s+/).filter(Boolean)
+    let shown = 0
+    for (const cell of cells) {
+      const name = cell.dataset.icon!
+      const text = terms?.[name] ?? name
+      const match = words.every((word) => text.includes(word))
+      cell.parentElement!.hidden = !match
+      if (match) shown++
+    }
+    count.textContent = `${shown.toLocaleString("en")} icons${input.value ? ` match "${input.value}"` : ""}`
+    empty.hidden = shown > 0
+  }
+  input.addEventListener("input", async () => {
+    if (!terms) {
+      terms = await fetch("/icons/search.json").then((response) => response.json()).catch(() => ({}))
+    }
+    filter()
+  })
+  root.querySelector("[data-icon-clear]")?.addEventListener("click", () => {
+    input.value = ""
+    filter()
+    input.focus()
+  })
+
+  // The URL carries the selected icon; the detail panel and the preview follow it.
+  const variant = (name: string) =>
+    name.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")
+  const select = (name: string, scroll: boolean) => {
+    for (const cell of cells) {
+      if (cell.dataset.icon === name) cell.setAttribute("aria-pressed", "true")
+      else cell.removeAttribute("aria-pressed")
+    }
+    detail.querySelector("[data-icon-name]")!.textContent = name
+    detail.querySelector<HTMLElement>("[data-icon-variant]")!.textContent = variant(name)
+    detail.querySelector<HTMLAnchorElement>("[data-icon-download]")!.href = `/icons/lucide/${name}.svg`
+    preview.dataset.icon = name
+    preview.dispatchEvent(new CustomEvent("gpuicn:preview", { bubbles: true }))
+    if (scroll && matchMedia("(max-width: 63.9rem)").matches) {
+      detail.scrollIntoView({ block: "start" })
+      detail.focus({ preventScroll: true })
+    }
+  }
+  for (const cell of cells) {
+    cell.addEventListener("click", (event) => {
+      event.preventDefault()
+      history.replaceState(null, "", `?icon=${cell.dataset.icon}`)
+      select(cell.dataset.icon!, true)
+    })
+  }
+  const requested = new URLSearchParams(location.search).get("icon")
+  const initial = requested && cells.find((cell) => cell.dataset.icon === requested)
+  if (initial) select(initial.dataset.icon!, false)
+</script>
+
+<style>
+  .icons {
+    display: grid;
+    gap: 2rem;
+    align-items: start;
+    margin-top: 1.5rem;
+  }
+  @media (min-width: 64rem) {
+    .icons {
+      grid-template-columns: minmax(0, 1fr) var(--margin);
+      gap: var(--gap);
+    }
+  }
+  .search input {
+    width: 100%;
+    height: 2.4rem;
+    padding: 0 0.8rem;
+    font: inherit;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule-2);
+    border-radius: 3px;
+  }
+  .search input:focus {
+    outline: 0;
+    border-color: var(--rubric);
+  }
+  .search input::-webkit-search-cancel-button {
+    display: none;
+  }
+  .icons__count {
+    padding: 0.6rem 0;
+  }
+  .grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+  .grid li[hidden] {
+    display: none;
+  }
+  .cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.8rem 0.35rem 0.6rem;
+    background: var(--paper);
+  }
+  .cell:hover {
+    background: var(--paper-2);
+  }
+  .cell[aria-pressed="true"] {
+    background: var(--rubric-soft);
+    box-shadow: inset 0 0 0 1px var(--rubric);
+  }
+  .cell:focus-visible {
+    outline-offset: -3px;
+  }
+  .cell img {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+  :global([data-theme="dark"]) .cell img {
+    filter: invert(1);
+  }
+  .cell span {
+    width: 100%;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-2);
+  }
+  .icons__empty {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2rem 0;
+  }
+  .detail {
+    display: grid;
+    gap: 0.9rem;
+    position: sticky;
+    top: calc(var(--head) + 1.5rem);
+    scroll-margin-top: calc(var(--head) + 1rem);
+  }
+  .detail__figure {
+    margin: 0;
+  }
+  .detail__back {
+    display: inline-block;
+  }
+  @media (min-width: 64rem) {
+    .detail__back {
+      display: none;
+    }
+  }
+  .detail .small a {
+    color: var(--rubric);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+</style>

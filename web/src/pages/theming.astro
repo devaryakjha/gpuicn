@@ -1,0 +1,85 @@
+---
+import Chapter from "../layouts/Chapter.astro"
+import Aside from "../components/Aside.astro"
+import Code from "../components/Code.astro"
+import { setup } from "../lib/docs"
+
+const switchSource = `use crate::ui::theme::{ThemeMode, UiTheme};\n\n// Install the default dark palette.\nUiTheme::switch(cx, ThemeMode::Dark);`
+const customSource = `use gpui_kit::{px, rgb};\nuse crate::ui::theme::{UiRadius, UiTheme};\n\nlet mut theme = UiTheme::neutral_light();\ntheme.colors.primary = rgb(0x2563eb);\ntheme.colors.primary_foreground = rgb(0xffffff);\ntheme.radius = UiRadius::new(px(4.));\ntheme.spacing.unit = px(4.5);\ntheme.text_scale = 1.0;\ntheme.motion.reduced = false;\nUiTheme::set(cx, theme);`
+---
+
+<Chapter
+  title="Theming"
+  part="Guide"
+  kicker="Chapter 3"
+  lede="Every component reads one struct of tokens. This chapter explains what is in it and how to change it while the app runs."
+>
+  <div class="text">
+    <h2 class="h2">One struct, read everywhere</h2>
+    <p>
+      <code>gpuicn add</code> installs <code>src/ui/theme.rs</code> with the first component. It
+      defines <code>UiTheme</code>, a plain struct of colors, fonts, radii, spacing, a type scale, and
+      motion settings. Components read it with <code>UiTheme::read(cx)</code> at render time, so a theme
+      change repaints every open window without rebuilding views.
+    </p>
+  </div>
+  <Aside>
+    <p>
+      <code>switch</code> replaces only the color palette. Fonts, radii, spacing, type scale, and motion
+      keep their values.
+    </p>
+  </Aside>
+  <div class="text">
+    <p>The smallest change is to switch between the two generated palettes:</p>
+  </div>
+  <Code code={switchSource} />
+
+  <div class="text">
+    <h2 class="h2">Change the tokens</h2>
+    <p>
+      To change more than the palette, start from a generated theme, set the fields you want, and
+      install it with <code>UiTheme::set</code>:
+    </p>
+  </div>
+  <Code code={customSource} />
+  <Aside>
+    <p>
+      <code>gpuicn theme set</code> regenerates both palettes from a shadcn base color, a radius, and an
+      appearance, and writes them to <code>assets/theme.css</code>.
+    </p>
+  </Aside>
+  <div class="text">
+    <p>
+      The fields are grouped by what they describe. <code>colors</code> holds semantic colors for
+      surfaces, text, controls, borders, and focus. <code>fonts</code> names the body, heading, and mono
+      families. <code>radius</code>, <code>spacing</code>, and <code>shadows</code> shape controls.
+      <code>text_scale</code> scales type independently of spacing. <code>motion</code> holds durations,
+      easing, and the reduced-motion flag.
+    </p>
+
+    <h2 class="h2">Where the theme stops</h2>
+    <p>
+      Wrapped controls accept GPUI <code>Styled</code> overrides after their theme defaults, so a
+      one-off color is a method call at the use site. Composition helpers expose
+      <code>style_with_state</code>, which replaces their style callback entirely.
+    </p>
+    <p>
+      Shared motion covers the switch thumb, disclosure icons, and caller-driven sidebar width. Exit
+      animations and automatic reduced-motion detection are limited by the pinned platform. Set
+      <code>motion.reduced</code> from your own preference reading.
+    </p>
+
+    <h2 class="h2">The installed file</h2>
+    <p>Every field is public. This is <code>theme.rs</code> as the CLI writes it.</p>
+  </div>
+  <details class="fold">
+    <summary>theme.rs, {setup.theme.split("\n").length} lines</summary>
+    <Code code={setup.theme} />
+  </details>
+</Chapter>
+
+<style>
+  .fold {
+    margin-top: 1rem;
+  }
+</style>

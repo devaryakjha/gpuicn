@@ -14,7 +14,7 @@ requests are welcome; say which checks you ran.
 | `crates/cli` | The `gpuicn` CLI (`init`, `new`, `add`, `status`, `diff`, `remove`, `build`). |
 | `site/` | The GPUI/WASM previews (one file per component under `site/src/previews/`) and the gpuicn Workspace example app. |
 | `xtask/` | `cargo xtask new-component <name>` scaffolds a component in every place above. |
-| `web/` | The catalog website (TanStack, Bun). |
+| `web/` | The catalog website: static Astro pages with plain CSS, built with Bun. `bun run build` regenerates the catalog data first. |
 | `fixtures/registry-install` | A consumer app CI installs every component into. |
 | `docs/` | User docs; `docs/internal/` holds plans and validation records. |
 | `release-pins.toml` | Every pinned upstream version and hash. |

@@ -24,3 +24,6 @@ public/r
 *.njsproj
 *.sln
 *.sw?
+
+# Astro
+.astro

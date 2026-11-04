@@ -1,0 +1,77 @@
+---
+import Chapter from "../layouts/Chapter.astro"
+import Aside from "../components/Aside.astro"
+import Code from "../components/Code.astro"
+import { components, componentHref } from "../lib/catalog"
+import { registry, release } from "../lib/release"
+---
+
+<Chapter
+  title="Registry"
+  part="Reference"
+  kicker="Chapter 7"
+  lede="The registry is a directory of JSON files, one per component. The CLI reads it; this page lists it."
+>
+  <Aside top>
+    <p>
+      The same files are served from this site under <code>/r/</code>, and from the tagged source on
+      GitHub, which is what <code>gpuicn.toml</code> points at.
+    </p>
+  </Aside>
+  <div class="text">
+    <p>
+      Each file names the component, its source files with their contents, and the registry items it
+      depends on. <code>gpuicn add</code> resolves dependencies, writes every file that is not already
+      present, and updates <code>src/ui/mod.rs</code>. The registry for {release} is pinned by URL:
+    </p>
+  </div>
+  <Code code={`gpuicn --registry ${registry} init`} lang="bash" />
+
+  <table class="wide files">
+    <thead>
+      <tr>
+        <th scope="col">Component</th>
+        <th scope="col">Registry file</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        components.map((component) => (
+          <tr>
+            <td><a href={componentHref(component.slug)}>{component.name}</a></td>
+            <td><a class="files__raw" href={`/r/${component.slug}.json`}><code>/r/{component.slug}.json</code></a></td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</Chapter>
+
+<style>
+  .files {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 2rem;
+    font-size: 0.9rem;
+  }
+  .files th {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 0.74rem;
+    color: var(--ink-2);
+    text-align: left;
+    padding: 0.4rem 0.75rem 0.4rem 0;
+    border-bottom: 1px solid var(--rule-2);
+  }
+  .files td {
+    padding: 0.45rem 0.75rem 0.45rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .files td a:hover {
+    color: var(--rubric);
+  }
+  .files__raw code {
+    font-size: 0.76rem;
+    color: var(--ink-2);
+  }
+</style>

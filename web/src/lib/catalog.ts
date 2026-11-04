@@ -337,14 +337,30 @@ export const components: CatalogComponent[] = [
   },
 ]
 
-export const sections = [
-  { to: "/introduction", label: "Introduction" },
-  { to: "/installation", label: "Installation" },
-  { to: "/showcase", label: "Example app" },
-  { to: "/theming", label: "Theming" },
-  { to: "/icons", label: "Icons" },
-  { to: "/registry", label: "Registry" },
+export const guide = [
+  { to: "/introduction/", label: "Introduction", blurb: "What gpuicn is, and how installing source differs from adding a crate." },
+  { to: "/installation/", label: "Installation", blurb: "Create an app, install the CLI, add a component, open a window." },
+  { to: "/theming/", label: "Theming", blurb: "The tokens every component reads, and how to change them at runtime." },
+  { to: "/showcase/", label: "Example app", blurb: "gpuicn Workspace for macOS and Linux, built from this catalog." },
 ] as const
+
+export const reference = [
+  { to: "/components/", label: "Components", blurb: "All 58 components, each with a live preview, usage, API, and platform notes." },
+  { to: "/icons/", label: "Icons", blurb: "The 1,924 Lucide icons as Rust names, rendered by GPUI." },
+  { to: "/registry/", label: "Registry", blurb: "The JSON files behind gpuicn add." },
+] as const
+
+/** Kept for the search palette and older links. */
+export const sections = [...guide, ...reference]
+
+export function componentHref(slug: string) {
+  return `/components/${slug}/`
+}
+
+/** Zero-padded position in the catalog, such as "07". */
+export function componentNumber(slug: string) {
+  return String(components.findIndex((component) => component.slug === slug) + 1).padStart(2, "0")
+}
 
 export function findComponent(slug: string) {
   return components.find((component) => component.slug === slug)
