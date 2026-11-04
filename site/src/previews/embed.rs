@@ -1,12 +1,15 @@
 //! The embed catalog preview.
 
 use crate::*;
-use gpuicn::embed::{LinkPreview, MessageEmbed};
+use gpuicn::embed::{ImagePlaceholder, LinkPreview, MessageEmbed};
 
 impl Showcase {
     pub(crate) fn embed_preview(&self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let image = "https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png";
         let collapsed = self.checked;
+        // The attachment's image waits for a click, as with "Load remote
+        // images: ask", and then loads into the same box.
+        let image_loaded = self.pressed;
         div()
             .w_full()
             .max_w(px(480.))
@@ -37,8 +40,8 @@ impl Showcase {
                         cx.notify();
                     })),
             )
-            .child(
-                MessageEmbed::new("embed.attachment")
+            .child({
+                let embed = MessageEmbed::new("embed.attachment")
                     .color_str("good")
                     .pretext("Release pipeline finished")
                     .author("GitHub Actions")
@@ -51,11 +54,25 @@ impl Showcase {
                     .body("Published the crates, the desktop apps and the website.")
                     .field("Branch", "main", true)
                     .field("Duration", "6m 41s", true)
-                    .field("Commit", "Embed cards and scrolling dialogs", false)
                     .footer("gpuicn")
                     .footer_icon(image)
-                    .timestamp("Today at 10:42"),
-            )
+                    .timestamp("Today at 10:42");
+                if image_loaded {
+                    embed.image(image, 460, 460)
+                } else {
+                    embed.image_placeholder(
+                        ImagePlaceholder::new(
+                            "raw.githubusercontent.com",
+                            cx.listener(|this, _, _, cx| {
+                                this.pressed = true;
+                                this.demo_action = "Loaded the image".into();
+                                cx.notify();
+                            }),
+                        )
+                        .size(460, 460),
+                    )
+                }
+            })
     }
 }
 

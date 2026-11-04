@@ -20,6 +20,20 @@ pretext above the card, an author line with a small round icon, a title, a
 body slot for the application's Markdown, a fields grid with short fields two
 to a row, a large image, a thumbnail and a footer with icon and time.
 
+For applications that ask before loading remote images, `image_placeholder`
+on both cards (and `thumbnail_placeholder` on `MessageEmbed`) takes an
+`ImagePlaceholder` instead of the image. It fills the box the image would
+take, so nothing moves when the image arrives: the card's inner width at the
+given pixel size's aspect, or 16:9 when the size is unknown, with the same
+large or thumbnail layout as `image`. The surface is `muted` with
+`radius.md` and no border, holding the Lucide `Image` icon at the large icon
+size, "Load image" in the xs style at medium weight, and the host in xs
+`muted_foreground`; hover fills it with `accent`. It is a GPUI Kit button
+named "Load image from {host}" with the focus ring, and click, Enter or Space
+runs `on_load` once. Fetching stays with the application, which passes the
+image through `image` on the next render. Tests cover the box sizes, the
+thumbnail layout, Enter, and the single call.
+
 Both cards are groups named by their title. Titles with a click handler are
 GPUI Kit buttons with the link role, so they take focus, show the focus ring
 and activate on Enter. gpuicn never fetches images; deciding which embeds to

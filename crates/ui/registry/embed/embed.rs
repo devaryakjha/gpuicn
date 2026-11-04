@@ -6,7 +6,9 @@
 //! the same density steps as `Message`. Titles that open something are GPUI
 //! Kit buttons with the link role, so they take focus and activate on Enter.
 //! gpuicn never fetches: images arrive as `ImageSource` with their pixel size
-//! so the card reserves its box before the bytes load.
+//! so the card reserves its box before the bytes load. When the application
+//! asks before loading remote images, an [`ImagePlaceholder`] takes the
+//! image's box until the person chooses to load it.
 
 use std::rc::Rc;
 
@@ -22,7 +24,7 @@ use super::button::{Button, ButtonSize, ButtonVariant};
 pub use super::message::MessageDensity;
 use super::theme::{
     UiTheme, apply_style,
-    primitives::{clipped_image, focus, round_image, text},
+    primitives::{clipped_image, focus, icon, round_image, text},
 };
 
 type Handler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
@@ -69,6 +71,80 @@ struct SizedImage {
     height: u32,
 }
 
+/// A click-to-load stand-in for a remote image, for applications that ask
+/// before loading one. It takes the box the image would take, so nothing
+/// moves when the image arrives, and shows an image icon, "Load image" and
+/// the image's host. It is a button named "Load image from {host}" that
+/// runs `on_load` once on click, Enter or Space; the caller then fetches the
+/// image and passes it through `image` on the next render.
+#[derive(Clone)]
+pub struct ImagePlaceholder {
+    host: SharedString,
+    size: Option<(u32, u32)>,
+    label: SharedString,
+    aria_label: Option<SharedString>,
+    on_load: Handler,
+}
+
+impl ImagePlaceholder {
+    /// Creates a placeholder for an image served from `host`, such as
+    /// "github.com". `on_load` runs once, when the person asks to load it.
+    pub fn new(
+        host: impl Into<SharedString>,
+        on_load: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        Self {
+            host: host.into(),
+            size: None,
+            label: "Load image".into(),
+            aria_label: None,
+            on_load: Rc::new(on_load),
+        }
+    }
+    /// The image's pixel size from the server's metadata, so the placeholder
+    /// takes the image's box and layout. Without it the box is 16:9 and large.
+    pub fn size(mut self, width: u32, height: u32) -> Self {
+        self.size = Some((width, height));
+        self
+    }
+    /// Replaces the visible "Load image" text, such as for a translation.
+    pub fn label(mut self, label: impl Into<SharedString>) -> Self {
+        self.label = label.into();
+        self
+    }
+    /// Replaces the accessible name, "Load image from {host}" by default.
+    pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
+        self.aria_label = Some(label.into());
+        self
+    }
+    /// The pixel size layouts resolve against; 16:9 when unknown.
+    fn layout_size(&self) -> (u32, u32) {
+        self.size.unwrap_or((1600, 900))
+    }
+}
+
+/// What fills a card's image slot.
+#[derive(Clone)]
+enum ImageSlot {
+    Image(SizedImage),
+    Placeholder(ImagePlaceholder),
+}
+
+/// What fills a card's thumbnail square.
+enum ThumbnailSlot {
+    Image(ImageSource),
+    Placeholder(ImagePlaceholder),
+}
+
+impl ImageSlot {
+    fn size(&self) -> (u32, u32) {
+        match self {
+            Self::Image(image) => (image.width, image.height),
+            Self::Placeholder(placeholder) => placeholder.layout_size(),
+        }
+    }
+}
+
 /// Density-aware inner padding and spacing, matching `Message`.
 fn metrics(theme: &UiTheme, density: MessageDensity) -> (Pixels, Pixels) {
     match density {
@@ -86,23 +162,33 @@ fn fit_within(width: f32, height: f32, max: (Pixels, Pixels)) -> (Pixels, Pixels
     (px((width * scale).round()), px((height * scale).round()))
 }
 
-/// A large image whose box is reserved from its pixel size. The width also
+/// The box of a large image of `width` × `height` pixels. The width also
 /// shrinks with a narrow card, and the aspect ratio keeps the height in step.
+fn large_box(
+    id: ElementId,
+    width: u32,
+    height: u32,
+    theme: &UiTheme,
+) -> gpui_kit::Stateful<gpui_kit::Div> {
+    let (width, height) = (width.max(1) as f32, height.max(1) as f32);
+    let (box_width, _) = fit_within(width, height, (theme.space(114.), theme.space(72.)));
+    div()
+        .id(id)
+        .w(box_width)
+        .max_w_full()
+        .aspect_ratio(width / height)
+        .flex_shrink_0()
+}
+
+/// A large image whose box is reserved from its pixel size.
 fn large_image(
     id: ElementId,
     image: SizedImage,
     on_click: Option<Handler>,
     theme: &UiTheme,
 ) -> AnyElement {
-    let (width, height) = (image.width.max(1) as f32, image.height.max(1) as f32);
-    let (box_width, _) = fit_within(width, height, (theme.space(114.), theme.space(72.)));
-    div()
-        .id(id)
+    large_box(id, image.width, image.height, theme)
         .debug_selector(|| "embed-image".into())
-        .w(box_width)
-        .max_w_full()
-        .aspect_ratio(width / height)
-        .flex_shrink_0()
         .child(clipped_image(image.source, theme.radius.md, ObjectFit::Cover, theme).size_full())
         .when_some(on_click, |frame, handler| {
             frame
@@ -112,6 +198,11 @@ fn large_image(
         .into_any_element()
 }
 
+/// The box of a small square image beside the text.
+fn thumbnail_box(id: ElementId, theme: &UiTheme) -> gpui_kit::Stateful<gpui_kit::Div> {
+    div().id(id).flex_shrink_0().size(theme.space(20.))
+}
+
 /// A small square image beside the text.
 fn thumbnail(
     id: ElementId,
@@ -119,18 +210,111 @@ fn thumbnail(
     on_click: Option<Handler>,
     theme: &UiTheme,
 ) -> AnyElement {
-    div()
-        .id(id)
+    thumbnail_box(id, theme)
         .debug_selector(|| "embed-thumbnail".into())
-        .flex_shrink_0()
-        .child(
-            clipped_image(source, theme.radius.md, ObjectFit::Cover, theme).size(theme.space(20.)),
-        )
+        .child(clipped_image(source, theme.radius.md, ObjectFit::Cover, theme).size_full())
         .when_some(on_click, |frame, handler| {
             frame
                 .cursor_pointer()
                 .on_click(move |event, window, cx| handler(event, window, cx))
         })
+        .into_any_element()
+}
+
+/// The placeholder's button filling an image box: a muted surface with the
+/// image icon, the label and the host, which runs `on_load` only once.
+fn placeholder_button(
+    id: ElementId,
+    placeholder: ImagePlaceholder,
+    window: &mut Window,
+    cx: &mut App,
+    theme: &UiTheme,
+) -> Button {
+    let colors = theme.colors;
+    let loaded = window.use_keyed_state((id.clone(), "loaded"), cx, |_, _| false);
+    let aria_label = placeholder
+        .aria_label
+        .unwrap_or_else(|| format!("Load image from {}", placeholder.host).into());
+    let on_load = placeholder.on_load;
+    let style_theme = theme.clone();
+    Button::new(id)
+        .aria_label(aria_label)
+        .style_with(move |base| {
+            let theme = style_theme.clone();
+            let focus_theme = theme.clone();
+            base.size_full()
+                .flex()
+                .flex_col()
+                .items_center()
+                .justify_center()
+                .gap(theme.space(1.))
+                .p(theme.space(2.))
+                .overflow_hidden()
+                .rounded(theme.radius.md)
+                .bg(theme.colors.muted)
+                .cursor_pointer()
+                .hover(move |style| style.bg(theme.colors.accent))
+                .focus_visible(move |style| focus::ring(style, &focus_theme))
+        })
+        .on_click(move |event, window, cx| {
+            if *loaded.read(cx) {
+                return;
+            }
+            loaded.update(cx, |loaded, _| *loaded = true);
+            on_load(event, window, cx);
+        })
+        .child(
+            lucide(LucideIcon::Image)
+                .flex_shrink_0()
+                .size(icon::lg(theme))
+                .text_color(colors.muted_foreground),
+        )
+        .child(
+            text::xs(div(), theme)
+                .max_w_full()
+                .font_weight(FontWeight::MEDIUM)
+                .overflow_hidden()
+                .text_ellipsis()
+                .whitespace_nowrap()
+                .child(placeholder.label),
+        )
+        .child(
+            text::xs(div(), theme)
+                .max_w_full()
+                .text_color(colors.muted_foreground)
+                .overflow_hidden()
+                .text_ellipsis()
+                .whitespace_nowrap()
+                .child(placeholder.host),
+        )
+}
+
+/// A placeholder in a large image's box.
+fn large_placeholder(
+    id: ElementId,
+    placeholder: ImagePlaceholder,
+    window: &mut Window,
+    cx: &mut App,
+    theme: &UiTheme,
+) -> AnyElement {
+    let (width, height) = placeholder.layout_size();
+    large_box((id.clone(), "frame").into(), width, height, theme)
+        .debug_selector(|| "embed-image-placeholder".into())
+        .child(placeholder_button(id, placeholder, window, cx, theme))
+        .into_any_element()
+}
+
+/// A placeholder in a thumbnail's box.
+fn thumbnail_placeholder(
+    id: ElementId,
+    placeholder: ImagePlaceholder,
+    window: &mut Window,
+    cx: &mut App,
+    theme: &UiTheme,
+) -> AnyElement {
+    thumbnail_box((id.clone(), "frame").into(), theme)
+        .debug_selector(|| "embed-thumbnail-placeholder".into())
+        .child(placeholder_button(id, placeholder, window, cx, theme))
         .into_any_element()
 }
 
@@ -219,7 +403,7 @@ pub struct LinkPreview {
     title: SharedString,
     site_name: Option<SharedString>,
     description: Option<SharedString>,
-    image: Option<SizedImage>,
+    image: Option<ImageSlot>,
     image_layout: LinkPreviewImageLayout,
     collapsed: bool,
     density: MessageDensity,
@@ -260,11 +444,18 @@ impl LinkPreview {
     /// Adds the page image with its pixel size from the server's metadata, so
     /// the card reserves the image's box before it loads.
     pub fn image(mut self, source: impl Into<ImageSource>, width: u32, height: u32) -> Self {
-        self.image = Some(SizedImage {
+        self.image = Some(ImageSlot::Image(SizedImage {
             source: source.into(),
             width,
             height,
-        });
+        }));
+        self
+    }
+    /// Shows a click-to-load placeholder in the image's place, with the same
+    /// box and layout the image would take. Replaces `image`; pass the image
+    /// through `image` once it has loaded.
+    pub fn image_placeholder(mut self, placeholder: ImagePlaceholder) -> Self {
+        self.image = Some(ImageSlot::Placeholder(placeholder));
         self
     }
     /// Chooses between a large image and a thumbnail. Defaults to `Auto`.
@@ -294,7 +485,7 @@ impl LinkPreview {
     /// Adds a chevron that collapses or expands the image, named "Collapse
     /// preview" or "Expand preview". Receives the new collapsed state; the
     /// caller stores it and passes it back through `collapsed`. Shown only
-    /// when the preview has an image.
+    /// when the preview has an image or an image placeholder.
     pub fn on_toggle(mut self, handler: impl Fn(&bool, &mut Window, &mut App) + 'static) -> Self {
         self.on_toggle = Some(Rc::new(handler));
         self
@@ -316,7 +507,7 @@ impl Styled for LinkPreview {
 }
 
 impl RenderOnce for LinkPreview {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
         let (padding, gap) = metrics(&theme, self.density);
@@ -375,26 +566,51 @@ impl RenderOnce for LinkPreview {
             });
 
         let (large, thumb) = match self.image.filter(|_| !collapsed) {
-            Some(image) => match self.image_layout.resolve(image.width, image.height) {
-                LinkPreviewImageLayout::Thumbnail => (
-                    None,
-                    Some(thumbnail(
-                        (id.clone(), "thumbnail").into(),
-                        image.source,
-                        self.on_click.clone(),
-                        &theme,
-                    )),
-                ),
-                _ => (
-                    Some(large_image(
-                        (id.clone(), "image").into(),
-                        image,
-                        self.on_click.clone(),
-                        &theme,
-                    )),
-                    None,
-                ),
-            },
+            Some(slot) => {
+                let (width, height) = slot.size();
+                let as_thumbnail =
+                    self.image_layout.resolve(width, height) == LinkPreviewImageLayout::Thumbnail;
+                match (slot, as_thumbnail) {
+                    (ImageSlot::Image(image), true) => (
+                        None,
+                        Some(thumbnail(
+                            (id.clone(), "thumbnail").into(),
+                            image.source,
+                            self.on_click.clone(),
+                            &theme,
+                        )),
+                    ),
+                    (ImageSlot::Image(image), false) => (
+                        Some(large_image(
+                            (id.clone(), "image").into(),
+                            image,
+                            self.on_click.clone(),
+                            &theme,
+                        )),
+                        None,
+                    ),
+                    (ImageSlot::Placeholder(placeholder), true) => (
+                        None,
+                        Some(thumbnail_placeholder(
+                            (id.clone(), "thumbnail-placeholder").into(),
+                            placeholder,
+                            window,
+                            cx,
+                            &theme,
+                        )),
+                    ),
+                    (ImageSlot::Placeholder(placeholder), false) => (
+                        Some(large_placeholder(
+                            (id.clone(), "image-placeholder").into(),
+                            placeholder,
+                            window,
+                            cx,
+                            &theme,
+                        )),
+                        None,
+                    ),
+                }
+            }
             None => (None, None),
         };
 
@@ -468,9 +684,9 @@ pub struct MessageEmbed {
     on_title_click: Option<Handler>,
     body: Option<AnyElement>,
     fields: Vec<EmbedField>,
-    image: Option<SizedImage>,
+    image: Option<ImageSlot>,
     on_image_click: Option<Handler>,
-    thumbnail: Option<ImageSource>,
+    thumbnail: Option<ThumbnailSlot>,
     footer: Option<SharedString>,
     footer_icon: Option<ImageSource>,
     timestamp: Option<SharedString>,
@@ -586,11 +802,18 @@ impl MessageEmbed {
     /// Adds an image below the fields with its pixel size, so the card
     /// reserves the image's box before it loads.
     pub fn image(mut self, source: impl Into<ImageSource>, width: u32, height: u32) -> Self {
-        self.image = Some(SizedImage {
+        self.image = Some(ImageSlot::Image(SizedImage {
             source: source.into(),
             width,
             height,
-        });
+        }));
+        self
+    }
+    /// Shows a click-to-load placeholder in the image's place, in the box the
+    /// image would take. Replaces `image`; pass the image through `image` once
+    /// it has loaded.
+    pub fn image_placeholder(mut self, placeholder: ImagePlaceholder) -> Self {
+        self.image = Some(ImageSlot::Placeholder(placeholder));
         self
     }
     /// Runs when the image is clicked, such as to open a preview.
@@ -603,7 +826,13 @@ impl MessageEmbed {
     }
     /// Adds a small square image on the right of the card.
     pub fn thumbnail(mut self, source: impl Into<ImageSource>) -> Self {
-        self.thumbnail = Some(source.into());
+        self.thumbnail = Some(ThumbnailSlot::Image(source.into()));
+        self
+    }
+    /// Shows a click-to-load placeholder in the thumbnail's square. Replaces
+    /// `thumbnail`; pass the image through `thumbnail` once it has loaded.
+    pub fn thumbnail_placeholder(mut self, placeholder: ImagePlaceholder) -> Self {
+        self.thumbnail = Some(ThumbnailSlot::Placeholder(placeholder));
         self
     }
     /// Sets the footer text.
@@ -635,7 +864,7 @@ impl Styled for MessageEmbed {
 }
 
 impl RenderOnce for MessageEmbed {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
         let (padding, gap) = metrics(&theme, self.density);
@@ -719,13 +948,32 @@ impl RenderOnce for MessageEmbed {
                         .child(text::sm(div(), &theme).child(field.value))
                 }))
         });
-        let image = self.image.map(|image| {
-            large_image(
+        let image = self.image.map(|slot| match slot {
+            ImageSlot::Image(image) => large_image(
                 (id.clone(), "image").into(),
                 image,
                 self.on_image_click,
                 &theme,
-            )
+            ),
+            ImageSlot::Placeholder(placeholder) => large_placeholder(
+                (id.clone(), "image-placeholder").into(),
+                placeholder,
+                window,
+                cx,
+                &theme,
+            ),
+        });
+        let thumb = self.thumbnail.map(|slot| match slot {
+            ThumbnailSlot::Image(source) => {
+                thumbnail((id.clone(), "thumbnail").into(), source, None, &theme)
+            }
+            ThumbnailSlot::Placeholder(placeholder) => thumbnail_placeholder(
+                (id.clone(), "thumbnail-placeholder").into(),
+                placeholder,
+                window,
+                cx,
+                &theme,
+            ),
         });
         let footer = (self.footer.is_some() || self.timestamp.is_some()).then(|| {
             let line: SharedString = match (self.footer, self.timestamp) {
@@ -794,9 +1042,7 @@ impl RenderOnce for MessageEmbed {
                                     .children(image)
                                     .children(footer),
                             )
-                            .children(self.thumbnail.map(|source| {
-                                thumbnail((id.clone(), "thumbnail").into(), source, None, &theme)
-                            })),
+                            .children(thumb),
                     ),
             );
         apply_style(card, &self.style)
@@ -919,6 +1165,108 @@ mod tests {
         assert_eq!(image.size.width, px(454.));
         let expected = 454. * 630. / 1200.;
         assert!((f32::from(image.size.height) - expected).abs() < 1.);
+    }
+
+    struct PlaceholderProbe {
+        loads: Rc<Cell<usize>>,
+        size: Option<(u32, u32)>,
+    }
+
+    impl Render for PlaceholderProbe {
+        fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+            let loads = self.loads.clone();
+            let mut placeholder =
+                ImagePlaceholder::new("github.com", move |_, _, _| loads.set(loads.get() + 1));
+            if let Some((width, height)) = self.size {
+                placeholder = placeholder.size(width, height);
+            }
+            div().w(px(600.)).child(
+                LinkPreview::new("preview", "gpuicn 0.9.3 released")
+                    .site_name("GitHub")
+                    .image_placeholder(placeholder),
+            )
+        }
+    }
+
+    fn placeholder_probe(
+        cx: &mut TestAppContext,
+        size: Option<(u32, u32)>,
+    ) -> (Rc<Cell<usize>>, VisualTestContext) {
+        cx.update(super::super::theme::init);
+        let loads = Rc::new(Cell::new(0));
+        let window = cx.add_window({
+            let loads = loads.clone();
+            move |_, _| PlaceholderProbe { loads, size }
+        });
+        let mut cx = VisualTestContext::from_window(window.into(), cx);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        (loads, cx)
+    }
+
+    #[gpui_kit::test]
+    fn placeholders_take_the_images_box(cx: &mut TestAppContext) {
+        // The same 1200 × 630 box the loaded image takes.
+        let (_, mut sized) = placeholder_probe(cx, Some((1200, 630)));
+        let frame = sized.debug_bounds("embed-image-placeholder").unwrap();
+        assert_eq!(frame.size.width, px(454.));
+        assert!((f32::from(frame.size.height) - 454. * 630. / 1200.).abs() < 1.);
+    }
+
+    #[gpui_kit::test]
+    fn placeholders_without_a_size_are_16_by_9(cx: &mut TestAppContext) {
+        let (_, mut cx) = placeholder_probe(cx, None);
+        let frame = cx.debug_bounds("embed-image-placeholder").unwrap();
+        assert_eq!(frame.size.width, px(454.));
+        assert!((f32::from(frame.size.height) - 454. * 9. / 16.).abs() < 1.);
+    }
+
+    #[gpui_kit::test]
+    fn square_placeholders_sit_in_the_thumbnail(cx: &mut TestAppContext) {
+        let (_, mut cx) = placeholder_probe(cx, Some((400, 400)));
+        assert!(cx.debug_bounds("embed-image-placeholder").is_none());
+        let frame = cx.debug_bounds("embed-thumbnail-placeholder").unwrap();
+        assert_eq!(frame.size.width, frame.size.height);
+    }
+
+    #[gpui_kit::test]
+    fn the_placeholder_loads_once(cx: &mut TestAppContext) {
+        let (loads, mut cx) = placeholder_probe(cx, None);
+        let frame = cx.debug_bounds("embed-image-placeholder").unwrap();
+        cx.simulate_click(frame.center(), Default::default());
+        cx.simulate_click(frame.center(), Default::default());
+        assert_eq!(loads.get(), 1);
+    }
+
+    #[gpui_kit::test]
+    fn enter_loads_the_focused_placeholder(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let loads = Rc::new(Cell::new(0));
+        let window = cx.add_window({
+            let loads = loads.clone();
+            move |window, _| {
+                window.activate_window();
+                PlaceholderProbe { loads, size: None }
+            }
+        });
+        let mut cx = VisualTestContext::from_window(window.into(), cx);
+        cx.run_until_parked();
+        for keys in ["tab", "enter", "space"] {
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            cx.simulate_keystrokes(keys);
+            cx.update(|window, cx| {
+                window.dispatch_event(
+                    gpui_kit::PlatformInput::KeyUp(gpui_kit::KeyUpEvent {
+                        keystroke: gpui_kit::Keystroke::parse(keys).unwrap(),
+                    }),
+                    cx,
+                );
+            });
+            cx.run_until_parked();
+            if keys == "enter" {
+                assert_eq!(loads.get(), 1, "Enter runs on_load");
+            }
+        }
+        assert_eq!(loads.get(), 1, "on_load runs once");
     }
 
     #[gpui_kit::test]
