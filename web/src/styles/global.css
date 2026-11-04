@@ -5,25 +5,25 @@
   font-family: "Geist";
   font-weight: 400;
   font-display: swap;
-  src: url("/fonts/Geist-Regular.ttf") format("truetype");
+  src: url("/type/Geist-Regular.woff2") format("woff2");
 }
 @font-face {
   font-family: "Geist";
   font-weight: 500;
   font-display: swap;
-  src: url("/fonts/Geist-Medium.ttf") format("truetype");
+  src: url("/type/Geist-Medium.woff2") format("woff2");
 }
 @font-face {
   font-family: "Geist";
   font-weight: 600;
   font-display: swap;
-  src: url("/fonts/Geist-SemiBold.ttf") format("truetype");
+  src: url("/type/Geist-SemiBold.woff2") format("woff2");
 }
 @font-face {
   font-family: "Geist Mono";
   font-weight: 400;
   font-display: swap;
-  src: url("/fonts/GeistMono-Regular.ttf") format("truetype");
+  src: url("/type/GeistMono-Regular.woff2") format("woff2");
 }
 
 :root {
