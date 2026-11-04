@@ -2,6 +2,7 @@
 
 use super::theme::{UiTheme, primitives::disabled};
 use gpui_kit::base::OtpInput;
+use gpui_kit::base::TestSupportExt as _;
 pub use gpui_kit::base::{OtpEvent, OtpState};
 use gpui_kit::{
     App, Entity, Focusable as _, InteractiveElement as _, IntoElement, MouseButton,
@@ -95,6 +96,7 @@ impl RenderOnce for OtpField {
             .children(cells);
         let root = div()
             .id(("otp", self.state.entity_id()))
+            .test_support()
             .role(Role::TextInput)
             .track_focus(&focus)
             .aria_label(self.label)

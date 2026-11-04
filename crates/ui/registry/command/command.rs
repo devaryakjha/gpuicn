@@ -6,6 +6,7 @@
 use std::rc::Rc;
 
 use gpui_icons::{LucideIcon, lucide};
+use gpui_kit::base::TestSupportExt as _;
 use gpui_kit::base::actions::{Cancel, Confirm, SelectDown, SelectUp};
 use gpui_kit::{
     AnyElement, App, AppContext as _, Context, ElementId, Entity, EventEmitter, FocusHandle,
@@ -380,6 +381,7 @@ impl Render for CommandState {
                                 .and_then(|slot| slot(item, window, cx));
                             div()
                                 .id((list_id.clone(), SharedString::from(row.to_string())))
+                                .test_support()
                                 .role(Role::ListBoxOption)
                                 .aria_label(item.label.clone())
                                 .aria_selected(selected)

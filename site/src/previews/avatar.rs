@@ -69,6 +69,36 @@ impl Showcase {
                         div()
                             .text_size(px(12.))
                             .text_color(theme.colors.muted_foreground)
+                            .child("Presence"),
+                    )
+                    .child(
+                        div().flex().items_center().gap(px(16.)).children(
+                            [
+                                ("preview.avatar.online", "Ana Lopez", "AL", AvatarStatus::Online),
+                                ("preview.avatar.away", "Sam Kim", "SK", AvatarStatus::Away),
+                                ("preview.avatar.dnd", "Priya Nair", "PN", AvatarStatus::Dnd),
+                                ("preview.avatar.offline", "Lee Chen", "LC", AvatarStatus::Offline),
+                            ]
+                            .into_iter()
+                            .map(|(id, name, initials, status)| {
+                                Avatar::new(id)
+                                    .aria_label(name)
+                                    .fallback(initials)
+                                    .status(status)
+                            }),
+                        ),
+                    ),
+            )
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .items_center()
+                    .gap(px(12.))
+                    .child(
+                        div()
+                            .text_size(px(12.))
+                            .text_color(theme.colors.muted_foreground)
                             .child("Sizes"),
                     )
                     .child(
@@ -85,6 +115,7 @@ impl Showcase {
                                     .image(image)
                                     .aria_label("Arya")
                                     .fallback("AJ")
+                                    .status(AvatarStatus::Online)
                             }),
                         ),
                     ),

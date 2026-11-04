@@ -8,6 +8,7 @@
 use std::ops::Range;
 
 use gpui_icons::{LucideIcon, lucide};
+use gpui_kit::base::TestSupportExt as _;
 use gpui_kit::{
     AnyElement, App, AppContext as _, Context, ElementId, Entity, EventEmitter, FocusHandle,
     Focusable, FontWeight, ImageSource, InteractiveElement as _, IntoElement, Keystroke, ObjectFit,
@@ -676,6 +677,7 @@ impl Render for EmojiPickerState {
                                         list_id.clone(),
                                         SharedString::from(format!("{section}-{index}")),
                                     ))
+                                    .test_support()
                                     .role(Role::ListBoxOption)
                                     .aria_label(format!(":{}:", emoji.name))
                                     .aria_selected(selected)
@@ -717,6 +719,7 @@ impl Render for EmojiPickerState {
                 let active = active_tab == Some(index);
                 div()
                     .id((id.clone(), SharedString::from(format!("tab-{index}"))))
+                    .test_support()
                     .role(Role::Tab)
                     .aria_label(section.name.clone())
                     .aria_selected(active)
@@ -752,6 +755,7 @@ impl Render for EmojiPickerState {
                 let checked = tone == self.skin_tone;
                 div()
                     .id((id.clone(), SharedString::from(format!("tone-{swatch}"))))
+                    .test_support()
                     .role(Role::RadioButton)
                     .aria_label(TONE_NAMES[swatch])
                     .aria_toggled(if checked {

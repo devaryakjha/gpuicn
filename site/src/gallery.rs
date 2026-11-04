@@ -94,7 +94,7 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
     (
         "embed",
         "Embed",
-        "Link preview and message attachment cards under a chat message.",
+        "Link previews, message attachments and quoted posts under a chat message.",
     ),
     (
         "emoji-picker",
@@ -242,6 +242,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "spinner",
         "Spinner",
         "An animated indicator that shows work in progress.",
+    ),
+    (
+        "sortable",
+        "Sortable",
+        "Rows people drag, or move with the keyboard, to reorder them and move them between groups.",
     ),
     (
         "tabs",

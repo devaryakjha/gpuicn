@@ -4,6 +4,36 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.9.4
+
+[Notes](docs/releases/v0.9.4.md)
+
+### Added
+
+- Avatar: `status(AvatarStatus)` draws a presence dot (Online, Away, Dnd,
+  a hollow Offline ring, or `Custom`) with a `ring_color` surface ring, and
+  adds the status to the accessible name (#115).
+- Popover: `hover_popover`, a popover that opens on hover without taking
+  focus, and on click, Enter or Space with focus moving into it, for
+  profile cards (#118).
+- Embed: `QuotedMessage`, a quoted-post card for permalinks and forwards
+  (#119).
+- Sortable: a new component whose rows drag to reorder and move between
+  groups, with Alt+Shift+Up and Down and an announcement; groups reorder too
+  with `reorder_groups` (#121).
+- A `test-support` crate feature with `gpuicn::audit`: `unnamed_controls`
+  lists interactive elements without an accessible name, and
+  `A11yAuditOverlay` outlines them in a debug build (#120).
+
+### Changed
+
+- Menu panels use the room in the window before they scroll, instead of
+  stopping at 288px, and submenus open after resting the pointer on their
+  row for 200ms (#117).
+- Command and composer options, emoji picker cells and tabs, the OTP field,
+  Slider, the Resizable handle, Virtual List and context-menu areas register
+  for GPUI Kit's element queries with their role and name (#120).
+
 ## 0.9.3
 
 [Notes](docs/releases/v0.9.3.md)

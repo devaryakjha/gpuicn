@@ -1,7 +1,7 @@
 //! The embed catalog preview.
 
 use crate::*;
-use gpuicn::embed::{ImagePlaceholder, LinkPreview, MessageEmbed};
+use gpuicn::embed::{ImagePlaceholder, LinkPreview, MessageEmbed, QuotedMessage};
 
 impl Showcase {
     pub(crate) fn embed_preview(&self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -73,6 +73,23 @@ impl Showcase {
                     )
                 }
             })
+            .child(
+                QuotedMessage::new("embed.quote", "Margaret Hamilton")
+                    .avatar(image)
+                    .initials("MH")
+                    .timestamp("Yesterday at 4:12 PM")
+                    .channel("~town-square")
+                    .body(
+                        "The landing software flagged an overflow, and the computer shed its \
+                         lowest-priority work to keep guidance running. That was the design: the \
+                         scheduler restarted the jobs that mattered, and the crew carried on with \
+                         the descent while Houston confirmed the alarm was safe to ignore.",
+                    )
+                    .on_jump(cx.listener(|this, _, _, cx| {
+                        this.demo_action = "Jumped to the original message".into();
+                        cx.notify();
+                    })),
+            )
     }
 }
 

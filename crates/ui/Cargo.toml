@@ -15,6 +15,10 @@ categories = ["gui"]
 native-fixture = ["dep:gpui_platform"]
 # Syntax-highlights Markdown code blocks with GPUI Kit's syntect highlighter.
 syntect = ["gpui-kit/syntect"]
+# Registers components for GPUI Kit's element queries and adds `gpuicn::audit`,
+# which lists or outlines controls without an accessible name. For tests and
+# debug builds; release builds leave it off.
+test-support = ["gpui-kit/test-support"]
 
 [dependencies]
 gpui-kit.workspace = true

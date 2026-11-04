@@ -10,6 +10,7 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use gpui_icons::{LucideIcon, lucide};
+use gpui_kit::base::TestSupportExt as _;
 use gpui_kit::{
     Anchor, AnchoredPositionMode, AnyElement, App, AppContext as _, Bounds, ClipboardItem, Context,
     ElementId, Entity, EntityInputHandler as _, EventEmitter, FocusHandle, Focusable, FontWeight,
@@ -544,6 +545,7 @@ impl Render for ComposerState {
                                 id.clone(),
                                 SharedString::from(format!("suggestion-{index}")),
                             ))
+                            .test_support()
                             .role(Role::ListBoxOption)
                             .aria_label(suggestion.label.clone())
                             .aria_selected(selected)

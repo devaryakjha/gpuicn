@@ -60,3 +60,4 @@ pub mod toolbar;
 pub mod tooltip;
 pub mod virtual_list;
 pub mod embed;
+pub mod sortable;

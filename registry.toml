@@ -104,5 +104,7 @@ description = "A draggable custom window title bar with platform window controls
 description = "Nova-styled Markdown with themed code blocks, tables, quotes and inline entity chips for mentions and channels."
 
 [components.embed]
-description = "Link preview and message attachment cards under a chat message."
-dependencies = ["button", "message"]
+description = "Link previews, message attachments and quoted posts under a chat message."
+dependencies = ["avatar", "button", "message"]
+[components.sortable]
+description = "Rows people drag, or move with the keyboard, to reorder them and move them between groups."

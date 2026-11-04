@@ -38,4 +38,12 @@ Both cards are groups named by their title. Titles with a click handler are
 GPUI Kit buttons with the link role, so they take focus, show the focus ring
 and activate on Enter. gpuicn never fetches images; deciding which embeds to
 show, collapse preferences and opening links stay with the application.
+
+`QuotedMessage` is a quoted post, for pasted permalinks and forwards: the
+author's small avatar (image or initials), name and time on one line with a
+trailing Jump link, a muted "Originally posted in {channel}" line (left out
+for direct messages), the body slot clamped to four lines (`max_lines`) with
+a "Show more" toggle that appears only when the body is taller, and an
+optional strip for the quoted post's files. It uses the card frame and
+density of the other embeds and is named "Quoted message from {author}".
 Interactive attachment buttons and menus are not supported yet.
