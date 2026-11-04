@@ -14,8 +14,9 @@ Usage:
 Creates crates/ui/registry/<name>/<name>.rs, declares it in crates/ui/src/lib.rs
 and registry.toml, writes docs/parity/<name>.md, a Usage example in
 crates/ui/examples/usage.rs, a catalog preview in site/src/previews/<name>.rs
-(listed in site/src/previews/mod.rs and site/src/gallery.rs), then prints the
-commands that refresh the registry snapshot.";
+(listed in site/src/previews/mod.rs and site/src/gallery.rs), a website page
+(listed in web/src/lib/catalog.ts), then prints the commands that refresh the
+registry snapshot.";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -137,6 +138,7 @@ fn new_component(root: &Path, component: &Component) -> Result<(), String> {
         (root.join("crates/ui/examples/usage.rs"), add_usage_example),
         (root.join("site/src/previews/mod.rs"), list_preview),
         (root.join("site/src/gallery.rs"), list_in_gallery),
+        (root.join("web/src/lib/catalog.ts"), list_in_site_catalog),
     ];
     // Compute every edit before writing anything, so a failure changes no file.
     let mut writes = Vec::new();
@@ -321,6 +323,44 @@ pub fn list_in_gallery(text: &str, component: &Component) -> Result<String, Stri
     ))
 }
 
+/// Adds the website's component page to `components` in web/src/lib/catalog.ts,
+/// in alphabetical slug order. Without it the catalog preview exists but the
+/// website has no page for it.
+pub fn list_in_site_catalog(text: &str, component: &Component) -> Result<String, String> {
+    let slug = component.slug();
+    if text.contains(&format!("slug: \"{slug}\",")) {
+        return Err(format!("already lists {slug}"));
+    }
+    let start = text
+        .find("export const components: CatalogComponent[] = [\n")
+        .ok_or("found no `components` list")?;
+    let start = start + text[start..].find('\n').unwrap() + 1;
+    let end = start
+        + text[start..]
+            .find("\n]")
+            .ok_or("unterminated `components` list")?;
+    let entry = format!(
+        "  {{\n    slug: \"{slug}\",\n    name: \"{}\",\n    description:\n      \"{}\",\n  }},\n",
+        component.title.replace('"', "\\\""),
+        component.description.replace('"', "\\\"")
+    );
+    // Insert before the first entry whose slug sorts after this one.
+    let mut at = end + 1;
+    let mut offset = start;
+    for line in text[start..=end].split_inclusive('\n') {
+        if let Some(other) = line.trim().strip_prefix("slug: \"") {
+            let other = other.split('"').next().unwrap_or("");
+            if other > slug.as_str() {
+                // Back up to the `  {` line that opens this entry.
+                at = text[..offset].rfind("  {\n").ok_or("malformed entry")?;
+                break;
+            }
+        }
+        offset += line.len();
+    }
+    Ok(format!("{}{}{}", &text[..at], entry, &text[at..]))
+}
+
 pub fn component_source(component: &Component) -> String {
     let Component {
         module,
@@ -502,6 +542,18 @@ mod tests {
         );
         assert!(edited.ends_with("    ),\n];\n"));
         assert!(list_in_gallery(&edited, &component).is_err());
+
+        let catalog = "export const components: CatalogComponent[] = [\n  {\n    slug: \"button\",\n    name: \"Button\",\n    description: \"A button.\",\n  },\n  {\n    slug: \"dialog\",\n    name: \"Dialog\",\n    description: \"A dialog.\",\n  },\n]\n";
+        let edited = list_in_site_catalog(catalog, &component).unwrap();
+        let slugs: Vec<&str> = edited
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix("slug: "))
+            .collect();
+        assert_eq!(slugs, ["\"button\",", "\"date-picker\",", "\"dialog\","]);
+        assert!(edited.contains("    name: \"Date Picker\",\n"));
+        assert!(list_in_site_catalog(&edited, &component).is_err());
+        let last = list_in_site_catalog(catalog, &late).unwrap();
+        assert!(last.ends_with("    slug: \"zoom\",\n    name: \"Zoom\",\n    description:\n      \"Describe the component in one sentence.\",\n  },\n]\n"));
 
         assert!(component_source(&component).contains("pub struct DatePicker"));
         assert!(component_source(&component).contains("#[cfg(test)]"));

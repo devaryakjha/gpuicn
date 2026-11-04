@@ -11,7 +11,7 @@ export type CatalogComponent = {
  * search. Keep the latest two releases here and drop the oldest when a
  * release is cut.
  */
-export const newReleases = ["0.6.0", "0.7.0"]
+export const newReleases = ["0.7.0", "0.9.2"]
 
 export function isNew(component: CatalogComponent) {
   return component.added !== undefined && newReleases.includes(component.added)
@@ -110,6 +110,13 @@ export const components: CatalogComponent[] = [
     slug: "drawer",
     name: "Drawer",
     description: "A panel that slides from an edge of the window.",
+  },
+  {
+    slug: "embed",
+    name: "Embed",
+    description:
+      "Link preview and message attachment cards under a chat message.",
+    added: "0.9.2",
   },
   {
     slug: "emoji-picker",
@@ -372,6 +379,7 @@ export function previewHeight(slug: string) {
   if (
     [
       "carousel",
+      "embed",
       "form",
       "input-group",
       "markdown",
