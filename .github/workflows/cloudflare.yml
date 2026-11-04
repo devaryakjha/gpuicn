@@ -32,6 +32,11 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # A release deploy and a manual deploy can overlap. Queue them instead of
+    # letting the slower one overwrite a newer site.
+    concurrency:
+      group: cloudflare-deploy
+      cancel-in-progress: false
     # Holds CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
     environment: release
     steps:

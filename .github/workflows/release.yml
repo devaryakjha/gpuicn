@@ -203,4 +203,7 @@ jobs:
     uses: ./.github/workflows/cloudflare.yml
     with:
       release_tag: ${{ needs.plan.outputs.tag }}
+      # Build the site from main, not the tag, so a release that finishes
+      # after a later merge does not roll the site back.
+      site_ref: main
     secrets: inherit
