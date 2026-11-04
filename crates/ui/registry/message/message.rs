@@ -402,6 +402,8 @@ impl RenderOnce for Message {
 
         // The name, as plain text, a link-styled button or the caller's element.
         let shows_author = !self.continuation;
+        // Clipping would cut off the hover underline of a clickable name.
+        let clip = self.author_element.is_none() && self.on_author_click.is_none();
         let mut author = shows_author
             .then(|| match (self.author_element, self.author.clone()) {
                 (Some(element), _) => Some(element),
@@ -426,7 +428,7 @@ impl RenderOnce for Message {
                         .text_size(theme.text(14.))
                         .text_color(colors.foreground)
                         .min_w_0()
-                        .overflow_hidden()
+                        .when(clip, |name| name.overflow_hidden())
                         .text_ellipsis()
                         .whitespace_nowrap()
                         .child(author)
