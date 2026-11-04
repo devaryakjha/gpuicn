@@ -1150,5 +1150,16 @@ mod embed {
                     .footer("GitHub Actions")
                     .timestamp("10:42"),
             )
+            .child(
+                // "Load remote images: ask": a click-to-load placeholder in the
+                // image's box. Fetch in `on_load`, then pass the image through
+                // `.image()` on the next render.
+                LinkPreview::new("post-3.preview", "Release notes")
+                    .site_name("GitHub")
+                    .image_placeholder(
+                        ImagePlaceholder::new("github.com", |_, _, _| println!("fetch the image"))
+                            .size(1200, 630),
+                    ),
+            )
     }
 }

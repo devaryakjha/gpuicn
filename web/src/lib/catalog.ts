@@ -376,10 +376,10 @@ export function findComponent(slug: string) {
 
 export function previewHeight(slug: string) {
   if (slug === "drawer") return 560
+  if (slug === "embed") return 720
   if (
     [
       "carousel",
-      "embed",
       "form",
       "input-group",
       "markdown",
