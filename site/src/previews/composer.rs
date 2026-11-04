@@ -79,8 +79,10 @@ impl Showcase {
         let emoji = state.clone();
         let mention = state.clone();
         let send = state.clone();
+        let cap = window.viewport_size().height * 0.4;
         div().w_full().max_w(px(480.)).pt(px(220.)).child(
             Composer::new(&state)
+                .max_height(cap)
                 .child(tool(
                     "composer.attach",
                     "Attach files",

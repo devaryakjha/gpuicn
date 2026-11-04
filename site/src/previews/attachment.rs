@@ -47,6 +47,12 @@ impl Showcase {
                 [
                     Some(Attachment::new("attachment.image", "avatar.png").image(image)),
                     Some(
+                        Attachment::new("attachment.image.sized", "avatar-large.png")
+                            .image(image)
+                            .dimensions(460, 460)
+                            .max_size(px(120.), px(120.)),
+                    ),
+                    Some(
                         Attachment::new("attachment.image.uploading", "avatar-2.png")
                             .image(image)
                             .status(AttachmentStatus::Uploading(0.3)),

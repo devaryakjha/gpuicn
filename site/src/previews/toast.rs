@@ -21,7 +21,9 @@ impl Showcase {
                             state.push(
                                 id,
                                 Notice::new("Changes saved")
-                                    .description("Your settings are up to date."),
+                                    .description("Your settings are up to date.")
+                                    .action("Undo", |_, _| {})
+                                    .cancel("Dismiss"),
                                 cx,
                             )
                         })

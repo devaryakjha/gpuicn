@@ -118,7 +118,9 @@ pub struct Message {
     avatar: Option<AnyElement>,
     author: Option<SharedString>,
     timestamp: Option<SharedString>,
+    timestamp_tooltip: Option<SharedString>,
     gutter_time: Option<SharedString>,
+    on_gutter_click: Option<Handler>,
     header: Vec<AnyElement>,
     children: Vec<AnyElement>,
     reactions: Vec<Reaction>,
@@ -144,7 +146,9 @@ impl Message {
             avatar: None,
             author: None,
             timestamp: None,
+            timestamp_tooltip: None,
             gutter_time: None,
+            on_gutter_click: None,
             header: Vec::new(),
             children: Vec::new(),
             reactions: Vec::new(),
@@ -179,6 +183,24 @@ impl Message {
     /// Sets the time shown beside the name, such as "10:42 AM".
     pub fn timestamp(mut self, timestamp: impl Into<SharedString>) -> Self {
         self.timestamp = Some(timestamp.into());
+        self
+    }
+    /// Shows the full date and time in a tooltip when the reader hovers the
+    /// time, such as "Tuesday, 3 November 2026 at 16:40". It also serves the
+    /// `gutter_time` of continuation and compact rows.
+    pub fn timestamp_tooltip(mut self, text: impl Into<SharedString>) -> Self {
+        self.timestamp_tooltip = Some(text.into());
+        self
+    }
+    /// Runs when the reader clicks the gutter column (the avatar on the first
+    /// row of a run, the empty gutter or hover time on continuation rows), for
+    /// selecting the row with the pointer while clicks on the body stay free
+    /// for text selection and links.
+    pub fn on_gutter_click(
+        mut self,
+        handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_gutter_click = Some(Rc::new(handler));
         self
     }
     /// Adds an element after the time in the header, such as a "Bot" tag.
@@ -301,11 +323,14 @@ impl RenderOnce for Message {
                     .clone()
                     .or(self.timestamp.clone())
                     .map(|time| {
-                        text::xs(div(), &theme)
-                            .line_height(theme.text(20.))
-                            .text_color(colors.muted_foreground)
-                            .whitespace_nowrap()
-                            .child(time)
+                        time_tooltip(
+                            text::xs(div(), &theme).id((self.id.clone(), "gutter-time")),
+                            self.timestamp_tooltip.clone(),
+                        )
+                        .line_height(theme.text(20.))
+                        .text_color(colors.muted_foreground)
+                        .whitespace_nowrap()
+                        .child(time)
                     }),
             )
         } else if self.continuation {
@@ -317,15 +342,17 @@ impl RenderOnce for Message {
                     .or(self.timestamp.clone())
                     .map(|time| {
                         hover_reveal_in_group(
-                            text::xs(div(), &theme)
-                                .id((self.id.clone(), "gutter-time"))
-                                .absolute()
-                                .top(px(2.))
-                                .right_0()
-                                .line_height(theme.text(20.))
-                                .text_color(colors.muted_foreground)
-                                .whitespace_nowrap()
-                                .child(time),
+                            time_tooltip(
+                                text::xs(div(), &theme).id((self.id.clone(), "gutter-time")),
+                                self.timestamp_tooltip.clone(),
+                            )
+                            .absolute()
+                            .top(px(2.))
+                            .right_0()
+                            .line_height(theme.text(20.))
+                            .text_color(colors.muted_foreground)
+                            .whitespace_nowrap()
+                            .child(time),
                             group.clone(),
                             false,
                         )
@@ -338,6 +365,14 @@ impl RenderOnce for Message {
                 .pt(px(2.))
                 .children(self.avatar)
         };
+        let gutter_content = gutter_content.id((self.id.clone(), "gutter")).when_some(
+            self.on_gutter_click.clone(),
+            |gutter, handler| {
+                gutter
+                    .cursor_pointer()
+                    .on_click(move |event, window, cx| handler(event, window, cx))
+            },
+        );
 
         let mut header_children = self.header;
         let header = (!self.continuation && !compact).then(|| {
@@ -357,11 +392,14 @@ impl RenderOnce for Message {
                         .child(author)
                 }))
                 .children(self.timestamp.clone().map(|time| {
-                    div()
-                        .flex_shrink_0()
-                        .text_size(theme.text(12.))
-                        .text_color(colors.muted_foreground)
-                        .child(time)
+                    time_tooltip(
+                        div().id((self.id.clone(), "timestamp")),
+                        self.timestamp_tooltip.clone(),
+                    )
+                    .flex_shrink_0()
+                    .text_size(theme.text(12.))
+                    .text_color(colors.muted_foreground)
+                    .child(time)
                 }))
                 .children(std::mem::take(&mut header_children))
         });
@@ -525,6 +563,16 @@ impl RenderOnce for Message {
             });
         apply_style(root, &self.style)
     }
+}
+
+/// Adds the full-date tooltip to a time label when one is set.
+fn time_tooltip(
+    label: gpui_kit::Stateful<gpui_kit::Div>,
+    tooltip: Option<SharedString>,
+) -> gpui_kit::Stateful<gpui_kit::Div> {
+    label.when_some(tooltip, |label, text| {
+        label.tooltip(move |_, cx| text_tooltip(text.clone(), cx))
+    })
 }
 
 fn reaction_chip(
@@ -757,5 +805,48 @@ mod tests {
         assert!(compact_follow < standard_follow);
         // One line: the name sits inline, so the first row is as tall as a continuation row.
         assert_eq!(compact_first, compact_follow);
+    }
+
+    struct GutterProbe(Rc<std::cell::Cell<usize>>);
+
+    impl Render for GutterProbe {
+        fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+            let clicks = self.0.clone();
+            div().w(px(600.)).child(
+                div().debug_selector(|| "row".into()).child(
+                    Message::new("row")
+                        .continuation(true)
+                        .gutter_time("10:43")
+                        .timestamp_tooltip("Tuesday, 3 November 2026 at 10:43")
+                        .on_gutter_click(move |_, _, _| clicks.set(clicks.get() + 1))
+                        .child("Second"),
+                ),
+            )
+        }
+    }
+
+    /// The gutter of a continuation row is a click target, and the body is not
+    /// (devaryakjha/gpuicn#98).
+    #[gpui_kit::test]
+    fn the_gutter_selects_the_row_and_the_body_does_not(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let clicks = Rc::new(std::cell::Cell::new(0));
+        let probe = clicks.clone();
+        let window = cx.add_window(move |_, _| GutterProbe(probe));
+        let mut cx = VisualTestContext::from_window(window.into(), cx);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let row = cx.debug_bounds("row").expect("row drew");
+        let y = row.center().y;
+        // The gutter starts after the row's 16px padding and 2px bar.
+        cx.simulate_click(
+            gpui_kit::point(row.left() + px(30.), y),
+            gpui_kit::Modifiers::default(),
+        );
+        assert_eq!(clicks.get(), 1);
+        cx.simulate_click(
+            gpui_kit::point(row.left() + px(200.), y),
+            gpui_kit::Modifiers::default(),
+        );
+        assert_eq!(clicks.get(), 1);
     }
 }

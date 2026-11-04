@@ -92,6 +92,10 @@ impl Showcase {
                         transcript_row(index, current, cx)
                     })
                     .unseen(*unseen.read(cx))
+                    .on_jump({
+                        let state = state.clone();
+                        move |_, cx| state.update(cx, |state, cx| state.scroll_to_end(cx))
+                    })
                     .track_focus(&focus)
                     .selected(current)
                     .selectable(|index, _| !index.is_multiple_of(60))

@@ -47,6 +47,11 @@ impl Showcase {
                     )
                     .author("Arya")
                     .timestamp("10:42 AM")
+                    .timestamp_tooltip("Tuesday, 4 November 2026 at 10:42")
+                    .on_gutter_click(cx.listener(|this, _, _, cx| {
+                        this.demo_action = "Selected the first message".into();
+                        cx.notify();
+                    }))
                     .actions(actions("message.first", cx))
                     .reactions([
                         Reaction::new("🎉", if reacted { 4 } else { 3 }, reacted).tooltip(
@@ -70,6 +75,11 @@ impl Showcase {
                 Message::new("message.second")
                     .continuation(true)
                     .gutter_time("10:43")
+                    .timestamp_tooltip("Tuesday, 4 November 2026 at 10:43")
+                    .on_gutter_click(cx.listener(|this, _, _, cx| {
+                        this.demo_action = "Selected the second message".into();
+                        cx.notify();
+                    }))
                     .actions(actions("message.second", cx))
                     .child("Hover a row to see its actions and time."),
             )

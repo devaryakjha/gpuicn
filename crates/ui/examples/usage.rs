@@ -552,7 +552,10 @@ mod toast {
                 notify.update(cx, |state, cx| {
                     state.push(
                         "saved",
-                        Notice::new("Saved").description("Your changes were saved."),
+                        Notice::new("Saved")
+                            .description("Your changes were saved.")
+                            .action("Undo", |_, _| println!("undo"))
+                            .cancel("Dismiss"),
                         cx,
                     )
                 });
@@ -652,6 +655,8 @@ mod sidebar {
 
     fn example(cx: &App) -> impl IntoElement {
         Sidebar::new("navigation", "Workspace navigation")
+            // The rows are one tab stop; Up and Down move between them.
+            .roving_focus(true)
             .header("My workspace")
             .child(sidebar_group_label("Project", cx))
             .child(SidebarItem::new("changes", "Changes").selected(true))
@@ -915,7 +920,9 @@ mod composer {
             (state, subscription)
         });
         let state = state.read(cx).0.clone();
-        Composer::new(&state).child("Attach")
+        // Grow to 40% of the window, then scroll.
+        let cap = window.viewport_size().height * 0.4;
+        Composer::new(&state).max_height(cap).child("Attach")
     }
 }
 
@@ -983,6 +990,8 @@ mod message {
             .avatar(Avatar::new("post.42.avatar").fallback("AJ"))
             .author("Arya")
             .timestamp("10:42 AM")
+            .timestamp_tooltip("Tuesday, 4 November 2026 at 10:42")
+            .on_gutter_click(|_, _, _| println!("select post 42"))
             .highlight(MessageHighlight::Mention)
             .reactions([Reaction::new("🎉", 3, true).tooltip("You, Sam and Lee")])
             .on_reaction(|emoji, _, _| println!("toggle {emoji}"))
@@ -1037,6 +1046,9 @@ mod message_list {
                         cx,
                     ))
             })
+            // After a jump into the past, load the newest page instead of
+            // scrolling to the loaded end.
+            .on_jump(|_, _| println!("load the latest page"))
             .track_focus(&focus)
             .selected(current)
             .on_select(move |index, _, cx| selected.update(cx, |selected, _| *selected = index))
@@ -1056,11 +1068,17 @@ mod attachment {
     fn example(progress: f32, cx: &App) -> impl IntoElement {
         attachment_group(
             "composer.files",
-            [Attachment::new("upload.plan", "plan.pdf")
-                .icon(LucideIcon::FileText)
-                .meta("PDF · 2.4 MB")
-                .status(AttachmentStatus::Uploading(progress))
-                .on_remove(|_, _, _| {})],
+            [
+                Attachment::new("upload.plan", "plan.pdf")
+                    .icon(LucideIcon::FileText)
+                    .meta("PDF · 2.4 MB")
+                    .status(AttachmentStatus::Uploading(progress))
+                    .on_remove(|_, _, _| {}),
+                // Reserve the image's box from its metadata before it loads.
+                Attachment::new("post.screenshot", "screenshot.png")
+                    .image("cache/screenshot.png")
+                    .dimensions(1920, 1080),
+            ],
             cx,
         )
     }
