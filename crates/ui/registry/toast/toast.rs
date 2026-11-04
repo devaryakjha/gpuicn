@@ -12,18 +12,34 @@ use gpui_kit::base::{
     ToastTransitionStatus,
 };
 use gpui_kit::{
-    Anchor, Context, ElementId, FocusHandle, FontWeight, InteractiveElement as _, IntoElement,
+    Anchor, App, Context, ElementId, FocusHandle, FontWeight, InteractiveElement as _, IntoElement,
     ParentElement as _, Render, SharedString, Styled, Task, Window, div, px,
 };
-use std::time::Duration;
+use std::{rc::Rc, time::Duration};
 use web_time::Instant;
 
-/// One notification: a title, optional description and auto-dismiss timeout.
-#[derive(Clone, Debug)]
+type ActionHandler = Rc<dyn Fn(&mut Window, &mut App) + 'static>;
+
+/// One notification: a title, optional description, up to two buttons and an
+/// auto-dismiss timeout.
+#[derive(Clone)]
 pub struct Notice {
     title: SharedString,
     description: SharedString,
     timeout: Option<Duration>,
+    action: Option<(SharedString, ActionHandler)>,
+    cancel: Option<SharedString>,
+}
+impl std::fmt::Debug for Notice {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Notice")
+            .field("title", &self.title)
+            .field("description", &self.description)
+            .field("timeout", &self.timeout)
+            .field("action", &self.action.as_ref().map(|(label, _)| label))
+            .field("cancel", &self.cancel)
+            .finish()
+    }
 }
 impl Notice {
     /// Creates a notification that dismisses itself after five seconds.
@@ -32,7 +48,25 @@ impl Notice {
             title: title.into(),
             description: SharedString::default(),
             timeout: Some(Duration::from_secs(5)),
+            action: None,
+            cancel: None,
         }
+    }
+    /// Adds a button, such as "Undo", "Retry" or "Show in folder". Pressing it
+    /// runs `handler` and dismisses the notification. Hovering the stack
+    /// pauses the timeout so the button can be reached.
+    pub fn action(
+        mut self,
+        label: impl Into<SharedString>,
+        handler: impl Fn(&mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.action = Some((label.into(), Rc::new(handler)));
+        self
+    }
+    /// Adds a secondary button, such as "Dismiss", that only closes the notification.
+    pub fn cancel(mut self, label: impl Into<SharedString>) -> Self {
+        self.cancel = Some(label.into());
+        self
     }
     /// Secondary text below the title.
     pub fn description(mut self, description: impl Into<SharedString>) -> Self {
@@ -181,6 +215,42 @@ impl Render for ToastState {
         for (id, notice, phase) in self.manager.visible(3) {
             let dismiss = id.clone();
             let state = cx.entity().downgrade();
+            let button = |key: &'static str,
+                          label: SharedString,
+                          variant: ButtonVariant,
+                          handler: Option<ActionHandler>| {
+                let dismiss = id.clone();
+                let state = state.clone();
+                Button::new(ElementId::from((ElementId::from(id.clone()), key)))
+                    .variant(variant)
+                    .size(ButtonSize::Xs)
+                    .label(label)
+                    .on_click(move |_, window, cx| {
+                        if let Some(handler) = &handler {
+                            handler(window, cx);
+                        }
+                        state
+                            .update(cx, |state, cx| state.dismiss(&dismiss, cx))
+                            .ok();
+                    })
+            };
+            // In tab order the buttons come before the close button.
+            let buttons = (notice.action.is_some() || notice.cancel.is_some()).then(|| {
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(theme.space(2.))
+                    .pt(theme.space(2.))
+                    .children(notice.action.clone().map(|(label, handler)| {
+                        button("action", label, ButtonVariant::Default, Some(handler))
+                    }))
+                    .children(
+                        notice
+                            .cancel
+                            .clone()
+                            .map(|label| button("cancel", label, ButtonVariant::Outline, None)),
+                    )
+            });
             let close = Button::new(ElementId::from((ElementId::from(id.clone()), "close")))
                 .aria_label("Close notification")
                 .variant(ButtonVariant::Ghost)
@@ -222,6 +292,7 @@ impl Render for ToastState {
                         .child(notice.title.clone()),
                 )
                 .child(text::muted(div(), &theme).child(notice.description.clone()))
+                .children(buttons)
                 .child(close);
             stack = stack.item(id.clone(), toast);
         }
@@ -293,6 +364,57 @@ mod tests {
             assert!(state.is_empty());
             state.schedule(cx);
             assert!(state.timer.is_none(), "nothing left to wait for");
+        });
+    }
+
+    /// Tab from the stack reaches a notice's action before its close button,
+    /// and pressing it runs the handler and dismisses the notice
+    /// (devaryakjha/gpuicn#95).
+    #[gpui_kit::test]
+    fn an_action_runs_and_dismisses_its_notice(cx: &mut TestAppContext) {
+        use gpui_kit::{KeyDownEvent, KeyUpEvent, Keystroke};
+        cx.update(super::super::theme::init);
+        let ran = Rc::new(std::cell::Cell::new(0));
+        let count = ran.clone();
+        let (state, cx) = cx.add_window_view(|window, cx| {
+            window.activate_window();
+            ToastState::new(cx)
+        });
+        state.update(cx, |state, cx| {
+            state.push(
+                "download",
+                Notice::new("review-notes.pdf")
+                    .description("Saved to Downloads")
+                    .persistent()
+                    .action("Show in folder", move |_, _| count.set(count.get() + 1))
+                    .cancel("Dismiss"),
+                cx,
+            )
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        cx.update(|window, cx| {
+            let focus = state.read(cx).focus.clone();
+            focus.focus(window, cx);
+            window.draw(cx).clear(cx);
+        });
+        cx.simulate_keystrokes("tab");
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let keystroke = Keystroke::parse("enter").unwrap();
+        cx.simulate_event(KeyDownEvent {
+            keystroke: keystroke.clone(),
+            is_held: false,
+            prefer_character_input: false,
+        });
+        cx.simulate_event(KeyUpEvent { keystroke });
+        assert_eq!(ran.get(), 1, "the action ran");
+        state.update(cx, |state, _| {
+            assert!(
+                state
+                    .manager
+                    .iter()
+                    .all(|(_, _, phase)| phase == ToastTransitionStatus::Ending),
+                "the notice is leaving"
+            );
         });
     }
 }

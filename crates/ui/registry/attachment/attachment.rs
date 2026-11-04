@@ -5,7 +5,7 @@ use std::rc::Rc;
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
     AnyElement, App, ClickEvent, ElementId, FontWeight, ImageSource, InteractiveElement as _,
-    IntoElement, ObjectFit, ParentElement, RenderOnce, SharedString,
+    IntoElement, ObjectFit, ParentElement, Pixels, RenderOnce, SharedString,
     StatefulInteractiveElement as _, Styled, Window, div, prelude::FluentBuilder as _, px,
     relative,
 };
@@ -39,6 +39,8 @@ pub struct Attachment {
     meta: Option<SharedString>,
     icon: LucideIcon,
     image: Option<ImageSource>,
+    dimensions: Option<(f32, f32)>,
+    max_size: Option<(Pixels, Pixels)>,
     status: AttachmentStatus,
     on_click: Option<Handler>,
     on_remove: Option<Handler>,
@@ -55,6 +57,8 @@ impl Attachment {
             meta: None,
             icon: LucideIcon::File,
             image: None,
+            dimensions: None,
+            max_size: None,
             status: AttachmentStatus::Ready,
             on_click: None,
             on_remove: None,
@@ -74,6 +78,21 @@ impl Attachment {
     /// Shows an image thumbnail instead of a file card.
     pub fn image(mut self, source: impl Into<ImageSource>) -> Self {
         self.image = Some(source.into());
+        self
+    }
+    /// Sizes the image thumbnail from the file's pixel size, such as the
+    /// width and height in the server's file metadata. The box keeps the
+    /// image's aspect ratio, scaled down to fit `max_size`, and holds that size
+    /// while the image loads so a transcript does not jump. Without it, the
+    /// thumbnail is a 64px square.
+    pub fn dimensions(mut self, width: u32, height: u32) -> Self {
+        self.dimensions = (width > 0 && height > 0).then_some((width as f32, height as f32));
+        self
+    }
+    /// Caps a thumbnail sized by `dimensions`. Defaults to 360 × 240 at the
+    /// default spacing scale.
+    pub fn max_size(mut self, width: impl Into<Pixels>, height: impl Into<Pixels>) -> Self {
+        self.max_size = Some((width.into(), height.into()));
         self
     }
     /// Sets the upload state.
@@ -105,6 +124,15 @@ impl Attachment {
         self.on_retry = Some(Rc::new(handler));
         self
     }
+}
+
+/// The thumbnail box for an image of `width` × `height` pixels: its aspect
+/// ratio, scaled down (never up) to fit the cap.
+fn fit_within(width: f32, height: f32, max: (Pixels, Pixels)) -> (Pixels, Pixels) {
+    let scale = (f32::from(max.0) / width)
+        .min(f32::from(max.1) / height)
+        .min(1.);
+    (px((width * scale).round()), px((height * scale).round()))
 }
 
 impl Styled for Attachment {
@@ -221,11 +249,31 @@ impl RenderOnce for Attachment {
                     .on_click(move |event, window, cx| handler(event, window, cx))
             });
 
+        let sized = self.dimensions.map(|(width, height)| {
+            let max = self
+                .max_size
+                .unwrap_or((theme.space(90.), theme.space(60.)));
+            fit_within(width, height, max)
+        });
         let root: AnyElement = match self.image {
             Some(source) => root
-                .size(theme.space(16.))
+                .map(|root| match sized {
+                    // The muted fill shows until the bytes arrive.
+                    Some((width, height)) => root.w(width).h(height).bg(colors.muted),
+                    None => root.size(theme.space(16.)),
+                })
                 .child(disabled::dim(
-                    clipped_image(source, inner_radius, ObjectFit::Cover, &theme).size_full(),
+                    clipped_image(
+                        source,
+                        inner_radius,
+                        if sized.is_some() {
+                            ObjectFit::Contain
+                        } else {
+                            ObjectFit::Cover
+                        },
+                        &theme,
+                    )
+                    .size_full(),
                     progress.is_some() || failed,
                 ))
                 .when(failed, |root| {
@@ -344,4 +392,20 @@ pub fn attachment_group(
         .gap(theme.space(2.))
         .overflow_x_scroll()
         .children(attachments)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fit_within;
+    use gpui_kit::px;
+
+    #[test]
+    fn thumbnails_keep_the_aspect_ratio_inside_the_cap() {
+        let cap = (px(360.), px(240.));
+        // A wide screenshot is limited by the width, a tall one by the height.
+        assert_eq!(fit_within(1920., 1080., cap), (px(360.), px(203.)));
+        assert_eq!(fit_within(1080., 1920., cap), (px(135.), px(240.)));
+        // Small images keep their own size.
+        assert_eq!(fit_within(120., 80., cap), (px(120.), px(80.)));
+    }
 }

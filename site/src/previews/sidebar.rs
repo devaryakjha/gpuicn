@@ -197,6 +197,7 @@ impl Showcase {
             }
         }
         let mut navigation = Sidebar::new("sidebar.navigation", "Main navigation")
+            .roving_focus(true)
             .header(header)
             .when(!collapsed, |el| {
                 el.child(sidebar_group_label("Platform", cx))
