@@ -4,6 +4,19 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.9.5
+
+[Notes](docs/releases/v0.9.5.md)
+
+### Added
+
+- Message: `on_author_click` makes the name a focusable, link-styled button
+  whose handler gets the name's bounds, and `author_element` replaces the
+  name with any element, such as a popover trigger (#123).
+- Toast: `Notice::on_dismiss` reports why a notice left (`NoticeDismissal`),
+  `ToastState::contains(id)` says whether one is still showing, and
+  `set_placement` / `set_inset` move the stack (#122).
+
 ## 0.9.4
 
 [Notes](docs/releases/v0.9.4.md)

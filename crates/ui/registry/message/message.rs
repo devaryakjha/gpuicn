@@ -8,20 +8,23 @@ use std::rc::Rc;
 
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
-    AnyElement, AnyView, App, Axis, ClickEvent, ElementId, FontWeight, ImageSource,
-    InteractiveElement as _, IntoElement, ParentElement, RenderOnce, Role, SharedString,
+    AnyElement, AnyView, App, Axis, Bounds, ClickEvent, ElementId, FontWeight, ImageSource,
+    InteractiveElement as _, IntoElement, ParentElement, Pixels, RenderOnce, Role, SharedString,
     StatefulInteractiveElement as _, Styled, Window, div, img, prelude::FluentBuilder as _, px,
     relative,
 };
 
+use gpui_kit::base::ElementExt as _;
+
 use super::button::{Button, ButtonSize, ButtonVariant};
 use super::theme::{
     UiTheme, apply_style,
-    primitives::{hover_reveal_in_group, surface, text},
+    primitives::{focus, hover_reveal_in_group, surface, text},
 };
 use super::tooltip::text_tooltip;
 
 type Handler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
+type AuthorHandler = Rc<dyn Fn(&ClickEvent, Bounds<Pixels>, &mut Window, &mut App) + 'static>;
 type ReactionHandler = Rc<dyn Fn(&SharedString, &mut Window, &mut App) + 'static>;
 type ReactionTooltip = Rc<dyn Fn(&Reaction, &mut Window, &mut App) -> AnyView + 'static>;
 
@@ -117,6 +120,8 @@ pub struct Message {
     id: ElementId,
     avatar: Option<AnyElement>,
     author: Option<SharedString>,
+    author_element: Option<AnyElement>,
+    on_author_click: Option<AuthorHandler>,
     timestamp: Option<SharedString>,
     timestamp_tooltip: Option<SharedString>,
     gutter_time: Option<SharedString>,
@@ -145,6 +150,8 @@ impl Message {
             id: id.into(),
             avatar: None,
             author: None,
+            author_element: None,
+            on_author_click: None,
             timestamp: None,
             timestamp_tooltip: None,
             gutter_time: None,
@@ -178,6 +185,25 @@ impl Message {
     /// Sets the sender's display name.
     pub fn author(mut self, author: impl Into<SharedString>) -> Self {
         self.author = Some(author.into());
+        self
+    }
+    /// Makes the name a link-styled button that the reader can click, or
+    /// reach with Tab and press with Enter or Space, such as to open the
+    /// sender's profile card. The handler gets the click and the name's
+    /// bounds in window coordinates, to anchor a popover.
+    pub fn on_author_click(
+        mut self,
+        handler: impl Fn(&ClickEvent, Bounds<Pixels>, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_author_click = Some(Rc::new(handler));
+        self
+    }
+    /// Draws this element in place of the name, such as the app's own popover
+    /// trigger around the name, the way `avatar` takes any element. It
+    /// inherits the name's weight, size and color, and replaces both `author`
+    /// and `on_author_click`.
+    pub fn author_element(mut self, element: impl IntoElement) -> Self {
+        self.author_element = Some(element.into_any_element());
         self
     }
     /// Sets the time shown beside the name, such as "10:42 AM".
@@ -374,6 +400,21 @@ impl RenderOnce for Message {
             },
         );
 
+        // The name, as plain text, a link-styled button or the caller's element.
+        let shows_author = !self.continuation;
+        // Clipping would cut off the hover underline of a clickable name.
+        let clip = self.author_element.is_none() && self.on_author_click.is_none();
+        let mut author = shows_author
+            .then(|| match (self.author_element, self.author.clone()) {
+                (Some(element), _) => Some(element),
+                (None, Some(name)) => Some(match self.on_author_click.clone() {
+                    Some(handler) => author_button(&self.id, name, handler, &theme),
+                    None => name.into_any_element(),
+                }),
+                (None, None) => None,
+            })
+            .flatten();
+
         let mut header_children = self.header;
         let header = (!self.continuation && !compact).then(|| {
             div()
@@ -381,12 +422,13 @@ impl RenderOnce for Message {
                 .items_baseline()
                 .gap(theme.space(2.))
                 .min_w_0()
-                .children(self.author.clone().map(|author| {
+                .children(author.take().map(|author| {
                     div()
                         .font_weight(FontWeight::SEMIBOLD)
                         .text_size(theme.text(14.))
                         .text_color(colors.foreground)
-                        .overflow_hidden()
+                        .min_w_0()
+                        .when(clip, |name| name.overflow_hidden())
                         .text_ellipsis()
                         .whitespace_nowrap()
                         .child(author)
@@ -471,7 +513,7 @@ impl RenderOnce for Message {
         // Compact rows start the body line with the name; continuation rows
         // keep only the time in the gutter.
         let inline_author = (compact && !self.continuation)
-            .then(|| self.author.clone())
+            .then(|| author.take())
             .flatten()
             .map(|author| {
                 div()
@@ -645,6 +687,33 @@ fn reaction_chip(
             wrapper.tooltip(move |window, cx| builder(&reaction, window, cx))
         })
         .child(chip)
+}
+
+/// The sender's name as a link-styled button that reports its own bounds.
+fn author_button(
+    id: &ElementId,
+    name: SharedString,
+    handler: AuthorHandler,
+    theme: &UiTheme,
+) -> AnyElement {
+    let bounds = Rc::new(std::cell::Cell::new(Bounds::default()));
+    let measured = bounds.clone();
+    let theme = theme.clone();
+    Button::new((id.clone(), "author"))
+        .aria_label(name.clone())
+        .style_with(move |base| {
+            let focus_theme = theme.clone();
+            base.role(Role::Link)
+                .rounded(theme.radius.sm)
+                .justify_start()
+                .cursor_pointer()
+                .hover(|style| style.underline())
+                .focus_visible(move |style| focus::ring(style, &focus_theme))
+        })
+        .on_click(move |event, window, cx| handler(event, bounds.get(), window, cx))
+        .child(name)
+        .on_prepaint(move |bounds, _, _| measured.set(bounds))
+        .into_any_element()
 }
 
 /// The floating bar that holds a message's hover actions.
@@ -848,5 +917,84 @@ mod tests {
             gpui_kit::Modifiers::default(),
         );
         assert_eq!(clicks.get(), 1);
+    }
+
+    type Clicked = Rc<std::cell::RefCell<Vec<Bounds<Pixels>>>>;
+
+    struct AuthorProbe(Clicked, MessageDensity);
+
+    impl Render for AuthorProbe {
+        fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+            let clicks = self.0.clone();
+            div()
+                .w(px(600.))
+                .flex()
+                .flex_col()
+                .child(
+                    Message::new("post")
+                        .density(self.1)
+                        .author("Arya")
+                        .on_author_click(move |_, bounds, _, _| clicks.borrow_mut().push(bounds))
+                        .timestamp("10:42")
+                        .child("Hello"),
+                )
+                .child(
+                    Message::new("custom")
+                        .density(self.1)
+                        .author("ignored")
+                        .author_element(div().debug_selector(|| "custom-name".into()).child("Dev"))
+                        .child("Hi"),
+                )
+        }
+    }
+
+    /// The name opens something with the pointer or the keyboard and reports
+    /// its bounds, and `author_element` replaces it (devaryakjha/gpuicn#123).
+    #[gpui_kit::test]
+    fn the_author_name_is_a_button_with_its_bounds(cx: &mut TestAppContext) {
+        use gpui_kit::test::TestQueryExt as _;
+        use gpui_kit::{KeyDownEvent, KeyUpEvent, Keystroke};
+        cx.update(super::super::theme::init);
+        for density in [MessageDensity::Standard, MessageDensity::Compact] {
+            let clicks = Clicked::default();
+            let probe = clicks.clone();
+            let window = cx.add_window(move |window, _| {
+                window.activate_window();
+                AuthorProbe(probe, density)
+            });
+            let mut cx = VisualTestContext::from_window(window.into(), cx);
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            assert!(
+                cx.debug_bounds("custom-name").is_some(),
+                "the custom element drew"
+            );
+
+            let name = cx.update(|window, _| {
+                let name = window.find_by_label("Arya");
+                assert_eq!(name.role(), Some(Role::Link));
+                name.bounds()
+            });
+            cx.simulate_click(name.center(), gpui_kit::Modifiers::default());
+            assert_eq!(
+                *clicks.borrow(),
+                [name],
+                "{density:?}: the click reports the name's bounds"
+            );
+
+            cx.simulate_keystrokes("tab");
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            let keystroke = Keystroke::parse("enter").unwrap();
+            cx.simulate_event(KeyDownEvent {
+                keystroke: keystroke.clone(),
+                is_held: false,
+                prefer_character_input: false,
+            });
+            cx.simulate_event(KeyUpEvent { keystroke });
+            assert_eq!(
+                clicks.borrow().len(),
+                2,
+                "{density:?}: Enter on the focused name"
+            );
+        }
     }
 }

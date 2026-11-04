@@ -32,6 +32,17 @@ impl Showcase {
                     cx,
                 ))
         };
+        let view = cx.entity().downgrade();
+        let open_profile = |name: &'static str| {
+            let view = view.clone();
+            move |_: &gpui_kit::ClickEvent, _: gpui_kit::Bounds<gpui_kit::Pixels>, _: &mut Window, cx: &mut App| {
+                view.update(cx, |this, cx| {
+                    this.demo_action = format!("Opened {name}'s profile");
+                    cx.notify();
+                })
+                .ok();
+            }
+        };
         div()
             .size_full()
             .flex()
@@ -46,6 +57,7 @@ impl Showcase {
                             .fallback("AJ"),
                     )
                     .author("Arya")
+                    .on_author_click(open_profile("Arya"))
                     .timestamp("10:42 AM")
                     .timestamp_tooltip("Tuesday, 4 November 2026 at 10:42")
                     .on_gutter_click(cx.listener(|this, _, _, cx| {
@@ -125,6 +137,7 @@ impl Showcase {
                 Message::new("message.compact")
                     .density(MessageDensity::Compact)
                     .author("Sam")
+                    .on_author_click(open_profile("Sam"))
                     .timestamp("11:07")
                     .actions(actions("message.compact", cx))
                     .child("Compact density keeps one line per post."),
