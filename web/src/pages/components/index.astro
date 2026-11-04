@@ -37,7 +37,7 @@ const rows = components.map((component) => {
         rows.map((row) => (
           <tr>
             <td class="catalog__no">{componentNumber(row.slug)}</td>
-            <td>
+            <td class="catalog__name">
               <a href={componentHref(row.slug)}>{row.name}</a>
               {isNew(row) && <span class="badge">New</span>}
             </td>
@@ -56,7 +56,6 @@ const rows = components.map((component) => {
 
 <style>
   .catalog {
-    width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
   }
@@ -81,8 +80,16 @@ const rows = components.map((component) => {
   .catalog a:hover {
     color: var(--rubric);
   }
+  .catalog__name {
+    white-space: nowrap;
+  }
   .catalog .badge {
     margin-left: 0.4rem;
+  }
+  @media (max-width: 77.99rem) {
+    .catalog {
+      width: 100%;
+    }
   }
   .catalog__no {
     font-family: var(--mono);

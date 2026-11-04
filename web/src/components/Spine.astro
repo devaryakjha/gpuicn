@@ -56,6 +56,31 @@ const active = (href: string) => (current === href ? "page" : undefined)
     </ol>
   </nav>
 </aside>
+<script is:inline>
+  // Pages are separate documents, so keep the spine's scroll position across
+  // navigations, and bring the current chapter into view if it is hidden.
+  ;(() => {
+    const spine = document.currentScript.previousElementSibling
+    const key = "gpuicn-spine"
+    try {
+      const saved = sessionStorage.getItem(key)
+      if (saved) spine.scrollTop = Number(saved)
+    } catch {}
+    const current = spine.querySelector('[aria-current="page"]')
+    if (current) {
+      const item = current.getBoundingClientRect()
+      const box = spine.getBoundingClientRect()
+      if (item.top < box.top + 48 || item.bottom > box.bottom - 24) {
+        spine.scrollTop += item.top - box.top - box.height / 3
+      }
+    }
+    addEventListener("pagehide", () => {
+      try {
+        sessionStorage.setItem(key, String(spine.scrollTop))
+      } catch {}
+    })
+  })()
+</script>
 
 <style>
   .spine {
@@ -108,17 +133,21 @@ const active = (href: string) => (current === href ? "page" : undefined)
     display: flex;
     align-items: baseline;
     gap: 0.5rem;
-    padding: 0.2rem 0;
+    padding: 0.2rem 0.5rem;
+    margin-inline: -0.5rem;
+    border-radius: 6px;
     color: var(--ink-2);
   }
   .spine__list--dense a {
-    padding: 0.12rem 0;
+    padding-block: 0.12rem;
   }
   .spine__list a:hover {
     color: var(--ink);
   }
   .spine__list a[aria-current="page"] {
-    color: var(--rubric);
+    color: var(--ink);
+    font-weight: 500;
+    background: var(--paper-2);
   }
   .spine__num {
     font-family: var(--mono);
@@ -130,7 +159,7 @@ const active = (href: string) => (current === href ? "page" : undefined)
   .spine__new {
     margin-left: auto;
     font-size: 0.68rem;
-    color: var(--rubric);
+    color: var(--ink-3);
     letter-spacing: 0.04em;
   }
   @media (min-width: 64rem) {
@@ -141,8 +170,10 @@ const active = (href: string) => (current === href ? "page" : undefined)
       align-self: start;
       max-height: calc(100vh - var(--head));
       overflow-y: auto;
-      padding: 3.6rem 0.75rem 3rem 0;
+      padding: 3.6rem 0.75rem 3rem 0.5rem;
+      margin-left: -0.5rem;
       scrollbar-width: thin;
+      view-transition-name: spine;
     }
     .spine__toggle {
       display: none;

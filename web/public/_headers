@@ -1,0 +1,9 @@
+# Fonts and hashed build assets never change at a given URL, so browsers can
+# reuse them across page loads without revalidating. Without this, every
+# navigation re-checked the fonts and showed the fallback font first.
+/type/*
+  Cache-Control: public, max-age=31536000, immutable
+/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+/fonts/*
+  Cache-Control: public, max-age=86400

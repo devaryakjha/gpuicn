@@ -348,6 +348,7 @@ export const reference = [
   { to: "/components/", label: "Components", blurb: "All 58 components, each with a live preview, usage, API, and platform notes." },
   { to: "/icons/", label: "Icons", blurb: "The 1,924 Lucide icons as Rust names, rendered by GPUI." },
   { to: "/registry/", label: "Registry", blurb: "The JSON files behind gpuicn add." },
+  { to: "/changelog/", label: "Changelog", blurb: "What each release added, changed, and fixed." },
 ] as const
 
 /** Kept for the search palette and older links. */

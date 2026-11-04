@@ -1,0 +1,61 @@
+---
+import Chapter from "../layouts/Chapter.astro"
+import Aside from "../components/Aside.astro"
+import { changelog } from "../lib/docs"
+---
+
+<Chapter
+  title="Changelog"
+  part="Reference"
+  kicker="Chapter 8"
+  lede="Every release, newest first. Installed source never updates itself, so read the entry for a release before you overwrite files with it."
+>
+  <Aside top>
+    <p>Releases</p>
+    <ul class="versions">
+      {changelog.versions.map((version) => <li><a href={`#v${version}`}><code>{version}</code></a></li>)}
+    </ul>
+  </Aside>
+  <div class="text changelog" set:html={changelog.html} />
+</Chapter>
+
+<style>
+  .versions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    columns: 2;
+  }
+  .versions li + li {
+    margin-top: 0.15rem;
+  }
+  .versions a {
+    text-decoration: none;
+    color: var(--ink-2);
+  }
+  .versions a:hover {
+    color: var(--ink);
+  }
+  .changelog :global(.release) {
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin-top: 2.75rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+    scroll-margin-top: calc(var(--head) + 1rem);
+  }
+  .changelog :global(.release + p) {
+    margin-top: 0.25rem;
+    font-size: 0.88rem;
+  }
+  .changelog :global(.release__kind) {
+    font-size: 0.84rem;
+    font-weight: 500;
+    color: var(--ink-3);
+    margin-top: 1.25rem;
+  }
+  .changelog :global(ul) {
+    margin-top: 0.4rem;
+  }
+</style>

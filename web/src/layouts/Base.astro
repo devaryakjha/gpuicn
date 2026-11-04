@@ -29,8 +29,10 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-panels.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-panels.png" />
-    <link rel="preload" href="/fonts/Geist-Regular.ttf" as="font" type="font/ttf" crossorigin />
-    <link rel="preload" href="/fonts/Geist-Regular.ttf" as="font" type="font/ttf" crossorigin />
+    <link rel="preload" href="/type/Geist-Regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/type/Geist-Medium.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/type/Geist-SemiBold.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/type/GeistMono-Regular.woff2" as="font" type="font/woff2" crossorigin />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="gpuicn" />
     <meta property="og:title" content={fullTitle} />
