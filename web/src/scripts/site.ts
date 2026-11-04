@@ -217,7 +217,10 @@ class Preview {
     // skips WebGPU, which the screenshot scripts use.
     const backend = new URLSearchParams(location.search).get("backend")
     if (backend === "webgl" || !("gpu" in navigator)) query.set("backend", "webgl")
-    return `/demo/index.html?${query}`
+    // `/demo/`, not `/demo/index.html`: the host forces trailing slashes and
+    // redirects the latter, and a cross-origin-isolated page blocks a framed
+    // document that arrives through a redirect.
+    return `/demo/?${query}`
   }
   mount() {
     this.frame?.remove()
