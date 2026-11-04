@@ -3,6 +3,7 @@ use super::theme::{
     UiTheme, apply_style,
     primitives::{disabled, focus},
 };
+use gpui_kit::base::TestSupportExt as _;
 pub use gpui_kit::base::slider::{SliderEvent, SliderState, SliderValue};
 use gpui_kit::base::{SliderIndicator, SliderThumb, SliderTrack};
 use gpui_kit::{
@@ -106,6 +107,7 @@ impl RenderOnce for Slider {
             });
         let root = div()
             .id(("slider", self.state.entity_id()))
+            .test_support()
             .role(Role::Slider)
             .aria_numeric_value(value as f64)
             .aria_min_numeric_value(min as f64)

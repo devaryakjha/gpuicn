@@ -115,7 +115,7 @@ export const components: CatalogComponent[] = [
     slug: "embed",
     name: "Embed",
     description:
-      "Link preview and message attachment cards under a chat message.",
+      "Link previews, message attachments and quoted posts under a chat message.",
     added: "0.9.2",
   },
   {
@@ -279,6 +279,12 @@ export const components: CatalogComponent[] = [
     description: "Selects a value or range along a track.",
   },
   {
+    slug: "sortable",
+    name: "Sortable",
+    description:
+      "Rows people drag, or move with the keyboard, to reorder them and move them between groups.",
+  },
+  {
     slug: "spinner",
     name: "Spinner",
     description: "An animated indicator that shows work in progress.",
@@ -376,7 +382,7 @@ export function findComponent(slug: string) {
 
 export function previewHeight(slug: string) {
   if (slug === "drawer") return 560
-  if (slug === "embed") return 720
+  if (slug === "embed") return 960
   if (
     [
       "carousel",

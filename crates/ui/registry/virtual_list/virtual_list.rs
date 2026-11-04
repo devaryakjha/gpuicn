@@ -9,6 +9,7 @@ use super::theme::{
     primitives::{disabled, text},
 };
 use gpui_kit::accesskit::Role;
+use gpui_kit::base::TestSupportExt as _;
 use gpui_kit::{
     AnyElement, App, ElementId, FontWeight, InteractiveElement as _, IntoElement, ListOffset,
     Modifiers, MouseButton, ParentElement as _, Pixels, RenderOnce, SharedString,
@@ -588,6 +589,7 @@ impl RenderOnce for VirtualList {
         };
         let mut root = div()
             .id(self.id.clone())
+            .test_support()
             .role(Role::ListBox)
             .aria_label(self.label)
             .aria_description(instructions)
@@ -655,6 +657,7 @@ impl RenderOnce for VirtualList {
                         let tooltip_label = row.item.label.clone();
                         let mut element = div()
                             .id(id.clone())
+                            .test_support()
                             .role(Role::ListBoxOption)
                             .aria_label(row.item.label.clone())
                             .tooltip(move |_, cx| {

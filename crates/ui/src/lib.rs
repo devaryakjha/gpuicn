@@ -13,6 +13,8 @@ pub mod alert_dialog;
 pub mod app;
 #[path = "../registry/attachment/attachment.rs"]
 pub mod attachment;
+#[cfg(any(test, feature = "test-support"))]
+pub mod audit;
 #[path = "../registry/autocomplete/autocomplete.rs"]
 pub mod autocomplete;
 #[path = "../registry/avatar/avatar.rs"]
@@ -97,6 +99,8 @@ pub mod separator;
 pub mod skeleton;
 #[path = "../registry/slider/slider.rs"]
 pub mod slider;
+#[path = "../registry/sortable/sortable.rs"]
+pub mod sortable;
 #[path = "../registry/spinner/spinner.rs"]
 pub mod spinner;
 #[path = "../registry/switch/switch.rs"]

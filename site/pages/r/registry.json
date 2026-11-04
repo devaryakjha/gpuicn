@@ -559,7 +559,7 @@
       "name": "embed",
       "type": "registry:item",
       "title": "Embed",
-      "description": "Link preview and message attachment cards under a chat message.",
+      "description": "Link previews, message attachments and quoted posts under a chat message.",
       "files": [
         {
           "path": "registry/theme/primitives.rs",
@@ -570,6 +570,11 @@
           "path": "registry/theme/theme.rs",
           "type": "registry:file",
           "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/avatar/avatar.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/avatar.rs"
         },
         {
           "path": "registry/button/button.rs",
@@ -1402,6 +1407,29 @@
           "path": "registry/slider/slider.rs",
           "type": "registry:file",
           "target": "~/src/ui/slider.rs"
+        }
+      ]
+    },
+    {
+      "name": "sortable",
+      "type": "registry:item",
+      "title": "Sortable",
+      "description": "Rows people drag, or move with the keyboard, to reorder them and move them between groups.",
+      "files": [
+        {
+          "path": "registry/theme/primitives.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/primitives.rs"
+        },
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/sortable/sortable.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/sortable.rs"
         }
       ]
     },

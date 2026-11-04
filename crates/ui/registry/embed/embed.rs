@@ -1,6 +1,6 @@
 //! Nova embed cards under a chat message: link previews (Open Graph) and
 //! message attachments (the integration format with a colored bar, fields and
-//! a footer).
+//! a footer) and quoted posts for permalinks and forwards.
 //!
 //! shadcn/ui has no embed card; both cards are drawn on the card tokens with
 //! the same density steps as `Message`. Titles that open something are GPUI
@@ -20,6 +20,9 @@ use gpui_kit::{
     relative,
 };
 
+use gpui_kit::base::ElementExt as _;
+
+use super::avatar::{Avatar, AvatarSize};
 use super::button::{Button, ButtonSize, ButtonVariant};
 pub use super::message::MessageDensity;
 use super::theme::{
@@ -1049,6 +1052,294 @@ impl RenderOnce for MessageEmbed {
     }
 }
 
+/// How many lines of a quoted body show before "Show more".
+pub const QUOTED_MESSAGE_LINES: usize = 4;
+
+/// A quoted post: a pasted permalink or a forwarded message, drawn as its own
+/// card next to [`LinkPreview`] and [`MessageEmbed`].
+///
+/// One line holds the author's avatar, name and time with a trailing Jump
+/// link; a muted line says where it was first posted; the body is clamped
+/// to a few lines with a "Show more" toggle, and an optional strip below it
+/// holds the quoted post's files or images. The card is named "Quoted
+/// message from <author>" for assistive technology.
+#[derive(IntoElement)]
+pub struct QuotedMessage {
+    style: gpui_kit::StyleRefinement,
+    id: ElementId,
+    author: SharedString,
+    avatar: Option<ImageSource>,
+    initials: Option<SharedString>,
+    timestamp: Option<SharedString>,
+    channel: Option<SharedString>,
+    body: Option<AnyElement>,
+    attachments: Option<AnyElement>,
+    max_lines: usize,
+    density: MessageDensity,
+    on_jump: Option<Handler>,
+}
+
+impl QuotedMessage {
+    /// Creates a quoted post by `author` with a stable caller-owned ID.
+    pub fn new(id: impl Into<ElementId>, author: impl Into<SharedString>) -> Self {
+        Self {
+            style: gpui_kit::StyleRefinement::default(),
+            id: id.into(),
+            author: author.into(),
+            avatar: None,
+            initials: None,
+            timestamp: None,
+            channel: None,
+            body: None,
+            attachments: None,
+            max_lines: QUOTED_MESSAGE_LINES,
+            density: MessageDensity::Standard,
+            on_jump: None,
+        }
+    }
+    /// Sets the author's avatar image; the initials show while it loads.
+    pub fn avatar(mut self, source: impl Into<ImageSource>) -> Self {
+        self.avatar = Some(source.into());
+        self
+    }
+    /// Sets the initials drawn when there is no avatar image. Defaults to the
+    /// first letter of the author's name.
+    pub fn initials(mut self, initials: impl Into<SharedString>) -> Self {
+        self.initials = Some(initials.into());
+        self
+    }
+    /// Sets the time shown after the author's name, already formatted.
+    pub fn timestamp(mut self, timestamp: impl Into<SharedString>) -> Self {
+        self.timestamp = Some(timestamp.into());
+        self
+    }
+    /// Names the channel the post came from, shown as "Originally posted in
+    /// <channel>". Leave it out for direct messages.
+    pub fn channel(mut self, channel: impl Into<SharedString>) -> Self {
+        self.channel = Some(channel.into());
+        self
+    }
+    /// Sets the quoted text, usually rendered Markdown.
+    pub fn body(mut self, body: impl IntoElement) -> Self {
+        self.body = Some(body.into_any_element());
+        self
+    }
+    /// Sets the strip of the quoted post's files or images under the body.
+    pub fn attachments(mut self, attachments: impl IntoElement) -> Self {
+        self.attachments = Some(attachments.into_any_element());
+        self
+    }
+    /// Sets how many body lines show before "Show more"; at least one.
+    pub fn max_lines(mut self, lines: usize) -> Self {
+        self.max_lines = lines.max(1);
+        self
+    }
+    /// Matches the density of the message list around the card.
+    pub fn density(mut self, density: MessageDensity) -> Self {
+        self.density = density;
+        self
+    }
+    /// Shows a Jump link that opens the original post.
+    pub fn on_jump(
+        mut self,
+        handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_jump = Some(Rc::new(handler));
+        self
+    }
+}
+
+impl Styled for QuotedMessage {
+    fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
+        &mut self.style
+    }
+}
+
+/// Whether the body is expanded, and whether it is taller than the clamp.
+#[derive(Default)]
+struct QuoteState {
+    expanded: bool,
+    overflows: bool,
+}
+
+/// A small link-styled button, as Jump and Show more are.
+fn link_button(
+    id: ElementId,
+    label: SharedString,
+    aria_label: SharedString,
+    expanded: Option<bool>,
+    on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    theme: &UiTheme,
+) -> Button {
+    let theme = theme.clone();
+    Button::new(id)
+        .aria_label(aria_label)
+        .style_with(move |base| {
+            let focus_theme = theme.clone();
+            let base = match expanded {
+                Some(expanded) => base.aria_expanded(expanded),
+                None => base.role(Role::Link),
+            };
+            text::xs(base, &theme)
+                .font_weight(FontWeight::MEDIUM)
+                .text_color(theme.colors.primary)
+                .rounded(theme.radius.sm)
+                .flex_shrink_0()
+                .cursor_pointer()
+                .hover(|style| style.underline())
+                .focus_visible(move |style| focus::ring(style, &focus_theme))
+        })
+        .on_click(on_click)
+        .child(label)
+}
+
+impl RenderOnce for QuotedMessage {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = UiTheme::read(cx).clone();
+        let colors = theme.colors;
+        let (padding, gap) = metrics(&theme, self.density);
+        let id = self.id;
+        let state = window.use_keyed_state((id.clone(), "quote"), cx, |_, _| QuoteState::default());
+        let (expanded, overflows) = {
+            let state = state.read(cx);
+            (state.expanded, state.overflows)
+        };
+        let line_height = theme.text_style(theme.typography.sm).line_height;
+        let clamp = line_height * self.max_lines as f32;
+
+        let initials = self.initials.clone().unwrap_or_else(|| {
+            self.author
+                .chars()
+                .next()
+                .map(|c| c.to_uppercase().to_string())
+                .unwrap_or_default()
+                .into()
+        });
+        let avatar = Avatar::new((id.clone(), "avatar"))
+            .size(AvatarSize::Sm)
+            .fallback(initials)
+            .when_some(self.avatar, |avatar, source| avatar.image(source));
+        let author = self.author.clone();
+        let jump = self.on_jump.map(|handler| {
+            div()
+                .debug_selector(|| "quote-jump".into())
+                .child(link_button(
+                    (id.clone(), "jump").into(),
+                    "Jump".into(),
+                    format!("Jump to the message from {author}").into(),
+                    None,
+                    move |event, window, cx| handler(event, window, cx),
+                    &theme,
+                ))
+        });
+        let header = div()
+            .flex()
+            .items_center()
+            .gap(theme.space(2.))
+            .min_w_0()
+            .child(avatar)
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .flex()
+                    .items_baseline()
+                    .gap(theme.space(2.))
+                    .overflow_hidden()
+                    .child(
+                        text::sm(div(), &theme)
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .flex_shrink_0()
+                            .child(self.author.clone()),
+                    )
+                    .children(self.timestamp.map(|time| {
+                        text::xs(div(), &theme)
+                            .text_color(colors.muted_foreground)
+                            .whitespace_nowrap()
+                            .overflow_hidden()
+                            .text_ellipsis()
+                            .child(time)
+                    })),
+            )
+            .children(jump);
+        let origin = self.channel.map(|channel| {
+            text::xs(div(), &theme)
+                .debug_selector(|| "quote-origin".into())
+                .text_color(colors.muted_foreground)
+                .overflow_hidden()
+                .text_ellipsis()
+                .whitespace_nowrap()
+                .child(format!("Originally posted in {channel}"))
+        });
+        let body = self.body.map(|body| {
+            let measured = state.clone();
+            div()
+                .flex()
+                .flex_col()
+                .gap(theme.space(1.))
+                .child(
+                    text::sm(div(), &theme)
+                        .debug_selector(|| "quote-body".into())
+                        .when(!expanded, |frame| frame.max_h(clamp).overflow_hidden())
+                        .child(
+                            div()
+                                .on_prepaint(move |bounds, window, cx| {
+                                    // The text's natural height, measured
+                                    // inside the clamp, decides whether
+                                    // there is more to show.
+                                    let overflows = bounds.size.height > clamp + px(0.5);
+                                    if measured.read(cx).overflows != overflows {
+                                        measured.update(cx, |state, _| state.overflows = overflows);
+                                        window.refresh();
+                                    }
+                                })
+                                .child(body),
+                        ),
+                )
+                .when(overflows, |column| {
+                    let toggle = state.clone();
+                    let label: SharedString =
+                        if expanded { "Show less" } else { "Show more" }.into();
+                    column.child(div().debug_selector(|| "quote-toggle".into()).flex().child(
+                        link_button(
+                            (id.clone(), "more").into(),
+                            label.clone(),
+                            label,
+                            Some(expanded),
+                            move |_, window, cx| {
+                                toggle.update(cx, |state, _| state.expanded = !state.expanded);
+                                window.refresh();
+                            },
+                            &theme,
+                        ),
+                    ))
+                })
+        });
+
+        let card = card_frame(
+            id.clone(),
+            format!("Quoted message from {}", self.author).into(),
+            &theme,
+        )
+        .flex()
+        .flex_col()
+        .gap(gap)
+        .p(padding)
+        .rounded(theme.radius.lg)
+        .border_1()
+        .border_color(colors.border)
+        .bg(colors.card)
+        .child(header)
+        .children(origin)
+        .children(body)
+        .children(
+            self.attachments
+                .map(|strip| div().flex().flex_wrap().gap(gap).child(strip)),
+        );
+        apply_style(card, &self.style)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{cell::Cell, rc::Rc};
@@ -1282,5 +1573,74 @@ mod tests {
             Some(false),
             "expanding reports collapsed = false"
         );
+    }
+
+    struct Quote {
+        jumps: Rc<Cell<usize>>,
+        body: &'static str,
+    }
+
+    impl Render for Quote {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            let jumps = self.jumps.clone();
+            div().w(px(420.)).child(
+                QuotedMessage::new("quote", "Margaret Hamilton")
+                    .timestamp("Yesterday at 4:12 PM")
+                    .channel("~town-square")
+                    .max_lines(2)
+                    .body(div().child(self.body))
+                    .on_jump(move |_, _, _| jumps.set(jumps.get() + 1)),
+            )
+        }
+    }
+
+    fn quote(body: &'static str, cx: &mut TestAppContext) -> (Rc<Cell<usize>>, VisualTestContext) {
+        cx.update(super::super::theme::init);
+        let jumps = Rc::new(Cell::new(0));
+        let window = cx.add_window({
+            let jumps = jumps.clone();
+            move |_, _| Quote { jumps, body }
+        });
+        let mut cx = VisualTestContext::from_window(window.into(), cx);
+        cx.update(|window, cx| {
+            window.draw(cx).clear(cx);
+            window.draw(cx).clear(cx);
+        });
+        (jumps, cx)
+    }
+
+    const LONG: &str = "The landing software flagged an overflow, and the computer \
+        shed its lowest-priority work to keep the guidance running. That was the \
+        design: the priority scheduler restarted the jobs that mattered, and the \
+        crew carried on with the descent while Houston confirmed the alarm was safe.";
+
+    #[gpui_kit::test]
+    fn a_long_quote_clamps_and_show_more_expands_it(cx: &mut TestAppContext) {
+        let (_, mut cx) = quote(LONG, cx);
+        let clamped = cx.debug_bounds("quote-body").unwrap();
+        let line = UiTheme::default()
+            .text_style(UiTheme::default().typography.sm)
+            .line_height;
+        assert_eq!(clamped.size.height, line * 2., "two lines");
+        assert!(cx.debug_bounds("quote-origin").is_some());
+        let toggle = cx.debug_bounds("quote-toggle").expect("Show more appears");
+        let on_label = toggle.origin + gpui_kit::point(px(8.), toggle.size.height / 2.);
+        cx.simulate_click(on_label, Default::default());
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let expanded = cx.debug_bounds("quote-body").unwrap();
+        assert!(expanded.size.height > clamped.size.height, "{expanded:?}");
+    }
+
+    #[gpui_kit::test]
+    fn a_short_quote_has_no_show_more_and_jump_reports(cx: &mut TestAppContext) {
+        let (jumps, mut cx) = quote("Lunch?", cx);
+        assert!(cx.debug_bounds("quote-toggle").is_none());
+        cx.update(|window, _| {
+            use gpui_kit::test::TestQueryExt as _;
+            window.find_by_label("Jump to the message from Margaret Hamilton");
+        });
+        let jump = cx.debug_bounds("quote-jump").unwrap();
+        cx.simulate_click(jump.center(), Default::default());
+        assert_eq!(jumps.get(), 1);
     }
 }

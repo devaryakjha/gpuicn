@@ -7,6 +7,7 @@ use super::{
     },
 };
 use gpui_icons::{LucideIcon, lucide};
+use gpui_kit::base::TestSupportExt as _;
 use gpui_kit::base::{Align, Button, ElementExt as _, Placement, Positioner};
 use gpui_kit::{
     AnyElement, App, Bounds, ClickEvent, Context, ElementId, Entity, FocusHandle, Focusable,
@@ -124,6 +125,36 @@ pub struct MenuState {
     popup_bounds: Vec<Bounds<Pixels>>,
     query: String,
     typed_at: Option<web_time::Instant>,
+    submenu_timer: Option<gpui_kit::Task<()>>,
+}
+
+/// How long the pointer rests on a submenu row before the submenu opens.
+const SUBMENU_HOVER_DELAY: Duration = Duration::from_millis(200);
+/// The gap kept between a menu panel and the window edge.
+const WINDOW_MARGIN: f32 = 8.;
+/// The shortest a menu panel gets before it scrolls in a very short window.
+const MIN_PANEL_HEIGHT: f32 = 96.;
+
+/// The tallest a menu panel can be before it scrolls: the larger of the room
+/// below and above `anchor` for a menu that drops from its trigger, or the
+/// window height for one beside its anchor (a context menu or a submenu),
+/// which slides up and down instead of flipping.
+#[doc(hidden)]
+pub fn menu_max_height(
+    anchor: Bounds<Pixels>,
+    viewport: gpui_kit::Size<Pixels>,
+    beside: bool,
+    offset: Pixels,
+) -> Pixels {
+    let margin = gpui_kit::px(WINDOW_MARGIN);
+    let room = if beside {
+        viewport.height - margin * 2.
+    } else {
+        let below = viewport.height - anchor.bottom() - offset - margin;
+        let above = anchor.top() - offset - margin;
+        below.max(above)
+    };
+    room.max(gpui_kit::px(MIN_PANEL_HEIGHT))
 }
 impl MenuState {
     /// Creates a closed menu with the supplied entries and new focus handles.
@@ -142,6 +173,7 @@ impl MenuState {
             popup_bounds: Vec::new(),
             query: String::new(),
             typed_at: None,
+            submenu_timer: None,
         }
     }
     /// Returns whether the popup is open.
@@ -228,6 +260,42 @@ impl MenuState {
         self.highlighted[depth] = Some(index);
         cx.notify();
     }
+    /// Opens the submenu at `index` after a short rest, unless the pointer
+    /// has moved on to another row by then.
+    fn hover_submenu(
+        &mut self,
+        depth: usize,
+        index: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.submenu_timer = None;
+        if self.level(depth)[index].children.is_empty() || self.path.get(depth) == Some(&index) {
+            return;
+        }
+        self.submenu_timer = Some(cx.spawn_in(window, async move |this, cx| {
+            cx.background_executor().timer(SUBMENU_HOVER_DELAY).await;
+            _ = this.update(cx, |this, cx| {
+                if this.open
+                    && this.path.len() == depth
+                    && this.highlighted.get(depth).copied().flatten() == Some(index)
+                {
+                    this.open_submenu(depth, index, cx);
+                }
+            });
+        }));
+    }
+    fn open_submenu(&mut self, depth: usize, index: usize, cx: &mut Context<Self>) {
+        let first = self.level(depth)[index]
+            .children
+            .iter()
+            .position(MenuItem::enabled);
+        self.path.truncate(depth);
+        self.path.push(index);
+        self.highlighted.truncate(depth + 1);
+        self.highlighted.push(first);
+        cx.notify();
+    }
     fn activate(
         &mut self,
         depth: usize,
@@ -241,12 +309,8 @@ impl MenuState {
             return;
         }
         if !item.children.is_empty() {
-            self.path.truncate(depth);
-            self.path.push(index);
-            self.highlighted.truncate(depth + 1);
-            self.highlighted
-                .push(item.children.iter().position(MenuItem::enabled));
-            cx.notify();
+            self.submenu_timer = None;
+            self.open_submenu(depth, index, cx);
         } else {
             let mut path = self.path[..depth].to_vec();
             path.push(index);
@@ -351,8 +415,9 @@ impl Focusable for MenuState {
     }
 }
 impl Render for MenuState {
-    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t = UiTheme::read(cx).clone();
+        let viewport = window.viewport_size();
         let mut root = div()
             .id(("menu", cx.entity_id()))
             .track_focus(&self.focus)
@@ -376,12 +441,19 @@ impl Render for MenuState {
                 )
                     .into()
             };
+            let anchor = if depth == 0 {
+                self.anchor
+            } else {
+                self.row_bounds[depth - 1][self.path[depth - 1]]
+            };
+            let beside = depth > 0 || self.pointer;
             let mut popup = div()
                 .id(popup_id)
                 .relative()
                 .role(Role::Menu)
                 .min_w(t.space(40.))
-                .max_h(t.space(72.))
+                .max_h(menu_max_height(anchor, viewport, beside, t.space(1.)))
+                .debug_selector(move || format!("menu-popup-{depth}"))
                 .overflow_y_scroll()
                 .map(|popup| surface::menu(popup, &t))
                 .on_prepaint(move |bounds, _, cx| {
@@ -455,9 +527,10 @@ impl Render for MenuState {
                             }
                         })
                     })
-                    .on_hover(cx.listener(move |this, hovered, _, cx| {
+                    .on_hover(cx.listener(move |this, hovered, window, cx| {
                         if *hovered {
                             this.highlight(depth, index, cx);
+                            this.hover_submenu(depth, index, window, cx);
                         }
                     }))
                     .on_click(cx.listener(move |this, event, window, cx| {
@@ -480,16 +553,12 @@ impl Render for MenuState {
                     });
                 popup = popup.child(row);
             }
-            let anchor = if depth == 0 {
-                self.anchor
-            } else {
-                self.row_bounds[depth - 1][self.path[depth - 1]]
-            };
             root = root.child(
                 gpui_kit::deferred(
                     Positioner::side(anchor)
                         .align(Align::Start)
-                        .placement(if depth > 0 || self.pointer {
+                        .margin(gpui_kit::px(WINDOW_MARGIN))
+                        .placement(if beside {
                             Placement::Right
                         } else {
                             Placement::Bottom
@@ -566,6 +635,7 @@ impl RenderOnce for Menu {
         let open = state.read(cx).open;
         let mut base = div()
             .id(("menu-trigger", state.entity_id()))
+            .test_support()
             .relative()
             .on_prepaint(move |bounds, _, cx| {
                 measured.update(cx, |this, _| {
@@ -644,6 +714,126 @@ impl RenderOnce for Menu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gpui_kit::{AppContext as _, point, px, size};
+
+    #[test]
+    fn a_menu_uses_the_room_in_the_window() {
+        let viewport = size(px(1000.), px(800.));
+        let offset = px(4.);
+        // A trigger near the top drops a panel almost to the bottom edge.
+        let top = Bounds::new(point(px(10.), px(20.)), size(px(80.), px(32.)));
+        assert_eq!(
+            menu_max_height(top, viewport, false, offset),
+            px(800. - 52. - 4. - 8.)
+        );
+        // A trigger near the bottom has more room above, where it flips.
+        let bottom = Bounds::new(point(px(10.), px(700.)), size(px(80.), px(32.)));
+        assert_eq!(
+            menu_max_height(bottom, viewport, false, offset),
+            px(700. - 4. - 8.)
+        );
+        // A context menu or submenu slides along the window's full height.
+        assert_eq!(
+            menu_max_height(bottom, viewport, true, offset),
+            px(800. - 16.)
+        );
+        // A very short window still shows a few rows and scrolls.
+        let tiny = size(px(300.), px(60.));
+        assert_eq!(menu_max_height(top, tiny, false, offset), px(96.));
+    }
+
+    struct LongMenu {
+        state: Entity<MenuState>,
+    }
+    impl Render for LongMenu {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            div()
+                .p(px(16.))
+                .child(Menu::new(&self.state, "Message actions"))
+        }
+    }
+
+    #[gpui_kit::test]
+    fn a_long_menu_does_not_scroll_in_a_tall_window(cx: &mut gpui_kit::TestAppContext) {
+        cx.update(super::super::theme::init);
+        let (view, cx) = cx.add_window_view(|_, cx| LongMenu {
+            state: cx.new(|cx| {
+                MenuState::new(
+                    (0..12).map(|i| MenuItem::new(("item", i as u64), format!("Action {i}"))),
+                    cx,
+                )
+            }),
+        });
+        cx.simulate_resize(size(px(800.), px(800.)));
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        cx.update(|window, cx| {
+            let state = view.read(cx).state.clone();
+            state.update(cx, |menu, cx| menu.open(window, cx));
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let popup = cx.debug_bounds("menu-popup-0").expect("the menu is open");
+        // Twelve 32px rows plus padding: taller than the old 288px cap.
+        assert!(popup.size.height > px(12. * 32.), "{popup:?}");
+    }
+
+    #[gpui_kit::test]
+    fn resting_on_a_submenu_row_opens_it_and_a_sibling_closes_it(
+        cx: &mut gpui_kit::TestAppContext,
+    ) {
+        cx.update(super::super::theme::init);
+        let window = cx.add_window(|_, cx| {
+            MenuState::new(
+                [
+                    MenuItem::new("reply", "Reply"),
+                    MenuItem::submenu(
+                        "remind",
+                        "Remind me",
+                        [
+                            MenuItem::new("hour", "In 1 hour"),
+                            MenuItem::new("tomorrow", "Tomorrow"),
+                        ],
+                    ),
+                    MenuItem::new("copy", "Copy link"),
+                ],
+                cx,
+            )
+        });
+        window
+            .update(cx, |menu, window, cx| {
+                menu.open(window, cx);
+                menu.highlight(0, 1, cx);
+                menu.hover_submenu(0, 1, window, cx);
+            })
+            .unwrap();
+        cx.executor().advance_clock(SUBMENU_HOVER_DELAY / 2);
+        cx.run_until_parked();
+        window
+            .update(cx, |menu, _, _| {
+                assert!(menu.path.is_empty(), "not before the delay")
+            })
+            .unwrap();
+        cx.executor().advance_clock(SUBMENU_HOVER_DELAY);
+        cx.run_until_parked();
+        window
+            .update(cx, |menu, window, cx| {
+                assert_eq!(menu.path, [1], "the submenu opened");
+                menu.highlight(0, 2, cx);
+                menu.hover_submenu(0, 2, window, cx);
+                assert!(menu.path.is_empty(), "a sibling row closes it");
+                // Passing over the submenu row on the way elsewhere opens nothing.
+                menu.highlight(0, 1, cx);
+                menu.hover_submenu(0, 1, window, cx);
+                menu.highlight(0, 0, cx);
+                menu.hover_submenu(0, 0, window, cx);
+            })
+            .unwrap();
+        cx.executor().advance_clock(SUBMENU_HOVER_DELAY * 2);
+        cx.run_until_parked();
+        window
+            .update(cx, |menu, _, _| assert!(menu.path.is_empty()))
+            .unwrap();
+    }
     #[gpui_kit::test]
     fn check_actions_toggle_and_radio_actions_select_one(cx: &mut gpui_kit::TestAppContext) {
         cx.update(super::super::theme::init);

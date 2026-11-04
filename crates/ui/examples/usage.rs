@@ -90,7 +90,7 @@ mod autocomplete {
 }
 
 mod avatar {
-    use crate::ui::avatar::Avatar;
+    use crate::ui::avatar::{Avatar, AvatarStatus};
     use gpui_kit::IntoElement;
 
     fn example() -> impl IntoElement {
@@ -98,6 +98,8 @@ mod avatar {
             .image("https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png")
             .aria_label("Arya")
             .fallback("AJ")
+            // Named "Arya, away"; pass `.ring_color(colors.sidebar)` on a sidebar.
+            .status(AvatarStatus::Away)
     }
 }
 
@@ -392,6 +394,14 @@ mod popover {
             .content(|_, _, cx| {
                 popover_popup("details.popup", "Details", cx).child("Account details")
             })
+    }
+
+    // A profile card that opens on hover, and on click or Enter with focus
+    // moving into it.
+    fn hover_example() -> impl IntoElement {
+        hover_popover("post-1.author", "Priya Nair, online")
+            .trigger("Priya Nair")
+            .content(|_, cx| popover_popup("post-1.author.card", "Priya Nair", cx).child("Design"))
     }
 }
 
@@ -1161,5 +1171,37 @@ mod embed {
                             .size(1200, 630),
                     ),
             )
+            .child(
+                // A pasted permalink or a forwarded post.
+                QuotedMessage::new("post-4.quote", "Margaret Hamilton")
+                    .timestamp("Yesterday at 4:12 PM")
+                    .channel("~town-square")
+                    .body("The scheduler restarted the jobs that mattered.")
+                    .on_jump(|_, _, _| println!("open the original post")),
+            )
+    }
+}
+
+mod sortable {
+    use crate::ui::sortable::*;
+    use gpui_kit::{App, Entity, IntoElement};
+
+    // The application owns the order and applies each move.
+    fn example(groups: &Entity<Vec<Vec<&'static str>>>, cx: &App) -> impl IntoElement {
+        let names = ["Favorites", "Channels"];
+        let order = groups.clone();
+        Sortable::new("sidebar.channels", "Channels")
+            .groups(groups.read(cx).iter().enumerate().map(|(group, rows)| {
+                SortableGroup::new(names[group], names[group]).rows(
+                    rows.iter()
+                        .map(|&name| SortableRow::new(name, name, move |_, _| format!("# {name}"))),
+                )
+            }))
+            .on_reorder(move |movement, _, cx| {
+                order.update(cx, |groups, cx| {
+                    movement.apply(groups);
+                    cx.notify();
+                })
+            })
     }
 }

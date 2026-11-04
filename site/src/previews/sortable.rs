@@ -1,0 +1,57 @@
+//! The sortable catalog preview.
+
+use crate::*;
+
+/// The demo's channel categories and their channels, in the current order.
+struct ChannelOrder {
+    names: Vec<&'static str>,
+    groups: Vec<Vec<&'static str>>,
+}
+
+impl Showcase {
+    pub(crate) fn sortable_preview(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let order = window.use_keyed_state("sortable.order", cx, |_, _| ChannelOrder {
+            names: vec!["Favorites", "Channels", "Direct messages"],
+            groups: vec![
+                vec!["town-square", "design"],
+                vec!["engineering", "releases", "random"],
+                vec![],
+            ],
+        });
+        let moved = order.clone();
+        let regrouped = order.clone();
+        let current = order.read(cx);
+        div().w(px(260.)).child(
+            Sortable::new("sortable.channels", "Channels")
+                .reorder_groups(true)
+                .groups(current.names.iter().zip(&current.groups).map(|(&name, rows)| {
+                    SortableGroup::new(name, name).rows(rows.iter().map(|&channel| {
+                        SortableRow::new(channel, channel, move |_, _| {
+                            gpuicn::sidebar::SidebarItem::new(
+                                gpui_kit::ElementId::from(format!("sortable.{channel}")),
+                                channel,
+                            )
+                            .icon(lucide(LucideIcon::Hash).size(px(16.)))
+                        })
+                    }))
+                }))
+                .on_reorder(move |movement, _, cx| {
+                    moved.update(cx, |order, cx| {
+                        movement.apply(&mut order.groups);
+                        cx.notify();
+                    })
+                })
+                .on_reorder_group(move |from, to, _, cx| {
+                    regrouped.update(cx, |order, cx| {
+                        gpuicn::sortable::move_group(&mut order.groups, from, to);
+                        gpuicn::sortable::move_group(&mut order.names, from, to);
+                        cx.notify();
+                    })
+                }),
+        )
+    }
+}
+
+pub(crate) fn preview(view: &Showcase, window: &mut Window, cx: &mut Context<Showcase>) -> gpui_kit::AnyElement {
+    view.sortable_preview(window, cx).into_any_element()
+}

@@ -5,6 +5,7 @@
 //! group becomes scrollable. Pass retained child entities for expensive content.
 
 use super::theme::UiTheme;
+use gpui_kit::base::TestSupportExt as _;
 use gpui_kit::{
     AccessibleAction, AnyElement, App, Bounds, DispatchPhase, ElementId, FocusHandle,
     InteractiveElement as _, IntoElement, MouseButton, MouseMoveEvent, MouseUpEvent, Orientation,
@@ -177,6 +178,7 @@ impl RenderOnce for Resizable {
         let handle_id = ElementId::NamedChild(Arc::new(self.id.clone()), "handle".into());
         let mut handle = div()
             .id(handle_id)
+            .test_support()
             .debug_selector(|| "resizable-handle".into())
             .role(Role::Splitter)
             .aria_label(self.label)
