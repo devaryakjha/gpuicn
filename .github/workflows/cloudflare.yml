@@ -69,6 +69,8 @@ jobs:
           gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
             --pattern 'gpuicn-workspace-macos-arm64.zip*' --pattern 'showcase.json' \
             --dir web/public/downloads
+          # With site_ref set, HEAD is not the release, so compare against the tag's commit.
+          git fetch --quiet --depth 1 origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
           python3 - <<'PY'
           import hashlib, json, os, pathlib, subprocess
           folder = pathlib.Path("web/public/downloads")
@@ -78,7 +80,7 @@ jobs:
           assert data["url"] == "/downloads/" + archive.name
           assert data["architecture"] == "arm64"
           assert "v" + data["version"] == os.environ["RELEASE_TAG"]
-          assert data["build"] == subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+          assert data["build"] == subprocess.check_output(["git", "rev-parse", "--short", os.environ["RELEASE_TAG"] + "^{commit}"], text=True).strip()
           assert data["bytes"] == archive.stat().st_size
           assert data["sha256"] == hashlib.sha256(archive.read_bytes()).hexdigest()
           PY
