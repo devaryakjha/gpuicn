@@ -4,6 +4,20 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.9.1
+
+[Notes](docs/releases/v0.9.1.md)
+
+### Added
+
+- Message `timestamp_tooltip` and `on_gutter_click`.
+- Toast `Notice::action` and `Notice::cancel`.
+- MessageList `on_jump` and `show_jump`.
+- Attachment `dimensions` and `max_size` for image thumbnails.
+- Sidebar `roving_focus`: one tab stop with arrow-key navigation.
+- Composer `max_height`, `ComposerState::set_max_rows` and `max_rows`.
+- ScrollArea `track_scroll`.
+
 ## 0.9.0
 
 [Notes](docs/releases/v0.9.0.md)
