@@ -40,3 +40,5 @@ export function componentDocs(slug: string): ComponentDocs {
 
 export { default as setup } from "../generated/setup.json"
 export { default as icons } from "../generated/icons.json"
+
+export { default as changelog } from "../generated/changelog.json"

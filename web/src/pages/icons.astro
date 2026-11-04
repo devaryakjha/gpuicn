@@ -62,7 +62,7 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
         <div class="figure__frame">
           <Preview id="icon-preview" slug="icons" name="icon" icon={initial.name} height={180} />
         </div>
-        <figcaption class="figure__caption"><span data-icon-name>{initial.name}</span> at 16, 24, 32, and 48 pixels, drawn by GPUI.</figcaption>
+        <figcaption class="figure__caption"><span class="detail__name" data-icon-name>{initial.name}</span><br />At 16, 24, 32, and 48 pixels, drawn by GPUI.</figcaption>
       </figure>
       <div class="code">
         <pre tabindex="0"><code class="shiki" set:html={snippet} /></pre>
@@ -238,8 +238,12 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
     gap: 0.75rem;
     padding: 2rem 0;
   }
+  /* The detail column has one fixed width; long icon names and code lines
+     scroll or truncate inside it instead of resizing it. */
   .detail {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 0;
     gap: 0.9rem;
     position: sticky;
     top: calc(var(--head) + 1.5rem);
@@ -247,6 +251,24 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
   }
   .detail__figure {
     margin: 0;
+    width: auto;
+    min-width: 0;
+  }
+  .detail__figure :global(.figure__caption) {
+    min-height: 3em;
+  }
+  .detail__name {
+    display: inline-block;
+    max-width: calc(100% - 3.5rem);
+    vertical-align: bottom;
+    font-family: var(--mono);
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .detail :global(.code) {
+    min-width: 0;
   }
   .detail__back {
     display: inline-block;
