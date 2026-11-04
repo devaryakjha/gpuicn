@@ -78,17 +78,28 @@ for (const tabs of document.querySelectorAll<HTMLElement>("[data-tabs]")) {
 const palette = document.querySelector<HTMLDialogElement>("[data-palette]")
 if (palette) {
   const input = palette.querySelector<HTMLInputElement>("[data-palette-input]")!
-  const items = [...palette.querySelectorAll<HTMLAnchorElement>(".palette__item")]
-  const groups = [...palette.querySelectorAll<HTMLElement>(".palette__group")]
-  const empty = palette.querySelector<HTMLElement>("[data-palette-empty]")!
+  const list = palette.querySelector<HTMLElement>("[data-palette-list]")!
+  const template = palette.querySelector<HTMLTemplateElement>("[data-palette-items]")!
+  let items: HTMLAnchorElement[] = []
+  let groups: HTMLElement[] = []
+  let empty: HTMLElement | null = null
   let active = -1
+
+  // The list lives in a template until the first open.
+  const mount = () => {
+    if (empty) return
+    list.append(template.content.cloneNode(true))
+    items = [...list.querySelectorAll<HTMLAnchorElement>(".palette__item")]
+    groups = [...list.querySelectorAll<HTMLElement>(".palette__group")]
+    empty = list.querySelector<HTMLElement>("[data-palette-empty]")!
+  }
 
   const visible = () => items.filter((item) => !item.hidden)
   const highlight = (index: number) => {
-    const list = visible()
-    active = list.length ? Math.max(0, Math.min(index, list.length - 1)) : -1
+    const shown = visible()
+    active = shown.length ? Math.max(0, Math.min(index, shown.length - 1)) : -1
     items.forEach((item) => delete item.dataset.active)
-    const item = list[active]
+    const item = shown[active]
     if (item) {
       item.dataset.active = ""
       item.scrollIntoView({ block: "nearest" })
@@ -109,11 +120,12 @@ if (palette) {
       }
       group.hidden = !any
     }
-    empty.hidden = visible().length > 0
+    empty!.hidden = visible().length > 0
     highlight(0)
   }
   const open = () => {
     if (palette.open) return
+    mount()
     palette.showModal()
     input.value = ""
     filter()
@@ -156,6 +168,13 @@ if (palette) {
 type Status = "loading" | "ready" | "failed" | "unsupported"
 
 const theme = () => (root.dataset.theme === "dark" ? "dark" : "light")
+
+const afterLoad = (run: () => void) => {
+  const idle = () =>
+    "requestIdleCallback" in window ? requestIdleCallback(run, { timeout: 1500 }) : setTimeout(run, 200)
+  if (document.readyState === "complete") idle()
+  else window.addEventListener("load", idle, { once: true })
+}
 const hosts = new Set<Preview>()
 
 class Preview {
@@ -164,16 +183,18 @@ class Preview {
   constructor(public host: HTMLElement) {
     hosts.add(this)
     host.querySelector("[data-retry]")?.addEventListener("click", () => this.mount())
-    if (!("gpu" in navigator)) {
+    // The preview draws with WebGPU, or WebGL 2 where WebGPU is missing.
+    if (!("gpu" in navigator) && typeof WebGL2RenderingContext === "undefined") {
       this.status("unsupported")
       return
     }
     // Mount only when visible, so a page with several previews loads one
-    // WASM instance at a time.
+    // WASM instance at a time, and only once the page itself has loaded and
+    // gone idle, so the preview never delays the text or the first click.
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting) && !this.frame) {
         observer.disconnect()
-        this.mount()
+        afterLoad(() => this.frame || this.mount())
       }
     })
     observer.observe(host)
@@ -192,8 +213,8 @@ class Preview {
     const example = this.host.dataset.example
     if (icon) query.set("icon", icon)
     if (example) query.set("example", example)
-    // Browsers without WebGPU draw with WebGL. `?backend=webgl` on the page
-    // forces it, which the screenshot scripts use.
+    // The preview falls back to WebGL by itself. `?backend=webgl` on the page
+    // skips WebGPU, which the screenshot scripts use.
     const backend = new URLSearchParams(location.search).get("backend")
     if (backend === "webgl" || !("gpu" in navigator)) query.set("backend", "webgl")
     return `/demo/index.html?${query}`

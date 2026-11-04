@@ -3,7 +3,8 @@ import { components, componentHref, componentNumber, isNew, guide, reference } f
 const chapters = [...guide, ...reference]
 ---
 
-<!-- Search in a native dialog. The list is static HTML; the script only filters it. -->
+<!-- Search in a native dialog. The list is static HTML kept in a template until
+     the first open, so pages do not carry it in the DOM; the script only filters it. -->
 <dialog class="palette" data-palette aria-label="Search gpuicn">
   <form method="dialog" class="palette__form">
     <input
@@ -16,7 +17,8 @@ const chapters = [...guide, ...reference]
     />
     <button class="palette__close" type="submit" aria-label="Close">esc</button>
   </form>
-  <div class="palette__list" data-palette-list>
+  <div class="palette__list" data-palette-list></div>
+  <template data-palette-items>
     <p class="palette__group">Chapters</p>
     {
       chapters.map((chapter, index) => (
@@ -45,7 +47,7 @@ const chapters = [...guide, ...reference]
       ))
     }
     <p class="palette__empty" data-palette-empty hidden>Nothing matches.</p>
-  </div>
+  </template>
 </dialog>
 
 <style>

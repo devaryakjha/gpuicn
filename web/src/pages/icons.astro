@@ -43,7 +43,7 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
         {
           icons.map((icon) => (
             <li>
-              <a class="cell" href={`?icon=${icon.name}`} data-icon={icon.name} aria-pressed={icon.name === initial.name ? "true" : undefined}>
+              <a class="cell" href={`?icon=${icon.name}`} data-icon={icon.name} aria-current={icon.name === initial.name ? "true" : undefined}>
                 <img src={`/icons/lucide/${icon.name}.svg`} alt="" loading="lazy" decoding="async" />
                 <span>{icon.name}</span>
               </a>
@@ -124,8 +124,8 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
     name.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")
   const select = (name: string, scroll: boolean) => {
     for (const cell of cells) {
-      if (cell.dataset.icon === name) cell.setAttribute("aria-pressed", "true")
-      else cell.removeAttribute("aria-pressed")
+      if (cell.dataset.icon === name) cell.setAttribute("aria-current", "true")
+      else cell.removeAttribute("aria-current")
     }
     detail.querySelector("[data-icon-name]")!.textContent = name
     detail.querySelector<HTMLElement>("[data-icon-variant]")!.textContent = variant(name)
@@ -197,6 +197,11 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
   .grid li[hidden] {
     display: none;
   }
+  /* About 1,900 cells: skip layout and paint for the ones off screen. */
+  .grid li {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 71px;
+  }
   .cell {
     display: flex;
     flex-direction: column;
@@ -208,7 +213,7 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
   .cell:hover {
     background: var(--paper-2);
   }
-  .cell[aria-pressed="true"] {
+  .cell[aria-current="true"] {
     background: var(--rubric-soft);
     box-shadow: inset 0 0 0 1px var(--rubric);
   }

@@ -1,3 +1,10 @@
+# Every page is cross-origin isolated, so the GPUI previews can use shared
+# WebAssembly memory for their worker threads. Every subresource is
+# same-origin; the previews fetch images over CORS.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+
 # Fonts and hashed build assets never change at a given URL, so browsers can
 # reuse them across page loads without revalidating. Without this, every
 # navigation re-checked the fonts and showed the fallback font first.

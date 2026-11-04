@@ -35,11 +35,11 @@ fn application() -> Application {
     // URLs need one passed in.
     #[cfg(target_family = "wasm")]
     let app = {
-        // Headless browsers used for screenshots have no WebGPU; `?backend=webgl`
-        // selects WebGL so SwiftShader can draw the preview.
+        // Auto tries WebGPU and falls back to WebGL when the browser has no
+        // WebGPU adapter. `?backend=webgl` skips WebGPU for screenshots.
         let backend = match requested_value("backend").as_deref() {
             Some("webgl") => gpui_kit::platform::WebBackendPreference::WebGl,
-            _ => gpui_kit::platform::WebBackendPreference::WebGpu,
+            _ => gpui_kit::platform::WebBackendPreference::Auto,
         };
         let platform = gpui_kit::web::WebPlatform::new_with_backend(true, backend);
         let http_client = std::sync::Arc::new(platform.fetch_http_client());

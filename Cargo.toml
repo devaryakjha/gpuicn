@@ -22,3 +22,10 @@ opt-level = "s"
 lto = "thin"
 codegen-units = 1
 strip = "debuginfo"
+
+# The browser preview downloads the whole WASM binary before it can draw, so
+# it trades build time for size: fat LTO and size-first optimization.
+[profile.web]
+inherits = "release"
+opt-level = "z"
+lto = "fat"

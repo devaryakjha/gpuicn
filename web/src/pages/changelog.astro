@@ -26,10 +26,11 @@ import { changelog } from "../lib/docs"
     padding: 0;
     columns: 2;
   }
-  .versions li + li {
-    margin-top: 0.15rem;
-  }
+  /* Each link is at least 24px tall, the minimum touch target. */
   .versions a {
+    display: inline-block;
+    min-height: 24px;
+    padding: 0.1rem 0;
     text-decoration: none;
     color: var(--ink-2);
   }

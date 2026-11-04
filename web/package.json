@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "bun run sync:static && astro dev",
     "build": "bun run sync:static && astro build",
-    "sync:static": "bun ../scripts/sync-catalog.mjs && bun scripts/render-platform-notes.mjs && bun scripts/render-changelog.mjs && mkdir -p public/r && cp -R ../site/pages/r/. public/r/",
+    "sync:static": "bun ../scripts/sync-catalog.mjs && bun scripts/render-platform-notes.mjs && bun scripts/render-changelog.mjs && bun scripts/minify-demo.mjs && mkdir -p public/r && cp -R ../site/pages/r/. public/r/",
     "lint": "astro check",
     "typecheck": "astro check",
     "preview": "astro preview --host 127.0.0.1"

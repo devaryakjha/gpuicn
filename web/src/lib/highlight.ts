@@ -6,7 +6,7 @@ let highlighter: Promise<HighlighterGeneric<any, any>> | undefined
 
 function load() {
   highlighter ??= createHighlighter({
-    themes: ["vitesse-light", "vitesse-dark"],
+    themes: ["github-light-default", "github-dark-default"],
     langs: ["rust", "bash", "toml", "json"],
   })
   return highlighter
@@ -21,7 +21,10 @@ export async function highlight(value: string, language: CodeLanguage) {
   const shiki = await load()
   const html = shiki.codeToHtml(value, {
     lang: language,
-    themes: { light: "vitesse-light", dark: "vitesse-dark" },
+    // GitHub's default themes keep every token above 4.5:1 on the code
+    // background, except the light comment grey, which is darkened here.
+    themes: { light: "github-light-default", dark: "github-dark-default" },
+    colorReplacements: { "github-light-default": { "#6e7781": "#5f6874" } },
     defaultColor: false,
   })
   // Keep only the highlighted lines; Code.astro supplies its own <pre><code>.
