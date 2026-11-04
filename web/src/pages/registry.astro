@@ -1,87 +1,77 @@
 ---
-import Docs from "../layouts/Docs.astro"
+import Chapter from "../layouts/Chapter.astro"
+import Aside from "../components/Aside.astro"
 import Code from "../components/Code.astro"
 import { components, componentHref } from "../lib/catalog"
-import { registry } from "../lib/release"
+import { registry, release } from "../lib/release"
 ---
 
-<Docs
+<Chapter
   title="Registry"
-  eyebrow="Reference"
-  description="The public registry powers the installer. Each component is one JSON file with its source files and dependencies; this page is the human-readable catalog."
+  part="Reference"
+  kicker="Chapter 7"
+  lede="The registry is a directory of JSON files, one per component. The CLI reads it; this page lists it."
 >
-  <div class="section">
-    <p class="prose">
-      <code>gpuicn add</code> reads the registry pinned in <code>gpuicn.toml</code>. The same files are
-      served from this site under <code>/r/</code>, and from the release tag on GitHub:
+  <Aside top>
+    <p>
+      The same files are served from this site under <code>/r/</code>, and from the tagged source on
+      GitHub, which is what <code>gpuicn.toml</code> points at.
     </p>
-    <Code code={`gpuicn --registry ${registry} init\ngpuicn add button`} lang="bash" />
+  </Aside>
+  <div class="text">
+    <p>
+      Each file names the component, its source files with their contents, and the registry items it
+      depends on. <code>gpuicn add</code> resolves dependencies, writes every file that is not already
+      present, and updates <code>src/ui/mod.rs</code>. The registry for {release} is pinned by URL:
+    </p>
   </div>
-  <ul class="files">
-    {
-      components.map((component) => (
-        <li>
-          <a class="files__row" href={componentHref(component.slug)}>
-            <span class="files__name">{component.name}</span>
-            <code class="files__path">/r/{component.slug}.json</code>
-          </a>
-          <a class="files__raw" href={`/r/${component.slug}.json`} aria-label={`Raw registry entry for ${component.name}`}>
-            JSON
-          </a>
-        </li>
-      ))
-    }
-  </ul>
-</Docs>
+  <Code code={`gpuicn --registry ${registry} init`} lang="bash" />
+
+  <table class="wide files">
+    <thead>
+      <tr>
+        <th scope="col">Component</th>
+        <th scope="col">Registry file</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        components.map((component) => (
+          <tr>
+            <td><a href={componentHref(component.slug)}>{component.name}</a></td>
+            <td><a class="files__raw" href={`/r/${component.slug}.json`}><code>/r/{component.slug}.json</code></a></td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</Chapter>
 
 <style>
-  .section {
-    display: grid;
-    gap: 1rem;
-    padding: 1.5rem 0 2rem;
-  }
   .files {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    border-top: 1px solid var(--rule);
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 2rem;
+    font-size: 0.9rem;
   }
-  .files li {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+  .files th {
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 0.74rem;
+    color: var(--ink-2);
+    text-align: left;
+    padding: 0.4rem 0.75rem 0.4rem 0;
+    border-bottom: 1px solid var(--rule-2);
+  }
+  .files td {
+    padding: 0.45rem 0.75rem 0.45rem 0;
     border-bottom: 1px solid var(--rule);
   }
-  .files__row {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.25rem 1rem;
-    padding: 0.7rem 0.25rem;
-    border-radius: 0.25rem;
+  .files td a:hover {
+    color: var(--rubric);
   }
-  .files__row:hover {
-    background: var(--paper-2);
-  }
-  .files__name {
-    font-weight: 500;
-  }
-  .files__path {
-    font-size: 0.75rem;
+  .files__raw code {
+    font-size: 0.76rem;
     color: var(--ink-2);
-    background: none;
-    padding: 0;
-  }
-  .files__raw {
-    font-family: var(--mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.08em;
-    color: var(--accent-ink);
-    padding: 0.2rem 0.4rem;
-    border: 1px solid currentColor;
-    border-radius: 0.25rem;
   }
 </style>

@@ -1,0 +1,19 @@
+---
+/**
+ * A numbered figure. The number comes from a CSS counter, so figures stay in
+ * document order without any bookkeeping. `caption` may contain HTML.
+ */
+interface Props {
+  caption: string
+  id?: string
+  class?: string
+}
+const { caption, id, class: className } = Astro.props
+---
+
+<figure class:list={["figure", className]} id={id}>
+  <div class="figure__frame">
+    <slot />
+  </div>
+  <figcaption class="figure__caption" set:html={caption} />
+</figure>

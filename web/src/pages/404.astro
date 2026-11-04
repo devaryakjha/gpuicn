@@ -1,31 +1,25 @@
 ---
 import Base from "../layouts/Base.astro"
+import Spine from "../components/Spine.astro"
 ---
 
 <Base title="Page not found">
-  <section class="wrap missing">
-    <p class="mono">404</p>
-    <h1 class="display missing__title">Nothing here.</h1>
-    <p class="lede">The page may have moved. The catalog and the docs are one search away.</p>
-    <div class="missing__actions">
-      <a class="btn" href="/">Back home</a>
-      <button class="btn btn--ghost" type="button" data-open-palette>Search</button>
-    </div>
-  </section>
+  <div class="page">
+    <Spine current="" />
+    <article class="body">
+      <p class="kicker">404</p>
+      <h1 class="h1">There is no page at this address.</h1>
+      <div class="text missing">
+        <p>
+          The contents are on the left, or start from the <a href="/">front page</a>. Press ⌘K to search.
+        </p>
+      </div>
+    </article>
+  </div>
 </Base>
 
 <style>
-  .missing {
-    display: grid;
-    gap: 1.25rem;
-    justify-items: start;
-    padding: clamp(4rem, 12vw, 9rem) var(--gutter);
-  }
-  .missing__title {
-    font-size: clamp(3rem, 9vw, 7rem);
-  }
-  .missing__actions {
-    display: flex;
-    gap: 0.75rem;
+  .h1 {
+    margin: 0.75rem 0 1rem;
   }
 </style>

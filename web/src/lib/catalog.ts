@@ -337,14 +337,21 @@ export const components: CatalogComponent[] = [
   },
 ]
 
-export const sections = [
-  { to: "/introduction/", label: "Introduction", blurb: "What gpuicn is and how it fits a GPUI app." },
-  { to: "/installation/", label: "Installation", blurb: "Create an app, install the CLI, add your first component." },
-  { to: "/showcase/", label: "Example app", blurb: "Download gpuicn Workspace for macOS and Linux." },
-  { to: "/theming/", label: "Theming", blurb: "Semantic tokens for color, radius, density, type and motion." },
-  { to: "/icons/", label: "Icons", blurb: "The complete Lucide set, rendered by GPUI." },
-  { to: "/registry/", label: "Registry", blurb: "The machine-readable catalog behind gpuicn add." },
+export const guide = [
+  { to: "/introduction/", label: "Introduction", blurb: "What gpuicn is, and how installing source differs from adding a crate." },
+  { to: "/installation/", label: "Installation", blurb: "Create an app, install the CLI, add a component, open a window." },
+  { to: "/theming/", label: "Theming", blurb: "The tokens every component reads, and how to change them at runtime." },
+  { to: "/showcase/", label: "Example app", blurb: "gpuicn Workspace for macOS and Linux, built from this catalog." },
 ] as const
+
+export const reference = [
+  { to: "/components/", label: "Components", blurb: "All 58 components, each with a live preview, usage, API, and platform notes." },
+  { to: "/icons/", label: "Icons", blurb: "The 1,924 Lucide icons as Rust names, rendered by GPUI." },
+  { to: "/registry/", label: "Registry", blurb: "The JSON files behind gpuicn add." },
+] as const
+
+/** Kept for the search palette and older links. */
+export const sections = [...guide, ...reference]
 
 export function componentHref(slug: string) {
   return `/components/${slug}/`

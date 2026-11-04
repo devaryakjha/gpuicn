@@ -1,0 +1,154 @@
+---
+import { components, componentHref, componentNumber, isNew, guide, reference } from "../lib/catalog"
+
+interface Props {
+  current: string
+}
+const { current } = Astro.props
+const active = (href: string) => (current === href ? "page" : undefined)
+---
+
+<!-- The book's spine: every chapter, in order. On narrow screens it folds behind a button. -->
+<aside class="spine">
+  <button class="spine__toggle" type="button" data-rail-toggle aria-expanded="false" aria-controls="spine-nav">
+    Contents
+  </button>
+  <nav class="spine__nav" id="spine-nav" aria-label="Contents">
+    <p class="spine__part">Guide</p>
+    <ol class="spine__list">
+      {
+        guide.map((chapter, index) => (
+          <li>
+            <a href={chapter.to} aria-current={active(chapter.to)}>
+              <span class="spine__num">{index + 1}</span>
+              {chapter.label}
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+    <p class="spine__part">Reference</p>
+    <ol class="spine__list">
+      {
+        reference.map((chapter, index) => (
+          <li>
+            <a href={chapter.to} aria-current={active(chapter.to)}>
+              <span class="spine__num">{guide.length + index + 1}</span>
+              {chapter.label}
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+    <p class="spine__part">Components</p>
+    <ol class="spine__list spine__list--dense">
+      {
+        components.map((component) => (
+          <li>
+            <a href={componentHref(component.slug)} aria-current={active(componentHref(component.slug))}>
+              <span class="spine__num">{componentNumber(component.slug)}</span>
+              {component.name}
+              {isNew(component) && <span class="spine__new">new</span>}
+            </a>
+          </li>
+        ))
+      }
+    </ol>
+  </nav>
+</aside>
+
+<style>
+  .spine {
+    font-family: var(--sans);
+    font-size: 0.8rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .spine__toggle {
+    width: 100%;
+    text-align: left;
+    padding: 0.8rem 0;
+    font-weight: 500;
+    display: flex;
+    justify-content: space-between;
+  }
+  .spine__toggle::after {
+    content: "";
+    width: 0.4rem;
+    height: 0.4rem;
+    border-right: 1.5px solid var(--ink-2);
+    border-bottom: 1.5px solid var(--ink-2);
+    transform: translateY(0.1rem) rotate(45deg);
+  }
+  .spine__toggle[aria-expanded="true"]::after {
+    transform: translateY(0.3rem) rotate(-135deg);
+  }
+  .spine__nav {
+    display: none;
+    padding-bottom: 1rem;
+  }
+  .spine__toggle[aria-expanded="true"] + .spine__nav {
+    display: block;
+  }
+  .spine__part {
+    color: var(--ink-3);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 1.1rem 0 0.35rem;
+  }
+  .spine__part:first-child {
+    padding-top: 0;
+  }
+  .spine__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .spine__list a {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.2rem 0;
+    color: var(--ink-2);
+  }
+  .spine__list--dense a {
+    padding: 0.12rem 0;
+  }
+  .spine__list a:hover {
+    color: var(--ink);
+  }
+  .spine__list a[aria-current="page"] {
+    color: var(--rubric);
+  }
+  .spine__num {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--ink-3);
+    width: 1.4rem;
+    flex: none;
+  }
+  .spine__new {
+    margin-left: auto;
+    font-size: 0.62rem;
+    color: var(--rubric);
+    letter-spacing: 0.04em;
+  }
+  @media (min-width: 64rem) {
+    .spine {
+      border: 0;
+      position: sticky;
+      top: var(--head);
+      align-self: start;
+      max-height: calc(100vh - var(--head));
+      overflow-y: auto;
+      padding: 3.6rem 0.75rem 3rem 0;
+      scrollbar-width: thin;
+    }
+    .spine__toggle {
+      display: none;
+    }
+    .spine__nav {
+      display: block;
+    }
+  }
+</style>

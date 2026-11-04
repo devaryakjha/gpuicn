@@ -1,5 +1,5 @@
 ---
-import Docs from "../layouts/Docs.astro"
+import Chapter from "../layouts/Chapter.astro"
 import Preview from "../components/Preview.astro"
 import { icons } from "../lib/docs"
 import { highlight } from "../lib/highlight"
@@ -16,36 +16,34 @@ const snippet = (
 if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost its variant token")
 ---
 
-<Docs
+<Chapter
   title="Icons"
-  eyebrow="gpui-icons"
-  description="The complete Lucide set for GPUI. Original SVGs, consistent strokes, and editable application code."
+  part="Reference"
+  kicker="Chapter 6"
+  lede={`The ${icons.length.toLocaleString("en")} icons of Lucide 1.63.0, as Rust names. gpui-icons renders the original SVGs with GPUI, on native targets and in WebAssembly.`}
 >
-  <p class="meta mono">
-    {icons.length.toLocaleString("en")} icons · Lucide 1.63.0 · Native and WASM ·
-    <a href="https://github.com/devaryakjha/gpui-icons">Standalone Rust library</a>
-  </p>
+  <div class="text">
+    <p>
+      The Rust name is the icon name in PascalCase, so <code>a-arrow-down</code> is
+      <code>LucideIcon::AArrowDown</code>. Register <code>LucideAssetSource</code> on your application,
+      set the color from your theme, and give icon-only controls an accessible label.
+      <a href="https://github.com/devaryakjha/gpui-icons">gpui-icons</a> is a separate crate and works
+      without gpuicn.
+    </p>
+  </div>
 
-  <div class="icons" data-icons>
+  <div class="wide icons" data-icons>
     <section class="icons__catalog" aria-label="Icon catalog">
       <label class="search">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="11" cy="11" r="7"></circle>
-          <path d="m20 20-3.5-3.5"></path>
-        </svg>
-        <input id="icon-search" type="search" placeholder="Search names, tags, or aliases…" autocomplete="off" data-icon-search />
+        <span class="sr-only">Search icons</span>
+        <input id="icon-search" type="search" placeholder="Search names, tags, and aliases" autocomplete="off" data-icon-search />
       </label>
-      <p class="icons__count mono" role="status" data-icon-count>{icons.length.toLocaleString("en")} icons available</p>
+      <p class="small icons__count" role="status" data-icon-count>{icons.length.toLocaleString("en")} icons</p>
       <ul class="grid" data-icon-grid>
         {
           icons.map((icon) => (
             <li>
-              <a
-                class="cell"
-                href={`?icon=${icon.name}`}
-                data-icon={icon.name}
-                aria-pressed={icon.name === initial.name ? "true" : undefined}
-              >
+              <a class="cell" href={`?icon=${icon.name}`} data-icon={icon.name} aria-pressed={icon.name === initial.name ? "true" : undefined}>
                 <img src={`/icons/lucide/${icon.name}.svg`} alt="" loading="lazy" decoding="async" />
                 <span>{icon.name}</span>
               </a>
@@ -53,47 +51,40 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
           ))
         }
       </ul>
-      <p class="icons__empty" data-icon-empty hidden>
-        No icons match this search.
-        <button class="btn btn--ghost btn--sm" type="button" data-icon-clear>Clear search</button>
+      <p class="small icons__empty" data-icon-empty hidden>
+        No icon matches. <button class="btn" type="button" data-icon-clear>Clear the search</button>
       </p>
     </section>
 
     <aside class="detail" aria-label="Selected icon" tabindex="-1" data-icon-detail>
-      <a class="detail__back" href="#icon-search">↑ Back to the grid</a>
-      <h2 class="detail__name" data-icon-name>{initial.name}</h2>
-      <div class="window">
-        <div class="window__bar">
-          <span class="window__dots"><i></i><i></i><i></i></span>
-          <span class="window__title">16 · 24 · 32 · 48 px</span>
+      <a class="small detail__back" href="#icon-search">↑ Back to the grid</a>
+      <figure class="figure detail__figure">
+        <div class="figure__frame">
+          <Preview id="icon-preview" slug="icons" name="icon" icon={initial.name} height={180} />
         </div>
-        <Preview id="icon-preview" slug="icons" name="icon" icon={initial.name} height={200} />
-      </div>
-      <div class="code detail__code">
+        <figcaption class="figure__caption"><span data-icon-name>{initial.name}</span> at 16, 24, 32, and 48 pixels, drawn by GPUI.</figcaption>
+      </figure>
+      <div class="code">
         <pre tabindex="0"><code class="shiki" set:html={snippet} /></pre>
         <button class="code__copy" type="button" data-copy aria-label="Copy code">
-          <svg class="icon icon--copy" viewBox="0 0 24 24" aria-hidden="true">
+          <svg class="icon--copy" viewBox="0 0 24 24" aria-hidden="true">
             <rect x="9" y="9" width="12" height="12" rx="2"></rect>
             <path d="M15 9V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4"></path>
           </svg>
-          <svg class="icon icon--check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+          <svg class="icon--check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
         </button>
         <p class="code__status" role="status" data-copy-status></p>
       </div>
-      <p class="prose detail__notes">
-        Register <code>LucideAssetSource</code> on your application. Set the icon color explicitly with
-        your theme’s foreground color. Give icon-only controls a clear accessible label.
-      </p>
-      <a class="detail__download" href={`/icons/lucide/${initial.name}.svg`} download data-icon-download>Download the original SVG</a>
-      <p class="detail__license">
-        Original Lucide assets under <a href="/icons/LICENSE">ISC and Feather MIT terms</a>. gpui-icons is an independent port.
+      <p class="small">
+        <a href={`/icons/lucide/${initial.name}.svg`} download data-icon-download>Download the SVG</a>. Lucide
+        assets are under <a href="/icons/LICENSE">ISC and Feather MIT terms</a>.
       </p>
     </aside>
   </div>
-</Docs>
+</Chapter>
 
 <script>
-  // Search: terms are fetched once on first input, so the page stays small.
+  // Search terms are fetched once, on the first keystroke, so the page stays small.
   const root = document.querySelector<HTMLElement>("[data-icons]")!
   const input = root.querySelector<HTMLInputElement>("[data-icon-search]")!
   const count = root.querySelector<HTMLElement>("[data-icon-count]")!
@@ -113,7 +104,7 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
       cell.parentElement!.hidden = !match
       if (match) shown++
     }
-    count.textContent = `${shown.toLocaleString("en")} icons${input.value ? ` matching “${input.value}”` : " available"}`
+    count.textContent = `${shown.toLocaleString("en")} icons${input.value ? ` match "${input.value}"` : ""}`
     empty.hidden = shown > 0
   }
   input.addEventListener("input", async () => {
@@ -128,8 +119,7 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
     input.focus()
   })
 
-  // Selection: the URL carries the icon, the panel and the preview follow it.
-  // The Rust variant is the PascalCase slug: "a-arrow-down" -> LucideIcon::AArrowDown.
+  // The URL carries the selected icon; the detail panel and the preview follow it.
   const variant = (name: string) =>
     name.split("-").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")
   const select = (name: string, scroll: boolean) => {
@@ -160,62 +150,49 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
 </script>
 
 <style>
-  .meta {
-    padding-bottom: 1.5rem;
-  }
-  .meta a {
-    color: var(--accent-ink);
-  }
   .icons {
     display: grid;
-    gap: 2.5rem;
+    gap: 2rem;
     align-items: start;
+    margin-top: 1.5rem;
   }
   @media (min-width: 64rem) {
     .icons {
-      grid-template-columns: minmax(0, 1fr) 18rem;
+      grid-template-columns: minmax(0, 1fr) var(--margin);
+      gap: var(--gap);
     }
   }
-  .search {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    height: 2.75rem;
-    padding: 0 1rem;
-    border: 1px solid var(--rule-strong);
-    border-radius: 999px;
-    color: var(--ink-2);
-    background: var(--surface);
-  }
-  .search:focus-within {
-    border-color: var(--accent);
-  }
   .search input {
-    flex: 1;
-    min-width: 0;
+    width: 100%;
+    height: 2.4rem;
+    padding: 0 0.8rem;
     font: inherit;
+    font-family: var(--sans);
+    font-size: 0.9rem;
     color: var(--ink);
-    background: none;
-    border: 0;
+    background: var(--paper);
+    border: 1px solid var(--rule-2);
+    border-radius: 3px;
+  }
+  .search input:focus {
     outline: 0;
+    border-color: var(--rubric);
   }
   .search input::-webkit-search-cancel-button {
     display: none;
   }
   .icons__count {
-    padding: 0.75rem 0;
+    padding: 0.6rem 0;
   }
   .grid {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
     gap: 1px;
     background: var(--rule);
     border: 1px solid var(--rule);
-    border-radius: 0.75rem;
-    overflow: hidden;
   }
   .grid li[hidden] {
     display: none;
@@ -224,78 +201,64 @@ if (!snippet.includes("data-icon-variant")) throw new Error("Icon snippet lost i
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.9rem 0.4rem 0.7rem;
-    background: var(--surface);
-    transition: background-color 100ms;
+    gap: 0.55rem;
+    padding: 0.8rem 0.35rem 0.6rem;
+    background: var(--paper);
   }
   .cell:hover {
     background: var(--paper-2);
   }
   .cell[aria-pressed="true"] {
-    background: var(--accent-soft);
-    box-shadow: inset 0 0 0 1px var(--accent);
+    background: var(--rubric-soft);
+    box-shadow: inset 0 0 0 1px var(--rubric);
   }
   .cell:focus-visible {
     outline-offset: -3px;
+  }
+  .cell img {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+  :global([data-theme="dark"]) .cell img {
+    filter: invert(1);
   }
   .cell span {
     width: 100%;
     text-align: center;
     font-family: var(--mono);
-    font-size: 0.625rem;
+    font-size: 0.6rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--ink-2);
   }
-  :global([data-theme="dark"]) .cell img {
-    filter: invert(1);
-  }
   .icons__empty {
-    display: grid;
-    gap: 1rem;
-    justify-items: center;
-    padding: 3rem 1rem;
-    font-size: 0.875rem;
-    color: var(--ink-2);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2rem 0;
   }
   .detail {
     display: grid;
-    gap: 1rem;
+    gap: 0.9rem;
     position: sticky;
-    top: calc(var(--header) + 1.5rem);
-    scroll-margin-top: calc(var(--header) + 1rem);
+    top: calc(var(--head) + 1.5rem);
+    scroll-margin-top: calc(var(--head) + 1rem);
+  }
+  .detail__figure {
+    margin: 0;
   }
   .detail__back {
-    font-size: 0.8125rem;
-    color: var(--ink-2);
+    display: inline-block;
   }
   @media (min-width: 64rem) {
     .detail__back {
       display: none;
     }
   }
-  .detail__name {
-    font-family: var(--mono);
-    font-size: 1.125rem;
-    letter-spacing: -0.01em;
-  }
-  .detail__notes {
-    font-size: 0.8125rem;
-  }
-  .detail__download {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--accent-ink);
-  }
-  .detail__license {
-    font-size: 0.75rem;
-    line-height: 1.5;
-    color: var(--ink-3);
-  }
-  .detail__license a {
+  .detail .small a {
+    color: var(--rubric);
     text-decoration: underline;
-    text-underline-offset: 0.2em;
+    text-underline-offset: 0.15em;
   }
 </style>

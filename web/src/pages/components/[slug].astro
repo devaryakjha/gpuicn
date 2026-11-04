@@ -1,8 +1,8 @@
 ---
-import Docs from "../../layouts/Docs.astro"
+import Chapter from "../../layouts/Chapter.astro"
+import Aside from "../../components/Aside.astro"
 import Code from "../../components/Code.astro"
 import Preview from "../../components/Preview.astro"
-import Tabs from "../../components/Tabs.astro"
 import { components, componentHref, componentNumber, isNew } from "../../lib/catalog"
 import { componentDocs } from "../../lib/docs"
 
@@ -15,60 +15,42 @@ const docs = componentDocs(component.slug)
 const index = components.findIndex((item) => item.slug === component.slug)
 const previous = components[index - 1]
 const next = components[index + 1]
-const sidebarExamples = [
-  ["workspace", "Workspace", "Inset layout with a team switcher, nested projects, a toggle rail, and an account menu."],
-  ["docs", "Documentation", "Searchable documentation tree with independent sections and off-canvas navigation."],
-  ["mail", "Mail", "A folder rail beside a searchable message list. Filter unread mail and open a message."],
-  ["floating", "Floating right", "A rounded sidebar on the right, with an icon-only collapsed state."],
-  ["mobile", "Mobile sheet", "Modal navigation with its own open state, focus containment, and Escape dismissal."],
-  ["loading", "Loading", "Fixed navigation with stable placeholders. Load the menu to replace them with working controls."],
-] as const
 const isSidebar = component.slug === "sidebar"
+const sidebarExamples = [
+  ["workspace", "Workspace", "An inset layout with a team switcher, nested projects, a toggle rail, and an account menu."],
+  ["docs", "Documentation", "A searchable documentation tree with independent sections and off-canvas navigation."],
+  ["mail", "Mail", "A folder rail beside a searchable message list. Filter unread mail and open a message."],
+  ["floating", "Floating right", "A rounded sidebar on the right with an icon-only collapsed state."],
+  ["mobile", "Mobile sheet", "Modal navigation with its own open state, focus containment, and Escape to dismiss."],
+  ["loading", "Loading", "Fixed navigation with stable placeholders until the menu loads."],
+] as const
 const command = `gpuicn add ${docs.installComponents.join(" ")}`
 const manual = `// src/ui/mod.rs\n${docs.modules.map((module) => `pub mod ${module};`).join("\n")}\n\n// src/main.rs\nmod ui;`
-const toc = [
-  { href: "#preview", label: "Preview" },
-  { href: "#installation", label: "Installation" },
-  { href: "#usage", label: "Usage" },
-  { href: "#api-reference", label: "API reference" },
-  { href: "#platform-notes", label: "Platform notes" },
-]
+const files = docs.modules.map((module) => `src/ui/${module}.rs`)
+const lines = docs.source.split("\n").length
 ---
 
-<Docs
+<Chapter
   title={component.name}
-  description={component.description}
-  eyebrow={`Component ${componentNumber(component.slug)} / ${components.length}`}
-  toc={toc}
+  part="Components"
+  kicker={`Component ${componentNumber(component.slug)} of ${components.length}`}
+  lede={component.description}
 >
-  <nav class="pager" slot="head" aria-label="Component pages">
-    {
-      previous && (
-        <a class="chip" href={componentHref(previous.slug)} rel="prev">
-          ← {previous.name}
-        </a>
-      )
-    }
-    {
-      next && (
-        <a class="chip" href={componentHref(next.slug)} rel="next">
-          {next.name} →
-        </a>
-      )
-    }
-    {isNew(component) && <span class="tag">New in {component.added}</span>}
+  <nav class="pager" slot="head" aria-label="Neighbouring components">
+    {previous && <a href={componentHref(previous.slug)} rel="prev">← {previous.name}</a>}
+    {next && <a href={componentHref(next.slug)} rel="next">{next.name} →</a>}
+    {isNew(component) && <span class="badge">Added in {component.added}</span>}
   </nav>
 
-  <section id="preview" class="section section--first">
-    <div class="window" data-tabs>
-      <div class="window__bar">
-        <span class="window__dots"><i></i><i></i><i></i></span>
-        <div class="tabs__list window__tabs" role="tablist" aria-label="Preview or code">
+  <figure class="figure wide" id="preview" data-tabs>
+    <div class="figure__frame">
+      <div class="figure__bar">
+        <div class="tabs__list" role="tablist" aria-label="Preview or its source">
           <button class="tabs__tab" type="button" role="tab" id="tab-preview" aria-controls="panel-preview" aria-selected="true" tabindex="0">Preview</button>
-          <button class="tabs__tab" type="button" role="tab" id="tab-code" aria-controls="panel-code" aria-selected="false" tabindex="-1">Demo code</button>
+          <button class="tabs__tab" type="button" role="tab" id="tab-code" aria-controls="panel-code" aria-selected="false" tabindex="-1">Preview source</button>
         </div>
-        <span class="window__spacer"></span>
-        <span class="window__title">{component.slug}.rs</span>
+        <span class="spacer"></span>
+        <span class="mono">site/src/previews/{component.slug.replaceAll("-", "_")}.rs</span>
       </div>
       <div class="tabs__panel" role="tabpanel" id="panel-preview" aria-labelledby="tab-preview">
         {
@@ -82,7 +64,7 @@ const toc = [
                 ))}
               </div>
               {sidebarExamples.map(([value, , blurb]) => (
-                <p class="examples__blurb" data-example-blurb={value} hidden={value !== "workspace"}>
+                <p class="small" data-example-blurb={value} hidden={value !== "workspace"}>
                   {blurb}
                 </p>
               ))}
@@ -92,10 +74,6 @@ const toc = [
         <Preview id="component-preview" slug={component.slug} name={component.name} example={isSidebar ? "workspace" : undefined} />
       </div>
       <div class="tabs__panel" role="tabpanel" id="panel-code" aria-labelledby="tab-code" hidden>
-        <p class="window__note">
-          The full preview, including its layout and demo state. For a small example see
-          <a href="#usage">Usage</a>. <a href="/examples/showcase.rs" download>Download the complete showcase</a> for its imports and helpers.
-        </p>
         {
           isSidebar && docs.examples ? (
             Object.entries(docs.examples).map(([value, source]) => (
@@ -109,37 +87,64 @@ const toc = [
         }
       </div>
     </div>
-  </section>
+    <figcaption class="figure__caption">
+      {component.name}, running in the browser. The second tab shows the preview's own source, which
+      includes its layout and demo state. For the smallest working example, see Usage below.
+      <a href="/examples/showcase.rs" download>Download the whole showcase</a> for its imports and helpers.
+    </figcaption>
+  </figure>
 
-  <section id="installation" class="section">
+  <section class="section" id="installation">
     <h2 class="h2">Installation</h2>
-    <p class="prose">
-      Complete the <a href="/installation/">one-time Rust setup</a>, then add the source. The native CLI
-      maintains the installed module declarations.
-    </p>
-    <Tabs tabs={[{ id: "command", label: "Command" }, { id: "modules", label: "Modules" }]} label="Installation method" class="section__tabs">
-      <Code slot="command" code={command} lang="bash" />
-      <Code slot="modules" code={manual} />
-    </Tabs>
+    <Aside>
+      <p>Files this command writes:</p>
+      <ul class="files">
+        {files.map((file) => <li><code>{file}</code></li>)}
+      </ul>
+      <p>
+        {docs.installComponents.length > 1
+          ? `${component.name} depends on ${docs.installComponents.slice(1).join(", ")}, so the command installs them too.`
+          : "The theme module is shared by every component and is written once."}
+      </p>
+    </Aside>
+    <div class="text">
+      <p>
+        After the one-time <a href="/installation/">setup</a>, run the command from your app root. The CLI
+        writes the modules and keeps <code>src/ui/mod.rs</code> in step.
+      </p>
+    </div>
+    <Code code={command} lang="bash" />
+    <div class="text">
+      <p>If you prefer to copy the files by hand, declare them yourself:</p>
+    </div>
+    <Code code={manual} />
   </section>
 
-  <section id="usage" class="section">
+  <section class="section" id="usage">
     <h2 class="h2">Usage</h2>
-    <p class="prose">
-      Copy this into your view module and return <code>{docs.usageCall}</code> from its
-      <code>render</code> method. Complete the <a href="/installation/">app setup</a> once, and keep IDs
-      unique among siblings.
-    </p>
+    <Aside>
+      <p>
+        The example compiles in CI against the installed source. Element IDs must be unique among
+        siblings.
+      </p>
+    </Aside>
+    <div class="text">
+      <p>
+        Put this in a view module and return <code>{docs.usageCall}</code> from its <code>render</code> method.
+      </p>
+    </div>
     <Code code={docs.usage} />
   </section>
 
-  <section id="api-reference" class="section">
+  <section class="section" id="api">
     <h2 class="h2">API reference</h2>
-    <p class="prose">
-      Public constructors and methods from the source you install. Functions that return GPUI Kit parts
-      also support those parts’ builder methods.
-    </p>
-    <div class="api">
+    <Aside>
+      <p>
+        {docs.api.length} public functions, extracted from <code>{files[files.length - 1]}</code> ({lines} lines) at
+        this release. Functions that return GPUI Kit parts also accept those parts' builder methods.
+      </p>
+    </Aside>
+    <div class="api wide">
       {
         docs.api.map((entry) => (
           <div class="api__row">
@@ -150,25 +155,25 @@ const toc = [
       }
     </div>
     <details class="fold">
-      <summary>View the editable Rust source ({docs.source.split("\n").length} lines)</summary>
-      <div class="fold__body">
-        <Code code={docs.source} />
-      </div>
+      <summary>Installed source, {lines} lines</summary>
+      <Code code={docs.source} />
     </details>
   </section>
 
-  <section id="platform-notes" class="section">
+  <section class="section" id="platform-notes">
     <h2 class="h2">Platform notes</h2>
-    <p class="prose">
-      GPUI handles rendering and input. These notes record the current platform differences, including
-      accessibility and interaction limits.
-    </p>
-    <div class="prose platform-notes" set:html={docs.parityHtml} />
+    <Aside>
+      <p>
+        These notes are kept in <code>docs/parity</code> in the repository and name the shadcn/ui and
+        GPUI Kit versions they were checked against.
+      </p>
+    </Aside>
+    <div class="text platform-notes" set:html={docs.parityHtml} />
   </section>
-</Docs>
+</Chapter>
 
 <script>
-  // Sidebar examples: switch the preview and the demo code together.
+  // Sidebar examples: switch the preview and its source together.
   const group = document.querySelector<HTMLElement>("[data-sidebar-examples]")
   const preview = document.getElementById("component-preview")
   if (group && preview) {
@@ -196,64 +201,47 @@ const toc = [
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
-    padding-top: 0.25rem;
+    gap: 1.25rem;
+    font-family: var(--sans);
+    font-size: 0.8rem;
+    color: var(--ink-2);
   }
-  .pager .tag {
-    margin-left: 0.25rem;
+  .pager a:hover {
+    color: var(--rubric);
   }
   .section {
-    display: grid;
-    gap: 1rem;
-    padding-top: 3rem;
-    scroll-margin-top: calc(var(--header) + 1rem);
+    margin-top: 2.75rem;
+    scroll-margin-top: calc(var(--head) + 1rem);
   }
-  .section--first {
-    padding-top: 0.5rem;
-  }
-  .section__tabs {
-    display: grid;
-    gap: 0.75rem;
-    justify-items: start;
-  }
-  .section__tabs :global(.tabs__panel) {
-    width: 100%;
-  }
-  .window__tabs {
-    background: transparent;
-    padding: 0;
-  }
-  .window__note {
-    padding: 0.85rem 1rem;
-    font-size: 0.8125rem;
-    line-height: 1.55;
-    color: var(--ink-2);
-    border-bottom: 1px solid var(--rule);
-  }
-  .window__note a {
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
-    color: var(--ink);
+  .section > :global(* + *) {
+    margin-top: 0.85rem;
   }
   :global(.code--flush) {
     border-radius: 0;
   }
+  :global(.code--flush pre) {
+    max-height: 40rem;
+  }
   .examples {
-    padding: 0.75rem 1rem;
+    padding: 0.6rem 1rem;
     border-bottom: 1px solid var(--rule);
     display: grid;
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
   .examples__chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.375rem;
+    gap: 0.3rem;
   }
-  .examples__blurb {
-    font-size: 0.8125rem;
-    color: var(--ink-2);
+  .files {
+    list-style: none;
+    padding: 0;
+    margin: 0;
   }
-  .fold__body {
-    padding-top: 0.75rem;
+  .files li + li {
+    margin-top: 0.15rem;
+  }
+  .fold {
+    margin-top: 1rem;
   }
 </style>

@@ -1,52 +1,45 @@
 ---
-import Docs from "../layouts/Docs.astro"
+import Chapter from "../layouts/Chapter.astro"
+import Aside from "../components/Aside.astro"
 import Code from "../components/Code.astro"
 
 const views = [
-  ["light", "Tasks", "The native gpuicn Workspace light task view"],
-  ["chat", "Local chat", "The native gpuicn Workspace local chat"],
-  ["dark", "Dark appearance", "The native gpuicn Workspace dark task view"],
+  ["light", "Tasks", "gpuicn Workspace showing a project's task list in the light theme"],
+  ["chat", "Local chat", "gpuicn Workspace showing a project's local chat"],
+  ["dark", "Dark", "gpuicn Workspace showing a project's task list in the dark theme"],
 ] as const
 ---
 
-<Docs
-  title="gpuicn Workspace"
-  eyebrow="Example app · Beta"
-  description="A native example app built with gpuicn. Organize projects, tasks and notes, all saved on your computer."
+<Chapter
+  title="Example app"
+  part="Guide"
+  kicker="Chapter 4"
+  lede="gpuicn Workspace is a small desktop app built from this catalog: projects, tasks, and notes, saved on your computer."
 >
   <div class="downloads" slot="head" data-showcase>
-    <a class="btn" href="#" hidden data-mac-download>
-      <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M6 11l6 6 6-6M4 21h16"></path></svg>
-      Download for macOS
-    </a>
-    <span class="downloads__status" data-mac-status>Checking the macOS download…</span>
+    <a class="btn btn--primary" href="#" hidden data-mac-download>Download for macOS</a>
+    <span class="small" data-mac-status>Checking the macOS download</span>
     <details class="menu">
-      <summary class="btn btn--ghost">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M6 11l6 6 6-6M4 21h16"></path></svg>
-        Download for Linux
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
-      </summary>
+      <summary class="btn">Download for Linux</summary>
       <div class="menu__popup">
         <a href="https://github.com/devaryakjha/gpuicn/releases/latest/download/gpuicn-workspace-linux-x86_64.tar.gz">
-          <span>x86-64 · Intel / AMD</span>
-          <small>Limited Ubuntu 24.04 startup checks</small>
+          <span>x86-64</span>
+          <small>Started on Ubuntu 24.04</small>
         </a>
         <a href="https://github.com/devaryakjha/gpuicn/releases/latest/download/gpuicn-workspace-linux-aarch64.tar.gz">
           <span>ARM64</span>
-          <small>Built, not runtime-tested</small>
+          <small>Builds, not yet run on hardware</small>
         </a>
       </div>
     </details>
-    <p class="downloads__meta mono">
-      macOS 12+ <span data-mac-arch></span> · Linux preview, needs testing
-    </p>
-    <p class="downloads__warning" hidden data-mac-unsigned>
-      The macOS build is not notarized. macOS may block it from opening.
+    <p class="small downloads__meta">macOS 12 or newer <span data-mac-arch></span>. Linux needs glibc 2.39 and a Vulkan driver.</p>
+    <p class="small downloads__warning" hidden data-mac-unsigned>
+      This macOS build is not notarized, so macOS may refuse to open it.
     </p>
   </div>
 
-  <figure class="views">
-    <div class="views__chips" role="group" aria-label="Native app previews">
+  <figure class="figure wide views">
+    <div class="views__chips" role="group" aria-label="Views">
       {
         views.map(([value, label], index) => (
           <>
@@ -56,58 +49,64 @@ const views = [
         ))
       }
     </div>
-    {
-      views.map(([value, , alt]) => (
-        <a class="views__shot" data-view={value} href={`/workspace-${value}.jpg`} target="_blank" rel="noreferrer">
-          <img src={`/workspace-${value}.jpg`} width="1188" height="768" alt={alt} loading={value === "light" ? "eager" : "lazy"} />
-        </a>
-      ))
-    }
-    <figcaption class="views__caption">Captured in the native macOS app. Open the image to see it at full size.</figcaption>
+    <div class="figure__frame">
+      {
+        views.map(([value, , alt]) => (
+          <a class="views__shot" data-view={value} href={`/workspace-${value}.jpg`} target="_blank" rel="noreferrer">
+            <img src={`/workspace-${value}.jpg`} width="1188" height="768" alt={alt} loading={value === "light" ? "eager" : "lazy"} />
+          </a>
+        ))
+      }
+    </div>
+    <figcaption class="figure__caption">
+      The native macOS app. Open the image for full size. Sidebar, Button, Input, Checkbox, Tabs, Dialog,
+      Menu, Message List, and Composer are all installed from the catalog.
+    </figcaption>
   </figure>
 
-  <section class="facts">
-    <div>
-      <h2 class="h3">A local workspace</h2>
-      <p>
-        No account needed. Projects, tasks and messages stay on your computer. Local chat is a project
-        message log; it does not connect to other people or generate replies.
-      </p>
-    </div>
-    <div>
-      <h2 class="h3">Linux is experimental</h2>
-      <p>
-        Requires glibc 2.39+ and a working Vulkan driver. x86-64 has had limited Ubuntu 24.04 startup
-        checks; ARM64 has not been runtime-tested. Graphics performance, Wayland and other distributions
-        still need testing.
-      </p>
-    </div>
-  </section>
+  <div class="text">
+    <h2 class="h2">What it does</h2>
+    <p>
+      Workspace keeps projects, tasks, and notes in a local file. There is no account and no network
+      access. Local chat is a message log per project. It does not connect to other people and does not
+      generate replies.
+    </p>
+  </div>
+  <Aside>
+    <p>
+      The x86-64 build has started on Ubuntu 24.04. The ARM64 build compiles but has not been run on
+      hardware. Wayland, other distributions, and graphics performance are untested.
+    </p>
+  </Aside>
+  <div class="text">
+    <p>
+      The macOS build is signed and notarized by the release workflow. The Linux builds are a preview
+      and need testing.
+    </p>
 
-  <details class="fold block">
-    <summary>Installation and checksums</summary>
-    <div class="prose fold__body">
-      <p>On macOS, unzip the download, move gpuicn Workspace to Applications, and open it.</p>
-      <p class="mono" data-mac-size hidden></p>
-      <p><code class="checksum" data-mac-sha hidden></code></p>
-      <p>On Linux, extract the archive and run <code>./gpuicn-workspace</code> from its folder.</p>
-      <p><a href="https://github.com/devaryakjha/gpuicn/releases/latest">Linux build details, dependencies and checksums</a></p>
-    </div>
-  </details>
-  <details class="fold block">
-    <summary>Run from source</summary>
-    <div class="fold__body">
-      <p class="prose">From the gpuicn checkout, launch the workspace on macOS:</p>
-      <Code code="cargo run --release -p gpuicn-showcase --features gpui_platform/runtime_shaders" lang="bash" />
-      <p class="prose">On Linux, with the system build dependencies installed:</p>
-      <Code code="cargo run --release -p gpuicn-showcase --features gpui_platform/x11,gpui_platform/wayland" lang="bash" />
-    </div>
-  </details>
-</Docs>
+    <h2 class="h2">Install</h2>
+    <p>On macOS, unzip the download, move gpuicn Workspace to Applications, and open it.</p>
+    <p class="small" data-mac-size hidden></p>
+    <p><code class="checksum" data-mac-sha hidden></code></p>
+    <p>
+      On Linux, extract the archive and run <code>./gpuicn-workspace</code> from its folder. The
+      <a href="https://github.com/devaryakjha/gpuicn/releases/latest">release page</a> lists the Linux
+      dependencies and checksums.
+    </p>
+
+    <h2 class="h2">Run from source</h2>
+    <p>From a checkout of the gpuicn repository, on macOS:</p>
+  </div>
+  <Code code="cargo run --release -p gpuicn-showcase --features gpui_platform/runtime_shaders" lang="bash" />
+  <div class="text">
+    <p>On Linux, with the build dependencies from <a href="/installation/">Installation</a>:</p>
+  </div>
+  <Code code="cargo run --release -p gpuicn-showcase --features gpui_platform/x11,gpui_platform/wayland" lang="bash" />
+</Chapter>
 
 <script>
-  // The release workflow writes /downloads/showcase.json next to the macOS
-  // archive; validate it before trusting any field.
+  // The release workflow writes /downloads/showcase.json beside the macOS
+  // archive. Validate every field before using it.
   const root = document.querySelector<HTMLElement>("[data-showcase]")!
   const link = root.querySelector<HTMLAnchorElement>("[data-mac-download]")!
   const status = root.querySelector<HTMLElement>("[data-mac-status]")!
@@ -124,17 +123,17 @@ const views = [
       link.href = data.url
       link.hidden = false
       status.hidden = true
-      root.querySelector<HTMLElement>("[data-mac-arch]")!.textContent = `· ${data.architecture === "arm64" ? "Apple silicon" : "Intel"}`
+      root.querySelector<HTMLElement>("[data-mac-arch]")!.textContent = `on ${data.architecture === "arm64" ? "Apple silicon" : "Intel"}`
       root.querySelector<HTMLElement>("[data-mac-unsigned]")!.hidden = data.notarized
       const size = document.querySelector<HTMLElement>("[data-mac-size]")!
-      size.textContent = `macOS v${data.version} · ZIP · ${(data.bytes / 1024 / 1024).toFixed(1)} MB`
+      size.textContent = `macOS v${data.version}, ZIP, ${(data.bytes / 1024 / 1024).toFixed(1)} MB`
       size.hidden = false
       const sha = document.querySelector<HTMLElement>("[data-mac-sha]")!
-      sha.textContent = `SHA-256: ${data.sha256}`
+      sha.textContent = `SHA-256 ${data.sha256}`
       sha.hidden = false
     })
     .catch(() => {
-      status.textContent = "macOS download unavailable"
+      status.textContent = "No macOS download is published for this release yet."
     })
 </script>
 
@@ -143,24 +142,17 @@ const views = [
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem;
-    padding-top: 0.5rem;
+    gap: 0.6rem;
   }
-  .downloads__status {
-    font-size: 0.875rem;
-    color: var(--ink-2);
-  }
-  .downloads__status[hidden],
   .downloads [hidden] {
     display: none;
   }
-  .downloads__meta {
+  .downloads__meta,
+  .downloads__warning {
     flex-basis: 100%;
   }
   .downloads__warning {
-    flex-basis: 100%;
-    font-size: 0.875rem;
-    color: var(--accent-ink);
+    color: var(--rubric);
   }
   .menu {
     position: relative;
@@ -174,42 +166,35 @@ const views = [
   }
   .menu__popup {
     position: absolute;
-    top: calc(100% + 0.5rem);
+    top: calc(100% + 0.35rem);
     left: 0;
     z-index: 10;
-    width: 18rem;
-    padding: 0.35rem;
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-radius: 0.75rem;
-    box-shadow: 0 16px 40px rgb(0 0 0 / 0.18);
+    width: 16rem;
+    padding: 0.3rem;
+    background: var(--paper);
+    border: 1px solid var(--rule-2);
+    box-shadow: 0 12px 30px rgb(0 0 0 / 0.15);
+    font-family: var(--sans);
   }
   .menu__popup a {
     display: grid;
-    gap: 0.1rem;
-    padding: 0.55rem 0.75rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.82rem;
     font-weight: 500;
+    border-radius: 3px;
   }
   .menu__popup a:hover {
     background: var(--paper-2);
   }
   .menu__popup small {
-    font-size: 0.75rem;
+    font-size: 0.74rem;
     font-weight: 400;
     color: var(--ink-2);
   }
-
-  .views {
-    display: grid;
-    gap: 1rem;
-    padding-top: 1.5rem;
-  }
   .views__chips {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.375rem;
+    gap: 0.35rem;
+    margin-bottom: 0.6rem;
   }
   .views__chips input:checked + .chip {
     background: var(--ink);
@@ -217,15 +202,11 @@ const views = [
     color: var(--paper);
   }
   .views__chips input:focus-visible + .chip {
-    outline: 2px solid var(--focus);
+    outline: 2px solid var(--rubric);
     outline-offset: 2px;
   }
   .views__shot {
     display: none;
-    border: 1px solid var(--rule);
-    border-radius: 0.875rem;
-    overflow: hidden;
-    background: var(--surface);
   }
   .views__shot img {
     width: 100%;
@@ -235,41 +216,6 @@ const views = [
   .views:has(#view-chat:checked) .views__shot[data-view="chat"],
   .views:has(#view-dark:checked) .views__shot[data-view="dark"] {
     display: block;
-  }
-  .views__caption {
-    font-size: 0.75rem;
-    color: var(--ink-3);
-  }
-
-  .facts {
-    display: grid;
-    gap: 1.5rem;
-    margin-top: 2.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--rule);
-    font-size: 0.9375rem;
-    line-height: 1.6;
-    color: var(--ink-2);
-  }
-  .facts h2 {
-    color: var(--ink);
-    margin-bottom: 0.5rem;
-  }
-  @media (min-width: 40rem) {
-    .facts {
-      grid-template-columns: 1fr 1fr;
-      gap: 2.5rem;
-    }
-  }
-  .block {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--rule);
-  }
-  .fold__body {
-    display: grid;
-    gap: 0.75rem;
-    padding-top: 1rem;
   }
   .checksum {
     overflow-wrap: anywhere;

@@ -1,0 +1,11 @@
+---
+/** A margin note. Place it before the paragraph it belongs to. */
+interface Props {
+  top?: boolean
+}
+const { top } = Astro.props
+---
+
+<aside class:list={["aside", top && "aside--top"]}>
+  <slot />
+</aside>
