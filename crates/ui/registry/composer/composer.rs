@@ -133,6 +133,7 @@ pub struct ComposerState {
     on_key: Option<KeyHandler>,
     on_paste: Option<PasteHandler>,
     leading: Option<SuggestionSlot>,
+    max_rows: usize,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -147,9 +148,10 @@ impl Focusable for ComposerState {
 impl ComposerState {
     /// Creates a composer that grows from one to `max_rows` lines.
     pub fn new(max_rows: usize, window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let max_rows = max_rows.max(1);
         let input = cx.new(|cx| {
             TextareaState::new(window, cx)
-                .auto_grow(1, max_rows.max(1))
+                .auto_grow(1, max_rows)
                 .placeholder("Write a message…")
         });
         let window_handle = window.window_handle();
@@ -194,6 +196,7 @@ impl ComposerState {
             on_key: None,
             on_paste: None,
             leading: None,
+            max_rows,
             _subscriptions: subscriptions,
         }
     }
@@ -201,6 +204,25 @@ impl ComposerState {
     /// The editing state, for anything not covered here.
     pub fn input(&self) -> &Entity<TextareaState> {
         &self.input
+    }
+
+    /// The number of lines the editor grows to before it scrolls.
+    pub fn max_rows(&self) -> usize {
+        self.max_rows
+    }
+
+    /// Changes the number of lines the editor grows to before it scrolls,
+    /// keeping the draft, selection and history. `Composer::max_height`
+    /// calls it on each render to follow a cap in pixels.
+    pub fn set_max_rows(&mut self, max_rows: usize, cx: &mut Context<Self>) {
+        let max_rows = max_rows.max(1);
+        if max_rows == self.max_rows {
+            return;
+        }
+        self.max_rows = max_rows;
+        self.input
+            .update(cx, |input, cx| input.set_auto_grow(1, max_rows, cx));
+        cx.notify();
     }
 
     /// Sets the placeholder.
@@ -624,6 +646,7 @@ fn text_inset(theme: &UiTheme) -> Point<Pixels> {
 #[derive(IntoElement)]
 pub struct Composer {
     state: Entity<ComposerState>,
+    max_height: Option<Pixels>,
     toolbar: Vec<AnyElement>,
     style: StyleRefinement,
 }
@@ -633,10 +656,28 @@ impl Composer {
     pub fn new(state: &Entity<ComposerState>) -> Self {
         Self {
             state: state.clone(),
+            max_height: None,
             toolbar: Vec::new(),
             style: StyleRefinement::default(),
         }
     }
+
+    /// Caps the text box at a height, such as 40% of the window, without
+    /// rebuilding the state: the editor grows line by line until the box
+    /// reaches it, then scrolls. The toolbar is not counted. Pass a value
+    /// derived from `window.viewport_size()` on every render to follow resizes.
+    pub fn max_height(mut self, height: impl Into<Pixels>) -> Self {
+        self.max_height = Some(height.into());
+        self
+    }
+}
+
+/// How many editor lines fit in a text box `height` tall.
+fn rows_within(height: Pixels, line_height: Pixels, inset: Pixels) -> usize {
+    if line_height <= px(0.) {
+        return 1;
+    }
+    (((height - inset * 2.) / line_height).floor() as usize).max(1)
 }
 
 impl ParentElement for Composer {
@@ -656,6 +697,21 @@ impl RenderOnce for Composer {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
         let focused = self.state.read(cx).focus_handle(cx).is_focused(window);
+        if let Some(height) = self.max_height {
+            // Before the editor's first layout, the type scale gives the line height.
+            let line_height = self
+                .state
+                .read(cx)
+                .input
+                .read(cx)
+                .line_height()
+                .unwrap_or_else(|| theme.text_style(theme.typography.sm).line_height);
+            let rows = rows_within(height, line_height, text_inset(&theme).y);
+            if rows != self.state.read(cx).max_rows {
+                self.state
+                    .update(cx, |state, cx| state.set_max_rows(rows, cx));
+            }
+        }
         let root = div()
             .w_full()
             .flex()
@@ -682,7 +738,18 @@ impl RenderOnce for Composer {
 
 #[cfg(test)]
 mod tests {
-    use super::active_trigger;
+    use super::{active_trigger, rows_within};
+    use gpui_kit::px;
+
+    #[test]
+    fn a_pixel_cap_becomes_whole_lines() {
+        // 8px inset above and below, 20px lines.
+        assert_eq!(rows_within(px(216.), px(20.), px(8.)), 10);
+        assert_eq!(rows_within(px(215.), px(20.), px(8.)), 9);
+        // Never less than one line, even in a tiny window.
+        assert_eq!(rows_within(px(10.), px(20.), px(8.)), 1);
+        assert_eq!(rows_within(px(100.), px(0.), px(8.)), 1);
+    }
 
     const TRIGGERS: [char; 4] = ['@', '~', ':', '/'];
 

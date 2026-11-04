@@ -2,8 +2,8 @@
 use std::{cell::RefCell, rc::Rc};
 
 use gpui_kit::{
-    AppContext as _, Context, Entity, IntoElement, ParentElement as _, Render, Styled as _,
-    TestAppContext, Window, div, px,
+    AppContext as _, Context, Entity, InteractiveElement as _, IntoElement, ParentElement as _,
+    Render, Styled as _, TestAppContext, Window, div, px,
 };
 use gpuicn::{
     attachment::{Attachment, AttachmentStatus, attachment_group},
@@ -413,6 +413,77 @@ fn composer_autocompletes_submits_and_hands_keys_to_the_app(cx: &mut TestAppCont
             assert_eq!(state.value(cx), "make it **bold**!");
             assert!(!state.is_composing(window, cx));
         });
+    });
+}
+
+struct CappedComposer {
+    state: Entity<ComposerState>,
+    cap: gpui_kit::Pixels,
+}
+impl Render for CappedComposer {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        div().w(px(480.)).child(
+            div()
+                .debug_selector(|| "composer".into())
+                .child(Composer::new(&self.state).max_height(self.cap)),
+        )
+    }
+}
+
+/// A pixel cap follows the window without rebuilding the state, so the draft
+/// survives (devaryakjha/gpuicn#101).
+#[gpui_kit::test]
+fn composer_cap_follows_max_height_and_keeps_the_draft(cx: &mut TestAppContext) {
+    cx.update(gpuicn::init);
+    let (view, cx) = cx.add_window_view(|window, cx| CappedComposer {
+        state: cx.new(|cx| ComposerState::new(4, window, cx)),
+        cap: px(216.),
+    });
+    let draft = (1..=20)
+        .map(|line| format!("line {line}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let draw = |cx: &mut gpui_kit::VisualTestContext| {
+        for _ in 0..3 {
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            cx.run_until_parked();
+        }
+    };
+    cx.update(|window, cx| {
+        let state = view.read(cx).state.clone();
+        state.update(cx, |state, cx| state.set_value(draft.clone(), window, cx));
+    });
+    draw(cx);
+    let tall = cx
+        .debug_bounds("composer")
+        .expect("composer drew")
+        .size
+        .height;
+    let rows = cx.update(|_, cx| view.read(cx).state.read(cx).max_rows());
+    assert!(rows > 4, "the pixel cap replaced the row cap: {rows}");
+    assert!(
+        tall <= px(216.) + px(2.),
+        "the box stays under the cap: {tall:?}"
+    );
+
+    view.update(cx, |view, cx| {
+        view.cap = px(100.);
+        cx.notify();
+    });
+    draw(cx);
+    let short = cx
+        .debug_bounds("composer")
+        .expect("composer drew")
+        .size
+        .height;
+    assert!(
+        short < tall,
+        "a lower cap shrinks the box: {short:?} < {tall:?}"
+    );
+    cx.update(|_, cx| {
+        let state = view.read(cx).state.read(cx);
+        assert!(state.max_rows() < rows);
+        assert_eq!(state.value(cx), draft.as_str());
     });
 }
 

@@ -20,6 +20,7 @@ type RowRenderer = Box<dyn FnMut(usize, &mut Window, &mut App) -> gpui_kit::AnyE
 type SelectHandler = Rc<dyn Fn(Option<usize>, &mut Window, &mut App) + 'static>;
 type KeyHandler = Rc<dyn Fn(&KeyDownEvent, Option<usize>, &mut Window, &mut App) -> bool + 'static>;
 type SelectableRow = Rc<dyn Fn(usize, &App) -> bool + 'static>;
+type JumpHandler = Rc<dyn Fn(&mut Window, &mut App) + 'static>;
 
 /// A variable-height, virtualized chat transcript that follows new messages.
 ///
@@ -33,6 +34,8 @@ pub struct MessageList {
     renderer: RowRenderer,
     unseen: usize,
     jump_label: SharedString,
+    on_jump: Option<JumpHandler>,
+    show_jump: bool,
     focus: Option<FocusHandle>,
     selected: Option<usize>,
     on_select: Option<SelectHandler>,
@@ -55,6 +58,8 @@ impl MessageList {
             renderer: Box::new(move |index, window, cx| row(index, window, cx).into_any_element()),
             unseen: 0,
             jump_label: "Jump to latest".into(),
+            on_jump: None,
+            show_jump: false,
             focus: None,
             selected: None,
             on_select: None,
@@ -83,6 +88,23 @@ impl MessageList {
     /// Sets the jump pill's label when there are no unseen messages.
     pub fn jump_label(mut self, label: impl Into<SharedString>) -> Self {
         self.jump_label = label.into();
+        self
+    }
+
+    /// Runs when the reader presses the jump pill, instead of scrolling to the
+    /// loaded end. Use it when the loaded rows may not reach the newest message,
+    /// for example after jumping to a search result: the application scrolls
+    /// with `MessageListState::scroll_to_end` when the newest message is
+    /// loaded, and otherwise fetches the latest page and resets the list.
+    pub fn on_jump(mut self, handler: impl Fn(&mut Window, &mut App) + 'static) -> Self {
+        self.on_jump = Some(Rc::new(handler));
+        self
+    }
+
+    /// Shows the jump pill even when the reader is at the loaded end, for a
+    /// transcript whose loaded rows stop short of the newest message.
+    pub fn show_jump(mut self, show: bool) -> Self {
+        self.show_jump = show;
         self
     }
 
@@ -339,7 +361,7 @@ impl RenderOnce for MessageList {
                 ScrollTarget::End => state.scroll_to_end(cx),
             });
         }
-        let scrolled_up = self.state.read(cx).is_scrolled_up();
+        let scrolled_up = self.show_jump || self.state.read(cx).is_scrolled_up();
         let mut renderer = self.renderer;
         let measure = scrollbar.clone();
         // Rows own their spacing and gutters, so the Kit row wrapper adds none.
@@ -381,6 +403,7 @@ impl RenderOnce for MessageList {
             count => format!("{count} new messages").into(),
         };
         let state = self.state.clone();
+        let on_jump = self.on_jump.clone();
         let keys_state = self.state.clone();
         let selected = self.selected;
         let on_select = self.on_select.clone();
@@ -456,8 +479,9 @@ impl RenderOnce for MessageList {
                                 .size(ButtonSize::Sm)
                                 .rounded_full()
                                 .shadow(theme.shadows.md.to_vec())
-                                .on_click(move |_, _, cx| {
-                                    state.update(cx, |state, cx| state.scroll_to_end(cx))
+                                .on_click(move |_, window, cx| match &on_jump {
+                                    Some(handler) => handler(window, cx),
+                                    None => state.update(cx, |state, cx| state.scroll_to_end(cx)),
                                 })
                                 .child(
                                     lucide(LucideIcon::ArrowDown)
@@ -580,6 +604,43 @@ mod tests {
         draw(cx);
         assert!(cx.update(|_, cx| view.read(cx).state.read(cx).is_following_tail()));
         assert_eq!(scrollbar.scrolled(), scrollbar.content_height() - viewport);
+    }
+
+    struct Detached {
+        state: Entity<MessageListState>,
+        jumps: Rc<RefCell<usize>>,
+    }
+    impl Render for Detached {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            let jumps = self.jumps.clone();
+            div().w(px(600.)).h(px(400.)).child(
+                MessageList::new("detached", &self.state, |index, _, _| {
+                    div().h(px(ROW_HEIGHT)).child(format!("Row {index}"))
+                })
+                .show_jump(true)
+                .on_jump(move |_, _| *jumps.borrow_mut() += 1),
+            )
+        }
+    }
+
+    /// With `on_jump`, the pill hands the jump to the application, which may
+    /// need to load the newest page first (devaryakjha/gpuicn#97).
+    #[gpui_kit::test]
+    fn the_jump_pill_runs_on_jump_instead_of_scrolling(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let jumps = Rc::new(RefCell::new(0));
+        let count = jumps.clone();
+        let (view, cx) = cx.add_window_view(move |_, cx| Detached {
+            state: cx.new(|cx| MessageListState::new(ROWS, cx)),
+            jumps: count,
+        });
+        draw(cx);
+        draw(cx);
+        // At the loaded end, `show_jump` still shows the pill.
+        assert!(cx.update(|_, cx| view.read(cx).state.read(cx).is_following_tail()));
+        cx.simulate_click(point(px(300.), px(372.)), gpui_kit::Modifiers::default());
+        draw(cx);
+        assert_eq!(*jumps.borrow(), 1);
     }
 
     fn scrolled_px(scrollbar: &MessageListScrollbar) -> Pixels {

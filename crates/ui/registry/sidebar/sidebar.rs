@@ -11,11 +11,12 @@ use super::{
 };
 use gpui_kit::base::Button as BaseButton;
 use gpui_kit::{
-    AnyElement, App, ClickEvent, Div, ElementId, FontWeight, InteractiveElement as _, IntoElement,
-    ParentElement, RenderOnce, Role, SharedString, StatefulInteractiveElement as _, Styled, Text,
-    Window, div, prelude::FluentBuilder as _, px,
+    AnyElement, App, Bounds, ClickEvent, Div, Element, ElementId, FocusHandle, FontWeight,
+    GlobalElementId, InspectorElementId, InteractiveElement as _, IntoElement, KeyDownEvent,
+    LayoutId, ParentElement, Pixels, RenderOnce, Role, SharedString,
+    StatefulInteractiveElement as _, Styled, Text, Window, div, prelude::FluentBuilder as _, px,
 };
-use std::{rc::Rc, sync::Arc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 type ActivateHandler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 fn part(id: &ElementId, name: &'static str) -> ElementId {
@@ -32,6 +33,7 @@ pub struct Sidebar {
     header: Option<AnyElement>,
     content_padding: Option<gpui_kit::Pixels>,
     footer: Option<AnyElement>,
+    roving_focus: bool,
     children: Vec<AnyElement>,
 }
 impl Sidebar {
@@ -44,8 +46,19 @@ impl Sidebar {
             header: None,
             content_padding: None,
             footer: None,
+            roving_focus: false,
             children: vec![],
         }
+    }
+    /// Makes the navigation rows one tab stop, as the APG tree and Slack's
+    /// channel list do. Tab lands on the focused or selected row and the next
+    /// Tab leaves the navigation; Up and Down move between rows, wrapping at
+    /// the ends; Home and End jump to the first and last row; Enter or Space
+    /// activates. Applies to every `SidebarItem` in the scrollable content;
+    /// header, footer and other controls keep their own tab stops. Off by default.
+    pub fn roving_focus(mut self, roving: bool) -> Self {
+        self.roving_focus = roving;
+        self
     }
     /// Override the content inset, for example zero for full-width mail rows.
     /// Header and footer retain their standard inset.
@@ -70,12 +83,23 @@ impl ParentElement for Sidebar {
     }
 }
 impl RenderOnce for Sidebar {
-    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let roving = self.roving_focus.then(|| {
+            let model = window
+                .use_keyed_state(part(&self.id, "roving"), cx, |_, _| RovingModel::default())
+                .read(cx)
+                .clone();
+            model.start_frame(window);
+            model
+        });
         let theme = UiTheme::read(cx).clone();
         let spacing = theme.spacing.unit;
         let color = theme.colors.sidebar;
         let padding = self.content_padding.unwrap_or(spacing * 2_f32);
         let content = ScrollArea::new(part(&self.id, "scroll"))
+            .when_some(roving.as_ref(), |area, model| {
+                area.track_scroll(&model.0.borrow().scroll)
+            })
             .size_full()
             .aria_label(self.label.clone())
             .child(
@@ -108,12 +132,225 @@ impl RenderOnce for Sidebar {
                     .min_h_0()
                     .min_w_0()
                     .overflow_hidden()
-                    .child(content),
+                    .map(|el| match roving {
+                        Some(model) => {
+                            let keys = model.clone();
+                            // Capture: the scroll area under it scrolls on the arrows.
+                            el.capture_key_down(move |event, window, cx| {
+                                if keys.handle_key(event, window, cx) {
+                                    cx.stop_propagation();
+                                }
+                            })
+                            .child(RovingScope {
+                                model,
+                                child: content.into_any_element(),
+                            })
+                        }
+                        None => el.child(content),
+                    }),
             )
             .when_some(self.footer, |el, footer| {
                 el.child(div().flex_shrink_0().p(spacing * 2_f32).child(footer))
             })
             .map(|base| super::theme::apply_style(base, &self.style))
+    }
+}
+
+/// One navigation row registered with a roving sidebar this frame.
+struct RovingRow {
+    id: ElementId,
+    focus: FocusHandle,
+    /// Where the row was painted, for scrolling it into view.
+    bounds: Rc<std::cell::Cell<Bounds<Pixels>>>,
+    selected: bool,
+    disabled: bool,
+}
+
+/// The rows of a `Sidebar::roving_focus` sidebar, in visual order, and the
+/// one row that is its tab stop.
+#[derive(Default)]
+struct Roving {
+    rows: Vec<RovingRow>,
+    target: Option<ElementId>,
+    scroll: gpui_kit::ScrollHandle,
+}
+
+impl Roving {
+    /// Picks this frame's tab stop from last frame's rows: the focused row,
+    /// else the last one focused, else the selected one, else the first.
+    fn start_frame(&mut self, window: &Window) {
+        let rows = std::mem::take(&mut self.rows);
+        let enabled = |row: &&RovingRow| !row.disabled;
+        let target = rows
+            .iter()
+            .find(|row| row.focus.is_focused(window))
+            .or_else(|| {
+                rows.iter()
+                    .filter(enabled)
+                    .find(|row| Some(&row.id) == self.target.as_ref())
+            })
+            .or_else(|| rows.iter().filter(enabled).find(|row| row.selected))
+            .or_else(|| rows.iter().find(enabled))
+            .map(|row| row.id.clone());
+        self.target = target;
+    }
+
+    /// Records a row and returns whether it is the tab stop.
+    fn register(&mut self, row: RovingRow) -> bool {
+        let tab_stop = match &self.target {
+            Some(target) => *target == row.id,
+            // The first frame has no history: the selected row and the first
+            // enabled row take the stop until the next frame settles on one.
+            None => !row.disabled && (row.selected || self.rows.iter().all(|row| row.disabled)),
+        };
+        self.rows.push(row);
+        tab_stop
+    }
+
+    /// The row to focus for an arrow, Home or End key, if any.
+    fn next(&self, key: &str, window: &Window) -> Option<&RovingRow> {
+        let enabled: Vec<&RovingRow> = self.rows.iter().filter(|row| !row.disabled).collect();
+        let last = enabled.len().checked_sub(1)?;
+        let current = enabled.iter().position(|row| row.focus.is_focused(window));
+        let index = match (key, current) {
+            ("home", _) => 0,
+            ("end", _) => last,
+            ("down", Some(index)) => {
+                if index == last {
+                    0
+                } else {
+                    index + 1
+                }
+            }
+            ("up", Some(index)) => {
+                if index == 0 {
+                    last
+                } else {
+                    index - 1
+                }
+            }
+            _ => return None,
+        };
+        Some(enabled[index])
+    }
+
+    /// Scrolls the navigation so `row` and its focus ring are fully visible.
+    fn reveal(&self, row: &RovingRow) {
+        let viewport = self.scroll.bounds();
+        let bounds = row.bounds.get();
+        if viewport.size.height <= px(0.) || bounds.size.height <= px(0.) {
+            return;
+        }
+        // Leave room for the row's border and the 3px outer focus ring.
+        let bounds = bounds.dilate(px(4.));
+        let mut offset = self.scroll.offset();
+        if bounds.top() < viewport.top() {
+            offset.y += viewport.top() - bounds.top();
+        } else if bounds.bottom() > viewport.bottom() {
+            offset.y -= bounds.bottom() - viewport.bottom();
+        } else {
+            return;
+        }
+        let max = self.scroll.max_offset().y.max(px(0.));
+        offset.y = offset.y.clamp(-max, px(0.));
+        self.scroll.set_offset(offset);
+    }
+}
+
+#[derive(Clone, Default)]
+struct RovingModel(Rc<RefCell<Roving>>);
+
+impl RovingModel {
+    fn start_frame(&self, window: &Window) {
+        self.0.borrow_mut().start_frame(window);
+    }
+
+    fn handle_key(&self, event: &KeyDownEvent, window: &mut Window, cx: &mut App) -> bool {
+        let modifiers = event.keystroke.modifiers;
+        if modifiers.control || modifiers.alt || modifiers.platform || modifiers.shift {
+            return false;
+        }
+        let roving = self.0.borrow();
+        let Some(row) = roving.next(&event.keystroke.key, window) else {
+            return false;
+        };
+        let focus = row.focus.clone();
+        roving.reveal(row);
+        drop(roving);
+        focus.focus(window, cx);
+        window.refresh();
+        true
+    }
+}
+
+thread_local! {
+    /// The roving sidebars whose content is laying out, innermost last.
+    static ROVING: RefCell<Vec<RovingModel>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Lets the `SidebarItem`s rendered inside a roving sidebar find it: rows
+/// render while their ancestors request layout, so the scope is open exactly
+/// while its content renders.
+struct RovingScope {
+    model: RovingModel,
+    child: AnyElement,
+}
+
+impl IntoElement for RovingScope {
+    type Element = Self;
+    fn into_element(self) -> Self {
+        self
+    }
+}
+
+impl Element for RovingScope {
+    type RequestLayoutState = ();
+    type PrepaintState = ();
+
+    fn id(&self) -> Option<ElementId> {
+        None
+    }
+
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, ()) {
+        ROVING.with(|scopes| scopes.borrow_mut().push(self.model.clone()));
+        let layout = self.child.request_layout(window, cx);
+        ROVING.with(|scopes| scopes.borrow_mut().pop());
+        (layout, ())
+    }
+
+    fn prepaint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        _: Bounds<Pixels>,
+        _: &mut (),
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        self.child.prepaint(window, cx);
+    }
+
+    fn paint(
+        &mut self,
+        _: Option<&GlobalElementId>,
+        _: Option<&InspectorElementId>,
+        _: Bounds<Pixels>,
+        _: &mut (),
+        _: &mut (),
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        self.child.paint(window, cx);
     }
 }
 
@@ -218,7 +455,26 @@ impl SidebarItem {
     }
 }
 impl RenderOnce for SidebarItem {
-    fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        // Inside a roving sidebar, the row uses a handle the sidebar can move
+        // focus to, and only one row is a tab stop.
+        let roving = ROVING
+            .with(|scopes| scopes.borrow().last().cloned())
+            .map(|model| {
+                let focus = window
+                    .use_keyed_state(part(&self.id, "focus"), cx, |_, cx| cx.focus_handle())
+                    .read(cx)
+                    .clone();
+                let bounds = Rc::new(std::cell::Cell::new(Bounds::default()));
+                let tab_stop = model.0.borrow_mut().register(RovingRow {
+                    id: self.id.clone(),
+                    focus: focus.clone(),
+                    bounds: bounds.clone(),
+                    selected: self.selected,
+                    disabled: self.disabled,
+                });
+                (focus, tab_stop, bounds)
+            });
         let theme = UiTheme::read(cx).clone();
         let spacing = theme.spacing.unit;
         let selected = self.selected;
@@ -249,6 +505,13 @@ impl RenderOnce for SidebarItem {
         BaseButton::new(part(&self.id, "button"))
             .accessibility_label(accessible)
             .disabled(self.disabled)
+            .when_some(roving, |base, (focus, tab_stop, bounds)| {
+                base.track_focus(&focus).tab_stop(tab_stop).child(
+                    gpui_kit::canvas(move |row, _, _| bounds.set(row), |_, _, _, _| {})
+                        .absolute()
+                        .size_full(),
+                )
+            })
             .map(|base| {
                 let base = {
                     let mut base = base;
@@ -1098,5 +1361,141 @@ mod sidebar_tests {
             assert!(view.opener.is_focused(window));
         })
         .unwrap();
+    }
+
+    /// A roving sidebar is one tab stop that lands on the selected (later the
+    /// last focused) row, and the arrows, Home and End move between rows,
+    /// skipping disabled ones (devaryakjha/gpuicn#100).
+    #[test]
+    fn roving_rows_are_one_tab_stop_moved_with_the_arrows() {
+        use gpui_kit::{
+            AppContext as _, Context, FocusHandle, Render, TestAppContext, VisualTestContext,
+        };
+        struct View {
+            before: FocusHandle,
+            after: FocusHandle,
+            activated: Rc<RefCell<Vec<&'static str>>>,
+        }
+        impl Render for View {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                let rows = ["a", "b", "c", "d"].map(|label| {
+                    let activated = self.activated.clone();
+                    div().debug_selector(move || format!("row-{label}")).child(
+                        SidebarItem::new(label, label)
+                            .selected(label == "b")
+                            .disabled(label == "c")
+                            .on_activate(move |_, _, _| activated.borrow_mut().push(label)),
+                    )
+                });
+                div()
+                    .size_full()
+                    .flex()
+                    .child(
+                        div()
+                            .id("before")
+                            .track_focus(&self.before.clone().tab_stop(true))
+                            .child("Before"),
+                    )
+                    .child(
+                        Sidebar::new("nav", "Channels")
+                            .roving_focus(true)
+                            .w(px(200.))
+                            .h(px(80.))
+                            .child(sidebar_menu().children(rows)),
+                    )
+                    .child(
+                        div()
+                            .id("after")
+                            .track_focus(&self.after.clone().tab_stop(true))
+                            .child("After"),
+                    )
+            }
+        }
+        let dispatcher = gpui_kit::TestDispatcher::new(0);
+        let mut cx = TestAppContext::build(dispatcher.clone(), None);
+        cx.update(|cx| {
+            super::super::theme::init(cx);
+            UiTheme::set(cx, UiTheme::neutral_light());
+        });
+        let activated = Rc::new(RefCell::new(Vec::new()));
+        let log = activated.clone();
+        let window = cx.add_window(move |window, cx| {
+            window.activate_window();
+            View {
+                before: cx.focus_handle(),
+                after: cx.focus_handle(),
+                activated: log,
+            }
+        });
+        let mut visual = VisualTestContext::from_window(window.into(), &cx);
+        let draw = |cx: &mut TestAppContext| {
+            cx.update_window(window.into(), |_, window, cx| window.draw(cx).clear(cx))
+                .unwrap();
+        };
+        draw(&mut cx);
+        cx.update_window(window.into(), |view, window, cx| {
+            let view = view.downcast::<View>().unwrap();
+            view.read(cx).before.clone().focus(window, cx);
+        })
+        .unwrap();
+        draw(&mut cx);
+        let focused_is = |cx: &mut TestAppContext, which: &str| {
+            cx.update_window(window.into(), |view, window, cx| {
+                let view = view.downcast::<View>().unwrap();
+                let view = view.read(cx);
+                match which {
+                    "before" => view.before.is_focused(window),
+                    _ => view.after.is_focused(window),
+                }
+            })
+            .unwrap()
+        };
+        // Enter activates the focused row, which names it.
+        let row = |visual: &mut VisualTestContext, cx: &mut TestAppContext| {
+            let keystroke = gpui_kit::Keystroke::parse("enter").unwrap();
+            visual.simulate_event(gpui_kit::KeyDownEvent {
+                keystroke: keystroke.clone(),
+                is_held: false,
+                prefer_character_input: false,
+            });
+            visual.simulate_event(gpui_kit::KeyUpEvent { keystroke });
+            draw(cx);
+            activated.borrow_mut().pop()
+        };
+        for (key, expected) in [
+            // In from the page, onto the selected row, then out in one step.
+            ("tab", Some("b")),
+            ("tab", None),
+            ("shift-tab", Some("b")),
+            // The disabled row is skipped and the arrows wrap.
+            ("down", Some("d")),
+            ("down", Some("a")),
+            ("up", Some("d")),
+            ("home", Some("a")),
+            ("end", Some("d")),
+            // Leaving and coming back returns to the last focused row.
+            ("shift-tab", None),
+            ("tab", Some("d")),
+        ] {
+            visual.simulate_keystrokes(key);
+            draw(&mut cx);
+            match expected {
+                Some(label) => {
+                    // The focused row is scrolled into the 80px sidebar.
+                    let bounds = visual
+                        .debug_bounds(Box::leak(format!("row-{label}").into_boxed_str()))
+                        .expect("row drew");
+                    assert!(
+                        bounds.top() >= px(-0.5) && bounds.bottom() <= px(80.5),
+                        "{key}: {label} at {bounds:?}"
+                    );
+                    assert_eq!(row(&mut visual, &mut cx), Some(label), "after {key}")
+                }
+                None => assert!(
+                    focused_is(&mut cx, "after") || focused_is(&mut cx, "before"),
+                    "{key} should leave the rows"
+                ),
+            }
+        }
     }
 }

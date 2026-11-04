@@ -46,6 +46,7 @@ pub struct ScrollArea {
     style: gpui_kit::StyleRefinement,
     label: Option<SharedString>,
     axis: Axis,
+    scroll: Option<ScrollHandle>,
     children: Vec<AnyElement>,
 }
 impl ScrollArea {
@@ -56,12 +57,19 @@ impl ScrollArea {
             style: Default::default(),
             label: None,
             axis: Axis::Vertical,
+            scroll: None,
             children: vec![],
         }
     }
     /// Sets the accessible name of the control.
     pub fn aria_label(mut self, value: impl Into<SharedString>) -> Self {
         self.label = Some(value.into());
+        self
+    }
+    /// Shares the scroll position with the caller, for example to scroll a
+    /// focused row into view. Without it the area keeps one per ID.
+    pub fn track_scroll(mut self, handle: &ScrollHandle) -> Self {
+        self.scroll = Some(handle.clone());
         self
     }
     /// Selects horizontal or vertical layout and keyboard navigation.
@@ -83,10 +91,13 @@ impl Styled for ScrollArea {
 impl RenderOnce for ScrollArea {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let t = UiTheme::read(cx).clone();
-        let handle = window
-            .use_keyed_state((self.id.clone(), "scroll"), cx, |_, _| ScrollHandle::new())
-            .read(cx)
-            .clone();
+        let handle = match self.scroll.clone() {
+            Some(handle) => handle,
+            None => window
+                .use_keyed_state((self.id.clone(), "scroll"), cx, |_, _| ScrollHandle::new())
+                .read(cx)
+                .clone(),
+        };
         let keyboard = handle.clone();
         let axis = self.axis;
         let viewport = div()
