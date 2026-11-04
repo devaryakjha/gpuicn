@@ -154,6 +154,7 @@ previews! {
     context_menu => ContextMenu,
     dialog => Dialog,
     drawer => Drawer,
+    embed => Embed,
     emoji_picker => EmojiPicker,
     empty => Empty,
     field => Field,

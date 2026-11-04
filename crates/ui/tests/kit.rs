@@ -758,6 +758,8 @@ fn long_dialog_content_can_scroll_to_the_footer(cx: &mut TestAppContext) {
         "the surface grows with its content"
     );
     assert!(cx.debug_bounds("long-footer").unwrap().bottom() > viewport.bottom());
+    // Hover first, as a real pointer does, so the hit test sees the surface.
+    cx.simulate_mouse_move(viewport.center(), None, Default::default());
     cx.simulate_event(ScrollEvent {
         position: viewport.center(),
         delta: ScrollDelta::Pixels(point(px(0.), px(-1400.))),

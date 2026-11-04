@@ -1116,3 +1116,39 @@ mod markdown {
         .plugin(MarkdownImages::new(|_url, _, _| None).on_click(|url, _, _| println!("open {url}")))
     }
 }
+
+mod embed {
+    use crate::ui::embed::*;
+    use gpui_kit::{IntoElement, ParentElement as _, Styled as _, div};
+
+    fn example(collapsed: bool) -> impl IntoElement {
+        div()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .child(
+                LinkPreview::new("post-1.preview", "gpuicn 0.9.1")
+                    .site_name("GitHub")
+                    .description("Seven component hooks for chat applications.")
+                    // Width and height from the post's metadata reserve the box.
+                    .image("https://example.com/og.png", 1200, 630)
+                    .collapsed(collapsed)
+                    .on_click(|_, _, cx| cx.open_url("https://github.com/devaryakjha/gpuicn"))
+                    .on_toggle(|collapsed, _, _| println!("collapsed: {collapsed}"))
+                    .on_remove(|_, _, _| println!("remove the preview")),
+            )
+            .child(
+                MessageEmbed::new("post-2.attachment.0")
+                    .color_str("#2eb886")
+                    .pretext("Deploy finished")
+                    .author("CI")
+                    .title("verify #812")
+                    .on_title_click(|_, _, _| println!("open the run"))
+                    .body("All checks passed.")
+                    .field("Branch", "main", true)
+                    .field("Duration", "4m 12s", true)
+                    .footer("GitHub Actions")
+                    .timestamp("10:42"),
+            )
+    }
+}
