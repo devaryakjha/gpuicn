@@ -19,4 +19,5 @@ itself: `on_reorder` reports a `SortableMove` (`from` and `to` positions, with
 `to` counted after the row has left) and `on_reorder_group` reports
 `(from, to)`; `SortableMove::apply` and `move_group` apply them to the
 application's own data. Row IDs are unique across the whole list, so a row
-keeps its state and focus when it changes group.
+keeps its state and focus when it changes group. Group
+headers are headings named by the group label.

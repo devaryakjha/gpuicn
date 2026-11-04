@@ -459,6 +459,9 @@ impl RenderOnce for Sortable {
             let mut header = div()
                 .id((group.id.clone(), "header"))
                 .debug_selector(move || format!("header-{header_name}"))
+                .when(group.header.is_none(), |header| {
+                    header.role(Role::Heading).aria_label(group.label.clone())
+                })
                 .relative()
                 .child(header_render(window, cx));
             {
@@ -662,10 +665,9 @@ impl RenderOnce for Sortable {
 
             // The group: a drop target for group drags, highlighted when a row
             // would drop into it.
+            // No ID: rows sit directly under the list in GPUI's element
+            // paths, so a row keeps its state and focus in any group.
             let mut container = div()
-                .id(group.id.clone())
-                .role(Role::Group)
-                .aria_label(group.label.clone())
                 .relative()
                 .flex()
                 .flex_col()
@@ -787,28 +789,30 @@ mod tests {
     struct Channels {
         groups: Vec<Vec<&'static str>>,
         names: Vec<&'static str>,
-        focus: gpui_kit::FocusHandle,
     }
 
     impl Render for Channels {
         fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
             let view = cx.entity();
             let group_view = cx.entity();
-            let focus = self.focus.clone();
             div().w(px(240.)).child(
                 Sortable::new("channels", "Channels")
                     .reorder_groups(true)
                     .groups(self.groups.iter().enumerate().map(|(g, rows)| {
                         SortableGroup::new(self.names[g], self.names[g]).rows(rows.iter().map(
                             |&name| {
-                                let focus = focus.clone();
                                 SortableRow::new(name, name, move |_, _| {
                                     div()
-                                        .id(gpui_kit::ElementId::from(format!("{name}-content")))
                                         .h(px(32.))
-                                        .when(name == "general", |row| row.track_focus(&focus))
                                         .debug_selector(move || format!("row-{name}"))
-                                        .child(name)
+                                        // A control that keys its focus by
+                                        // element path, as most rows hold.
+                                        .child(
+                                            super::super::button::Button::new(
+                                                gpui_kit::ElementId::from(format!("{name}-button")),
+                                            )
+                                            .label(name),
+                                        )
                                 })
                             },
                         ))
@@ -832,10 +836,9 @@ mod tests {
 
     fn channels(cx: &mut TestAppContext) -> (Entity<Channels>, &mut VisualTestContext) {
         cx.update(super::super::theme::init);
-        let (view, cx) = cx.add_window_view(|_, cx| Channels {
+        let (view, cx) = cx.add_window_view(|_, _| Channels {
             groups: vec![vec!["general", "random"], vec!["design"], vec![]],
             names: vec!["Favorites", "Channels", "Archive"],
-            focus: cx.focus_handle(),
         });
         cx.update(|window, cx| window.draw(cx).clear(cx));
         (view, cx)
@@ -844,7 +847,14 @@ mod tests {
     #[gpui_kit::test]
     fn alt_shift_arrows_move_the_focused_row_and_announce_it(cx: &mut TestAppContext) {
         let (view, cx) = channels(cx);
-        cx.update(|window, cx| view.read(cx).focus.clone().focus(window, cx));
+        // Tab past the Favorites header to the general row's button.
+        cx.update(|window, cx| {
+            window.activate_window();
+            window.focus_next(cx);
+            window.focus_next(cx);
+            window.draw(cx).clear(cx);
+            assert_eq!(window.find_by_label("general").focused(), Some(true));
+        });
         cx.simulate_keystrokes("alt-shift-down");
         cx.update(|window, cx| window.draw(cx).clear(cx));
         cx.update(|_, cx| {
@@ -862,7 +872,7 @@ mod tests {
                 [vec!["random"], vec!["general", "design"], vec![]]
             );
             // The row kept its focus across the group change.
-            assert!(this.focus.is_focused(window));
+            assert_eq!(window.find_by_label("general").focused(), Some(true));
             let status = window.find_by_label("general moved to position 1 of 2 in Channels");
             assert_eq!(status.role(), Some(Role::Status));
         });
@@ -912,6 +922,7 @@ mod tests {
         // Tab to the first header, Channels, and move it down one place.
         cx.update(|window, cx| {
             window.activate_window();
+            window.blur(cx);
             window.focus_next(cx);
         });
         cx.simulate_keystrokes("alt-shift-down");
