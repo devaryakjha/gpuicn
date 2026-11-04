@@ -192,6 +192,10 @@ class Preview {
     const example = this.host.dataset.example
     if (icon) query.set("icon", icon)
     if (example) query.set("example", example)
+    // Browsers without WebGPU draw with WebGL. `?backend=webgl` on the page
+    // forces it, which the screenshot scripts use.
+    const backend = new URLSearchParams(location.search).get("backend")
+    if (backend === "webgl" || !("gpu" in navigator)) query.set("backend", "webgl")
     return `/demo/index.html?${query}`
   }
   mount() {

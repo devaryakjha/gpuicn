@@ -2,34 +2,6 @@
    notes and code, numbered figures for the live previews. */
 
 @font-face {
-  font-family: "Source Serif 4";
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  src: url("/type/SourceSerif4-Regular.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Source Serif 4";
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-  src: url("/type/SourceSerif4-It.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Source Serif 4";
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-  src: url("/type/SourceSerif4-Semibold.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Source Serif 4 Display";
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  src: url("/type/SourceSerif4Display-Regular.woff2") format("woff2");
-}
-@font-face {
   font-family: "Geist";
   font-weight: 400;
   font-display: swap;
@@ -40,6 +12,12 @@
   font-weight: 500;
   font-display: swap;
   src: url("/fonts/Geist-Medium.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Geist";
+  font-weight: 600;
+  font-display: swap;
+  src: url("/fonts/Geist-SemiBold.ttf") format("truetype");
 }
 @font-face {
   font-family: "Geist Mono";
@@ -60,9 +38,9 @@
   --rubric: #b8451c;
   --rubric-soft: rgb(184 69 28 / 0.08);
   --code: #f4f3ef;
-  --serif: "Source Serif 4", Charter, "Iowan Old Style", Georgia, serif;
-  --display: "Source Serif 4 Display", "Source Serif 4", Charter, Georgia, serif;
   --sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --serif: var(--sans);
+  --display: var(--sans);
   --mono: "Geist Mono", ui-monospace, Menlo, monospace;
   --measure: 38rem;
   --margin: 19rem;
@@ -92,9 +70,9 @@
 }
 
 html {
-  font-family: var(--serif);
-  font-size: 17px;
-  line-height: 1.55;
+  font-family: var(--sans);
+  font-size: 16.5px;
+  line-height: 1.6;
   background: var(--paper);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
@@ -242,13 +220,13 @@ hr {
 .text th {
   font-family: var(--sans);
   font-weight: 500;
-  font-size: 0.8rem;
+  font-size: 0.86rem;
 }
 .text pre {
   overflow-x: auto;
   background: var(--code);
   padding: 0.8rem 1rem;
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   line-height: 1.6;
   border-radius: 4px;
 }
@@ -269,42 +247,42 @@ hr {
 /* Headings ------------------------------------------------------------------- */
 
 .h1 {
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: clamp(2.25rem, 4.6vw, 3.5rem);
-  line-height: 1.05;
-  letter-spacing: -0.01em;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: clamp(1.9rem, 3.6vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
   text-wrap: balance;
 }
 .h2 {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-weight: 600;
-  font-size: 1.45rem;
-  line-height: 1.2;
-  letter-spacing: -0.005em;
+  font-size: 1.3rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
 }
 .h3 {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   line-height: 1.3;
 }
 .kicker {
   font-family: var(--sans);
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   font-weight: 500;
   letter-spacing: 0.01em;
   color: var(--rubric);
 }
 .small {
   font-family: var(--sans);
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   line-height: 1.5;
   color: var(--ink-2);
 }
 .lede {
-  font-size: 1.2rem;
-  line-height: 1.45;
+  font-size: 1.15rem;
+  line-height: 1.5;
   color: var(--ink-2);
   text-wrap: pretty;
 }
@@ -353,7 +331,7 @@ hr {
    before the paragraph it annotates. */
 .aside {
   font-family: var(--sans);
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   line-height: 1.5;
   color: var(--ink-2);
 }
@@ -401,7 +379,7 @@ hr {
   counter-increment: figure;
 }
 @media (min-width: 78rem) {
-  .figure {
+  .body > .figure {
     width: calc(var(--measure) + var(--gap) + var(--margin));
   }
 }
@@ -418,14 +396,14 @@ hr {
   padding: 0.35rem 0.5rem 0.35rem 1rem;
   border-bottom: 1px solid var(--rule);
   font-family: var(--sans);
-  font-size: 0.8rem;
+  font-size: 0.86rem;
 }
 .figure__bar .spacer {
   flex: 1;
 }
 .figure__bar .mono {
   font-family: var(--mono);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: var(--ink-3);
   min-width: 0;
   overflow: hidden;
@@ -440,7 +418,7 @@ hr {
 .figure__caption {
   margin-top: 0.7rem;
   font-family: var(--sans);
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   line-height: 1.5;
   color: var(--ink-2);
   max-width: var(--measure);
@@ -479,7 +457,7 @@ hr {
   padding: 1.5rem;
   text-align: center;
   font-family: var(--sans);
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   color: var(--ink-2);
 }
 .gpu[data-status="ready"] .gpu__status {
@@ -526,7 +504,7 @@ hr {
   padding: 0.85rem 2.75rem 0.85rem 1rem;
   max-height: 34rem;
   overflow: auto;
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   line-height: 1.6;
   tab-size: 4;
 }
@@ -546,6 +524,8 @@ hr {
   place-items: center;
   border-radius: 3px;
   color: var(--ink-3);
+  background: var(--code);
+  box-shadow: -0.5rem 0 0.5rem var(--code);
 }
 .code__copy:hover {
   color: var(--ink);
@@ -566,7 +546,7 @@ hr {
 }
 .code__status {
   font-family: var(--sans);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   padding: 0 1rem 0.6rem;
   color: var(--rubric);
 }
@@ -574,7 +554,7 @@ hr {
   display: none;
 }
 .aside .code pre {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   padding-right: 2.25rem;
 }
 
@@ -587,7 +567,7 @@ hr {
   height: 2rem;
   padding: 0 0.8rem;
   font-family: var(--sans);
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 500;
   border: 1px solid var(--rule-2);
   border-radius: 3px;
@@ -623,7 +603,7 @@ hr {
 }
 .tabs__tab {
   font-family: var(--sans);
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   padding: 0.3rem 0.6rem;
   border-radius: 3px;
   color: var(--ink-2);
@@ -642,7 +622,7 @@ hr {
 
 .chip {
   font-family: var(--sans);
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   padding: 0.25rem 0.6rem;
   border: 1px solid var(--rule-2);
   border-radius: 999px;
@@ -661,7 +641,7 @@ hr {
 .badge {
   display: inline-block;
   font-family: var(--sans);
-  font-size: 0.66rem;
+  font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -713,7 +693,7 @@ details.fold > summary + * {
 }
 .api__row pre {
   overflow-x: auto;
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   line-height: 1.55;
 }
 .api__row p {
@@ -737,7 +717,7 @@ details.fold > summary + * {
 }
 .contents .num {
   font-family: var(--mono);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: var(--rubric);
 }
 .contents a {
@@ -762,7 +742,7 @@ details.fold > summary + * {
   flex: none;
   max-width: 55%;
   font-family: var(--sans);
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   color: var(--ink-2);
   overflow: hidden;
   text-overflow: ellipsis;

@@ -29,7 +29,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
     <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-panels.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-panels.png" />
-    <link rel="preload" href="/type/SourceSerif4-Regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/Geist-Regular.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preload" href="/fonts/Geist-Regular.ttf" as="font" type="font/ttf" crossorigin />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="gpuicn" />
@@ -116,8 +116,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
     <footer class="colophon">
       <div class="colophon__row">
         <p>
-          gpuicn is open source under the MIT license. The site is static HTML built with Astro, set in
-          Source Serif 4 and Geist. Every preview is the real component, compiled to WebAssembly and drawn by
+          gpuicn is open source under the MIT license. The site is static HTML built with Astro, set in Geist. Every preview is the real component, compiled to WebAssembly and drawn by
           GPUI.
         </p>
         <nav class="colophon__links" aria-label="Footer">
@@ -158,7 +157,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
     background: var(--paper);
     border-bottom: 1px solid var(--rule);
     font-family: var(--sans);
-    font-size: 0.82rem;
+    font-size: 0.88rem;
   }
   .head__row {
     height: 100%;
@@ -267,7 +266,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
   .colophon {
     border-top: 1px solid var(--rule);
     font-family: var(--sans);
-    font-size: 0.78rem;
+    font-size: 0.84rem;
     color: var(--ink-2);
     line-height: 1.5;
   }
