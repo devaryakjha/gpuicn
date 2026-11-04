@@ -6,12 +6,21 @@ on:
       release_tag:
         required: true
         type: string
+      site_ref:
+        required: false
+        type: string
+        default: ""
   workflow_dispatch:
     inputs:
       release_tag:
         description: Release tag whose downloads the site serves, for example v0.7.0
         required: true
         type: string
+      site_ref:
+        description: Branch or commit to build the site from; empty means the release tag
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -37,7 +46,7 @@ jobs:
           fi
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ inputs.site_ref || inputs.release_tag }}
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-08-17
