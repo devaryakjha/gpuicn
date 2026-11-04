@@ -561,14 +561,23 @@ mod tests {
 
     #[test]
     fn gallery_navigates_the_full_catalog_and_searches_without_reborrowing() {
-        for slug in include_str!("../../web/src/lib/catalog.ts")
+        let site: Vec<&str> = include_str!("../../web/src/lib/catalog.ts")
             .lines()
             .filter_map(|line| line.trim().strip_prefix("slug: \""))
             .filter_map(|line| line.split('"').next())
-        {
+            .collect();
+        for slug in &site {
             assert!(
-                COMPONENTS.iter().any(|entry| entry.0 == slug),
+                COMPONENTS.iter().any(|entry| entry.0 == *slug),
                 "gallery missing {slug}"
+            );
+        }
+        // Every preview needs a website page too, or it ships unseen. Icons
+        // has its own page outside the component list.
+        for (slug, _, _) in COMPONENTS.iter().filter(|entry| entry.0 != "icons") {
+            assert!(
+                site.contains(slug),
+                "web/src/lib/catalog.ts has no page for {slug}"
             );
         }
         // Declared first so it is dropped after `cx`: GPUI Kit 0.8 deadlocks when
