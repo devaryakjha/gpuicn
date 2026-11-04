@@ -155,6 +155,11 @@ fn title_text(
                         .text_color(theme.colors.primary)
                         .line_clamp(lines)
                         .rounded(theme.radius.sm)
+                        // A block, so the title wraps at the card's width
+                        // and clamps instead of growing past it.
+                        .block()
+                        .w_full()
+                        .text_left()
                         .cursor_pointer()
                         .hover(|style| style.underline())
                         .focus_visible(move |style| focus::ring(style, &focus_theme))
@@ -668,6 +673,7 @@ impl RenderOnce for MessageEmbed {
                                 text::xs(base.role(Role::Link), &theme)
                                     .font_weight(FontWeight::MEDIUM)
                                     .rounded(theme.radius.sm)
+                                    .justify_start()
                                     .cursor_pointer()
                                     .hover(|style| style.underline())
                                     .focus_visible(move |style| focus::ring(style, &focus_theme))
