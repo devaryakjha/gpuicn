@@ -323,6 +323,9 @@ impl InputCore {
                 focused,
                 self.invalid,
             )
+            // The ring is a shadow painted under the whole box; a translucent
+            // fill would show it across a tall textarea.
+            .when(focused, |root| root.bg(theme.opaque(theme.control().background)))
         } else {
             super::theme::primitives::text::sm(root, theme)
         };

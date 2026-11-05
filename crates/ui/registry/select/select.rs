@@ -69,6 +69,9 @@ pub struct SelectState {
     editor_ready: bool,
     disabled: bool,
     invalid: bool,
+    loading: bool,
+    /// The committed value's label, kept while `set_items` lists other options.
+    value_label: Option<SharedString>,
     label: SharedString,
     placeholder: SharedString,
     style: StyleRefinement,
@@ -109,6 +112,8 @@ impl SelectState {
             editor_ready: false,
             disabled: false,
             invalid: false,
+            loading: false,
+            value_label: None,
             label: "Selection".into(),
             placeholder: "Select…".into(),
             style: Default::default(),
@@ -134,10 +139,72 @@ impl SelectState {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if self.value != value {
+            self.value_label = None;
+        }
         self.value = value;
         self.normalize_value();
+        self.remember_value_label();
         self.sync_editor(window, cx);
         cx.notify();
+    }
+    /// Replaces the options in place, for options loaded as the reader types.
+    ///
+    /// The query, focus, open state and committed value stay as they are; the
+    /// committed value keeps its label even when the new options leave it
+    /// out. The highlighted row stays on the same value when it is still
+    /// listed, and otherwise moves to the first enabled match.
+    pub fn set_items(&mut self, items: impl IntoIterator<Item = SelectItem>, cx: &mut Context<Self>) {
+        let highlighted = self
+            .highlighted
+            .and_then(|index| self.items.get(index))
+            .map(|item| item.value.clone());
+        self.items = items.into_iter().collect();
+        let visible = self.visible(cx);
+        self.highlighted = highlighted
+            .and_then(|value| {
+                visible
+                    .iter()
+                    .copied()
+                    .find(|&i| !self.items[i].disabled && self.items[i].value == value)
+            })
+            .or_else(|| visible.into_iter().find(|&i| !self.items[i].disabled));
+        self.remember_value_label();
+        cx.notify();
+    }
+    /// Returns the options.
+    pub fn items(&self) -> &[SelectItem] {
+        &self.items
+    }
+    /// Shows that options are being looked up: the list reads "Loading…"
+    /// until `set_loading(false)`, usually right after `set_items`.
+    pub fn set_loading(&mut self, loading: bool, cx: &mut Context<Self>) {
+        if self.loading != loading {
+            self.loading = loading;
+            cx.notify();
+        }
+    }
+    /// Returns whether options are being looked up.
+    pub fn is_loading(&self) -> bool {
+        self.loading
+    }
+    fn remember_value_label(&mut self) {
+        match &self.value {
+            None => self.value_label = None,
+            Some(value) => {
+                if let Some(item) = self.items.iter().find(|item| &item.value == value) {
+                    self.value_label = Some(item.label.clone());
+                }
+            }
+        }
+    }
+    fn committed_label(&self) -> Option<SharedString> {
+        let value = self.value.as_ref()?;
+        self.items
+            .iter()
+            .find(|item| &item.value == value)
+            .map(|item| item.label.clone())
+            .or_else(|| self.value_label.clone())
     }
     fn normalize_value(&mut self) {
         if self.presented
@@ -156,10 +223,7 @@ impl SelectState {
             return;
         }
         let text = self
-            .value
-            .as_ref()
-            .and_then(|value| self.items.iter().find(|item| &item.value == value))
-            .map(|item| item.label.clone())
+            .committed_label()
             .or_else(|| {
                 (self.mode == Mode::Autocomplete)
                     .then(|| self.value.clone())
@@ -290,6 +354,58 @@ mod tests {
     }
 
     #[gpui_kit::test]
+    fn replacing_items_keeps_the_query_highlight_and_selection(
+        cx: &mut gpui_kit::TestAppContext,
+    ) {
+        let window = cx.add_empty_window();
+        window.update(|window, cx| {
+            super::super::theme::init(cx);
+            let state = cx.new(|cx| {
+                SelectState::new(
+                    [
+                        SelectItem::new("ann", "Ann"),
+                        SelectItem::new("anna", "Anna"),
+                    ],
+                    window,
+                    cx,
+                )
+            });
+            state.update(cx, |state, cx| {
+                state.mode = Mode::Combobox;
+                state.editor_ready = true;
+                state.presented = true;
+                state.set_value(Some("ann".into()), window, cx);
+                state.set_open(true, window, cx);
+                state
+                    .input
+                    .update(cx, |input, cx| input.set_value("an", window, cx));
+                state.highlighted = Some(1);
+                state.set_loading(true, cx);
+                state.set_items(
+                    [
+                        SelectItem::new("andy", "Andy"),
+                        SelectItem::new("anna", "Anna"),
+                    ],
+                    cx,
+                );
+                state.set_loading(false, cx);
+                assert_eq!(state.input.read(cx).value().as_ref(), "an");
+                assert!(state.is_open());
+                assert_eq!(state.highlighted, Some(1), "Anna stays highlighted");
+                assert_eq!(state.value().map(|v| v.as_ref()), Some("ann"));
+                state.set_open(false, window, cx);
+                assert_eq!(
+                    state.input.read(cx).value().as_ref(),
+                    "Ann",
+                    "the committed value keeps its label"
+                );
+                state.set_items([SelectItem::new("bob", "Bob")], cx);
+                assert_eq!(state.highlighted, None);
+            });
+        });
+    }
+
+    #[gpui_kit::test]
     fn reopening_combobox_starts_with_all_options(cx: &mut gpui_kit::TestAppContext) {
         let window = cx.add_empty_window();
         window.update(|window, cx| {
@@ -404,10 +520,7 @@ impl Render for SelectState {
                 .into_any_element()
         } else {
             let text = self
-                .value
-                .as_ref()
-                .and_then(|value| self.items.iter().find(|i| &i.value == value))
-                .map(|i| i.label.clone())
+                .committed_label()
                 .unwrap_or_else(|| self.placeholder.clone());
             div()
                 .id((id.clone(), "trigger"))
@@ -473,12 +586,18 @@ impl Render for SelectState {
                     this.set_open(false, window, cx);
                 }));
             let visible = self.visible(cx);
-            if visible.is_empty() {
+            if visible.is_empty() || self.loading {
                 list = list.child(
                     div()
+                        .id((id.clone(), "status"))
+                        .role(Role::Status)
                         .p(theme.space(3.))
                         .text_color(colors.muted_foreground)
-                        .child("No results found."),
+                        .child(if self.loading {
+                            "Loading…"
+                        } else {
+                            "No results found."
+                        }),
                 );
             }
             for i in visible {
@@ -525,13 +644,7 @@ impl Render for SelectState {
             .open(self.open)
             .disabled(self.disabled)
             .accessibility_label(accessibility_label)
-            .accessibility_value(
-                self.value
-                    .as_ref()
-                    .and_then(|value| self.items.iter().find(|i| &i.value == value))
-                    .map(|i| i.label.clone())
-                    .unwrap_or_default(),
-            )
+            .accessibility_value(self.committed_label().unwrap_or_default())
             .when(!editing, |s| s.focus_handle(&self.focus))
             .on_open_change(move |open, window, cx| {
                 open_state.update(cx, |state, cx| state.set_open(open, window, cx))

@@ -100,7 +100,84 @@ struct ActiveTrigger {
 /// text or after whitespace, followed by non-whitespace up to the caret.
 /// `/` only counts at the very start, as a command. Returns the trigger, its
 /// byte offset and the query after it.
+///
+/// A trigger inside Markdown code, an unclosed backtick span on its line or
+/// an open ``` fence, does not count, so `` `npm i @types/node` `` opens no
+/// popup. Use [`active_trigger_with`] to count those too.
 pub fn active_trigger<'a>(
+    text: &'a str,
+    cursor: usize,
+    triggers: &[char],
+) -> Option<(char, usize, &'a str)> {
+    active_trigger_with(text, cursor, triggers, true)
+}
+
+/// [`active_trigger`], with `ignore_code` choosing whether triggers inside
+/// Markdown code spans and fences are skipped.
+pub fn active_trigger_with<'a>(
+    text: &'a str,
+    cursor: usize,
+    triggers: &[char],
+    ignore_code: bool,
+) -> Option<(char, usize, &'a str)> {
+    let found = find_trigger(text, cursor, triggers)?;
+    if ignore_code && in_code(text, found.1) {
+        return None;
+    }
+    Some(found)
+}
+
+/// Whether byte `offset` of `text` is inside Markdown code: an open fenced
+/// block (``` or ~~~) or an unclosed backtick span earlier on its line.
+pub fn in_code(text: &str, offset: usize) -> bool {
+    let Some(before) = text.get(..offset) else {
+        return false;
+    };
+    let line_start = before.rfind('\n').map_or(0, |index| index + 1);
+    let mut fence: Option<(char, usize)> = None;
+    for line in before[..line_start].lines() {
+        let trimmed = line.trim_start();
+        let marker = trimmed.chars().next().filter(|c| *c == '`' || *c == '~');
+        let Some(marker) = marker else {
+            continue;
+        };
+        let run = trimmed.chars().take_while(|c| *c == marker).count();
+        if run < 3 {
+            continue;
+        }
+        fence = match fence {
+            None => Some((marker, run)),
+            Some((open, length)) if open == marker && run >= length => None,
+            open => open,
+        };
+    }
+    let line = &before[line_start..];
+    let trimmed = line.trim_start();
+    if fence.is_some() || trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+        return true;
+    }
+    // A span opens with a run of backticks and closes with a run as long.
+    let mut open: Option<usize> = None;
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '`' {
+            continue;
+        }
+        let mut run = 1;
+        while chars.peek() == Some(&'`') {
+            chars.next();
+            run += 1;
+        }
+        open = match open {
+            None => Some(run),
+            Some(length) if length == run => None,
+            open => open,
+        };
+    }
+    open.is_some()
+}
+
+fn find_trigger<'a>(
     text: &'a str,
     cursor: usize,
     triggers: &[char],
@@ -126,6 +203,7 @@ pub fn active_trigger<'a>(
 pub struct ComposerState {
     input: Entity<TextareaState>,
     triggers: Vec<char>,
+    ignore_code: bool,
     active: Option<ActiveTrigger>,
     dismissed: Option<usize>,
     suggestions: Vec<ComposerSuggestion>,
@@ -189,6 +267,7 @@ impl ComposerState {
         Self {
             input,
             triggers: vec!['@', '~', ':', '/'],
+            ignore_code: true,
             active: None,
             dismissed: None,
             suggestions: Vec::new(),
@@ -246,6 +325,13 @@ impl ComposerState {
         cx: &mut Context<Self>,
     ) {
         self.triggers = triggers.into_iter().collect();
+        self.refresh_trigger(cx);
+    }
+
+    /// Whether triggers inside Markdown code spans and fences are ignored, as
+    /// in the Mattermost web app. On by default.
+    pub fn set_ignore_triggers_in_code(&mut self, ignore: bool, cx: &mut Context<Self>) {
+        self.ignore_code = ignore;
         self.refresh_trigger(cx);
     }
 
@@ -425,7 +511,7 @@ impl ComposerState {
         let value = input.value();
         let range = input.selected_range();
         let found = (range.is_empty())
-            .then(|| active_trigger(&value, range.end, &self.triggers))
+            .then(|| active_trigger_with(&value, range.end, &self.triggers, self.ignore_code))
             .flatten()
             .map(|(trigger, start, query)| ActiveTrigger {
                 trigger,
@@ -740,7 +826,7 @@ impl RenderOnce for Composer {
 
 #[cfg(test)]
 mod tests {
-    use super::{active_trigger, rows_within};
+    use super::{active_trigger, active_trigger_with, rows_within};
     use gpui_kit::px;
 
     #[test]
@@ -778,5 +864,34 @@ mod tests {
         assert_eq!(active_trigger("x /cmd", 6, &TRIGGERS), None);
         // The caret, not the end of the text, ends the query.
         assert_eq!(active_trigger("@arya", 3, &TRIGGERS), Some(('@', 0, "ar")));
+    }
+
+    #[test]
+    fn triggers_inside_code_do_not_count() {
+        assert_eq!(active_trigger("run `@x", 7, &TRIGGERS), None);
+        assert_eq!(active_trigger("`npm i @types", 13, &TRIGGERS), None);
+        assert_eq!(active_trigger("`:wq", 4, &TRIGGERS), None);
+        assert_eq!(active_trigger("```\n@x", 6, &TRIGGERS), None);
+        assert_eq!(active_trigger("~~~ rust\nlet a = 1;\n :ta", 23, &TRIGGERS), None);
+        // A closed span or fence ends the code.
+        assert_eq!(
+            active_trigger("`code` @ar", 10, &TRIGGERS),
+            Some(('@', 7, "ar"))
+        );
+        assert_eq!(
+            active_trigger("```\nx\n```\n@ar", 13, &TRIGGERS),
+            Some(('@', 10, "ar"))
+        );
+        assert_eq!(
+            active_trigger("``a ` b`` @ar", 13, &TRIGGERS),
+            Some(('@', 10, "ar"))
+        );
+        // The span is per line.
+        assert_eq!(active_trigger("`open\n@ar", 9, &TRIGGERS), Some(('@', 6, "ar")));
+        // The option turns it off.
+        assert_eq!(
+            active_trigger_with("`npm i @types", 13, &TRIGGERS, false),
+            Some(('@', 7, "types"))
+        );
     }
 }

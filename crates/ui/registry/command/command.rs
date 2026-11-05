@@ -13,7 +13,7 @@ use gpui_kit::{
     Focusable, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _, Render,
     RenderOnce, Role, ScrollStrategy, SharedString, StatefulInteractiveElement as _,
     StyleRefinement, Styled, Subscription, UniformListScrollHandle, Window, div,
-    prelude::FluentBuilder as _, px, uniform_list,
+    prelude::FluentBuilder as _, px, relative, uniform_list,
 };
 
 use super::input::{Input, InputEvent, InputState};
@@ -30,6 +30,10 @@ pub struct CommandItem {
     pub value: SharedString,
     /// The visible label, which the query matches.
     pub label: SharedString,
+    /// Muted secondary text after the label, such as the team a channel is
+    /// in. It is also the row's accessible description, so rows that share a
+    /// label still sound different.
+    pub description: Option<SharedString>,
     /// The heading this item is listed under.
     pub group: Option<SharedString>,
     /// An optional leading Lucide icon.
@@ -48,12 +52,19 @@ impl CommandItem {
         Self {
             value: value.into(),
             label: label.into(),
+            description: None,
             group: None,
             icon: None,
             shortcut: None,
             keywords: Vec::new(),
             disabled: false,
         }
+    }
+    /// Shows muted secondary text at the row's trailing edge and reads it
+    /// as the row's accessible description, such as the team of a channel.
+    pub fn description(mut self, description: impl Into<SharedString>) -> Self {
+        self.description = Some(description.into());
+        self
     }
     /// Lists the item under a heading. Items with the same heading are shown together.
     pub fn group(mut self, group: impl Into<SharedString>) -> Self {
@@ -386,8 +397,19 @@ impl Render for CommandState {
                                 .aria_label(item.label.clone())
                                 .aria_selected(selected)
                                 .when(selected, |row| row.aria_active_descendant())
-                                .when(item.disabled, |row| {
-                                    disabled::style(row.aria_description("Unavailable"))
+                                .map(|row| match (&item.description, item.disabled) {
+                                    (description, true) => disabled::style(row.aria_description(
+                                        description.as_ref().map_or_else(
+                                            || SharedString::from("Unavailable"),
+                                            |description| {
+                                                format!("{description}, unavailable").into()
+                                            },
+                                        ),
+                                    )),
+                                    (Some(description), false) => {
+                                        row.aria_description(description.clone())
+                                    }
+                                    (None, false) => row,
                                 })
                                 .w_full()
                                 .h(row_theme.space(ROW))
@@ -435,6 +457,19 @@ impl Render for CommandState {
                                         .text_ellipsis()
                                         .child(item.label.clone()),
                                 )
+                                .when_some(item.description.clone(), |row, description| {
+                                    row.child(
+                                        div()
+                                            .flex_shrink(1.)
+                                            .min_w_0()
+                                            .max_w(relative(0.5))
+                                            .overflow_hidden()
+                                            .text_ellipsis()
+                                            .text_size(row_theme.text(12.))
+                                            .text_color(row_theme.colors.muted_foreground)
+                                            .child(description),
+                                    )
+                                })
                                 .when_some(trailing, |row, trailing| {
                                     row.child(
                                         div().flex_shrink_0().flex().items_center().child(trailing),

@@ -816,6 +816,21 @@ impl UiTheme {
         }
     }
 
+    /// `color` composited over the `background` token: the same color with
+    /// no transparency. A translucent fill lets a focus ring's shadow, which
+    /// GPUI paints under the whole box, show through it; this one does not.
+    pub fn opaque(&self, color: Rgba) -> Rgba {
+        let under = self.colors.background;
+        let alpha = color.a.clamp(0., 1.);
+        let mix = |top: f32, bottom: f32| top * alpha + bottom * (1. - alpha);
+        Rgba {
+            r: mix(color.r, under.r),
+            g: mix(color.g, under.g),
+            b: mix(color.b, under.b),
+            a: 1.,
+        }
+    }
+
     /// A step of the type scale multiplied by `text_scale`.
     pub fn text_style(&self, style: UiTextStyle) -> UiTextStyle {
         UiTextStyle {
