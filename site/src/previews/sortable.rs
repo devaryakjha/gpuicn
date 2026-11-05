@@ -92,6 +92,7 @@ impl Showcase {
                 }),
         );
         div()
+            .w_full()
             .flex()
             .flex_col()
             .items_center()
@@ -99,6 +100,7 @@ impl Showcase {
             .child(
                 div()
                     .id("sortable.bookmarks.scroll")
+                    .w_full()
                     .max_w(px(460.))
                     .overflow_x_scroll()
                     .child(bar),
