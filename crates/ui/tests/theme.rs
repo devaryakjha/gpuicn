@@ -33,3 +33,14 @@ fn switches_the_app_owned_theme(cx: &mut TestAppContext) {
         );
     });
 }
+
+#[test]
+fn pictures_carry_an_id_so_gifs_animate() {
+    use gpui_kit::{Element as _, ImageSource, SharedUri};
+    use gpuicn::theme::primitives::{image, image_id};
+    let gif = || ImageSource::from(SharedUri::from("https://example.com/party.gif"));
+    let other = ImageSource::from(SharedUri::from("https://example.com/wave.gif"));
+    // GPUI only advances an img's frames when it has an id.
+    assert_eq!(image(gif()).id(), Some(image_id(&gif())));
+    assert_ne!(image_id(&gif()), image_id(&other));
+}

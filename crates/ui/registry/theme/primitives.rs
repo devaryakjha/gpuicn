@@ -397,9 +397,40 @@ pub fn switch_colors(theme: &UiTheme, checked: bool) -> (Rgba, Rgba) {
     }
 }
 
+/// A GPUI `img` that plays animated GIFs and WebPs.
+///
+/// GPUI only advances an image's frames when the element has an id, so this
+/// names the picture after its source: two pictures of the same file share a
+/// frame clock, and a new source starts from the first frame. Animation stops
+/// while [`App::reduce_motion`](gpui_kit::App) is on, as for any `img`. Use it
+/// wherever a component draws a caller's picture.
+pub fn image(source: impl Into<ImageSource>) -> Img {
+    let source = source.into();
+    let id = image_id(&source);
+    let mut image = img(source);
+    image.interactivity().element_id = Some(id);
+    image
+}
+
+/// The element id [`image`] gives a picture of `source`.
+pub fn image_id(source: &ImageSource) -> gpui_kit::ElementId {
+    use std::hash::{Hash as _, Hasher as _};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    match source {
+        ImageSource::Resource(resource) => resource.hash(&mut hasher),
+        ImageSource::Render(render) => (1u8, render.id.0).hash(&mut hasher),
+        ImageSource::Image(image) => (2u8, image.id).hash(&mut hasher),
+        ImageSource::Custom(load) => {
+            (3u8, std::sync::Arc::as_ptr(load) as *const () as usize).hash(&mut hasher)
+        }
+    }
+    gpui_kit::ElementId::NamedInteger("gpuicn-image".into(), hasher.finish())
+}
+
 /// An image inside a rounded frame. GPUI clips children to rectangles, so the
 /// frame rounds itself and the image rounds to the frame's inner radius; the
 /// image fills the frame's box and never sizes the frame from its aspect ratio.
+/// Animated pictures play, through [`image`].
 pub fn clipped_image(
     source: impl Into<ImageSource>,
     radius: Pixels,
@@ -424,7 +455,7 @@ pub fn clipped_image_with(
         .rounded(radius)
         .bg(theme.colors.muted)
         .child(configure(
-            img(source)
+            image(source)
                 .absolute()
                 .inset_0()
                 .size_full()

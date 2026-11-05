@@ -10,7 +10,7 @@ use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
     AnyElement, AnyView, App, Axis, Bounds, ClickEvent, ElementId, FontWeight, ImageSource,
     InteractiveElement as _, IntoElement, ParentElement, Pixels, RenderOnce, Role, SharedString,
-    StatefulInteractiveElement as _, Styled, Window, div, img, prelude::FluentBuilder as _, px,
+    StatefulInteractiveElement as _, Styled, Window, div, prelude::FluentBuilder as _, px,
     relative,
 };
 
@@ -772,7 +772,7 @@ fn reaction_chip(
         .unwrap_or_else(|| format!("{} {}", reaction.emoji, reaction.count).into());
     let key = SharedString::from(format!("reaction-{}", reaction.emoji));
     let glyph = match reaction.image.clone() {
-        Some(image) => img(image)
+        Some(image) => super::theme::primitives::image(image)
             .size(theme.space(4.))
             .flex_shrink_0()
             .into_any_element(),

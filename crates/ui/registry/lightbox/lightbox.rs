@@ -9,7 +9,7 @@ use gpui_kit::{
     AnyElement, App, Context, ElementId, Entity, EventEmitter, ImageSource,
     InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, ObjectFit, ParentElement as _,
     Pixels, Point, Render, Role, SharedString, StatefulInteractiveElement as _, Styled,
-    StyledImage as _, Window, div, hsla, img, point, prelude::FluentBuilder as _, px,
+    StyledImage as _, Window, div, hsla, point, prelude::FluentBuilder as _, px,
 };
 
 use super::button::{Button, ButtonSize, ButtonVariant};
@@ -316,7 +316,7 @@ impl Render for LightboxState {
                 let width = self.stage.x * zoom;
                 let height = self.stage.y * zoom;
                 stage.child(
-                    img(image.source)
+                    super::theme::primitives::image(image.source)
                         .absolute()
                         .left((self.stage.x - width) / 2. + self.pan.x)
                         .top((self.stage.y - height) / 2. + self.pan.y)

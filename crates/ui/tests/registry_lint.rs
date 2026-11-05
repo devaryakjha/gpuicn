@@ -102,6 +102,15 @@ const RULES: &[Rule] = &[
         fix: "use `clipped_image(..)` from the primitives; GPUI clips to rectangles",
     },
     Rule {
+        name: "image-animation",
+        needles_in_file: &[],
+        needles_per_line: &[" img(", "(img(", "\timg("],
+        skip_lines_with: &["//"],
+        needles_within: None,
+        allow: &[PRIMITIVES],
+        fix: "use `image(..)` from the primitives; a bare `img` has no id, so GIFs stay on frame one",
+    },
+    Rule {
         name: "hover-state",
         needles_in_file: &[],
         needles_per_line: &["\"hovered\""],
