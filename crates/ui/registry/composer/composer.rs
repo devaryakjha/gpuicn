@@ -19,7 +19,7 @@ use gpui_kit::{
     Subscription, Window, anchored, deferred, div, point, prelude::FluentBuilder as _, px,
 };
 
-use super::input::{InputEvent, Textarea, TextareaState};
+use super::input::{InputEvent, Misspellings, SpellingMenu, Textarea, TextareaState};
 use super::theme::{UiTheme, apply_style, primitives::surface};
 
 type KeyHandler = Rc<dyn Fn(&Keystroke, &mut Window, &mut App) -> bool + 'static>;
@@ -84,6 +84,13 @@ pub enum ComposerEvent {
     Accept {
         /// The trigger character.
         trigger: char,
+        /// The accepted suggestion's value.
+        value: SharedString,
+    },
+    /// A suggestion opened with `open_suggestions` replaced its range.
+    AcceptRange {
+        /// The byte range that was replaced, in the text before the edit.
+        range: Range<usize>,
         /// The accepted suggestion's value.
         value: SharedString,
     },
@@ -202,9 +209,12 @@ fn find_trigger<'a>(
 /// Retained composer state: the editor, triggers and autocomplete.
 pub struct ComposerState {
     input: Entity<TextareaState>,
+    misspellings: Entity<Misspellings>,
     triggers: Vec<char>,
     ignore_code: bool,
     active: Option<ActiveTrigger>,
+    /// A range the application opened suggestions for; it wins over triggers.
+    custom: Option<Range<usize>>,
     dismissed: Option<usize>,
     suggestions: Vec<ComposerSuggestion>,
     highlighted: usize,
@@ -264,11 +274,14 @@ impl ComposerState {
                 }
             }),
         ];
+        let misspellings = cx.new(|cx| Misspellings::new(&input, cx));
         Self {
             input,
+            misspellings,
             triggers: vec!['@', '~', ':', '/'],
             ignore_code: true,
             active: None,
+            custom: None,
             dismissed: None,
             suggestions: Vec::new(),
             highlighted: 0,
@@ -284,6 +297,35 @@ impl ComposerState {
     /// The editing state, for anything not covered here.
     pub fn input(&self) -> &Entity<TextareaState> {
         &self.input
+    }
+
+    /// The misspelled ranges the composer underlines.
+    pub fn misspellings(&self) -> &Entity<Misspellings> {
+        &self.misspellings
+    }
+
+    /// Underlines misspelled byte ranges of the current text with a wavy
+    /// line. Pass fresh ranges a moment after typing stops; edits move or
+    /// drop the old ones meanwhile.
+    pub fn set_misspellings(
+        &mut self,
+        ranges: impl IntoIterator<Item = Range<usize>>,
+        cx: &mut Context<Self>,
+    ) {
+        self.misspellings
+            .update(cx, |misspellings, cx| misspellings.set(ranges, cx));
+    }
+
+    /// Builds the right-click menu for a misspelled word: suggestions, which
+    /// replace it in one undoable edit, and app items such as "Ignore". They
+    /// go above Cut, Copy, Paste and Select All.
+    pub fn set_on_misspelling_menu(
+        &mut self,
+        handler: impl Fn(&mut SpellingMenu, &mut Window, &mut App) + 'static,
+        cx: &mut Context<Self>,
+    ) {
+        self.misspellings
+            .update(cx, |misspellings, _| misspellings.on_menu(handler));
     }
 
     /// The number of lines the editor grows to before it scrolls.
@@ -464,9 +506,53 @@ impl ComposerState {
         cx.notify();
     }
 
+    /// Opens the suggestion popup for a byte range the application chose,
+    /// such as the argument after `/jira create `, anchored at its start.
+    ///
+    /// Accepting a suggestion replaces the range with its value and a space
+    /// and emits `ComposerEvent::AcceptRange`. Keys work as for a trigger.
+    /// Call it again with a new range or list as the text changes (an empty
+    /// list hides the popup), and `close_suggestions` when it no longer
+    /// applies. While it is open, trigger characters do not open their own.
+    pub fn open_suggestions(
+        &mut self,
+        range: Range<usize>,
+        suggestions: impl IntoIterator<Item = ComposerSuggestion>,
+        cx: &mut Context<Self>,
+    ) {
+        let len = self.value(cx).len();
+        let start = range.start.min(len);
+        let range = start..range.end.clamp(start, len);
+        let same_range = self.custom.as_ref() == Some(&range);
+        let previous = self.highlighted_suggestion().map(|item| item.value.clone());
+        self.active = None;
+        self.custom = Some(range);
+        self.suggestions = suggestions.into_iter().collect();
+        // Updating the list for the same range keeps the highlighted entry.
+        self.highlighted = previous
+            .filter(|_| same_range)
+            .and_then(|value| self.suggestions.iter().position(|item| item.value == value))
+            .unwrap_or(0);
+        cx.notify();
+    }
+
+    /// Closes suggestions opened with `open_suggestions`.
+    pub fn close_suggestions(&mut self, cx: &mut Context<Self>) {
+        if self.custom.take().is_some() {
+            self.suggestions.clear();
+            cx.notify();
+            self.refresh_trigger(cx);
+        }
+    }
+
+    /// The range suggestions were opened for with `open_suggestions`.
+    pub fn suggestion_range(&self) -> Option<Range<usize>> {
+        self.custom.clone()
+    }
+
     /// Whether the autocomplete popup is showing.
     pub fn is_autocomplete_open(&self) -> bool {
-        self.active.is_some() && !self.suggestions.is_empty()
+        (self.active.is_some() || self.custom.is_some()) && !self.suggestions.is_empty()
     }
 
     /// The highlighted suggestion while the popup is open.
@@ -478,6 +564,24 @@ impl ComposerState {
 
     /// Replaces the trigger and query with suggestion `index` and a space.
     pub fn accept(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(range) = self.custom.clone() {
+            let Some(suggestion) = self.suggestions.get(index).cloned() else {
+                return;
+            };
+            let text = format!("{} ", suggestion.value);
+            self.custom = None;
+            self.suggestions.clear();
+            self.input.update(cx, |input, cx| {
+                input.set_selected_range(range.clone(), cx);
+                input.replace(text, window, cx);
+            });
+            cx.emit(ComposerEvent::AcceptRange {
+                range,
+                value: suggestion.value,
+            });
+            cx.notify();
+            return;
+        }
         let (Some(active), Some(suggestion)) =
             (self.active.clone(), self.suggestions.get(index).cloned())
         else {
@@ -499,6 +603,12 @@ impl ComposerState {
     }
 
     fn close_autocomplete(&mut self, cx: &mut Context<Self>) {
+        if self.custom.take().is_some() {
+            self.suggestions.clear();
+            cx.emit(ComposerEvent::AutocompleteClosed);
+            cx.notify();
+            return;
+        }
         if self.active.take().is_some() {
             self.suggestions.clear();
             cx.emit(ComposerEvent::AutocompleteClosed);
@@ -507,6 +617,9 @@ impl ComposerState {
     }
 
     fn refresh_trigger(&mut self, cx: &mut Context<Self>) {
+        if self.custom.is_some() {
+            return;
+        }
         let input = self.input.read(cx);
         let value = input.value();
         let range = input.selected_range();
@@ -588,6 +701,7 @@ impl Render for ComposerState {
         let id = ElementId::from(("composer", cx.entity_id()));
         let on_paste = self.on_paste.clone();
         let textarea = Textarea::new(&self.input)
+            .misspellings(&self.misspellings)
             .aria_label("Message")
             .bordered(false)
             .min_h(px(0.))
@@ -597,15 +711,19 @@ impl Render for ComposerState {
                 textarea.on_paste(move |item, window, cx| handler(item, window, cx))
             });
 
-        let popup = self
-            .active
-            .clone()
+        let open = match (&self.custom, &self.active) {
+            (Some(range), _) => Some((None, range.start)),
+            (None, Some(active)) => Some((Some(active.trigger), active.start)),
+            (None, None) => None,
+        };
+        let popup = open
             .filter(|_| !self.suggestions.is_empty())
-            .and_then(|active| {
+            .and_then(|(trigger, start)| {
                 // Both rectangles come from the editor's last layout, so their
                 // difference stays right even if the page moved since then.
                 let input = self.input.read(cx);
-                let trigger = input.range_to_bounds(&(active.start..active.start));
+                let active = trigger;
+                let trigger = input.range_to_bounds(&(start..start));
                 let (Some(trigger), Some(text)) = (trigger, input.text_bounds()) else {
                     // The caret has no position until the editor's first layout.
                     window.request_animation_frame();
@@ -694,11 +812,11 @@ impl Render for ComposerState {
                             div()
                                 .id((id.clone(), "suggestions"))
                                 .role(Role::ListBox)
-                                .aria_label(match active.trigger {
-                                    '@' => "People",
-                                    '~' => "Channels",
-                                    ':' => "Emoji",
-                                    '/' => "Commands",
+                                .aria_label(match active {
+                                    Some('@') => "People",
+                                    Some('~') => "Channels",
+                                    Some(':') => "Emoji",
+                                    Some('/') => "Commands",
                                     _ => "Suggestions",
                                 })
                                 .occlude()
