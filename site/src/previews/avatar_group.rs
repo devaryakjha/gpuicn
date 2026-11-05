@@ -5,14 +5,17 @@ use gpuicn::avatar_group::AvatarGroup;
 
 impl Showcase {
     pub(crate) fn avatar_group_preview(&self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let image = "https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png";
         let theme = UiTheme::read(cx);
         let people = ["Ada Lovelace", "Grace Hopper", "Alan Turing", "Katherine Johnson", "Niklaus Wirth", "Margaret Hamilton"];
         let group = |id: &'static str, count: usize, size: AvatarSize| {
             people.iter().take(count).fold(
                 AvatarGroup::new(id).aria_label("Acknowledged by").size(size),
                 |group, name| {
-                    let initials: String = name.split(' ').filter_map(|part| part.chars().next()).collect();
-                    group.person(*name, Avatar::new(*name).fallback(initials))
+                    let initial: String = name.chars().take(1).collect();
+                    let avatar = Avatar::new(*name).fallback(initial);
+                    let avatar = if name.starts_with("Ada") { avatar.image(image) } else { avatar };
+                    group.person(*name, avatar)
                 },
             )
         };

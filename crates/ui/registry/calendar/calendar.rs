@@ -531,7 +531,11 @@ impl RenderOnce for Calendar {
                 .on_click(move |_, _, cx| {
                     state.update(cx, |state, cx| state.shift_month(direction, cx))
                 })
-                .child(lucide(icon).size(theme.space(4.)))
+                .child(
+                    lucide(icon)
+                        .size(theme.space(4.))
+                        .text_color(theme.colors.foreground),
+                )
         };
         let header = div()
             .flex()

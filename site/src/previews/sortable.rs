@@ -30,11 +30,15 @@ impl Showcase {
                 SortableGroup::new("sortable.bookmarks.bar", "Bookmarks")
                     .header(|_, _| div())
                     .rows(bookmarks.read(cx)[0].iter().map(|&name| {
-                        SortableRow::new(name, name, move |_, _| {
+                        SortableRow::new(name, name, move |_, cx| {
                             Button::new(gpui_kit::ElementId::from(format!("sortable.bookmark.{name}")))
                                 .size(ButtonSize::Sm)
                                 .variant(ButtonVariant::Secondary)
-                                .child(lucide(LucideIcon::Bookmark).size(px(14.)))
+                                .child(
+                                    lucide(LucideIcon::Bookmark)
+                                        .size(px(14.))
+                                        .text_color(UiTheme::read(cx).colors.secondary_foreground),
+                                )
                                 .label(name)
                         })
                     })),

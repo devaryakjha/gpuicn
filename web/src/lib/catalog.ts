@@ -416,6 +416,8 @@ export function previewHeight(slug: string) {
   if (
     [
       "carousel",
+      "date-picker",
+      "date-time-picker",
       "form",
       "input-group",
       "markdown",
@@ -445,8 +447,6 @@ export function previewHeight(slug: string) {
     [
       "autocomplete",
       "combobox",
-      "date-picker",
-      "date-time-picker",
       "field",
       "popover",
       "preview-card",
