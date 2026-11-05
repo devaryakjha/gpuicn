@@ -20,7 +20,8 @@ use gpui_kit::{
 };
 
 use super::theme::{
-    UiTheme, apply_style,
+    Direction, UiText, UiTheme, apply_style, locale,
+    locale::DirectionalStyled as _,
     primitives::{focus, text},
 };
 
@@ -329,12 +330,15 @@ fn drop_move(from: SortablePosition, target: Target, lens: &[usize]) -> Option<S
 
 /// Whether a key press is the move-one-place shortcut, and whether it moves
 /// toward the start: Up and Down, or Left and Right in a horizontal list.
-fn move_key(event: &KeyDownEvent, horizontal: bool) -> Option<bool> {
+fn move_key(event: &KeyDownEvent, horizontal: bool, direction: Direction) -> Option<bool> {
     let modifiers = &event.keystroke.modifiers;
     if !(modifiers.alt && modifiers.shift) || modifiers.control || modifiers.platform {
         return None;
     }
-    match (event.keystroke.key.as_str(), horizontal) {
+    match (
+        direction.logical_key(event.keystroke.key.as_str()),
+        horizontal,
+    ) {
         ("up", false) | ("left", true) => Some(true),
         ("down", false) | ("right", true) => Some(false),
         _ => None,
@@ -350,8 +354,16 @@ fn drop_line(before: bool, horizontal: bool, theme: &UiTheme) -> gpui_kit::Div {
     match (horizontal, before) {
         (false, true) => line.left_0().right_0().h(px(2.)).top(px(-1.)),
         (false, false) => line.left_0().right_0().h(px(2.)).bottom(px(-1.)),
-        (true, true) => line.top_0().bottom_0().w(px(2.)).left(offset),
-        (true, false) => line.top_0().bottom_0().w(px(2.)).right(offset),
+        (true, true) => line
+            .top_0()
+            .bottom_0()
+            .w(px(2.))
+            .inset_start(theme.direction, offset),
+        (true, false) => line
+            .top_0()
+            .bottom_0()
+            .w(px(2.))
+            .inset_end(theme.direction, offset),
     }
 }
 
@@ -387,8 +399,13 @@ impl RenderOnce for Sortable {
         let on_reorder_group = self.on_reorder_group.clone();
         let reorder_groups = self.reorder_groups && on_reorder_group.is_some();
         let horizontal = self.horizontal;
+        let direction = theme.direction;
         let (previous_key, next_key) = if horizontal {
-            ("Left", "Right")
+            if direction.is_rtl() {
+                ("Right", "Left")
+            } else {
+                ("Left", "Right")
+            }
         } else {
             ("Up", "Down")
         };
@@ -397,13 +414,17 @@ impl RenderOnce for Sortable {
             .id(self.id.clone())
             .role(Role::List)
             .aria_label(self.label.clone())
-            .aria_description(format!(
-                "Press Alt+Shift+{previous_key} or Alt+Shift+{next_key} to move the focused row."
+            .aria_description(locale::text(
+                cx,
+                UiText::SortInstructions {
+                    previous: previous_key.into(),
+                    next: next_key.into(),
+                },
             ))
             .relative()
             .flex()
             .when(horizontal, |root| {
-                root.flex_row().flex_wrap().items_center()
+                root.flex_row_in(direction).flex_wrap().items_center()
             })
             .when(!horizontal, |root| root.flex_col())
             .gap(theme.space(2.))
@@ -519,9 +540,13 @@ impl RenderOnce for Sortable {
                     header = header
                         .track_focus(&focus)
                         .role(Role::Button)
-                        .aria_label(format!(
-                            "{}, move with Alt+Shift+{previous_key} or {next_key}",
-                            group.label
+                        .aria_label(locale::text(
+                            cx,
+                            UiText::SortGroup {
+                                label: group.label.clone(),
+                                previous: previous_key.into(),
+                                next: next_key.into(),
+                            },
                         ))
                         .rounded(theme.radius.md)
                         .focus_visible(move |style| focus::ring(style, &ring));
@@ -559,7 +584,7 @@ impl RenderOnce for Sortable {
                 let on_reorder_group = on_reorder_group.clone();
                 let labels = group_labels.clone();
                 header = header.on_key_down(move |event, window, cx| {
-                    let Some(up) = move_key(event, horizontal) else {
+                    let Some(up) = move_key(event, horizontal, direction) else {
                         return;
                     };
                     cx.stop_propagation();
@@ -569,14 +594,17 @@ impl RenderOnce for Sortable {
                         (group_index + 1 < group_count).then_some(group_index + 1)
                     };
                     if let (Some(to), Some(handler)) = (to, &on_reorder_group) {
+                        let text = locale::text(
+                            cx,
+                            UiText::Moved {
+                                label: labels[group_index].clone(),
+                                position: to + 1,
+                                count: group_count,
+                                group: None,
+                            },
+                        );
                         state.update(cx, |state, _| {
-                            state.announcement = format!(
-                                "{} moved to position {} of {}",
-                                labels[group_index],
-                                to + 1,
-                                group_count
-                            )
-                            .into();
+                            state.announcement = text;
                         });
                         handler(group_index, to, window, cx);
                     }
@@ -586,7 +614,7 @@ impl RenderOnce for Sortable {
             let mut rows = div()
                 .flex()
                 .when(horizontal, |rows| {
-                    rows.flex_row()
+                    rows.flex_row_in(direction)
                         .flex_wrap()
                         .items_center()
                         .gap(theme.space(2.))
@@ -650,7 +678,8 @@ impl RenderOnce for Sortable {
                                     return;
                                 }
                                 let after = if horizontal {
-                                    event.event.position.x > event.bounds.center().x
+                                    (event.event.position.x > event.bounds.center().x)
+                                        != direction.is_rtl()
                                 } else {
                                     event.event.position.y > event.bounds.center().y
                                 };
@@ -665,7 +694,7 @@ impl RenderOnce for Sortable {
                             },
                         )
                         .on_key_down(move |event, window, cx| {
-                            let Some(up) = move_key(event, horizontal) else {
+                            let Some(up) = move_key(event, horizontal, direction) else {
                                 return;
                             };
                             cx.stop_propagation();
@@ -680,14 +709,16 @@ impl RenderOnce for Sortable {
                             } else {
                                 lens_for_keys[to.group] + 1
                             };
-                            keyed.update(cx, |state, _| {
-                                state.announcement = format!(
-                                    "{label} moved to position {} of {len} in {}",
-                                    to.index + 1,
-                                    labels[to.group]
-                                )
-                                .into();
-                            });
+                            let text = locale::text(
+                                cx,
+                                UiText::Moved {
+                                    label: label.clone(),
+                                    position: to.index + 1,
+                                    count: len,
+                                    group: Some(labels[to.group].clone()),
+                                },
+                            );
+                            keyed.update(cx, |state, _| state.announcement = text);
                             if let Some(handler) = &on_reorder {
                                 handler(&movement, window, cx);
                             }
@@ -710,7 +741,9 @@ impl RenderOnce for Sortable {
             let mut container = div()
                 .relative()
                 .flex()
-                .when(horizontal, |container| container.flex_row().items_center())
+                .when(horizontal, |container| {
+                    container.flex_row_in(direction).items_center()
+                })
                 .when(!horizontal, |container| container.flex_col())
                 .rounded(theme.radius.md)
                 .when(highlighted, |container| container.bg(theme.colors.accent))

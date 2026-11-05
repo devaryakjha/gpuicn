@@ -2,7 +2,8 @@
 use super::{
     button::{Button, ButtonSize, ButtonVariant},
     theme::{
-        UiTheme,
+        Direction, UiText, UiTheme,
+        locale::{self, DirectionalStyled as _},
         primitives::{surface, text},
     },
 };
@@ -65,6 +66,21 @@ pub enum ToastPlacement {
 }
 
 impl ToastPlacement {
+    /// The corner on screen: left and right are the reading start and end,
+    /// so they swap in right-to-left layouts.
+    pub fn physical(self, direction: Direction) -> Self {
+        if !direction.is_rtl() {
+            return self;
+        }
+        match self {
+            Self::TopLeft => Self::TopRight,
+            Self::TopRight => Self::TopLeft,
+            Self::BottomLeft => Self::BottomRight,
+            Self::BottomRight => Self::BottomLeft,
+            other => other,
+        }
+    }
+
     fn anchor(self) -> Anchor {
         match self {
             Self::TopLeft => Anchor::TopLeft,
@@ -315,19 +331,22 @@ impl Render for ToastState {
         let viewport = window.viewport_size();
         let (inset_x, inset_y) = self.inset.unwrap_or((theme.space(4.), theme.space(4.)));
         let width = (viewport.width - inset_x * 2.).min(theme.space(96.));
+        let dir = theme.direction;
+        let placement = self.placement.physical(dir);
+        let close_label = locale::text(cx, UiText::CloseNotification);
         let mut stack = ToastStack::new("toasts", self.stack.clone())
-            .placement(self.placement.anchor())
+            .placement(placement.anchor())
             .focus_handle(self.focus.clone())
             .absolute()
             .w(width);
-        stack = match self.placement {
+        stack = match placement {
             ToastPlacement::TopLeft | ToastPlacement::BottomLeft => stack.left(inset_x),
             ToastPlacement::TopRight | ToastPlacement::BottomRight => stack.right(inset_x),
             ToastPlacement::TopCenter | ToastPlacement::BottomCenter => {
                 stack.left((viewport.width - width) / 2.)
             }
         };
-        stack = match self.placement {
+        stack = match placement {
             ToastPlacement::TopLeft | ToastPlacement::TopCenter | ToastPlacement::TopRight => {
                 stack.top(inset_y)
             }
@@ -359,7 +378,7 @@ impl Render for ToastState {
             // In tab order the buttons come before the close button.
             let buttons = (notice.action.is_some() || notice.cancel.is_some()).then(|| {
                 div()
-                    .flex()
+                    .flex_row_in(dir)
                     .items_center()
                     .gap(theme.space(2.))
                     .pt(theme.space(2.))
@@ -383,12 +402,12 @@ impl Render for ToastState {
                     }))
             });
             let close = Button::new(ElementId::from((ElementId::from(id.clone()), "close")))
-                .aria_label("Close notification")
+                .aria_label(close_label.clone())
                 .variant(ButtonVariant::Ghost)
                 .size(ButtonSize::IconSm)
                 .absolute()
                 .top(theme.space(2.))
-                .right(theme.space(2.))
+                .inset_end(dir, theme.space(2.))
                 .on_click(move |_, _, cx| {
                     state
                         .update(cx, |state, cx| {
@@ -414,7 +433,7 @@ impl Render for ToastState {
                 .w_full();
             let toast = surface::toast(toast, &theme)
                 .p(theme.space(4.))
-                .pr(theme.space(12.))
+                .padding_end(dir, theme.space(12.))
                 .flex()
                 .flex_col()
                 .gap(theme.space(1.))

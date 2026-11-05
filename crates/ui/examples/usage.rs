@@ -1280,3 +1280,27 @@ mod date_time_picker {
         DateTimePicker::new("schedule.send-at", state).aria_label("Send at")
     }
 }
+
+mod locale {
+    use crate::ui::theme::{Direction, UiText, locale};
+    use gpui_kit::{App, SharedString};
+
+    // Translate the built-in strings you have, and lay the app out right to left.
+    fn arabic(cx: &mut App) {
+        locale::set_strings(cx, |text| {
+            Some(match text {
+                UiText::Close => "إغلاق".into(),
+                UiText::SearchEmoji => "ابحث عن رمز تعبيري".into(),
+                UiText::Remove(name) => format!("إزالة {name}").into(),
+                // Everything else keeps its English default.
+                _ => return None,
+            })
+        });
+        locale::set_direction(cx, Direction::Rtl);
+    }
+
+    // Isolate a name inside visible text that mixes scripts.
+    fn posted_by(name: &str) -> SharedString {
+        format!("Posted by {}", locale::isolate(name)).into()
+    }
+}

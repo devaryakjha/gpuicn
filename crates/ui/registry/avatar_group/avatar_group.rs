@@ -14,7 +14,7 @@ use gpui_kit::{
 use gpui_kit::base::TestSupportExt as _;
 
 use super::avatar::{Avatar, AvatarSize};
-use super::theme::{UiTheme, apply_style};
+use super::theme::{UiText, UiTheme, apply_style, locale};
 use super::tooltip::text_tooltip;
 
 /// A row of overlapping avatars, for "acknowledged by" or "seen by" stacks.
@@ -107,7 +107,7 @@ impl RenderOnce for AvatarGroup {
         let colors = theme.colors;
         let ring = self.ring_color.unwrap_or(colors.background);
         let names: Vec<SharedString> = self.people.iter().map(|(name, _)| name.clone()).collect();
-        let listed = list_names(&names);
+        let listed = locale::text(cx, UiText::Names(names)).to_string();
         let label: SharedString = match &self.label {
             Some(label) if !listed.is_empty() => format!("{label} {listed}").into(),
             Some(label) => label.clone(),
@@ -137,7 +137,13 @@ impl RenderOnce for AvatarGroup {
                 .rounded_full()
                 .p(ring_width)
                 .bg(ring)
-                .when(index > 0, |frame| frame.ml(-overlap))
+                .when(index > 0, |frame| {
+                    if theme.direction.is_rtl() {
+                        frame.mr(-overlap)
+                    } else {
+                        frame.ml(-overlap)
+                    }
+                })
                 .child(content)
         };
         let faces = self
@@ -175,6 +181,7 @@ impl RenderOnce for AvatarGroup {
             .role(Role::Image)
             .aria_label(label)
             .flex()
+            .when(theme.direction.is_rtl(), |root| root.flex_row_reverse())
             .items_center()
             .children(faces)
             .children(chip)

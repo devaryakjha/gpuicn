@@ -1,6 +1,7 @@
 //! Nova toggle sets with controlled selection and arrow-key focus.
 use super::theme::{
     RovingFocus, UiTheme, apply_style,
+    locale::DirectionalStyled as _,
     primitives::{control, focus},
 };
 use gpui_kit::{
@@ -168,7 +169,7 @@ impl RenderOnce for ToggleGroup {
                     .when_some(handle, |toggle, h| {
                         toggle.track_focus(h).tab_stop(h.tab_stop)
                     })
-                    .flex()
+                    .flex_row_in(theme.direction)
                     .items_center()
                     .justify_center()
                     .gap(theme.space(1.))
@@ -194,7 +195,7 @@ impl RenderOnce for ToggleGroup {
             })
             .collect::<Vec<_>>();
         let root = gpui_kit::base::ToggleGroup::new(self.id)
-            .flex()
+            .flex_row_in(theme.direction)
             .gap(theme.space(if self.joined { 0. } else { 2. }))
             .when_some(self.label, |root, label| root.aria_label(label))
             .on_key_down(move |event, window, cx| {

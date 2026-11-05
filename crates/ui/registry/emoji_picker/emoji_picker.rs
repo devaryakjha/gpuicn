@@ -18,7 +18,11 @@ use gpui_kit::{
 };
 
 use super::input::{Input, InputEvent, InputState};
-use super::theme::{UiTheme, apply_style, primitives::surface};
+use super::theme::{
+    UiText, UiTheme, apply_style,
+    locale::{self, DirectionalStyled as _},
+    primitives::surface,
+};
 
 /// Emoji per grid row.
 pub const COLUMNS: usize = 9;
@@ -83,14 +87,8 @@ impl Emoji {
 pub const SKIN_TONES: usize = 5;
 const TONE_SWATCHES: [u32; SKIN_TONES + 1] =
     [0xffc93a, 0xf7dece, 0xf3d2a2, 0xd5ab88, 0xaf7e57, 0x7c533e];
-const TONE_NAMES: [&str; SKIN_TONES + 1] = [
-    "Default skin tone",
-    "Light skin tone",
-    "Medium-light skin tone",
-    "Medium skin tone",
-    "Medium-dark skin tone",
-    "Dark skin tone",
-];
+/// The name of the category `set_custom` adds.
+const CUSTOM: &str = "Custom";
 
 /// A titled group of emoji with a tab icon.
 #[derive(Clone)]
@@ -138,9 +136,25 @@ enum Row {
     Emoji { section: usize, cells: Range<usize> },
 }
 
+/// A section heading: one of the picker's own or an application category's.
+#[derive(Clone, Debug)]
+enum SectionName {
+    Builtin(UiText),
+    Category(SharedString),
+}
+
+impl SectionName {
+    fn text(&self, cx: &App) -> SharedString {
+        match self {
+            Self::Builtin(text) => locale::text(cx, text.clone()),
+            Self::Category(name) => name.clone(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 struct Section {
-    name: SharedString,
+    name: SectionName,
     icon: LucideIcon,
     /// Emoji as (category, index) into the categories, so recents and search
     /// results point at the same data.
@@ -182,7 +196,8 @@ impl EmojiPickerState {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let input = cx.new(|cx| InputState::new(window, cx).placeholder("Search emoji"));
+        let placeholder = locale::text(cx, UiText::SearchEmoji);
+        let input = cx.new(|cx| InputState::new(window, cx).placeholder(placeholder));
         let window_handle = window.window_handle();
         let weak = cx.weak_entity();
         let subscriptions = vec![
@@ -245,14 +260,14 @@ impl EmojiPickerState {
         custom: impl IntoIterator<Item = (SharedString, ImageSource)>,
         cx: &mut Context<Self>,
     ) {
-        self.categories.retain(|category| category.name != "Custom");
+        self.categories.retain(|category| category.name != CUSTOM);
         let emoji: Vec<_> = custom
             .into_iter()
             .map(|(name, image)| Emoji::custom(name, image))
             .collect();
         if !emoji.is_empty() {
             self.categories
-                .push(EmojiCategory::new("Custom", LucideIcon::Sparkles, emoji));
+                .push(EmojiCategory::new(CUSTOM, LucideIcon::Sparkles, emoji));
         }
         self.rebuild(cx);
     }
@@ -378,7 +393,7 @@ impl EmojiPickerState {
     fn named_section(
         &self,
         names: &[SharedString],
-        title: &str,
+        title: UiText,
         icon: LucideIcon,
     ) -> Option<Section> {
         let mut emoji: Vec<_> = Vec::new();
@@ -387,8 +402,8 @@ impl EmojiPickerState {
                 emoji.push(at);
             }
         }
-        (!emoji.is_empty()).then(|| Section {
-            name: title.to_string().into(),
+        (!emoji.is_empty()).then_some(Section {
+            name: SectionName::Builtin(title),
             icon,
             emoji,
             tab: true,
@@ -411,15 +426,18 @@ impl EmojiPickerState {
             // so the catalog order holds within each group.
             matches.sort_by_key(|(prefix, _)| !prefix);
             vec![Section {
-                name: "Search results".into(),
+                name: SectionName::Builtin(UiText::SearchResults),
                 icon: LucideIcon::Search,
                 emoji: matches.into_iter().map(|(_, at)| at).collect(),
                 tab: false,
             }]
         } else {
-            let frequent =
-                self.named_section(&self.frequent, "Frequently used", LucideIcon::TrendingUp);
-            let recent = self.named_section(&self.recents, "Recently used", LucideIcon::Clock);
+            let frequent = self.named_section(
+                &self.frequent,
+                UiText::FrequentlyUsed,
+                LucideIcon::TrendingUp,
+            );
+            let recent = self.named_section(&self.recents, UiText::RecentlyUsed, LucideIcon::Clock);
             frequent
                 .into_iter()
                 .chain(recent)
@@ -429,7 +447,11 @@ impl EmojiPickerState {
                         .enumerate()
                         .filter(|(_, group)| !group.emoji.is_empty())
                         .map(|(category, group)| Section {
-                            name: group.name.clone(),
+                            name: if group.name == CUSTOM {
+                                SectionName::Builtin(UiText::CustomEmoji)
+                            } else {
+                                SectionName::Category(group.name.clone())
+                            },
                             icon: group.icon,
                             emoji: (0..group.emoji.len())
                                 .map(|index| (category, index))
@@ -462,7 +484,10 @@ impl EmojiPickerState {
         if modifiers.control || modifiers.alt || modifiers.platform || modifiers.shift {
             return false;
         }
-        match keystroke.key.as_str() {
+        // The grid reads toward the reading end, so the arrows swap in
+        // right-to-left layouts.
+        let direction = UiTheme::read(cx).direction;
+        match direction.logical_key(keystroke.key.as_str()) {
             "left" => self.step(-1, cx),
             "right" => self.step(1, cx),
             "up" => self.step_row(-1, cx),
@@ -643,6 +668,9 @@ impl Render for EmojiPickerState {
         let highlighted = self.highlighted;
         let row_theme = theme.clone();
         let list_id = id.clone();
+        let dir = theme.direction;
+        let names: Vec<SharedString> = self.sections.iter().map(|s| s.name.text(cx)).collect();
+        let heading_names = names.clone();
         let grid = uniform_list(
             (id.clone(), "grid"),
             total,
@@ -659,12 +687,12 @@ impl Render for EmojiPickerState {
                             .text_size(row_theme.text(12.))
                             .font_weight(FontWeight::MEDIUM)
                             .text_color(row_theme.colors.muted_foreground)
-                            .child(this.sections[*section].name.clone())
+                            .child(heading_names[*section].clone())
                             .into_any_element(),
                         Row::Emoji { section, cells } => div()
                             .w_full()
                             .h(cell)
-                            .flex()
+                            .flex_row_in(dir)
                             .children(cells.clone().map(|index| {
                                 let (category, at) = this.sections[*section].emoji[index];
                                 let emoji =
@@ -721,7 +749,7 @@ impl Render for EmojiPickerState {
                     .id((id.clone(), SharedString::from(format!("tab-{index}"))))
                     .test_support()
                     .role(Role::Tab)
-                    .aria_label(section.name.clone())
+                    .aria_label(names[index].clone())
                     .aria_selected(active)
                     .flex_1()
                     .h(theme.space(8.))
@@ -757,7 +785,7 @@ impl Render for EmojiPickerState {
                     .id((id.clone(), SharedString::from(format!("tone-{swatch}"))))
                     .test_support()
                     .role(Role::RadioButton)
-                    .aria_label(TONE_NAMES[swatch])
+                    .aria_label(locale::text(cx, UiText::SkinToneName(swatch as u8)))
                     .aria_toggled(if checked {
                         gpui_kit::accesskit::Toggled::True
                     } else {
@@ -791,7 +819,7 @@ impl Render for EmojiPickerState {
             .text_size(theme.text(14.))
             .child(
                 div()
-                    .flex()
+                    .flex_row_in(dir)
                     .items_center()
                     .gap(theme.space(2.))
                     .h(theme.space(9.))
@@ -806,7 +834,7 @@ impl Render for EmojiPickerState {
                     )
                     .child(
                         Input::new(&self.input)
-                            .aria_label("Search emoji")
+                            .aria_label(locale::text(cx, UiText::SearchEmoji))
                             .bordered(false)
                             .px_0(),
                     ),
@@ -816,8 +844,8 @@ impl Render for EmojiPickerState {
                     div()
                         .id((id.clone(), "tabs"))
                         .role(Role::TabList)
-                        .aria_label("Emoji categories")
-                        .flex()
+                        .aria_label(locale::text(cx, UiText::EmojiCategories))
+                        .flex_row_in(dir)
                         .px(theme.space(2.))
                         .border_b_1()
                         .border_color(colors.border)
@@ -828,7 +856,7 @@ impl Render for EmojiPickerState {
                 div()
                     .id((id.clone(), "list"))
                     .role(Role::ListBox)
-                    .aria_label("Emoji")
+                    .aria_label(locale::text(cx, UiText::Emoji))
                     .px(theme.space(2.))
                     .py(theme.space(1.))
                     .when(total == 0, |list| {
@@ -839,14 +867,14 @@ impl Render for EmojiPickerState {
                                 .items_center()
                                 .justify_center()
                                 .text_color(colors.muted_foreground)
-                                .child("No emoji found."),
+                                .child(locale::text(cx, UiText::NoEmoji)),
                         )
                     })
                     .when(total > 0, |list| list.child(grid)),
             )
             .child(
                 div()
-                    .flex()
+                    .flex_row_in(dir)
                     .items_center()
                     .gap(theme.space(2.))
                     .h(theme.space(11.))
@@ -869,9 +897,15 @@ impl Render for EmojiPickerState {
                         div()
                             .id((id.clone(), "tones"))
                             .role(Role::RadioGroup)
-                            .aria_label("Skin tone")
-                            .ml_auto()
-                            .flex()
+                            .aria_label(locale::text(cx, UiText::SkinTone))
+                            .map(|tones| {
+                                if dir.is_rtl() {
+                                    tones.mr_auto()
+                                } else {
+                                    tones.ml_auto()
+                                }
+                            })
+                            .flex_row_in(dir)
                             .gap(theme.space(1.))
                             .children(tones),
                     ),

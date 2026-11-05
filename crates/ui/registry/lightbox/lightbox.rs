@@ -14,7 +14,10 @@ use gpui_kit::{
 
 use super::button::{Button, ButtonSize, ButtonVariant};
 use super::dialog::{Dialog, DialogHandle, modal_focus};
-use super::theme::UiTheme;
+use super::theme::{
+    UiText, UiTheme,
+    locale::{self, DirectionalStyled as _},
+};
 
 /// The largest zoom, as a multiple of the fitted size.
 pub const MAX_ZOOM: f32 = 8.;
@@ -194,13 +197,18 @@ impl LightboxState {
             return false;
         }
         let pan = px(48.);
-        match (keystroke.key.as_str(), modifiers.shift) {
+        // Panning follows the arrow on screen; previous and next follow the
+        // reading direction.
+        let direction = UiTheme::read(cx).direction;
+        let key = keystroke.key.as_str();
+        let logical = direction.logical_key(key);
+        match (key, modifiers.shift) {
             ("left", true) => self.pan_by(point(pan, px(0.)), cx),
             ("right", true) => self.pan_by(point(-pan, px(0.)), cx),
             ("up", true) => self.pan_by(point(px(0.), pan), cx),
             ("down", true) => self.pan_by(point(px(0.), -pan), cx),
-            ("left", false) => self.previous(cx),
-            ("right", false) => self.next(cx),
+            ("left" | "right", false) if logical == "left" => self.previous(cx),
+            ("left" | "right", false) => self.next(cx),
             ("+" | "=", _) => self.zoom_in(cx),
             ("-", false) => self.zoom_out(cx),
             ("0", false) => self.reset_zoom(cx),
@@ -222,7 +230,10 @@ impl Render for LightboxState {
         let count = self.images.len();
         let current = self.current().cloned();
         let zoom = self.zoom;
-        let icon_button = |id: ElementId, label: &'static str, icon: LucideIcon| {
+        let dir = theme.direction;
+        let previous_label = locale::text(cx, UiText::PreviousImage);
+        let next_label = locale::text(cx, UiText::NextImage);
+        let icon_button = |id: ElementId, label: SharedString, icon: LucideIcon| {
             Button::new(id)
                 .size(ButtonSize::Icon)
                 .variant(ButtonVariant::Ghost)
@@ -320,23 +331,23 @@ impl Render for LightboxState {
                         side(
                             icon_button(
                                 (id.clone(), "previous").into(),
-                                "Previous image",
-                                LucideIcon::ChevronLeft,
+                                previous_label,
+                                dir.icon(false, LucideIcon::ChevronLeft, LucideIcon::ChevronRight),
                             )
                             .on_click(cx.listener(|this, _, _, cx| this.previous(cx))),
                         )
-                        .left(theme.space(4.)),
+                        .inset_start(dir, theme.space(4.)),
                     )
                     .child(
                         side(
                             icon_button(
                                 (id.clone(), "next").into(),
-                                "Next image",
-                                LucideIcon::ChevronRight,
+                                next_label,
+                                dir.icon(true, LucideIcon::ChevronLeft, LucideIcon::ChevronRight),
                             )
                             .on_click(cx.listener(|this, _, _, cx| this.next(cx))),
                         )
-                        .right(theme.space(4.)),
+                        .inset_end(dir, theme.space(4.)),
                     )
             })
     }
@@ -363,33 +374,41 @@ pub fn lightbox(
         .read(cx)
         .current()
         .map(|image| image.name.clone())
-        .unwrap_or_else(|| "Image".into());
+        .unwrap_or_else(|| locale::text(cx, UiText::Image));
+    let dir = theme.direction;
+    let position = locale::text(
+        cx,
+        UiText::Position {
+            index: state.read(cx).index() + 1,
+            count: state.read(cx).images().len(),
+        },
+    );
     let close = handle.clone();
     let escape = handle.clone();
-    let (current, index, count, zoom) = {
+    let (current, count, zoom) = {
         let state = state.read(cx);
-        (
-            state.current().cloned(),
-            state.index(),
-            state.images().len(),
-            state.zoom(),
-        )
+        (state.current().cloned(), state.images().len(), state.zoom())
     };
     let white = hsla(0., 0., 1., 1.);
     let dim = hsla(0., 0., 1., 0.7);
-    let icon_button = |id: ElementId, label: &'static str, icon: LucideIcon| {
+    let icon_button = |id: ElementId, label: SharedString, icon: LucideIcon| {
         Button::new(id)
             .size(ButtonSize::Icon)
             .variant(ButtonVariant::Ghost)
             .aria_label(label)
             .child(lucide(icon).size(theme.space(4.5)).text_color(white))
     };
+    let zoom_status = locale::text(cx, UiText::Zoom((zoom * 100.).round() as u32));
+    let zoom_out_label = locale::text(cx, UiText::ZoomOut);
+    let zoom_in_label = locale::text(cx, UiText::ZoomIn);
+    let close_label = locale::text(cx, UiText::Close);
+    let viewer_label = locale::text(cx, UiText::ImageViewer(name.clone()));
     let zoom_out = state.clone();
     let zoom_in = state.clone();
     let top = div()
         .flex_none()
         .h(theme.space(BAR))
-        .flex()
+        .flex_row_in(dir)
         .items_center()
         .gap(theme.space(2.))
         .px(theme.space(4.))
@@ -426,14 +445,14 @@ pub fn lightbox(
                 div()
                     .text_color(dim)
                     .text_size(theme.text(13.))
-                    .mr(theme.space(2.))
-                    .child(format!("{} of {count}", index + 1)),
+                    .margin_end(dir, theme.space(2.))
+                    .child(position),
             )
         })
         .child(
             icon_button(
                 (id.clone(), "zoom-out").into(),
-                "Zoom out",
+                zoom_out_label,
                 LucideIcon::ZoomOut,
             )
             .on_click(move |_, _, cx| zoom_out.update(cx, |state, cx| state.zoom_out(cx))),
@@ -442,10 +461,7 @@ pub fn lightbox(
             div()
                 .id((id.clone(), "zoom"))
                 .role(Role::Status)
-                .aria_label(SharedString::from(format!(
-                    "Zoom {}%",
-                    (zoom * 100.).round() as i32
-                )))
+                .aria_label(zoom_status)
                 .w(theme.space(12.))
                 .text_center()
                 .text_size(theme.text(13.))
@@ -454,21 +470,21 @@ pub fn lightbox(
         .child(
             icon_button(
                 (id.clone(), "zoom-in").into(),
-                "Zoom in",
+                zoom_in_label,
                 LucideIcon::ZoomIn,
             )
             .on_click(move |_, _, cx| zoom_in.update(cx, |state, cx| state.zoom_in(cx))),
         )
         .children(actions)
         .child(
-            icon_button((id.clone(), "close").into(), "Close", LucideIcon::X)
+            icon_button((id.clone(), "close").into(), close_label, LucideIcon::X)
                 .on_click(move |_, window, cx| close.close(window, cx)),
         );
     let key_state = state.clone();
     let popup = div()
         .id(id.clone())
         .role(Role::Dialog)
-        .aria_label(SharedString::from(format!("Image viewer: {name}")))
+        .aria_label(viewer_label)
         .track_focus(&focus)
         .relative()
         .size_full()

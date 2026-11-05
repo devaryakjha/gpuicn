@@ -12,7 +12,8 @@ use gpui_kit::{
 
 use super::button::{Button, ButtonSize, ButtonVariant};
 use super::theme::{
-    UiTheme, apply_style,
+    UiText, UiTheme, apply_style,
+    locale::{self, DirectionalStyled as _},
     primitives::{clipped_image, disabled},
 };
 
@@ -164,28 +165,30 @@ impl RenderOnce for Attachment {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
+        let dir = theme.direction;
         let failed = self.status == AttachmentStatus::Failed;
         let progress = match self.status {
             AttachmentStatus::Uploading(progress) => Some(progress.clamp(0., 1.)),
             _ => None,
         };
         let status_text: Option<SharedString> = match self.status {
-            AttachmentStatus::Uploading(progress) => {
-                Some(format!("Uploading… {}%", (progress.clamp(0., 1.) * 100.).round()).into())
-            }
-            AttachmentStatus::Failed => Some("Upload failed".into()),
+            AttachmentStatus::Uploading(progress) => Some(locale::text(
+                cx,
+                UiText::Uploading((progress.clamp(0., 1.) * 100.).round() as u32),
+            )),
+            AttachmentStatus::Failed => Some(locale::text(cx, UiText::UploadFailed)),
             AttachmentStatus::Ready => None,
         };
         let description = status_text.clone().or(self.meta.clone());
         let accessible: SharedString = match &description {
-            Some(description) => format!("{}, {}", self.name, description).into(),
+            Some(description) => format!("{}, {}", self.name.clone(), description).into(),
             None => self.name.clone(),
         };
         let remove = self.on_remove.clone().map(|handler| {
             icon_button(
                 (self.id.clone(), "remove").into(),
                 LucideIcon::X,
-                format!("Remove {}", self.name).into(),
+                locale::text(cx, UiText::Remove(self.name.clone())),
                 handler,
                 &theme,
             )
@@ -194,7 +197,7 @@ impl RenderOnce for Attachment {
             icon_button(
                 (self.id.clone(), "retry").into(),
                 LucideIcon::RotateCw,
-                format!("Retry uploading {}", self.name).into(),
+                locale::text(cx, UiText::RetryUpload(self.name.clone())),
                 handler,
                 &theme,
             )
@@ -218,6 +221,7 @@ impl RenderOnce for Attachment {
                 .rounded_full()
                 .overflow_hidden()
                 .bg(colors.muted)
+                .flex_row_in(dir)
                 .child(
                     div()
                         .h_full()
@@ -300,7 +304,7 @@ impl RenderOnce for Attachment {
                     div()
                         .absolute()
                         .top(theme.space(1.))
-                        .right(theme.space(1.))
+                        .inset_end(dir, theme.space(1.))
                         .rounded_md()
                         .bg(colors.background.opacity(0.9))
                         .child(remove)
@@ -310,11 +314,11 @@ impl RenderOnce for Attachment {
             None => root
                 .w(theme.space(60.))
                 .h(theme.space(14.))
-                .flex()
+                .flex_row_in(dir)
                 .items_center()
                 .gap(theme.space(3.))
-                .pl(theme.space(2.))
-                .pr(theme.space(1.5))
+                .padding_start(dir, theme.space(2.))
+                .padding_end(dir, theme.space(1.5))
                 .child(
                     div()
                         .size(theme.space(10.))
@@ -384,6 +388,12 @@ pub fn attachment_group(
     cx: &App,
 ) -> gpui_kit::Stateful<gpui_kit::Div> {
     let theme = UiTheme::read(cx);
+    let mut attachments: Vec<_> = attachments.into_iter().collect();
+    // A reversed row would overflow past the scroll origin, so right to
+    // left reverses the children instead.
+    if theme.direction.is_rtl() {
+        attachments.reverse();
+    }
     div()
         .id(id)
         .w_full()

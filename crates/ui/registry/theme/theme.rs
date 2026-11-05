@@ -10,8 +10,12 @@ use gpui_kit::{
     WindowAppearance, black, px,
 };
 
+#[path = "locale.rs"]
+pub mod locale;
 #[path = "primitives.rs"]
 pub mod primitives;
+
+pub use locale::{Direction, UiText};
 
 gpui_kit::actions!(
     gpuicn,
@@ -45,6 +49,7 @@ pub fn init(cx: &mut App) {
         gpui_kit::KeyBinding::new("tab", FocusNext, None),
         gpui_kit::KeyBinding::new("shift-tab", FocusPrevious, None),
     ]);
+    locale::bind_keys(cx);
     cx.on_action(|_: &FocusNext, cx| advance_focus(false, cx));
     cx.on_action(|_: &FocusPrevious, cx| advance_focus(true, cx));
     // Scoped component bindings take precedence over these window-wide defaults.
@@ -615,6 +620,9 @@ pub struct UiTheme {
     pub breakpoints: UiBreakpoints,
     /// Syntax colors and surface of Markdown code blocks.
     pub code_theme: CodeTheme,
+    /// Layout direction. [`locale::set_direction`] sets it and keeps it
+    /// across theme swaps; [`UiTheme::set`] overwrites it with that setting.
+    pub direction: Direction,
 }
 
 /// The syntax theme of Markdown code blocks, as in Mattermost's `codeTheme`.
@@ -862,7 +870,8 @@ impl UiTheme {
     }
 
     /// Installs a theme into the application.
-    pub fn set(cx: &mut App, theme: Self) {
+    pub fn set(cx: &mut App, mut theme: Self) {
+        theme.direction = locale::direction(cx);
         assert!(f32::from(theme.spacing.unit).is_finite() && theme.spacing.unit > px(0.));
         assert!(theme.text_scale.is_finite() && theme.text_scale > 0.);
         sync_component_theme(cx, theme.clone());
@@ -973,6 +982,7 @@ impl UiTheme {
             typography: UiTypography::default(),
             breakpoints: UiBreakpoints::default(),
             code_theme: CodeTheme::Default,
+            direction: Direction::Ltr,
             spacing: UiSpacing { unit: px(4.) },
             shadows: UiShadows {
                 sm: Arc::from([
@@ -1970,7 +1980,8 @@ impl RovingFocus {
             .filter_map(|(i, h)| h.as_ref().map(|h| (i, h)))
             .collect();
         let current = enabled.iter().position(|(_, h)| h.is_focused(window))?;
-        let next = match event.keystroke.key.as_str() {
+        let direction = UiTheme::read(cx).direction;
+        let next = match direction.logical_key(event.keystroke.key.as_str()) {
             "home" => 0,
             "end" => enabled.len() - 1,
             "left" if axis != Some(gpui_kit::Axis::Vertical) => {

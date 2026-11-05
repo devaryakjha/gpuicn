@@ -1,6 +1,7 @@
 //! Nova radio selection with GPUI Kit controls and roving focus.
 use super::theme::{
     RovingFocus, UiTheme, apply_style,
+    locale::DirectionalStyled as _,
     primitives::{control, disabled, focus, text},
 };
 use gpui_kit::{
@@ -144,7 +145,7 @@ impl RenderOnce for RadioGroup {
                     .accessibility_label(item.label.clone())
                     .set_position(index + 1, count)
                     .when_some(handle, |radio, h| radio.track_focus(h).tab_stop(h.tab_stop))
-                    .flex()
+                    .flex_row_in(theme.direction)
                     .items_center()
                     .gap(theme.space(2.))
                     .text_color(colors.foreground)

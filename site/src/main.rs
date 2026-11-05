@@ -4,6 +4,7 @@ mod previews;
 #[cfg(not(target_family = "wasm"))]
 mod workspace;
 
+use gpuicn::locale::DirectionalStyled as _;
 pub(crate) use previews::Demo;
 use previews::prelude::*;
 
@@ -70,6 +71,11 @@ fn launch(cx: &mut App) {
         _ => ThemeMode::Light,
     };
     UiTheme::switch(cx, mode);
+    // `?dir=rtl` (or `GPUICN_DIR=rtl` natively) previews the gallery in a
+    // right-to-left layout.
+    if requested_value("dir").as_deref() == Some("rtl") {
+        gpuicn::locale::set_direction(cx, gpuicn::Direction::Rtl);
+    }
     #[cfg(not(target_family = "wasm"))]
     if requested_value("demo")
         .as_deref()
@@ -206,6 +212,7 @@ impl Render for Showcase {
             .bg(theme.colors.background)
             .text_color(theme.colors.foreground)
             .font_family(theme.fonts.body)
+            .text_start(theme.direction)
             .when(!self.demo_action.is_empty(), |view| {
                 view.flex_col().gap(px(16.))
             })
@@ -318,6 +325,7 @@ fn requested_value(key: &str) -> Option<String> {
         "example" => std::env::args().nth(3),
         "width" => std::env::args().nth(4),
         "height" => std::env::args().nth(5),
+        "dir" => std::env::var("GPUICN_DIR").ok(),
         _ => None,
     }
 }

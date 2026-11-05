@@ -15,7 +15,7 @@ use gpui_kit::{
 pub struct OtpField {
     state: Entity<OtpState>,
     style: gpui_kit::StyleRefinement,
-    label: SharedString,
+    label: Option<SharedString>,
     disabled: bool,
     read_only: bool,
 }
@@ -25,14 +25,14 @@ impl OtpField {
         Self {
             state: state.clone(),
             style: Default::default(),
-            label: "One-time code".into(),
+            label: None,
             disabled: false,
             read_only: false,
         }
     }
     /// Sets the accessible name of the control.
     pub fn aria_label(mut self, value: impl Into<SharedString>) -> Self {
-        self.label = value.into();
+        self.label = Some(value.into());
         self
     }
     /// Disables interaction and applies the disabled appearance.
@@ -99,9 +99,16 @@ impl RenderOnce for OtpField {
             .test_support()
             .role(Role::TextInput)
             .track_focus(&focus)
-            .aria_label(self.label)
+            .aria_label(self.label.unwrap_or_else(|| {
+                super::theme::locale::text(cx, super::theme::UiText::OneTimeCode)
+            }))
             .aria_value(value)
-            .when(self.read_only, |root| root.aria_description("Read only"))
+            .when(self.read_only, |root| {
+                root.aria_description(super::theme::locale::text(
+                    cx,
+                    super::theme::UiText::ReadOnly,
+                ))
+            })
             .when(self.disabled, disabled::style)
             .when(!self.disabled, |root| {
                 root.on_mouse_down(MouseButton::Left, move |_, window, cx| {

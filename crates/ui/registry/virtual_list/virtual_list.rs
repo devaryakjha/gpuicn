@@ -582,11 +582,15 @@ impl RenderOnce for VirtualList {
         let state = self.state.clone();
         let change = self.on_event.clone();
         let key_focus = focus.clone();
-        let instructions = if self.state.data.borrow().mode == ListSelectionMode::Multiple {
-            "Multi-select list. Use arrows to navigate, Shift for a range, Command or Control to toggle."
-        } else {
-            "Use arrow keys to navigate and Enter to activate."
-        };
+        let instructions = super::theme::locale::text(
+            cx,
+            if self.state.data.borrow().mode == ListSelectionMode::Multiple {
+                super::theme::UiText::MultiSelectInstructions
+            } else {
+                super::theme::UiText::ListInstructions
+            },
+        );
+        let unavailable = super::theme::locale::text(cx, super::theme::UiText::Unavailable);
         let mut root = div()
             .id(self.id.clone())
             .test_support()
@@ -625,7 +629,10 @@ impl RenderOnce for VirtualList {
                 div()
                     .p(theme.spacing.unit * 4_f32)
                     .text_color(theme.colors.muted_foreground)
-                    .child("No items")
+                    .child(super::theme::locale::text(
+                        cx,
+                        super::theme::UiText::NoItems,
+                    ))
                     .into_any_element()
             }));
         } else {
@@ -668,11 +675,12 @@ impl RenderOnce for VirtualList {
                             .aria_size_of_set(total)
                             .when(row.focused, |el| el.aria_active_descendant())
                             .when(row.item.disabled, |el| {
-                                disabled::dim(el.aria_description("Unavailable"), true)
+                                disabled::dim(el.aria_description(unavailable.clone()), true)
                             })
                             .w_full()
                             .min_w_0()
                             .flex()
+                            .when(rows_theme.direction.is_rtl(), |el| el.flex_row_reverse())
                             .items_center()
                             .gap(rows_theme.spacing.unit * 2_f32)
                             .px(rows_theme.spacing.unit * 2_f32)

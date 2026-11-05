@@ -20,7 +20,11 @@ use gpui_kit::{
 };
 
 use super::input::{InputEvent, Misspellings, SpellingMenu, Textarea, TextareaState};
-use super::theme::{UiTheme, apply_style, primitives::surface};
+use super::theme::{
+    UiText, UiTheme, apply_style,
+    locale::{self, DirectionalStyled as _},
+    primitives::surface,
+};
 
 type KeyHandler = Rc<dyn Fn(&Keystroke, &mut Window, &mut App) -> bool + 'static>;
 type PasteHandler = Rc<dyn Fn(&ClipboardItem, &mut Window, &mut App) -> bool + 'static>;
@@ -700,9 +704,10 @@ impl Render for ComposerState {
         let colors = theme.colors;
         let id = ElementId::from(("composer", cx.entity_id()));
         let on_paste = self.on_paste.clone();
+        let dir = theme.direction;
         let textarea = Textarea::new(&self.input)
             .misspellings(&self.misspellings)
-            .aria_label("Message")
+            .aria_label(locale::text(cx, UiText::Message))
             .bordered(false)
             .min_h(px(0.))
             .px(text_inset(&theme).x)
@@ -754,7 +759,7 @@ impl Render for ComposerState {
                             .aria_label(suggestion.label.clone())
                             .aria_selected(selected)
                             .when(selected, |row| row.aria_active_descendant())
-                            .flex()
+                            .flex_row_in(dir)
                             .items_center()
                             .gap(theme.space(2.))
                             .h(theme.space(8.))
@@ -802,23 +807,33 @@ impl Render for ComposerState {
                             .into_any_element()
                     })
                     .collect();
+                let list_label = locale::text(
+                    cx,
+                    match active {
+                        Some('@') => UiText::People,
+                        Some('~') => UiText::Channels,
+                        Some(':') => UiText::Emoji,
+                        Some('/') => UiText::Commands,
+                        _ => UiText::Suggestions,
+                    },
+                );
+                // The list hangs from the trigger toward the reading end.
+                let x = if dir.is_rtl() {
+                    anchor.x + theme.space(2.)
+                } else {
+                    anchor.x - theme.space(2.)
+                };
                 deferred(
                     anchored()
                         .position_mode(AnchoredPositionMode::Local)
-                        .position(point(anchor.x - theme.space(2.), anchor.y - px(4.)))
-                        .anchor(Anchor::BottomLeft)
+                        .position(point(x, anchor.y - px(4.)))
+                        .anchor(dir.anchor(Anchor::BottomLeft))
                         .snap_to_window_with_margin(theme.space(2.))
                         .child(
                             div()
                                 .id((id.clone(), "suggestions"))
                                 .role(Role::ListBox)
-                                .aria_label(match active {
-                                    Some('@') => "People",
-                                    Some('~') => "Channels",
-                                    Some(':') => "Emoji",
-                                    Some('/') => "Commands",
-                                    _ => "Suggestions",
-                                })
+                                .aria_label(list_label)
                                 .occlude()
                                 .w(theme.space(72.))
                                 .max_h(theme.space(72.))
@@ -930,7 +945,7 @@ impl RenderOnce for Composer {
             .when(!self.toolbar.is_empty(), |root| {
                 root.child(
                     div()
-                        .flex()
+                        .flex_row_in(theme.direction)
                         .items_center()
                         .gap(theme.space(1.))
                         .px(theme.space(2.))

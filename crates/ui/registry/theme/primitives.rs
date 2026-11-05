@@ -172,8 +172,17 @@ pub mod disabled {
 pub mod surface {
     use super::*;
 
+    /// Starts text at the reading edge. Floating surfaces paint outside
+    /// their trigger's tree, so they cannot inherit the window's alignment.
+    fn reading_start<T: Styled>(element: T, theme: &UiTheme) -> T {
+        if theme.direction.is_rtl() {
+            element.text_align(gpui_kit::TextAlign::Right)
+        } else {
+            element
+        }
+    }
     fn popover_base<T: Styled>(element: T, theme: &UiTheme) -> T {
-        text::sm(element, theme)
+        reading_start(text::sm(element, theme), theme)
             .border_1()
             .border_color(theme.control().surface_border)
             .bg(theme.colors.popover)
@@ -209,7 +218,7 @@ pub mod surface {
     }
     /// Cards and empty states: `rounded-xl border shadow-sm` on the card color.
     pub fn card<T: Styled>(element: T, theme: &UiTheme) -> T {
-        text::sm(element, theme)
+        reading_start(text::sm(element, theme), theme)
             .rounded(theme.radius.xl)
             .border_1()
             .border_color(theme.colors.border)
@@ -228,7 +237,7 @@ pub mod surface {
     }
     /// Tooltips: inverted colors at the small radius and caption size.
     pub fn tooltip<T: Styled>(element: T, theme: &UiTheme) -> T {
-        text::xs(element, theme)
+        reading_start(text::xs(element, theme), theme)
             .rounded(theme.radius.sm)
             .px(theme.space(3.))
             .py(theme.space(1.5))

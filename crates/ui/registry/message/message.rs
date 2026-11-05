@@ -18,7 +18,8 @@ use gpui_kit::base::ElementExt as _;
 
 use super::button::{Button, ButtonSize, ButtonVariant};
 use super::theme::{
-    UiTheme, apply_style,
+    UiText, UiTheme, apply_style,
+    locale::{self, DirectionalStyled as _},
     primitives::{focus, hover_reveal_in_group, surface, text},
 };
 use super::tooltip::text_tooltip;
@@ -342,6 +343,7 @@ impl RenderOnce for Message {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
+        let dir = theme.direction;
         let group: SharedString = format!("message-{}", self.id).into();
         let selected = self.highlight == MessageHighlight::Selected;
         let compact = self.density == MessageDensity::Compact;
@@ -384,7 +386,7 @@ impl RenderOnce for Message {
                             )
                             .absolute()
                             .top(px(2.))
-                            .right_0()
+                            .inset_end(dir, px(0.))
                             .line_height(theme.text(20.))
                             .text_color(colors.muted_foreground)
                             .whitespace_nowrap()
@@ -428,7 +430,7 @@ impl RenderOnce for Message {
         let mut header_children = self.header;
         let header = (!self.continuation && !compact).then(|| {
             div()
-                .flex()
+                .flex_row_in(dir)
                 .items_baseline()
                 .gap(theme.space(2.))
                 .min_w_0()
@@ -457,7 +459,7 @@ impl RenderOnce for Message {
         });
 
         let failed = (self.status == MessageStatus::Failed).then(|| {
-            let link = |id: &'static str, label: &'static str, handler: Handler| {
+            let link = |id: &'static str, label: SharedString, handler: Handler| {
                 Button::new((self.id.clone(), id))
                     .variant(ButtonVariant::Link)
                     .size(ButtonSize::Xs)
@@ -467,7 +469,7 @@ impl RenderOnce for Message {
                     .on_click(move |event, window, cx| handler(event, window, cx))
             };
             div()
-                .flex()
+                .flex_row_in(dir)
                 .items_center()
                 .gap(theme.space(2.))
                 .text_size(theme.text(12.))
@@ -477,12 +479,12 @@ impl RenderOnce for Message {
                         .size(theme.space(3.5))
                         .text_color(colors.destructive),
                 )
-                .child("Message failed to send.")
+                .child(locale::text(cx, UiText::MessageFailed))
                 .when_some(self.on_retry.clone(), |row, handler| {
-                    row.child(link("retry", "Retry", handler))
+                    row.child(link("retry", locale::text(cx, UiText::Retry), handler))
                 })
                 .when_some(self.on_delete.clone(), |row, handler| {
-                    row.child(link("delete", "Delete", handler))
+                    row.child(link("delete", locale::text(cx, UiText::Delete), handler))
                 })
         });
 
@@ -490,7 +492,7 @@ impl RenderOnce for Message {
             let on_reaction = self.on_reaction.clone();
             let tooltip = self.reaction_tooltip.clone();
             div()
-                .flex()
+                .flex_row_in(dir)
                 .flex_wrap()
                 .gap(theme.space(1.))
                 .pt(theme.space(1.))
@@ -509,7 +511,7 @@ impl RenderOnce for Message {
                             .variant(ButtonVariant::Ghost)
                             .size(ButtonSize::IconXs)
                             .rounded_full()
-                            .aria_label("Add reaction")
+                            .aria_label(locale::text(cx, UiText::AddReaction))
                             .on_click(move |event, window, cx| handler(event, window, cx))
                             .child(
                                 lucide(LucideIcon::FaceSlightlySmilingPlus)
@@ -535,7 +537,7 @@ impl RenderOnce for Message {
         let inline_header =
             (compact && !self.continuation && !header_children.is_empty()).then(|| {
                 div()
-                    .flex()
+                    .flex_row_in(dir)
                     .items_center()
                     .gap(theme.space(1.))
                     .children(header_children)
@@ -554,7 +556,7 @@ impl RenderOnce for Message {
                     .text_color(colors.foreground)
                     .when(compact, |content| {
                         content
-                            .flex()
+                            .flex_row_in(dir)
                             .flex_wrap()
                             .items_baseline()
                             .gap(theme.space(1.5))
@@ -575,14 +577,15 @@ impl RenderOnce for Message {
             .role(Role::ListItem)
             .relative()
             .w_full()
-            .flex()
+            .flex_row_in(dir)
+            .text_start(dir)
             .gap(theme.space(2.))
             .px(theme.space(4.))
             .py(theme.space(if compact { 0.25 } else { 0.5 }))
             .when(!self.continuation && !compact, |row| {
                 row.pt(theme.space(2.))
             })
-            .border_l_2()
+            .border_start_2(dir)
             .border_color(colors.primary.opacity(0.))
             .when(!selected, |row| {
                 row.hover(move |style| style.bg(colors.muted.opacity(0.5)))
@@ -612,7 +615,7 @@ impl RenderOnce for Message {
                         .id((self.id.clone(), "actions"))
                         .absolute()
                         .top(-theme.space(3.))
-                        .right(theme.space(4.))
+                        .inset_end(dir, theme.space(4.))
                         .child(actions),
                     group.clone(),
                     selected,
@@ -857,7 +860,7 @@ fn author_button(
 pub fn message_actions(cx: &App) -> gpui_kit::Div {
     let theme = UiTheme::read(cx);
     div()
-        .flex()
+        .flex_row_in(theme.direction)
         .items_center()
         .gap(theme.space(0.5))
         .p(theme.space(0.5))
@@ -934,7 +937,7 @@ pub fn new_messages_divider(
         .id(id)
         .role(Role::Splitter)
         .w_full()
-        .flex()
+        .flex_row_in(theme.direction)
         .items_center()
         .gap(theme.space(2.))
         .px(theme.space(4.))

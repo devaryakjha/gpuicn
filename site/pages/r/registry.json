@@ -10,6 +10,11 @@
       "description": "The app-owned shadcn Neutral theme and shared native motion tokens for GPUI.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -27,6 +32,11 @@
       "title": "Accordion",
       "description": "The shadcn default Accordion visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -51,6 +61,11 @@
       "description": "An inline callout with an icon, title and description for form errors, warnings and notes.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -73,6 +88,11 @@
       "title": "Alert Dialog",
       "description": "The shadcn default Alert Dialog visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -112,6 +132,11 @@
       "description": "One-call application start: icon assets, bundled Geist fonts, the theme pair and the first window.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -134,6 +159,11 @@
       "title": "Attachment",
       "description": "File and image attachment cards with upload progress, retry and remove.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -162,6 +192,11 @@
       "title": "Autocomplete",
       "description": "The shadcn default Autocomplete visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -201,6 +236,11 @@
       "description": "The shadcn default Avatar visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -223,6 +263,11 @@
       "title": "Avatar Group",
       "description": "Overlapping avatars with a +N overflow chip and one accessible list of names.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -257,6 +302,11 @@
       "description": "Nova pills for labels and capped unread or mention counts.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -279,6 +329,11 @@
       "title": "Button",
       "description": "The shadcn default Button visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -303,6 +358,11 @@
       "description": "A keyboard-driven month grid for picking a date, with limits and a configurable first weekday.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -326,6 +386,11 @@
       "description": "Native snapping carousel with pointer, trackpad and keyboard navigation.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -348,6 +413,11 @@
       "title": "Checkbox",
       "description": "The shadcn default Checkbox visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -382,6 +452,11 @@
       "description": "The shadcn default Checkbox Group visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -405,6 +480,11 @@
       "description": "The shadcn default Collapsible visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -427,6 +507,11 @@
       "title": "Combobox",
       "description": "The shadcn default Combobox visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -465,6 +550,11 @@
       "title": "Command",
       "description": "A Nova command palette and quick switcher with grouped, fuzzy-filtered, virtualized results.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -514,6 +604,11 @@
       "description": "A growing chat composer with Enter to send, caret control, paste and key hooks, and autocomplete for mentions, channels, emoji and commands.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -546,6 +641,11 @@
       "title": "Context Menu",
       "description": "The shadcn default Context Menu visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -580,6 +680,11 @@
       "description": "A trigger that opens a Calendar popover and shows the chosen date.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -612,6 +717,11 @@
       "title": "Date Time Picker",
       "description": "A date and time picker: a Calendar popover with an hour and minute field, 12- or 24-hour.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -656,6 +766,11 @@
       "description": "The shadcn default Dialog visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -688,6 +803,11 @@
       "title": "Drawer",
       "description": "The shadcn default Drawer visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -726,6 +846,11 @@
       "title": "Embed",
       "description": "Link previews, message attachments and quoted posts under a chat message.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -770,6 +895,11 @@
       "description": "Searchable emoji grid with category tabs, recently used and custom emoji images.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -798,6 +928,11 @@
       "description": "Composable empty-state media, copy and action layout.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -820,6 +955,11 @@
       "title": "Field",
       "description": "The shadcn default Field visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -849,6 +989,11 @@
       "description": "The shadcn default Fieldset visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -871,6 +1016,11 @@
       "title": "Form",
       "description": "The shadcn default Form visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -895,6 +1045,11 @@
       "description": "Nova-styled native text input with accessible labels, IME and standard editing shortcuts.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -917,6 +1072,11 @@
       "title": "Input Group",
       "description": "Inputs, textareas, addons and actions sharing one accessible frame.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -956,6 +1116,11 @@
       "description": "Nova key caps that show shortcuts with each platform's modifier names.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -978,6 +1143,11 @@
       "title": "Lightbox",
       "description": "A full-window image viewer with zoom, pan and keyboard previous and next.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1016,6 +1186,11 @@
       "title": "Markdown",
       "description": "Nova-styled Markdown with themed code blocks, tables, quotes and inline entity chips for mentions and channels.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1065,6 +1240,11 @@
       "description": "The shadcn default Menu visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1092,6 +1272,11 @@
       "title": "Menubar",
       "description": "The shadcn default Menubar visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1126,6 +1311,11 @@
       "description": "Team-chat message rows with grouping, mention highlights, reactions, hover actions and dividers.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1159,6 +1349,11 @@
       "description": "A virtualized, variable-height chat transcript that follows new messages, with a jump-to-latest pill.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1187,6 +1382,11 @@
       "description": "The shadcn default Meter visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1209,6 +1409,11 @@
       "title": "Navigation Menu",
       "description": "The shadcn default Navigation Menu visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1248,6 +1453,11 @@
       "description": "The shadcn default Number Field visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1281,6 +1491,11 @@
       "description": "The shadcn default OTP Field visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1303,6 +1518,11 @@
       "title": "Popover",
       "description": "The shadcn default Popover visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1332,6 +1552,11 @@
       "description": "The shadcn default Preview Card visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1355,6 +1580,11 @@
       "description": "The shadcn default Progress visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1377,6 +1607,11 @@
       "title": "Radio Group",
       "description": "The shadcn default Radio Group visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1411,6 +1646,11 @@
       "description": "Controlled shadcn-styled native GPUI resizable panes.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1434,6 +1674,11 @@
       "description": "The shadcn default Scroll Area visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1456,6 +1701,11 @@
       "title": "Select",
       "description": "The shadcn default Select visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1490,6 +1740,11 @@
       "description": "The shadcn default Separator visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1512,6 +1767,11 @@
       "title": "Sidebar",
       "description": "Shadcn-styled navigation composed from GPUI Kit buttons and scroll areas.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1571,6 +1831,11 @@
       "description": "Muted pulsing placeholders for content that is still loading.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1593,6 +1858,11 @@
       "title": "Slider",
       "description": "The shadcn default Slider visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1617,6 +1887,11 @@
       "description": "Rows people drag, or move with the keyboard, to reorder them and move them between groups.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1639,6 +1914,11 @@
       "title": "Spinner",
       "description": "A rotating Lucide loader announced as a status; it holds still under reduced motion.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1663,6 +1943,11 @@
       "description": "The shadcn default Switch visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1686,6 +1971,11 @@
       "description": "The shadcn default Tabs visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1708,6 +1998,11 @@
       "title": "Tag",
       "description": "Compact chips for statuses and roles, with an optional status dot and remove button.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1737,6 +2032,11 @@
       "description": "Nova-styled multi-line text editor with retained native editing state.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1765,6 +2065,11 @@
       "description": "A draggable custom window title bar with platform window controls.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1787,6 +2092,11 @@
       "title": "Toast",
       "description": "The shadcn default Toast visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1816,6 +2126,11 @@
       "description": "The shadcn default Toggle visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1839,6 +2154,11 @@
       "description": "The shadcn default Toggle Group visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1861,6 +2181,11 @@
       "title": "Toolbar",
       "description": "The shadcn default Toolbar visual port backed by GPUI Kit behavior.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
@@ -1890,6 +2215,11 @@
       "description": "The shadcn default Tooltip visual port backed by GPUI Kit behavior.",
       "files": [
         {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",
           "target": "~/src/ui/primitives.rs"
@@ -1912,6 +2242,11 @@
       "title": "Virtual List",
       "description": "Virtualized native rows with stable identity, selection, keyboard navigation and fixed row heights.",
       "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
         {
           "path": "registry/theme/primitives.rs",
           "type": "registry:file",

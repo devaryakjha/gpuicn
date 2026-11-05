@@ -17,7 +17,7 @@ const TURN: std::time::Duration = std::time::Duration::from_secs(1);
 pub struct Spinner {
     style: gpui_kit::StyleRefinement,
     id: ElementId,
-    label: SharedString,
+    label: Option<SharedString>,
     color: Option<Rgba>,
 }
 
@@ -27,14 +27,14 @@ impl Spinner {
         Self {
             style: gpui_kit::StyleRefinement::default(),
             id: id.into(),
-            label: "Loading".into(),
+            label: None,
             color: None,
         }
     }
 
     /// Sets the accessible status text. Defaults to "Loading".
     pub fn label(mut self, label: impl Into<SharedString>) -> Self {
-        self.label = label.into();
+        self.label = Some(label.into());
         self
     }
 
@@ -61,13 +61,16 @@ impl RenderOnce for Spinner {
             )
             .into_any_element()
         };
-        let root = div()
-            .id(self.id)
-            .role(Role::Status)
-            .aria_label(self.label)
-            .size(theme.space(4.))
-            .flex_shrink_0()
-            .child(icon);
+        let root =
+            div()
+                .id(self.id)
+                .role(Role::Status)
+                .aria_label(self.label.unwrap_or_else(|| {
+                    super::theme::locale::text(cx, super::theme::UiText::Loading)
+                }))
+                .size(theme.space(4.))
+                .flex_shrink_0()
+                .child(icon);
         super::theme::apply_style(root, &self.style)
     }
 }

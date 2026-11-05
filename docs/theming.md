@@ -125,6 +125,60 @@ Composition helpers expose GPUI Kit builders. Use the theme for shared changes,
 `Styled` for a control's geometry, or edit the installed source for a custom skin.
 Input editing colors come from `UiTheme` and update with the surrounding controls.
 
+## Strings and layout direction
+
+Every word a component writes for you, such as "Close", "Search emoji",
+"Recently used", the calendar's month and weekday names, skin tone names,
+empty states and accessible labels, is a `UiText` value with an English
+default. Install your translations once; anything you return `None` for
+stays English. Strings you pass in yourself, such as a button's label, are
+never touched.
+
+```rust
+use ui::theme::{Direction, UiText, locale};
+
+locale::set_strings(cx, |text| {
+    Some(match text {
+        UiText::Close => "إغلاق".into(),
+        UiText::Remove(name) => format!("إزالة {name}").into(),
+        UiText::Month(month) => ARABIC_MONTHS[usize::from(*month) - 1].into(),
+        _ => return None,
+    })
+});
+locale::set_direction(cx, Direction::Rtl);
+```
+
+`UiText::key()` gives each string a stable kebab-case id (`"search-emoji"`)
+for looking it up in a catalog, and `UiText::english()` is the default.
+`UiText` is `#[non_exhaustive]`, so keep a wildcard arm. `locale::clear_strings`
+restores English.
+
+`Direction::Rtl` mirrors the components: rows run right to left, start and
+end paddings, insets, borders and corners swap, chevrons flip, menus,
+submenus, popovers, date pickers and the composer's suggestions open from
+the mirrored edge, a left drawer, sidebar or toast stack moves to the right,
+single-line inputs align to the start, and Left and Right move toward the
+start and end in inputs, menus, tabs, toolbars, toggle groups, the calendar,
+the emoji picker, the lightbox and sortable lists. The direction lives on
+`theme.direction` and survives `UiTheme::set` and `UiTheme::switch`; set it
+with `locale::set_direction`, not on the theme.
+
+Text alignment is inherited, so put `.text_start(theme.direction)` on your
+window's root view; components that own a whole region (sidebars, messages,
+popovers, tooltips) set it themselves. In your own views, `DirectionalStyled` (`flex_row_in`, `mirror_row`,
+`padding_start`, `inset_end`, `border_start_1`, `rounded_start`, …) and
+`Direction::{placement, align, anchor, icon, logical_key}` do the same.
+
+Wrap a name you place inside your own visible sentence in `locale::isolate`,
+so a Hebrew name inside English text (or the reverse) keeps its own order and
+does not drag the punctuation around it. Components already do this where
+they compose visible text, such as a quoted message's "Originally posted in".
+
+Not mirrored yet, because they belong to GPUI Kit: the carousel track,
+slider, and multi-line text areas, which stay
+left-aligned. Keyboard shortcut caps and the time field's hour and minute
+order stay left to right on purpose.
+
 ## Motion
 
 `UiMotion` provides fast/normal durations, an easing choice, and a reduced-motion preference. The shared `transition_value(id, target, duration, window, cx)` starts at its target, retargets from its current value, and requests frames only while moving. Use stable IDs and retain expensive child entities. Switch thumbs and disclosure chevrons use this pattern; the desktop example uses it for sidebar width.

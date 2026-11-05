@@ -2,7 +2,7 @@
 use super::{
     field::FieldControl,
     input::{Input, InputEvent, InputState},
-    theme::{UiTheme, apply_style},
+    theme::{UiText, UiTheme, apply_style, locale},
 };
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::base::{
@@ -460,7 +460,7 @@ impl Render for SelectState {
         let editing = self.mode != Mode::Select;
         let focused = self.focus_handle(cx).is_focused(window) && !self.disabled;
         let accessibility_label = if self.invalid {
-            format!("{} (invalid value)", self.label).into()
+            locale::text(cx, UiText::InvalidSelection(self.label.clone()))
         } else {
             self.label.clone()
         };
@@ -471,7 +471,7 @@ impl Render for SelectState {
             let clear = Button::new((id.clone(), "clear"))
                 .focusable(false)
                 .disabled(self.disabled)
-                .accessibility_label("Clear selection")
+                .accessibility_label(locale::text(cx, UiText::ClearSelection))
                 .size(theme.space(6.))
                 .on_click(cx.listener(|this, _, window, cx| this.clear(window, cx)))
                 .child(
@@ -482,7 +482,7 @@ impl Render for SelectState {
             let toggle = Button::new((id.clone(), "toggle"))
                 .focusable(false)
                 .disabled(self.disabled)
-                .accessibility_label("Show options")
+                .accessibility_label(locale::text(cx, UiText::ShowOptions))
                 .size(theme.space(6.))
                 .on_click(cx.listener(|this, _, window, cx| this.set_open(!this.open, window, cx)))
                 .child(
@@ -703,8 +703,8 @@ pub struct Select {
     state: Entity<SelectState>,
     #[doc(hidden)]
     pub mode: Mode,
-    label: SharedString,
-    placeholder: SharedString,
+    label: Option<SharedString>,
+    placeholder: Option<SharedString>,
     disabled: bool,
     invalid: bool,
     style: StyleRefinement,
@@ -715,8 +715,8 @@ impl Select {
         Self {
             state: state.clone(),
             mode: Mode::Select,
-            label: "Selection".into(),
-            placeholder: "Select…".into(),
+            label: None,
+            placeholder: None,
             disabled: false,
             invalid: false,
             style: Default::default(),
@@ -724,12 +724,12 @@ impl Select {
     }
     /// Sets the accessible name of the control.
     pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.label = label.into();
+        self.label = Some(label.into());
         self
     }
     /// Sets the text shown when no value is selected.
     pub fn placeholder(mut self, value: impl Into<SharedString>) -> Self {
-        self.placeholder = value.into();
+        self.placeholder = Some(value.into());
         self
     }
     /// Disables interaction and applies the disabled appearance.
@@ -750,6 +750,12 @@ impl Styled for Select {
 }
 impl RenderOnce for Select {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let label = self
+            .label
+            .unwrap_or_else(|| locale::text(cx, UiText::Selection));
+        let placeholder = self
+            .placeholder
+            .unwrap_or_else(|| locale::text(cx, UiText::SelectPlaceholder));
         self.state.update(cx, |state, cx| {
             let mode_changed = !state.presented || state.mode != self.mode;
             state.mode = self.mode;
@@ -769,8 +775,8 @@ impl RenderOnce for Select {
             }
             state.disabled = self.disabled;
             state.invalid = self.invalid;
-            state.label = self.label;
-            state.placeholder = self.placeholder;
+            state.label = label;
+            state.placeholder = placeholder;
             state.style = self.style;
             if state.input.read(cx).presentation().placeholder() != &state.placeholder {
                 state.input.update(cx, |input, cx| {

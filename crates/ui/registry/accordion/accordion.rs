@@ -61,14 +61,21 @@ pub fn accordion_trigger(
         })
         .w_full()
         .flex()
-        .flex_row_reverse()
+        // The chevron is the last child and sits at the reading end.
+        .map(|b| {
+            if theme.direction.is_rtl() {
+                b.flex_row()
+            } else {
+                b.flex_row_reverse()
+            }
+        })
         .items_start()
         .justify_between()
         .rounded(theme.radius.lg)
         .border_1()
         .border_color(colors.background.opacity(0.))
         .py(theme.space(2.5))
-        .text_left()
+        .text_align(theme.direction.start_align())
         .font_family(theme.fonts.body.clone())
         .font_weight(FontWeight::MEDIUM)
         .text_size(theme.text(14.))

@@ -98,6 +98,15 @@ impl Control {
             Self::Close => LucideIcon::X,
         }
     }
+    fn text(self) -> super::theme::UiText {
+        use super::theme::UiText;
+        match self {
+            Self::Minimize => UiText::Minimize,
+            Self::Maximize => UiText::Maximize,
+            Self::Restore => UiText::Restore,
+            Self::Close => UiText::Close,
+        }
+    }
     fn label(self) -> &'static str {
         match self {
             Self::Minimize => "Minimize",
@@ -115,7 +124,12 @@ impl Control {
     }
 }
 
-fn control(kind: Control, on_close: Option<CloseHandler>, theme: &UiTheme) -> impl IntoElement {
+fn control(
+    kind: Control,
+    on_close: Option<CloseHandler>,
+    theme: &UiTheme,
+    cx: &App,
+) -> impl IntoElement {
     let colors = theme.colors;
     let (hover_bg, hover_fg) = if kind == Control::Close {
         (colors.destructive, colors.destructive_foreground)
@@ -124,7 +138,7 @@ fn control(kind: Control, on_close: Option<CloseHandler>, theme: &UiTheme) -> im
     };
     div()
         .id(SharedString::from(kind.label()))
-        .aria_label(kind.label())
+        .aria_label(super::theme::locale::text(cx, kind.text()))
         .flex()
         .flex_shrink_0()
         .items_center()
@@ -249,7 +263,7 @@ impl RenderOnce for TitleBar {
                         .h_full()
                         .flex_shrink_0()
                         .when(supported.minimize, |row| {
-                            row.child(control(Control::Minimize, None, &theme))
+                            row.child(control(Control::Minimize, None, &theme, cx))
                         })
                         .when(supported.maximize, |row| {
                             row.child(control(
@@ -260,9 +274,10 @@ impl RenderOnce for TitleBar {
                                 },
                                 None,
                                 &theme,
+                                cx,
                             ))
                         })
-                        .child(control(Control::Close, self.on_close.clone(), &theme)),
+                        .child(control(Control::Close, self.on_close.clone(), &theme, cx)),
                 )
             });
         apply_style(bar, &self.style)

@@ -9,7 +9,7 @@ use gpui_kit::{
 };
 
 use super::button::{Button, ButtonSize, ButtonVariant};
-use super::theme::UiTheme;
+use super::theme::{UiText, UiTheme, locale, locale::DirectionalStyled as _};
 
 type RemoveHandler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
@@ -96,16 +96,18 @@ impl RenderOnce for Tag {
                 colors.destructive.opacity(0.2),
             ),
         };
-        let remove_label: SharedString = format!("Remove {}", self.label).into();
+        let remove_label = locale::text(cx, UiText::Remove(self.label.clone()));
         let root = div()
             .id(self.id.clone())
-            .flex()
+            .flex_row_in(theme.direction)
             .flex_shrink_0()
             .items_center()
             .gap(theme.space(1.5))
             .h(theme.space(6.))
             .px(theme.space(2.))
-            .when(self.on_remove.is_some(), |root| root.pr(theme.space(1.)))
+            .when(self.on_remove.is_some(), |root| {
+                root.padding_end(theme.direction, theme.space(1.))
+            })
             .rounded(theme.radius.md)
             .border_1()
             .border_color(border)

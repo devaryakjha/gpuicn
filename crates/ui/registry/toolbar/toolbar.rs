@@ -1,7 +1,7 @@
 //! Nova toolbar with roving focus and GPUI Kit buttons and editors.
 use super::{
     input::{Input, InputState},
-    theme::{UiTheme, primitives::disabled},
+    theme::{UiTheme, locale::DirectionalStyled as _, primitives::disabled},
 };
 use gpui_kit::base::Button as BaseButton;
 use gpui_kit::{
@@ -229,11 +229,14 @@ impl RenderOnce for Toolbar {
                 gpui_kit::Orientation::Vertical
             })
             .when(axis == Axis::Vertical, |d| d.flex_col())
+            .when(axis == Axis::Horizontal, |d| d.mirror_row(theme.direction))
             .capture_key_down(move |event, window, cx| {
                 if event.keystroke.modifiers.modified() {
                     return;
                 }
-                let key = event.keystroke.key.as_str();
+                let key = UiTheme::read(cx)
+                    .direction
+                    .logical_key(event.keystroke.key.as_str());
                 let Some(current) = handles.iter().position(|h| h.is_focused(window)) else {
                     return;
                 };
