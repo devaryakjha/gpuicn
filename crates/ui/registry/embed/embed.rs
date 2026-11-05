@@ -693,6 +693,7 @@ pub struct MessageEmbed {
     footer: Option<SharedString>,
     footer_icon: Option<ImageSource>,
     timestamp: Option<SharedString>,
+    actions: Vec<AnyElement>,
     density: MessageDensity,
 }
 
@@ -717,6 +718,7 @@ impl MessageEmbed {
             footer: None,
             footer_icon: None,
             timestamp: None,
+            actions: Vec::new(),
             density: MessageDensity::Standard,
         }
     }
@@ -851,6 +853,19 @@ impl MessageEmbed {
     /// Sets the footer's time, already formatted by the caller.
     pub fn timestamp(mut self, timestamp: impl Into<SharedString>) -> Self {
         self.timestamp = Some(timestamp.into());
+        self
+    }
+    /// Adds an interactive action, such as a `Button` or a `Select`, to the
+    /// row at the bottom of the card, after the fields and footer. Actions
+    /// wrap onto more rows when the card is narrow.
+    pub fn action(mut self, action: impl IntoElement) -> Self {
+        self.actions.push(action.into_any_element());
+        self
+    }
+    /// Adds several actions; see [`MessageEmbed::action`].
+    pub fn actions(mut self, actions: impl IntoIterator<Item = impl IntoElement>) -> Self {
+        self.actions
+            .extend(actions.into_iter().map(IntoElement::into_any_element));
         self
     }
     /// Matches the padding to the message list's density.
@@ -1000,6 +1015,7 @@ impl RenderOnce for MessageEmbed {
                 )
         });
 
+        let actions = self.actions;
         let card = card_frame(id.clone(), label, &theme)
             .flex()
             .flex_col()
@@ -1043,7 +1059,19 @@ impl RenderOnce for MessageEmbed {
                                     .children(self.body.map(|body| div().child(body)))
                                     .children(fields)
                                     .children(image)
-                                    .children(footer),
+                                    .children(footer)
+                                    .when(!actions.is_empty(), |content| {
+                                        content.child(
+                                            div()
+                                                .id((id.clone(), "actions"))
+                                                .pt(theme.space(1.))
+                                                .flex()
+                                                .flex_wrap()
+                                                .items_center()
+                                                .gap(theme.space(2.))
+                                                .children(actions),
+                                        )
+                                    }),
                             )
                             .children(thumb),
                     ),
@@ -1444,6 +1472,41 @@ mod tests {
             cx.update(|window, cx| window.draw(cx).clear(cx));
         }
         assert!(cx.debug_bounds("embed-bar").is_some());
+    }
+
+    struct ActionsProbe;
+
+    impl Render for ActionsProbe {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            div().w(px(480.)).child(
+                MessageEmbed::new("deploy")
+                    .color_str("#3f51b5")
+                    .title("Deploy to production?")
+                    .footer("Release bot")
+                    .action(
+                        Button::new("approve")
+                            .tint(Rgba::try_from("#3f51b5").unwrap())
+                            .label("Approve"),
+                    )
+                    .action(Button::new("reject").label("Reject")),
+            )
+        }
+    }
+
+    #[gpui_kit::test]
+    fn actions_sit_inside_the_card_after_the_footer(cx: &mut TestAppContext) {
+        use gpui_kit::test::TestQueryExt as _;
+        cx.update(super::super::theme::init);
+        let window = cx.add_window(|_, _| ActionsProbe);
+        let mut cx = VisualTestContext::from_window(window.into(), cx);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let bar = cx.debug_bounds("embed-bar").unwrap();
+        cx.update(|window, _| {
+            let approve = window.find_by_label("Approve").bounds();
+            window.find_by_label("Reject");
+            assert!(approve.left() > bar.right(), "inside the card, past the bar");
+            assert!(approve.bottom() <= bar.bottom(), "within the bar's height");
+        });
     }
 
     #[gpui_kit::test]

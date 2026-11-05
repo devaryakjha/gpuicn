@@ -148,7 +148,10 @@ impl RenderOnce for DatePicker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gpui_kit::{Context, Render, TestAppContext, VisualTestContext, test::TestQueryExt as _};
+    use gpui_kit::{
+        AppContext as _, Context, Render, TestAppContext, VisualTestContext,
+        test::TestQueryExt as _,
+    };
 
     struct Form {
         state: Entity<CalendarState>,

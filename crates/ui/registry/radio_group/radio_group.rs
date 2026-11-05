@@ -176,3 +176,21 @@ impl RenderOnce for RadioGroup {
         apply_style(root, &self.style)
     }
 }
+
+impl super::field::FieldControl for RadioGroup {
+    fn field_label_focus(&self, _: &App) -> Option<gpui_kit::FocusHandle> {
+        None
+    }
+
+    fn into_field_control(
+        self,
+        label: SharedString,
+        disabled: bool,
+        _invalid: bool,
+    ) -> gpui_kit::AnyElement {
+        let disabled = self.disabled || disabled;
+        self.aria_label(label)
+            .disabled(disabled)
+            .into_any_element()
+    }
+}

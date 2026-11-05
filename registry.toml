@@ -124,3 +124,7 @@ dependencies = ["calendar", "button"]
 title = "Date Time Picker"
 description = "A date and time picker: a Calendar popover with an hour and minute field, 12- or 24-hour."
 dependencies = ["date_picker", "calendar", "button", "input"]
+[components.checkbox]
+dependencies = ["field"]
+[components.radio_group]
+dependencies = ["field"]
