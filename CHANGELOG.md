@@ -4,6 +4,23 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.9.7
+
+[Notes](docs/releases/v0.9.7.md)
+
+### Added
+
+- Replaceable built-in strings: every word a component writes, from
+  "Close" and "Search emoji" to month names and accessible labels, is a
+  `UiText` with an English default that `locale::set_strings` translates
+  (#143).
+- Right-to-left layouts: `locale::set_direction(cx, Direction::Rtl)`
+  mirrors rows, paddings, chevrons, drawers, popovers, menus and toasts,
+  aligns inputs to the start and makes Left and Right follow the reading
+  direction (#143).
+- `locale::isolate` for names inside mixed-script text, and
+  `DirectionalStyled` start/end helpers for your own views (#143).
+
 ## 0.9.6
 
 [Notes](docs/releases/v0.9.6.md)

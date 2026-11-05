@@ -215,7 +215,10 @@ class Preview {
     if (example) query.set("example", example)
     // The preview falls back to WebGL by itself. `?backend=webgl` on the page
     // skips WebGPU, which the screenshot scripts use.
-    const backend = new URLSearchParams(location.search).get("backend")
+    const page = new URLSearchParams(location.search)
+    // `?dir=rtl` on the page previews the component in a right-to-left layout.
+    if (page.get("dir") === "rtl") query.set("dir", "rtl")
+    const backend = page.get("backend")
     if (backend === "webgl" || !("gpu" in navigator)) query.set("backend", "webgl")
     // `/demo/`, not `/demo/index.html`: the host forces trailing slashes and
     // redirects the latter, and a cross-origin-isolated page blocks a framed

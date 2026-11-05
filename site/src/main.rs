@@ -70,6 +70,11 @@ fn launch(cx: &mut App) {
         _ => ThemeMode::Light,
     };
     UiTheme::switch(cx, mode);
+    // `?dir=rtl` (or `GPUICN_DIR=rtl` natively) previews the gallery in a
+    // right-to-left layout.
+    if requested_value("dir").as_deref() == Some("rtl") {
+        gpuicn::locale::set_direction(cx, gpuicn::Direction::Rtl);
+    }
     #[cfg(not(target_family = "wasm"))]
     if requested_value("demo")
         .as_deref()
@@ -318,6 +323,7 @@ fn requested_value(key: &str) -> Option<String> {
         "example" => std::env::args().nth(3),
         "width" => std::env::args().nth(4),
         "height" => std::env::args().nth(5),
+        "dir" => std::env::var("GPUICN_DIR").ok(),
         _ => None,
     }
 }
