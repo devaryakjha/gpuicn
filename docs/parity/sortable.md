@@ -25,4 +25,7 @@ headers are headings named by the group label.
 `horizontal` lays rows out in a wrapping row, such as a bookmarks bar. The
 drop line is a 2px vertical line between items, the drop side follows the
 pointer's x, and Alt+Shift+Left and Alt+Shift+Right move the focused item
-with the same announcements.
+with the same announcements. `wrap(false)` keeps the row on one line at its
+content width, so a parent with `overflow_x_scroll` scrolls it sideways, and
+`gap(px)` sets the space between items (8px by default) with the drop line
+centred in it.

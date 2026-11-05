@@ -24,8 +24,12 @@ impl Showcase {
             vec![vec!["Roadmap", "Design specs", "On-call", "Runbook"]]
         });
         let rebooked = bookmarks.clone();
+        let space = UiTheme::read(cx).space(1.);
+        // One line that scrolls sideways when it overflows, chips 4px apart.
         let bar = Sortable::new("sortable.bookmarks", "Bookmarks")
             .horizontal()
+            .wrap(false)
+            .gap(space)
             .group(
                 SortableGroup::new("sortable.bookmarks.bar", "Bookmarks")
                     .header(|_, _| div())
@@ -88,11 +92,19 @@ impl Showcase {
                 }),
         );
         div()
+            .w_full()
             .flex()
             .flex_col()
             .items_center()
             .gap(px(16.))
-            .child(div().max_w(px(460.)).child(bar))
+            .child(
+                div()
+                    .id("sortable.bookmarks.scroll")
+                    .w_full()
+                    .max_w(px(460.))
+                    .overflow_x_scroll()
+                    .child(bar),
+            )
             .child(sidebar)
     }
 }

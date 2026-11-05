@@ -20,6 +20,8 @@ Notable changes to gpuicn. Detailed notes for each release are in
   direction (#143).
 - `locale::isolate` for names inside mixed-script text, and
   `DirectionalStyled` start/end helpers for your own views (#143).
+- Sortable `wrap(false)` and `gap(px)` for one-line horizontal bars
+  (#145).
 
 ## 0.9.6
 

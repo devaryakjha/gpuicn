@@ -163,6 +163,8 @@ pub struct Sortable {
     groups: Vec<SortableGroup>,
     reorder_groups: bool,
     horizontal: bool,
+    wrap: bool,
+    gap: Option<Pixels>,
     on_reorder: Option<MoveHandler>,
     on_reorder_group: Option<GroupMoveHandler>,
     style: gpui_kit::StyleRefinement,
@@ -177,6 +179,8 @@ impl Sortable {
             groups: Vec::new(),
             reorder_groups: false,
             horizontal: false,
+            wrap: true,
+            gap: None,
             on_reorder: None,
             on_reorder_group: None,
             style: gpui_kit::StyleRefinement::default(),
@@ -203,6 +207,19 @@ impl Sortable {
     /// Alt+Shift+Right move the focused item, with the same announcements.
     pub fn horizontal(mut self) -> Self {
         self.horizontal = true;
+        self
+    }
+    /// Whether a horizontal list wraps onto more lines when it runs out of
+    /// room. On by default. Off keeps one line at its content width, so a
+    /// bar such as bookmarks can scroll sideways in its parent instead.
+    pub fn wrap(mut self, wrap: bool) -> Self {
+        self.wrap = wrap;
+        self
+    }
+    /// The space between items in a horizontal list, 8px (two spacing
+    /// units) by default. The drop line stays centred in it.
+    pub fn gap(mut self, gap: Pixels) -> Self {
+        self.gap = Some(gap);
         self
     }
     /// Reports a row move, by mouse or keyboard.
@@ -347,10 +364,10 @@ fn move_key(event: &KeyDownEvent, horizontal: bool, direction: Direction) -> Opt
 
 /// The 2px line that shows where a drop lands: across a column, or down
 /// beside an item in a horizontal list.
-fn drop_line(before: bool, horizontal: bool, theme: &UiTheme) -> gpui_kit::Div {
+fn drop_line(before: bool, horizontal: bool, gap: Pixels, theme: &UiTheme) -> gpui_kit::Div {
     let line = div().absolute().rounded_full().bg(theme.colors.ring);
     // Half the gap between items, so the line sits between them.
-    let offset = -(theme.space(1.) + px(1.));
+    let offset = -(gap / 2. + px(1.));
     match (horizontal, before) {
         (false, true) => line.left_0().right_0().h(px(2.)).top(px(-1.)),
         (false, false) => line.left_0().right_0().h(px(2.)).bottom(px(-1.)),
@@ -400,6 +417,8 @@ impl RenderOnce for Sortable {
         let reorder_groups = self.reorder_groups && on_reorder_group.is_some();
         let horizontal = self.horizontal;
         let direction = theme.direction;
+        let wrap = self.wrap;
+        let gap = self.gap.unwrap_or_else(|| theme.space(2.));
         let (previous_key, next_key) = if horizontal {
             if direction.is_rtl() {
                 ("Right", "Left")
@@ -424,10 +443,13 @@ impl RenderOnce for Sortable {
             .relative()
             .flex()
             .when(horizontal, |root| {
-                root.flex_row_in(direction).flex_wrap().items_center()
+                root.flex_row_in(direction)
+                    .when(wrap, |root| root.flex_wrap())
+                    .when(!wrap, |root| root.flex_nowrap().flex_shrink_0())
+                    .items_center()
             })
             .when(!horizontal, |root| root.flex_col())
-            .gap(theme.space(2.))
+            .gap(if horizontal { gap } else { theme.space(2.) })
             .child(
                 div()
                     .id((self.id.clone(), "status"))
@@ -615,9 +637,10 @@ impl RenderOnce for Sortable {
                 .flex()
                 .when(horizontal, |rows| {
                     rows.flex_row_in(direction)
-                        .flex_wrap()
+                        .when(wrap, |rows| rows.flex_wrap())
+                        .when(!wrap, |rows| rows.flex_nowrap().flex_shrink_0())
                         .items_center()
-                        .gap(theme.space(2.))
+                        .gap(gap)
                 })
                 .when(!horizontal, |rows| rows.flex_col());
             if !group.collapsed {
@@ -725,10 +748,10 @@ impl RenderOnce for Sortable {
                         })
                         .child((row.render)(window, cx))
                         .when(line_before, |row| {
-                            row.child(drop_line(true, horizontal, &theme))
+                            row.child(drop_line(true, horizontal, gap, &theme))
                         })
                         .when(line_after, |row| {
-                            row.child(drop_line(false, horizontal, &theme))
+                            row.child(drop_line(false, horizontal, gap, &theme))
                         });
                     rows = rows.child(element);
                 }
@@ -774,10 +797,10 @@ impl RenderOnce for Sortable {
                     },
                 );
                 if group_target == Some(group_index) {
-                    container = container.child(drop_line(true, horizontal, &theme));
+                    container = container.child(drop_line(true, horizontal, gap, &theme));
                 }
                 if group_index + 1 == group_count && group_target == Some(group_count) {
-                    container = container.child(drop_line(false, horizontal, &theme));
+                    container = container.child(drop_line(false, horizontal, gap, &theme));
                 }
             }
             root = root.child(container);
@@ -1011,14 +1034,28 @@ mod tests {
 
     struct Bookmarks {
         items: Vec<Vec<&'static str>>,
+        width: Pixels,
+        one_line: Option<Pixels>,
+    }
+
+    impl Bookmarks {
+        fn new(items: Vec<&'static str>) -> Self {
+            Self {
+                items: vec![items],
+                width: px(480.),
+                one_line: None,
+            }
+        }
     }
 
     impl Render for Bookmarks {
         fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
             let view = cx.entity();
-            div().w(px(480.)).child(
+            let one_line = self.one_line;
+            div().w(self.width).child(
                 Sortable::new("bookmarks", "Bookmarks")
                     .horizontal()
+                    .when_some(one_line, |list, gap| list.wrap(false).gap(gap))
                     .group(
                         SortableGroup::new("bar", "Bookmarks")
                             .header(|_, _| div())
@@ -1050,9 +1087,7 @@ mod tests {
     #[gpui_kit::test]
     fn a_horizontal_list_moves_by_left_and_right_and_by_drag(cx: &mut TestAppContext) {
         cx.update(super::super::theme::init);
-        let (view, cx) = cx.add_window_view(|_, _| Bookmarks {
-            items: vec![vec!["Docs", "Board", "Wiki"]],
-        });
+        let (view, cx) = cx.add_window_view(|_, _| Bookmarks::new(vec!["Docs", "Board", "Wiki"]));
         cx.update(|window, cx| window.draw(cx).clear(cx));
         let docs = cx.debug_bounds("chip-Docs").expect("drawn");
         let board = cx.debug_bounds("chip-Board").expect("drawn");
@@ -1080,6 +1115,37 @@ mod tests {
             point(wiki.right() - px(4.), wiki.center().y),
         );
         cx.update(|_, cx| assert_eq!(view.read(cx).items[0], ["Docs", "Wiki", "Board"]));
+    }
+
+    #[gpui_kit::test]
+    fn a_horizontal_list_can_stay_on_one_line_with_its_own_gap(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        // Three 80px chips in 200px: they wrap by default.
+        let (view, cx) = cx.add_window_view(|_, _| Bookmarks {
+            width: px(200.),
+            ..Bookmarks::new(vec!["Docs", "Board", "Wiki"])
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let docs = cx.debug_bounds("chip-Docs").expect("drawn");
+        let wiki = cx.debug_bounds("chip-Wiki").expect("drawn");
+        assert!(wiki.top() > docs.top(), "the third chip wraps");
+
+        cx.update(|window, cx| {
+            view.update(cx, |this, cx| {
+                this.one_line = Some(px(4.));
+                cx.notify();
+            });
+            window.draw(cx).clear(cx);
+        });
+        let docs = cx.debug_bounds("chip-Docs").expect("drawn");
+        let board = cx.debug_bounds("chip-Board").expect("drawn");
+        let wiki = cx.debug_bounds("chip-Wiki").expect("drawn");
+        assert_eq!(wiki.top(), docs.top(), "one line");
+        assert!(
+            wiki.right() > docs.left() + px(200.),
+            "keeps its content width"
+        );
+        assert_eq!(board.left() - docs.right(), px(4.), "the app's gap");
     }
 
     fn drag(
