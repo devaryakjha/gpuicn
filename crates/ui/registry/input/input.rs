@@ -4,7 +4,7 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use super::theme::{
-    UiTheme,
+    UiTheme, UiText, locale,
     primitives::{control, disabled, focus},
 };
 pub use gpui_kit::base::input::{InputEvent, InputState, TextareaState};
@@ -265,21 +265,32 @@ impl SpellingMenu {
 }
 
 /// Cut, Copy, Paste and Select All, after `menu`'s own items.
-fn edit_menu(menu: NativeMenu, copyable: bool, editable: bool) -> NativeMenu {
+fn edit_menu(menu: NativeMenu, copyable: bool, editable: bool, cx: &App) -> NativeMenu {
     let menu = if menu.is_empty() {
         menu
     } else {
         menu.separator()
     };
     menu.menu_with_disabled(
-        "Cut",
+        locale::text(cx, UiText::Cut),
         !(editable && copyable),
         Box::new(gpui_kit::base::input::Cut),
     )
-    .menu_with_disabled("Copy", !copyable, Box::new(gpui_kit::base::input::Copy))
-    .menu_with_disabled("Paste", !editable, Box::new(gpui_kit::base::input::Paste))
+    .menu_with_disabled(
+        locale::text(cx, UiText::Copy),
+        !copyable,
+        Box::new(gpui_kit::base::input::Copy),
+    )
+    .menu_with_disabled(
+        locale::text(cx, UiText::Paste),
+        !editable,
+        Box::new(gpui_kit::base::input::Paste),
+    )
     .separator()
-    .menu("Select All", Box::new(gpui_kit::base::input::SelectAll))
+    .menu(
+        locale::text(cx, UiText::SelectAll),
+        Box::new(gpui_kit::base::input::SelectAll),
+    )
 }
 
 /// Paints a 1px wavy underline under each misspelled range that is laid out.
@@ -573,6 +584,7 @@ fn install_spelling_menu(
                 menu,
                 capabilities.is_copyable(),
                 editable && !capabilities.is_readonly(),
+                cx,
             )
             .show(position, window, cx);
         }));
@@ -616,11 +628,17 @@ impl InputCore {
         cx: &mut App,
     ) -> InputBase {
         let editor_style = Self::editor_style(theme);
+        let direction = theme.direction;
         state.update(cx, |state, cx| {
             state.set_disabled(self.disabled, cx);
             state.set_readonly(self.read_only, cx);
             state.set_editor_style(editor_style);
+            // Single-line inputs start at the reading edge; Kit leaves
+            // multi-line alignment to the text itself.
+            state.set_text_align(direction.start_align(), cx);
         });
+        let read_only_text = locale::text(cx, UiText::ReadOnly);
+        let invalid_text = locale::text(cx, UiText::InvalidValue);
         let read = state.read(cx);
         let focus_handle = read.focus_handle(cx);
         let focused = focus_handle.is_focused(window) && !self.disabled;
@@ -638,8 +656,9 @@ impl InputCore {
             .when_some(self.label, |root, label| root.accessibility_label(label))
             .aria_value(value)
             .aria_placeholder(placeholder)
-            .when(self.read_only, |root| root.aria_description("Read only"))
-            .when(self.invalid, |root| root.aria_description("Invalid value"))
+            .when(self.read_only, |root| root.aria_description(read_only_text))
+            .when(self.invalid, |root| root.aria_description(invalid_text))
+            .when(direction.is_rtl(), |root| root.key_context(locale::RTL_INPUT_CONTEXT))
             .when(!self.disabled, |root| {
                 root.on_a11y_action(AccessibleAction::Focus, move |_, window, cx| {
                     a11y_focus.update(cx, |state, cx| state.focus(window, cx));
@@ -901,15 +920,15 @@ mod spelling_tests {
         cx.update(|_, cx| assert_eq!(input.read(cx).value(), "see teh cat"));
     }
 
-    #[test]
-    fn the_spelling_menu_puts_suggestions_above_the_edit_items() {
+    #[gpui_kit::test]
+    fn the_spelling_menu_puts_suggestions_above_the_edit_items(cx: &mut TestAppContext) {
         let mut menu = SpellingMenu {
             range: 0..3,
             word: "teh".into(),
             menu: NativeMenu::new(),
         };
         menu.suggestion("the").suggestion("ten");
-        let menu = edit_menu(menu.menu, false, true);
+        let menu = cx.update(|cx| edit_menu(menu.menu, false, true, cx));
         assert!(!menu.is_empty());
     }
 }

@@ -14,6 +14,7 @@ use gpui_kit::{
 
 use super::theme::{
     UiRadius, UiTheme,
+    locale::DirectionalStyled as _,
     primitives::{disabled as disabled_style, focus},
 };
 
@@ -255,7 +256,7 @@ fn style_button_with<
     let focus_theme = theme.clone();
 
     let base = base
-        .flex()
+        .flex_row_in(theme.direction)
         .flex_shrink_0()
         .items_center()
         .justify_center()

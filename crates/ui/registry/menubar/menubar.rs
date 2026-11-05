@@ -1,7 +1,7 @@
 //! Nova menu bar with one tab stop and keyboard switching between menus.
 use super::{
     menu::{Menu, MenuState},
-    theme::{UiTheme, apply_style},
+    theme::{UiTheme, apply_style, locale::DirectionalStyled as _},
 };
 use gpui_kit::{
     App, ElementId, Entity, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce,
@@ -57,7 +57,7 @@ impl RenderOnce for Menubar {
             .id(self.id)
             .role(self.role)
             .aria_label(self.label)
-            .flex()
+            .flex_row_in(t.direction)
             .items_center()
             .gap(t.space(0.5))
             .p(t.space(0.75))
@@ -88,7 +88,8 @@ impl RenderOnce for Menubar {
                 if event.keystroke.modifiers.modified() || states.is_empty() {
                     return;
                 }
-                let key = event.keystroke.key.as_str();
+                let direction = UiTheme::read(cx).direction;
+                let key = direction.logical_key(event.keystroke.key.as_str());
                 let Some(current) = states.iter().position(|s| {
                     s.read(cx).is_open() || s.read(cx).trigger_focus().is_focused(window)
                 }) else {

@@ -2,7 +2,10 @@
 use super::{
     button::{Button, ButtonVariant},
     dialog::{dialog_backdrop, dialog_description, dialog_title, modal_focus},
-    theme::{UiEasing, UiTheme, apply_style, presence_with, primitives::surface, transition_with},
+    theme::{
+        Direction, UiEasing, UiTheme, apply_style, presence_with, primitives::surface,
+        transition_with,
+    },
 };
 pub use gpui_kit::base::DialogHandle as DrawerHandle;
 use gpui_kit::base::{ElementExt as _, Sheet};
@@ -19,15 +22,24 @@ use std::time::Duration;
 pub enum DrawerSide {
     /// Attach to the top edge.
     Top,
-    /// Attach to the right edge.
+    /// Attach to the right edge, or the left one in right-to-left layouts.
     Right,
     /// Attach to the bottom edge.
     #[default]
     Bottom,
-    /// Attach to the left edge.
+    /// Attach to the left edge, or the right one in right-to-left layouts.
     Left,
 }
 impl DrawerSide {
+    /// The edge on screen: Left and Right are the reading start and end, so
+    /// they swap in right-to-left layouts.
+    pub fn physical(self, direction: Direction) -> Self {
+        match (direction, self) {
+            (Direction::Rtl, Self::Left) => Self::Right,
+            (Direction::Rtl, Self::Right) => Self::Left,
+            _ => self,
+        }
+    }
     fn vertical(self) -> bool {
         matches!(self, Self::Top | Self::Bottom)
     }
@@ -221,7 +233,7 @@ impl RenderOnce for Drawer {
             );
             return base.into_any_element();
         }
-        let side = self.side;
+        let side = self.side.physical(t.direction);
         let vertical = side.vertical();
         let viewport = window.viewport_size();
         let side_width = if viewport.width >= t.space(160.) {

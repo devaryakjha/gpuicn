@@ -146,7 +146,8 @@ pub mod virtual_list;
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use checkbox::Checkbox;
 pub use theme::{
-    Appearance, ThemeMode, UiColors, UiFonts, UiRadius, UiShadows, UiSpacing, UiTheme,
+    Appearance, Direction, ThemeMode, UiColors, UiFonts, UiRadius, UiShadows, UiSpacing, UiText,
+    UiTheme, locale,
 };
 
 /// Installs the default theme and all shared keyboard/component behavior.

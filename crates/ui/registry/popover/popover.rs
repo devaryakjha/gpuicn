@@ -148,7 +148,8 @@ impl HoverPopover {
         self
     }
     /// Sets the preferred side (`gpui_kit::base::Placement`); the popup flips
-    /// when that side has no room.
+    /// when that side has no room. Left and Right, and Start and End
+    /// alignment, mirror in right-to-left layouts.
     pub fn placement(mut self, placement: Placement) -> Self {
         self.placement = placement;
         self
@@ -378,8 +379,8 @@ impl RenderOnce for HoverPopover {
             root = root.child(
                 gpui_kit::deferred(
                     Positioner::side(anchor)
-                        .placement(self.placement)
-                        .align(self.align)
+                        .placement(t.direction.placement(self.placement))
+                        .align(t.direction.align(self.align))
                         .offset(t.space(1.))
                         .occlude()
                         .child(popup),

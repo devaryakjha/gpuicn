@@ -3,6 +3,7 @@ use super::{
     button::{ButtonSize, ButtonVariant, style_button},
     theme::{
         UiTheme, apply_style,
+        locale::DirectionalStyled as _,
         primitives::{disabled, surface},
     },
 };
@@ -339,7 +340,10 @@ impl MenuState {
             return;
         }
         let depth = self.path.len();
-        let key = event.keystroke.key.as_str();
+        // Submenus open toward the reading end, so the arrows swap in
+        // right-to-left layouts.
+        let direction = UiTheme::read(cx).direction;
+        let key = direction.logical_key(event.keystroke.key.as_str());
         if key == "escape" {
             self.close(true, window, cx);
         } else if key == "tab" {
@@ -503,6 +507,7 @@ impl Render for MenuState {
                     .relative()
                     .w_full()
                     .min_h(t.space(8.))
+                    .mirror_row(t.direction)
                     .justify_start()
                     .gap(t.space(2.))
                     .px(t.space(1.5))
@@ -546,8 +551,12 @@ impl Render for MenuState {
                     })
                     .when(submenu, |b| {
                         b.child(
-                            lucide(LucideIcon::ChevronRight)
-                                .size(t.space(4.))
+                            lucide(t.direction.icon(
+                                true,
+                                LucideIcon::ChevronLeft,
+                                LucideIcon::ChevronRight,
+                            ))
+                            .size(t.space(4.))
                                 .text_color(t.colors.popover_foreground),
                         )
                     });
@@ -556,13 +565,13 @@ impl Render for MenuState {
             root = root.child(
                 gpui_kit::deferred(
                     Positioner::side(anchor)
-                        .align(Align::Start)
+                        .align(t.direction.align(Align::Start))
                         .margin(gpui_kit::px(WINDOW_MARGIN))
-                        .placement(if beside {
+                        .placement(t.direction.placement(if beside {
                             Placement::Right
                         } else {
                             Placement::Bottom
-                        })
+                        }))
                         .offset(t.space(1.))
                         .occlude()
                         .child(popup),
