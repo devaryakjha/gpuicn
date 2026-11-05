@@ -19,7 +19,8 @@ use gpui_kit::{
 use super::input::{Input, InputEvent, InputState};
 use super::kbd::{format_shortcut, key_label};
 use super::theme::{
-    UiTheme, apply_style,
+    UiTheme, UiText, apply_style,
+    locale::{self, DirectionalStyled as _},
     primitives::{disabled, surface},
 };
 
@@ -363,6 +364,8 @@ impl Render for CommandState {
         let list_id = id.clone();
         let leading_slot = self.leading.clone();
         let trailing_slot = self.trailing.clone();
+        let dir = theme.direction;
+        let unavailable = locale::text(cx, UiText::Unavailable);
         let rows_list = uniform_list(
             (id.clone(), "rows"),
             total,
@@ -400,9 +403,9 @@ impl Render for CommandState {
                                 .map(|row| match (&item.description, item.disabled) {
                                     (description, true) => disabled::style(row.aria_description(
                                         description.as_ref().map_or_else(
-                                            || SharedString::from("Unavailable"),
+                                            || unavailable.clone(),
                                             |description| {
-                                                format!("{description}, unavailable").into()
+                                                format!("{description}, {unavailable}").into()
                                             },
                                         ),
                                     )),
@@ -413,7 +416,7 @@ impl Render for CommandState {
                                 })
                                 .w_full()
                                 .h(row_theme.space(ROW))
-                                .flex()
+                                .flex_row_in(dir)
                                 .items_center()
                                 .gap(row_theme.space(2.))
                                 .px(row_theme.space(2.))
@@ -532,7 +535,7 @@ impl Render for CommandState {
             }))
             .child(
                 div()
-                    .flex()
+                    .flex_row_in(dir)
                     .items_center()
                     .gap(theme.space(2.))
                     .h(theme.space(9.))
@@ -547,7 +550,7 @@ impl Render for CommandState {
                     )
                     .child(
                         Input::new(&self.input)
-                            .aria_label("Search commands")
+                            .aria_label(locale::text(cx, UiText::SearchCommands))
                             .bordered(false)
                             .px_0(),
                     ),
@@ -556,7 +559,7 @@ impl Render for CommandState {
                 div()
                     .id((id, "list"))
                     .role(Role::ListBox)
-                    .aria_label("Commands")
+                    .aria_label(locale::text(cx, UiText::Commands))
                     .p(theme.space(1.))
                     .when(total == 0, |list| {
                         list.child(
@@ -565,7 +568,7 @@ impl Render for CommandState {
                                 .text_center()
                                 .text_size(theme.text(14.))
                                 .text_color(colors.muted_foreground)
-                                .child("No results found."),
+                                .child(locale::text(cx, UiText::NoResults)),
                         )
                     })
                     .when(total > 0, |list| list.child(rows_list)),
@@ -632,7 +635,7 @@ pub fn command_dialog_popup(
     let theme = UiTheme::read(cx);
     let root = div()
         .id(id)
-        .aria_label("Command palette")
+        .aria_label(locale::text(cx, UiText::CommandPalette))
         .occlude()
         .w_full()
         .min_w(px(0.))

@@ -8,7 +8,11 @@ use gpui_kit::{
 
 use gpui_kit::base::TestSupportExt as _;
 
-use super::theme::{UiTheme, primitives::clipped_image_with};
+use super::theme::{
+    UiText, UiTheme,
+    locale::{self, DirectionalStyled as _},
+    primitives::clipped_image_with,
+};
 
 /// A compact, circular Avatar with an optional image and fallback content.
 #[derive(IntoElement)]
@@ -49,7 +53,20 @@ pub enum AvatarStatus {
 }
 
 impl AvatarStatus {
-    /// The words appended to the avatar's accessible name.
+    /// The words appended to the avatar's accessible name, translated with
+    /// the application's strings.
+    pub fn text(&self, cx: &App) -> SharedString {
+        let text = match self {
+            Self::Online => UiText::StatusOnline,
+            Self::Away => UiText::StatusAway,
+            Self::Dnd => UiText::StatusDnd,
+            Self::Offline => UiText::StatusOffline,
+            Self::Custom { label, .. } => return label.clone(),
+        };
+        locale::text(cx, text)
+    }
+
+    /// The English words appended to the avatar's accessible name.
     pub fn label(&self) -> SharedString {
         match self {
             Self::Online => "online".into(),
@@ -174,7 +191,7 @@ fn status_dot(
     div()
         .debug_selector(|| "avatar-status".into())
         .absolute()
-        .right(px(-1.))
+        .inset_end(theme.direction, px(-1.))
         .bottom(px(-1.))
         .size(outer)
         .p(ring_width)
@@ -217,7 +234,9 @@ impl RenderOnce for Avatar {
             )
         });
         let label = match (self.aria_label, &self.status) {
-            (Some(label), Some(status)) => Some(format!("{label}, {}", status.label()).into()),
+            (Some(label), Some(status)) => Some(
+                format!("{}, {}", locale::isolate(&label), status.text(cx)).into(),
+            ),
             (label, _) => label,
         };
         let frame_theme = theme.clone();

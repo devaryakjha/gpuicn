@@ -5,7 +5,9 @@ pub mod modal_focus;
 use super::{
     button::{Button, ButtonSize, ButtonVariant},
     theme::{
-        UiTheme, presence,
+        UiText, UiTheme,
+        locale::{self, DirectionalStyled as _},
+        presence,
         primitives::{surface, text},
     },
 };
@@ -218,7 +220,7 @@ pub fn dialog_footer(cx: &App) -> Div {
     div()
         .mx(-t.space(4.))
         .mb(-t.space(4.))
-        .flex()
+        .flex_row_in(t.direction)
         .justify_end()
         .gap(t.space(2.))
         .rounded_b(t.radius.xl)
@@ -278,12 +280,12 @@ pub fn dialog_close(id: impl Into<ElementId>, cx: &App) -> DialogControl {
         DialogControlAction::Cancel,
         "gpuicn-dialog-close-anchor",
     )
-    .aria_label("Close")
+    .aria_label(locale::text(cx, UiText::Close))
     .variant(ButtonVariant::Ghost)
     .size(ButtonSize::IconSm)
     .absolute()
     .top(t.space(2.))
-    .right(t.space(2.))
+    .inset_end(t.direction, t.space(2.))
     .child(
         lucide(LucideIcon::X)
             .size(t.space(4.))

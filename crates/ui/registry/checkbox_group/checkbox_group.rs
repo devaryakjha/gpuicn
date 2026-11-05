@@ -1,6 +1,7 @@
 //! Controlled checkbox sets with clickable labels.
 use super::theme::{
     UiTheme, apply_style,
+    locale::DirectionalStyled as _,
     primitives::{control, disabled, focus, text},
 };
 use gpui_kit::{
@@ -136,7 +137,7 @@ impl RenderOnce for CheckboxGroup {
                     .disabled(disabled)
                     .accessibility_label(item.label.clone())
                     .track_focus(&focus)
-                    .flex()
+                    .flex_row_in(theme.direction)
                     .items_center()
                     .gap(theme.space(2.))
                     .text_color(colors.foreground)

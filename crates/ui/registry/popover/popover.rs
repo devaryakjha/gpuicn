@@ -4,6 +4,7 @@ use super::{
     button::{ButtonSize, ButtonVariant, style_button},
     theme::{
         UiTheme, apply_style,
+        locale::DirectionalStyled as _,
         primitives::{focus, surface},
     },
 };
@@ -301,7 +302,7 @@ impl RenderOnce for HoverPopover {
             .map(|button| match self.trigger_style {
                 Some(style) => style(button),
                 None => button
-                    .flex()
+                    .flex_row_in(t.direction)
                     .items_center()
                     .rounded(t.radius.sm)
                     .cursor_pointer()

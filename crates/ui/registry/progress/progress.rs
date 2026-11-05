@@ -6,7 +6,7 @@ use gpui_kit::{
     SharedString, Styled, Window, relative,
 };
 
-use super::theme::UiTheme;
+use super::theme::{UiTheme, locale::DirectionalStyled as _};
 
 #[derive(IntoElement)]
 /// A Nova track for determinate or indeterminate progress.
@@ -89,6 +89,8 @@ impl RenderOnce for Progress {
         root.child(
             ProgressTrack::new()
                 .relative()
+                // The bar fills from the reading start.
+                .flex_row_in(theme.direction)
                 .w_full()
                 .h(spacing * 1_f32)
                 .rounded_full()

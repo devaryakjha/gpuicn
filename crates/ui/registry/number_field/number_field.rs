@@ -67,6 +67,10 @@ impl Styled for NumberField {
 impl RenderOnce for NumberField {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let t = UiTheme::read(cx).clone();
+        let decrease_label =
+            super::theme::locale::text(cx, super::theme::UiText::DecreaseValue);
+        let increase_label =
+            super::theme::locale::text(cx, super::theme::UiText::IncreaseValue);
         let focused = self.state.focus_handle(cx).is_focused(window) && !self.disabled;
         let mut input = Input::new(&self.state)
             .bordered(false)
@@ -93,7 +97,7 @@ impl RenderOnce for NumberField {
                 let t = t.clone();
                 move |button| {
                     button
-                        .accessibility_label("Decrease value")
+                        .accessibility_label(decrease_label)
                         .size(t.space(8.))
                         .cursor_pointer()
                         .child(
@@ -107,7 +111,7 @@ impl RenderOnce for NumberField {
                 let t = t.clone();
                 move |button| {
                     button
-                        .accessibility_label("Increase value")
+                        .accessibility_label(increase_label)
                         .size(t.space(8.))
                         .cursor_pointer()
                         .child(

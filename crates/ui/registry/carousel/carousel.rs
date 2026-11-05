@@ -1,6 +1,6 @@
 //! Nova-styled composition around GPUI Kit's native carousel engine.
 
-use super::theme::{UiTheme, apply_style};
+use super::theme::{UiText, UiTheme, apply_style, locale};
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::base::AxisExt as _;
 use gpui_kit::component::carousel::{
@@ -21,7 +21,7 @@ pub use gpui_kit::component::carousel::{
 pub struct Carousel {
     id: ElementId,
     state: Entity<CarouselState>,
-    label: SharedString,
+    label: Option<SharedString>,
     style: StyleRefinement,
     children: Vec<AnyElement>,
 }
@@ -32,7 +32,7 @@ impl Carousel {
         Self {
             id: id.into(),
             state: state.clone(),
-            label: "Carousel".into(),
+            label: None,
             style: StyleRefinement::default(),
             children: Vec::new(),
         }
@@ -40,7 +40,7 @@ impl Carousel {
 
     /// Sets the name announced for the carousel region.
     pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.label = label.into();
+        self.label = Some(label.into());
         self
     }
 }
@@ -59,9 +59,12 @@ impl Styled for Carousel {
 
 impl RenderOnce for Carousel {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
+        let label = self
+            .label
+            .unwrap_or_else(|| locale::text(cx, UiText::Carousel));
         let theme = UiTheme::read(cx);
         let root = KitCarousel::new(self.id, &self.state)
-            .accessibility_label(self.label)
+            .accessibility_label(label)
             .gap(theme.space(3.))
             .font_family(theme.fonts.body.clone())
             .text_color(theme.colors.foreground)
@@ -74,7 +77,7 @@ impl RenderOnce for Carousel {
 #[derive(IntoElement)]
 pub struct CarouselPrevious {
     state: Entity<CarouselState>,
-    label: SharedString,
+    label: Option<SharedString>,
     style: StyleRefinement,
 }
 
@@ -83,14 +86,14 @@ impl CarouselPrevious {
     pub fn new(state: &Entity<CarouselState>) -> Self {
         Self {
             state: state.clone(),
-            label: "Previous slide".into(),
+            label: None,
             style: StyleRefinement::default(),
         }
     }
 
     /// Sets the accessible control name.
     pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.label = label.into();
+        self.label = Some(label.into());
         self
     }
 }
@@ -112,8 +115,11 @@ impl RenderOnce for CarouselPrevious {
         } else {
             LucideIcon::ChevronUp
         };
+        let label = self
+            .label
+            .unwrap_or_else(|| locale::text(cx, UiText::PreviousSlide));
         let control = KitCarouselPrevious::new(&state)
-            .accessibility_label(self.label)
+            .accessibility_label(label)
             .child(
                 lucide(icon)
                     .size(theme.space(4.))
@@ -127,7 +133,7 @@ impl RenderOnce for CarouselPrevious {
 #[derive(IntoElement)]
 pub struct CarouselNext {
     state: Entity<CarouselState>,
-    label: SharedString,
+    label: Option<SharedString>,
     style: StyleRefinement,
 }
 
@@ -136,14 +142,14 @@ impl CarouselNext {
     pub fn new(state: &Entity<CarouselState>) -> Self {
         Self {
             state: state.clone(),
-            label: "Next slide".into(),
+            label: None,
             style: StyleRefinement::default(),
         }
     }
 
     /// Sets the accessible control name.
     pub fn aria_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.label = label.into();
+        self.label = Some(label.into());
         self
     }
 }
@@ -165,8 +171,11 @@ impl RenderOnce for CarouselNext {
         } else {
             LucideIcon::ChevronDown
         };
+        let label = self
+            .label
+            .unwrap_or_else(|| locale::text(cx, UiText::NextSlide));
         let control = KitCarouselNext::new(&state)
-            .accessibility_label(self.label)
+            .accessibility_label(label)
             .child(
                 lucide(icon)
                     .size(theme.space(4.))

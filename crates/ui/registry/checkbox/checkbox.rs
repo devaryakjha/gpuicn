@@ -83,7 +83,7 @@ impl RenderOnce for Checkbox {
             .checked(self.checked)
             .indeterminate(self.indeterminate)
             .disabled(self.disabled)
-            .when(self.read_only, |root| root.aria_description("Read only"));
+            .when(self.read_only, |root| root.aria_description(super::theme::locale::text(cx, super::theme::UiText::ReadOnly)));
         let root = control::checkbox_box(root, &theme, self.checked, self.indeterminate)
             .focus_visible(move |style| focus::ring(style, &focus_theme))
             .when(!self.disabled && !self.read_only, |root| {

@@ -26,7 +26,8 @@ use super::avatar::{Avatar, AvatarSize};
 use super::button::{Button, ButtonSize, ButtonVariant};
 pub use super::message::MessageDensity;
 use super::theme::{
-    UiTheme, apply_style,
+    UiTheme, UiText, apply_style,
+    locale::{self, DirectionalStyled as _},
     primitives::{clipped_image, focus, icon, round_image, text},
 };
 
@@ -84,7 +85,7 @@ struct SizedImage {
 pub struct ImagePlaceholder {
     host: SharedString,
     size: Option<(u32, u32)>,
-    label: SharedString,
+    label: Option<SharedString>,
     aria_label: Option<SharedString>,
     on_load: Handler,
 }
@@ -99,7 +100,7 @@ impl ImagePlaceholder {
         Self {
             host: host.into(),
             size: None,
-            label: "Load image".into(),
+            label: None,
             aria_label: None,
             on_load: Rc::new(on_load),
         }
@@ -112,7 +113,7 @@ impl ImagePlaceholder {
     }
     /// Replaces the visible "Load image" text, such as for a translation.
     pub fn label(mut self, label: impl Into<SharedString>) -> Self {
-        self.label = label.into();
+        self.label = Some(label.into());
         self
     }
     /// Replaces the accessible name, "Load image from {host}" by default.
@@ -235,9 +236,12 @@ fn placeholder_button(
 ) -> Button {
     let colors = theme.colors;
     let loaded = window.use_keyed_state((id.clone(), "loaded"), cx, |_, _| false);
-    let aria_label = placeholder
-        .aria_label
-        .unwrap_or_else(|| format!("Load image from {}", placeholder.host).into());
+    let aria_label = placeholder.aria_label.unwrap_or_else(|| {
+        locale::text(cx, UiText::LoadImageFrom(placeholder.host.clone()))
+    });
+    let label = placeholder
+        .label
+        .unwrap_or_else(|| locale::text(cx, UiText::LoadImage));
     let on_load = placeholder.on_load;
     let style_theme = theme.clone();
     Button::new(id)
@@ -279,7 +283,7 @@ fn placeholder_button(
                 .overflow_hidden()
                 .text_ellipsis()
                 .whitespace_nowrap()
-                .child(placeholder.label),
+                .child(label),
         )
         .child(
             text::xs(div(), theme)
@@ -395,7 +399,7 @@ fn title_text(
 fn icon_button(
     id: ElementId,
     icon: LucideIcon,
-    label: &'static str,
+    label: SharedString,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     theme: &UiTheme,
 ) -> Button {
@@ -551,9 +555,17 @@ impl RenderOnce for LinkPreview {
             .filter(|_| self.image.is_some())
             .map(|handler| {
                 let (icon, label) = if collapsed {
-                    (LucideIcon::ChevronRight, "Expand preview")
+                    (
+                        theme
+                            .direction
+                            .icon(true, LucideIcon::ChevronLeft, LucideIcon::ChevronRight),
+                        locale::text(cx, UiText::ExpandPreview),
+                    )
                 } else {
-                    (LucideIcon::ChevronDown, "Collapse preview")
+                    (
+                        LucideIcon::ChevronDown,
+                        locale::text(cx, UiText::CollapsePreview),
+                    )
                 };
                 icon_button(
                     (id.clone(), "toggle").into(),
@@ -567,7 +579,7 @@ impl RenderOnce for LinkPreview {
             icon_button(
                 (id.clone(), "remove").into(),
                 LucideIcon::X,
-                "Remove preview",
+                locale::text(cx, UiText::RemovePreview),
                 move |event, window, cx| handler(event, window, cx),
                 &theme,
             )
@@ -575,7 +587,7 @@ impl RenderOnce for LinkPreview {
         let header =
             (self.site_name.is_some() || toggle.is_some() || remove.is_some()).then(|| {
                 div()
-                    .flex()
+                    .flex_row_in(theme.direction)
                     .items_center()
                     .gap(theme.space(1.))
                     .min_h(theme.space(5.))
@@ -658,7 +670,7 @@ impl RenderOnce for LinkPreview {
             .children(header)
             .child(
                 div()
-                    .flex()
+                    .flex_row_in(theme.direction)
                     .items_start()
                     .gap(theme.space(3.))
                     .child(
@@ -927,12 +939,13 @@ impl RenderOnce for MessageEmbed {
             .title
             .clone()
             .or_else(|| self.author.clone())
-            .unwrap_or_else(|| "Attachment".into());
+            .unwrap_or_else(|| locale::text(cx, UiText::Attachment));
         let small_icon = theme.space(4.);
+        let dir = theme.direction;
 
         let author = self.author.map(|name| {
             div()
-                .flex()
+                .flex_row_in(dir)
                 .items_center()
                 .gap(theme.space(1.5))
                 .children(
@@ -975,14 +988,14 @@ impl RenderOnce for MessageEmbed {
         });
         let fields = (!self.fields.is_empty()).then(|| {
             div()
-                .flex()
+                .flex_row_in(dir)
                 .flex_wrap()
                 .children(self.fields.into_iter().map(|field| {
                     div()
                         .when(field.short, |cell| cell.w(relative(0.5)))
                         .when(!field.short, |cell| cell.w_full())
                         .min_w_0()
-                        .pr(theme.space(3.))
+                        .padding_end(dir, theme.space(3.))
                         .py(theme.space(1.))
                         .flex()
                         .flex_col()
@@ -1030,7 +1043,7 @@ impl RenderOnce for MessageEmbed {
                 (None, None) => SharedString::default(),
             };
             div()
-                .flex()
+                .flex_row_in(dir)
                 .items_center()
                 .gap(theme.space(1.5))
                 .children(
@@ -1052,28 +1065,28 @@ impl RenderOnce for MessageEmbed {
             .children(self.pretext.map(|pretext| div().child(pretext)))
             .child(
                 div()
-                    .flex()
+                    .flex_row_in(dir)
                     .child(
                         // GPUI clips to rectangles, so the bar rounds its own
-                        // left corners and the content rounds the right ones.
+                        // start corners and the content rounds the end ones.
                         div()
                             .debug_selector(|| "embed-bar".into())
                             .w(theme.space(1.))
                             .flex_shrink_0()
-                            .rounded_l(theme.radius.lg)
+                            .rounded_start(dir, theme.radius.lg)
                             .bg(bar),
                     )
                     .child(
                         div()
                             .flex_1()
                             .min_w_0()
-                            .flex()
+                            .flex_row_in(dir)
                             .items_start()
                             .gap(theme.space(3.))
                             .p(padding)
-                            .rounded_r(theme.radius.lg)
+                            .rounded_end(dir, theme.radius.lg)
                             .border_1()
-                            .border_l_0()
+                            .border_start_0(dir)
                             .border_color(colors.border)
                             .bg(colors.card)
                             .child(
@@ -1094,7 +1107,7 @@ impl RenderOnce for MessageEmbed {
                                             div()
                                                 .id((id.clone(), "actions"))
                                                 .pt(theme.space(1.))
-                                                .flex()
+                                                .flex_row_in(dir)
                                                 .flex_wrap()
                                                 .items_center()
                                                 .gap(theme.space(2.))
@@ -1263,6 +1276,8 @@ impl RenderOnce for QuotedMessage {
         };
         let line_height = theme.text_style(theme.typography.sm).line_height;
         let clamp = line_height * self.max_lines as f32;
+        let show_more = locale::text(cx, UiText::ShowMore);
+        let show_less = locale::text(cx, UiText::ShowLess);
 
         let initials = self.initials.clone().unwrap_or_else(|| {
             self.author
@@ -1276,21 +1291,24 @@ impl RenderOnce for QuotedMessage {
             .size(AvatarSize::Sm)
             .fallback(initials)
             .when_some(self.avatar, |avatar, source| avatar.image(source));
-        let author = self.author.clone();
+        let dir = theme.direction;
+        let author = locale::isolate(&self.author);
+        let jump_text = locale::text(cx, UiText::Jump);
+        let jump_label = locale::text(cx, UiText::JumpToMessageFrom(author.clone()));
         let jump = self.on_jump.map(|handler| {
             div()
                 .debug_selector(|| "quote-jump".into())
                 .child(link_button(
                     (id.clone(), "jump").into(),
-                    "Jump".into(),
-                    format!("Jump to the message from {author}").into(),
+                    jump_text,
+                    jump_label,
                     None,
                     move |event, window, cx| handler(event, window, cx),
                     &theme,
                 ))
         });
         let header = div()
-            .flex()
+            .flex_row_in(dir)
             .items_center()
             .gap(theme.space(2.))
             .min_w_0()
@@ -1299,7 +1317,7 @@ impl RenderOnce for QuotedMessage {
                 div()
                     .flex_1()
                     .min_w_0()
-                    .flex()
+                    .flex_row_in(dir)
                     .items_baseline()
                     .gap(theme.space(2.))
                     .overflow_hidden()
@@ -1326,7 +1344,10 @@ impl RenderOnce for QuotedMessage {
                 .overflow_hidden()
                 .text_ellipsis()
                 .whitespace_nowrap()
-                .child(format!("Originally posted in {channel}"))
+                .child(locale::text(
+                    cx,
+                    UiText::OriginallyPostedIn(locale::isolate(&channel)),
+                ))
         });
         let body = self.body.map(|body| {
             let measured = state.clone();
@@ -1355,8 +1376,11 @@ impl RenderOnce for QuotedMessage {
                 )
                 .when(overflows, |column| {
                     let toggle = state.clone();
-                    let label: SharedString =
-                        if expanded { "Show less" } else { "Show more" }.into();
+                    let label = if expanded {
+                        show_less.clone()
+                    } else {
+                        show_more.clone()
+                    };
                     column.child(div().debug_selector(|| "quote-toggle".into()).flex().child(
                         link_button(
                             (id.clone(), "more").into(),
@@ -1375,7 +1399,7 @@ impl RenderOnce for QuotedMessage {
 
         let card = card_frame(
             id.clone(),
-            format!("Quoted message from {}", self.author).into(),
+            locale::text(cx, UiText::QuotedMessageFrom(author.clone())),
             &theme,
         )
         .flex()

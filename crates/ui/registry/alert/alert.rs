@@ -14,7 +14,7 @@ use gpui_kit::{
 
 use gpui_kit::base::TestSupportExt as _;
 
-use super::theme::{UiTheme, apply_style, primitives::text};
+use super::theme::{UiTheme, apply_style, locale::DirectionalStyled as _, primitives::text};
 
 /// The Alert's color treatment.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -168,7 +168,7 @@ impl RenderOnce for Alert {
                 body.child(
                     div()
                         .pt(theme.space(1.5))
-                        .flex()
+                        .flex_row_in(theme.direction)
                         .flex_wrap()
                         .items_center()
                         .gap(theme.space(2.))
@@ -184,7 +184,7 @@ impl RenderOnce for Alert {
                 root.aria_description(description)
             })
             .w_full()
-            .flex()
+            .flex_row_in(theme.direction)
             .items_start()
             .gap(theme.space(3.))
             .px(theme.space(4.))

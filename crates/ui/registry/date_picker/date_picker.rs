@@ -14,7 +14,7 @@ use gpui_kit::{
 
 use super::calendar::{Calendar, CalendarDate, CalendarState};
 use super::popover::popover_trigger;
-use super::theme::{UiTheme, apply_style, primitives::surface};
+use super::theme::{UiTheme, UiText, apply_style, locale, primitives::surface};
 
 type Format = std::rc::Rc<dyn Fn(CalendarDate) -> SharedString>;
 
@@ -26,7 +26,7 @@ type Format = std::rc::Rc<dyn Fn(CalendarDate) -> SharedString>;
 pub struct DatePicker {
     id: ElementId,
     state: Entity<CalendarState>,
-    placeholder: SharedString,
+    placeholder: Option<SharedString>,
     label: Option<SharedString>,
     format: Option<Format>,
     disabled: bool,
@@ -39,7 +39,7 @@ impl DatePicker {
         Self {
             id: id.into(),
             state: state.clone(),
-            placeholder: "Pick a date".into(),
+            placeholder: None,
             label: None,
             format: None,
             disabled: false,
@@ -49,7 +49,7 @@ impl DatePicker {
 
     /// Sets the text shown before a date is picked.
     pub fn placeholder(mut self, placeholder: impl Into<SharedString>) -> Self {
-        self.placeholder = placeholder.into();
+        self.placeholder = Some(placeholder.into());
         self
     }
 
@@ -96,14 +96,18 @@ impl RenderOnce for DatePicker {
         let selected = self.state.read(cx).selected();
         let text = selected.map(|date| match &self.format {
             Some(format) => format(date),
-            None => date.short_label().into(),
+            None => locale::text(cx, date.short_text()),
         });
-        let spoken = selected.map(|date| date.long_label());
+        let placeholder = self
+            .placeholder
+            .clone()
+            .unwrap_or_else(|| locale::text(cx, UiText::PickDate));
+        let spoken = selected.map(|date| locale::text(cx, date.long_text()));
         let label: SharedString = match (&self.label, spoken) {
             (Some(label), Some(date)) => format!("{label}, {date}").into(),
             (Some(label), None) => label.clone(),
             (None, Some(date)) => date.into(),
-            (None, None) => self.placeholder.clone(),
+            (None, None) => placeholder.clone(),
         };
         let trigger = popover_trigger((self.id.clone(), "trigger"), cx)
             .disabled(self.disabled)
@@ -121,11 +125,12 @@ impl RenderOnce for DatePicker {
                     .when(text.is_none(), |text| {
                         text.text_color(colors.muted_foreground)
                     })
-                    .child(text.unwrap_or_else(|| self.placeholder.clone())),
+                    .child(text.unwrap_or(placeholder)),
             );
         let state = self.state.clone();
         let focus = state.read(cx).focus.clone();
         let popover = Popover::new(self.id)
+            .anchor(theme.direction.anchor(gpui_kit::Anchor::TopLeft))
             .track_focus(&focus)
             .offset(theme.space(1.))
             .trigger(trigger)

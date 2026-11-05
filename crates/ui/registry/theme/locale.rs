@@ -73,6 +73,24 @@ impl Direction {
         }
     }
 
+    /// The popup corner mirrored for this direction: left and right corners
+    /// swap in right-to-left layouts.
+    pub fn anchor(self, anchor: gpui_kit::Anchor) -> gpui_kit::Anchor {
+        use gpui_kit::Anchor;
+        if !self.is_rtl() {
+            return anchor;
+        }
+        match anchor {
+            Anchor::TopLeft => Anchor::TopRight,
+            Anchor::TopRight => Anchor::TopLeft,
+            Anchor::BottomLeft => Anchor::BottomRight,
+            Anchor::BottomRight => Anchor::BottomLeft,
+            Anchor::LeftCenter => Anchor::RightCenter,
+            Anchor::RightCenter => Anchor::LeftCenter,
+            other => other,
+        }
+    }
+
     /// The chevron or arrow pointing toward the reading end (`forward`) or
     /// start, from the left-to-right `right` icon and `left` icon.
     pub fn icon<T>(self, forward: bool, left: T, right: T) -> T {
@@ -246,6 +264,48 @@ pub trait DirectionalStyled: Styled + Sized {
         self
     }
 
+    /// Rounds the two corners on the reading start edge.
+    fn rounded_start(mut self, direction: Direction, radius: gpui_kit::Pixels) -> Self {
+        let corners = &mut self.style().corner_radii;
+        let radius = Some(radius.into());
+        match direction {
+            Direction::Ltr => (corners.top_left, corners.bottom_left) = (radius, radius),
+            Direction::Rtl => (corners.top_right, corners.bottom_right) = (radius, radius),
+        }
+        self
+    }
+
+    /// Rounds the two corners on the reading end edge.
+    fn rounded_end(mut self, direction: Direction, radius: gpui_kit::Pixels) -> Self {
+        let corners = &mut self.style().corner_radii;
+        let radius = Some(radius.into());
+        match direction {
+            Direction::Ltr => (corners.top_right, corners.bottom_right) = (radius, radius),
+            Direction::Rtl => (corners.top_left, corners.bottom_left) = (radius, radius),
+        }
+        self
+    }
+
+    /// A two-pixel border on the reading start edge, as on a highlighted row.
+    fn border_start_2(mut self, direction: Direction) -> Self {
+        let border = &mut self.style().border_widths;
+        match direction {
+            Direction::Ltr => border.left = Some(px(2.).into()),
+            Direction::Rtl => border.right = Some(px(2.).into()),
+        }
+        self
+    }
+
+    /// Removes the border on the reading start edge.
+    fn border_start_0(mut self, direction: Direction) -> Self {
+        let border = &mut self.style().border_widths;
+        match direction {
+            Direction::Ltr => border.left = Some(px(0.).into()),
+            Direction::Rtl => border.right = Some(px(0.).into()),
+        }
+        self
+    }
+
     /// Text aligned to the reading start edge.
     fn text_start(self, direction: Direction) -> Self {
         self.text_align(direction.start_align())
@@ -270,6 +330,10 @@ pub enum UiText {
     Loading,
     /// "Read only", announced on read-only fields.
     ReadOnly,
+    /// "{label} (required)", a required field's accessible name.
+    Required(SharedString),
+    /// "One-time code", the OTP field's default accessible name.
+    OneTimeCode,
     /// "Invalid value", announced on invalid inputs.
     InvalidValue,
     /// "Unavailable", announced on disabled list rows and commands.
@@ -280,8 +344,14 @@ pub enum UiText {
     NoItems,
     /// "Use arrow keys to navigate and Enter to activate.", the virtual list's hint.
     ListInstructions,
+    /// The multi-select virtual list's hint.
+    MultiSelectInstructions,
     /// "Selection", a select's default accessible name.
     Selection,
+    /// "Select…", a select's default placeholder.
+    SelectPlaceholder,
+    /// "{label} (invalid value)", an invalid select's accessible name.
+    InvalidSelection(SharedString),
     /// "Navigation", the sidebar's accessible name.
     Navigation,
     /// "Toggle sidebar".
@@ -322,6 +392,35 @@ pub enum UiText {
     WeekdayShort(u8),
     /// A month name, 1 for "January" through 12 for "December".
     Month(u8),
+    /// A calendar's heading, such as "March 2026".
+    MonthYear {
+        /// 1 to 12.
+        month: u8,
+        /// The year.
+        year: i32,
+    },
+    /// A date read aloud, such as "Saturday, March 14, 2026".
+    LongDate {
+        /// 0 for Sunday through 6 for Saturday.
+        weekday: u8,
+        /// 1 to 12.
+        month: u8,
+        /// 1 to 31.
+        day: u8,
+        /// The year.
+        year: i32,
+    },
+    /// A compact date, such as "Mar 14, 2026".
+    ShortDate {
+        /// 1 to 12.
+        month: u8,
+        /// 1 to 31.
+        day: u8,
+        /// The year.
+        year: i32,
+    },
+    /// "today", appended to today's date in a calendar.
+    Today,
     /// "Pick a date", the date picker's placeholder.
     PickDate,
     /// "Pick a date and time", the date and time picker's placeholder.
@@ -330,6 +429,12 @@ pub enum UiText {
     TimeField(SharedString),
     /// "Hour".
     Hour,
+    /// "AM", before noon on a 12-hour clock.
+    Am,
+    /// "PM", after noon on a 12-hour clock.
+    Pm,
+    /// "AM or PM", the time field's period segment.
+    DayPeriod,
     /// "Minute".
     Minute,
     /// "Done", closing the date and time picker.
@@ -410,6 +515,15 @@ pub enum UiText {
     ZoomIn,
     /// "Image viewer: {name}", the lightbox's accessible name.
     ImageViewer(SharedString),
+    /// "{index} of {count}", the lightbox's position, counting from 1.
+    Position {
+        /// The current item, from 1.
+        index: usize,
+        /// How many there are.
+        count: usize,
+    },
+    /// "Zoom {percent}%", the lightbox's zoom status.
+    Zoom(u32),
     /// "Message failed to send.".
     MessageFailed,
     /// "Retry", resending a failed message.
@@ -428,6 +542,8 @@ pub enum UiText {
     StatusDnd,
     /// "offline", an avatar status.
     StatusOffline,
+    /// A list of names, such as "Ana, Ben and Chen", for avatar stacks.
+    Names(Vec<SharedString>),
 }
 
 const WEEKDAYS: [&str; 7] = [
@@ -462,6 +578,10 @@ const SKIN_TONES: [&str; 6] = [
     "Dark skin tone",
 ];
 
+fn month_english(month: u8) -> &'static str {
+    MONTHS[usize::from(month.clamp(1, 12) - 1)]
+}
+
 impl UiText {
     /// A stable kebab-case identifier, such as `close` or `emoji-search`,
     /// for looking the string up in a message catalog.
@@ -471,12 +591,17 @@ impl UiText {
             Self::CloseNotification => "close-notification",
             Self::Loading => "loading",
             Self::ReadOnly => "read-only",
+            Self::Required(_) => "required",
+            Self::OneTimeCode => "one-time-code",
             Self::InvalidValue => "invalid-value",
             Self::Unavailable => "unavailable",
             Self::NoResults => "no-results",
             Self::NoItems => "no-items",
             Self::ListInstructions => "list-instructions",
+            Self::MultiSelectInstructions => "multi-select-instructions",
             Self::Selection => "selection",
+            Self::SelectPlaceholder => "select-placeholder",
+            Self::InvalidSelection(_) => "invalid-selection",
             Self::Navigation => "navigation",
             Self::ToggleSidebar => "toggle-sidebar",
             Self::Cut => "cut",
@@ -497,10 +622,17 @@ impl UiText {
             Self::Weekday(_) => "weekday",
             Self::WeekdayShort(_) => "weekday-short",
             Self::Month(_) => "month",
+            Self::MonthYear { .. } => "month-year",
+            Self::LongDate { .. } => "long-date",
+            Self::ShortDate { .. } => "short-date",
+            Self::Today => "today",
             Self::PickDate => "pick-date",
             Self::PickDateTime => "pick-date-time",
             Self::TimeField(_) => "time-field",
             Self::Hour => "hour",
+            Self::Am => "am",
+            Self::Pm => "pm",
+            Self::DayPeriod => "day-period",
             Self::Minute => "minute",
             Self::Done => "done",
             Self::Carousel => "carousel",
@@ -541,6 +673,8 @@ impl UiText {
             Self::ZoomOut => "zoom-out",
             Self::ZoomIn => "zoom-in",
             Self::ImageViewer(_) => "image-viewer",
+            Self::Position { .. } => "position",
+            Self::Zoom(_) => "zoom",
             Self::MessageFailed => "message-failed",
             Self::Retry => "retry",
             Self::Delete => "delete",
@@ -550,6 +684,7 @@ impl UiText {
             Self::StatusAway => "status-away",
             Self::StatusDnd => "status-dnd",
             Self::StatusOffline => "status-offline",
+            Self::Names(_) => "names",
         }
     }
 
@@ -557,12 +692,30 @@ impl UiText {
     pub fn english(&self) -> SharedString {
         let text: &'static str = match self {
             Self::Uploading(percent) => return format!("Uploading… {percent}%").into(),
+            Self::Required(label) => return format!("{label} (required)").into(),
+            Self::InvalidSelection(label) => return format!("{label} (invalid value)").into(),
             Self::Remove(name) => return format!("Remove {name}").into(),
             Self::RetryUpload(name) => return format!("Retry uploading {name}").into(),
             Self::Weekday(day) => WEEKDAYS[usize::from(*day) % 7],
             Self::WeekdayShort(day) => &WEEKDAYS[usize::from(*day) % 7][..2],
-            Self::Month(month) => MONTHS[usize::from(month.clamp(&1, &12) - 1)],
+            Self::Month(month) => month_english(*month),
             Self::TimeField(time) => return format!("Time, {time}").into(),
+            Self::MonthYear { month, year } => {
+                return format!("{} {year}", month_english(*month)).into();
+            }
+            Self::LongDate {
+                weekday,
+                month,
+                day,
+                year,
+            } => {
+                let weekday = WEEKDAYS[usize::from(*weekday) % 7];
+                return format!("{weekday}, {} {day}, {year}", month_english(*month)).into();
+            }
+            Self::ShortDate { month, day, year } => {
+                return format!("{} {day}, {year}", &month_english(*month)[..3]).into();
+            }
+            Self::Today => "today",
             Self::LoadImageFrom(host) => return format!("Load image from {host}").into(),
             Self::JumpToMessageFrom(author) => {
                 return format!("Jump to the message from {author}").into();
@@ -574,17 +727,38 @@ impl UiText {
                 return format!("Quoted message from {author}").into();
             }
             Self::ImageViewer(name) => return format!("Image viewer: {name}").into(),
+            Self::Names(names) => {
+                return match names.as_slice() {
+                    [] => SharedString::default(),
+                    [only] => only.clone(),
+                    [rest @ .., last] => format!(
+                        "{} and {last}",
+                        rest.iter()
+                            .map(SharedString::as_ref)
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    )
+                    .into(),
+                };
+            }
+            Self::Position { index, count } => return format!("{index} of {count}").into(),
+            Self::Zoom(percent) => return format!("Zoom {percent}%").into(),
             Self::SkinToneName(tone) => SKIN_TONES[usize::from(*tone).min(SKIN_TONES.len() - 1)],
             Self::Close => "Close",
             Self::CloseNotification => "Close notification",
             Self::Loading => "Loading",
             Self::ReadOnly => "Read only",
+            Self::OneTimeCode => "One-time code",
             Self::InvalidValue => "Invalid value",
             Self::Unavailable => "Unavailable",
             Self::NoResults => "No results found.",
             Self::NoItems => "No items",
             Self::ListInstructions => "Use arrow keys to navigate and Enter to activate.",
+            Self::MultiSelectInstructions => {
+                "Multi-select list. Use arrows to navigate, Shift for a range, Command or Control to toggle."
+            }
             Self::Selection => "Selection",
+            Self::SelectPlaceholder => "Select…",
             Self::Navigation => "Navigation",
             Self::ToggleSidebar => "Toggle sidebar",
             Self::Cut => "Cut",
@@ -602,6 +776,9 @@ impl UiText {
             Self::PickDate => "Pick a date",
             Self::PickDateTime => "Pick a date and time",
             Self::Hour => "Hour",
+            Self::Am => "AM",
+            Self::Pm => "PM",
+            Self::DayPeriod => "AM or PM",
             Self::Minute => "Minute",
             Self::Done => "Done",
             Self::Carousel => "Carousel",
@@ -698,6 +875,19 @@ mod tests {
         assert_eq!(UiText::WeekdayShort(0).english(), "Su");
         assert_eq!(UiText::SkinToneName(5).english(), "Dark skin tone");
         assert_eq!(UiText::Uploading(40).english(), "Uploading… 40%");
+        let date = UiText::LongDate {
+            weekday: 6,
+            month: 3,
+            day: 14,
+            year: 2026,
+        };
+        assert_eq!(date.english(), "Saturday, March 14, 2026");
+        let date = UiText::ShortDate {
+            month: 3,
+            day: 14,
+            year: 2026,
+        };
+        assert_eq!(date.english(), "Mar 14, 2026");
     }
 
     #[test]

@@ -33,7 +33,7 @@ pub struct MessageList {
     state: Entity<MessageListState>,
     renderer: RowRenderer,
     unseen: usize,
-    jump_label: SharedString,
+    jump_label: Option<SharedString>,
     on_jump: Option<JumpHandler>,
     show_jump: bool,
     focus: Option<FocusHandle>,
@@ -57,7 +57,7 @@ impl MessageList {
             state: state.clone(),
             renderer: Box::new(move |index, window, cx| row(index, window, cx).into_any_element()),
             unseen: 0,
-            jump_label: "Jump to latest".into(),
+            jump_label: None,
             on_jump: None,
             show_jump: false,
             focus: None,
@@ -87,7 +87,7 @@ impl MessageList {
 
     /// Sets the jump pill's label when there are no unseen messages.
     pub fn jump_label(mut self, label: impl Into<SharedString>) -> Self {
-        self.jump_label = label.into();
+        self.jump_label = Some(label.into());
         self
     }
 
@@ -398,7 +398,9 @@ impl RenderOnce for MessageList {
                 }
             });
         let label: SharedString = match self.unseen {
-            0 => self.jump_label.clone(),
+            0 => self.jump_label.clone().unwrap_or_else(|| {
+                super::theme::locale::text(cx, super::theme::UiText::JumpToLatest)
+            }),
             1 => "1 new message".into(),
             count => format!("{count} new messages").into(),
         };

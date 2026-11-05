@@ -22,7 +22,8 @@ use super::calendar::{Calendar, CalendarDate, CalendarEvent, CalendarState};
 use super::date_picker::calendar_popup;
 use super::popover::popover_trigger;
 use super::theme::{
-    UiTheme, apply_style,
+    UiTheme, UiText, apply_style,
+    locale::{self, DirectionalStyled as _},
     primitives::{control, focus, surface},
 };
 
@@ -59,6 +60,22 @@ impl CalendarTime {
                     hour => hour,
                 };
                 let half = if self.hour < 12 { "AM" } else { "PM" };
+                format!("{hour}:{:02} {half}", self.minute)
+            }
+        }
+    }
+
+    /// The time as [`CalendarTime::label`] writes it, with the application's
+    /// AM and PM.
+    pub fn label_in(self, cycle: HourCycle, cx: &App) -> String {
+        match cycle {
+            HourCycle::H23 => self.label(cycle),
+            HourCycle::H12 => {
+                let hour = match self.hour % 12 {
+                    0 => 12,
+                    hour => hour,
+                };
+                let half = locale::text(cx, if self.hour < 12 { UiText::Am } else { UiText::Pm });
                 format!("{hour}:{:02} {half}", self.minute)
             }
         }
@@ -365,7 +382,13 @@ impl DateTimeState {
     /// "Mar 14, 2026, 9:30 AM".
     pub fn label(&self, cx: &App) -> Option<String> {
         self.date(cx)
-            .map(|date| format!("{}, {}", date.short_label(), self.time.label(self.cycle)))
+            .map(|date| {
+                format!(
+                    "{}, {}",
+                    locale::text(cx, date.short_text()),
+                    self.time.label_in(self.cycle, cx)
+                )
+            })
     }
 }
 
@@ -405,11 +428,11 @@ impl RenderOnce for TimeField {
                 }
             ),
         };
-        let segment = |kind: TimeSegment, text: String, name: &'static str| {
+        let segment = |kind: TimeSegment, text: String, key: &'static str, name: SharedString| {
             let active = focused && kind == current;
             let state = self.state.clone();
             div()
-                .id((id.clone(), name))
+                .id((id.clone(), key))
                 .test_support()
                 .role(Role::SpinButton)
                 .aria_label(name)
@@ -433,14 +456,19 @@ impl RenderOnce for TimeField {
                 .child(text)
         };
         let key_state = self.state.clone();
-        let label = time.label(cycle);
+        let label = time.label_in(cycle, cx);
+        let field_label = locale::text(cx, UiText::TimeField(label.into()));
+        let hour_label = locale::text(cx, UiText::Hour);
+        let minute_label = locale::text(cx, UiText::Minute);
+        let period_label = locale::text(cx, UiText::DayPeriod);
+        let period = locale::text(cx, if time.hour < 12 { UiText::Am } else { UiText::Pm });
         focus::shown(control::frame(div(), &theme, false), &theme, focused)
             .id(id.clone())
             .test_support()
             .key_context("TimeField")
             .track_focus(&state.focus)
             .role(Role::Group)
-            .aria_label(SharedString::from(format!("Time, {label}")))
+            .aria_label(field_label)
             .h(theme.space(8.))
             .px(theme.space(2.))
             .flex()
@@ -461,18 +489,20 @@ impl RenderOnce for TimeField {
                     cx.stop_propagation();
                 }
             })
-            .child(segment(TimeSegment::Hour, display_hour, "Hour"))
+            .child(segment(TimeSegment::Hour, display_hour, "Hour", hour_label))
             .child(div().text_color(colors.muted_foreground).child(":"))
             .child(segment(
                 TimeSegment::Minute,
                 format!("{:02}", time.minute),
                 "Minute",
+                minute_label,
             ))
             .when(cycle == HourCycle::H12, |root| {
                 root.child(segment(
                     TimeSegment::Period,
-                    if time.hour < 12 { "AM" } else { "PM" }.to_string(),
+                    period.to_string(),
                     "AM or PM",
+                    period_label.clone(),
                 ))
             })
     }
@@ -487,7 +517,7 @@ impl RenderOnce for TimeField {
 pub struct DateTimePicker {
     id: ElementId,
     state: Entity<DateTimeState>,
-    placeholder: SharedString,
+    placeholder: Option<SharedString>,
     label: Option<SharedString>,
     disabled: bool,
     style: StyleRefinement,
@@ -499,7 +529,7 @@ impl DateTimePicker {
         Self {
             id: id.into(),
             state: state.clone(),
-            placeholder: "Pick a date and time".into(),
+            placeholder: None,
             label: None,
             disabled: false,
             style: StyleRefinement::default(),
@@ -508,7 +538,7 @@ impl DateTimePicker {
 
     /// Sets the text shown before a date is picked.
     pub fn placeholder(mut self, placeholder: impl Into<SharedString>) -> Self {
-        self.placeholder = placeholder.into();
+        self.placeholder = Some(placeholder.into());
         self
     }
 
@@ -536,11 +566,17 @@ impl RenderOnce for DateTimePicker {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
         let text = self.state.read(cx).label(cx);
+        let placeholder = self
+            .placeholder
+            .clone()
+            .unwrap_or_else(|| locale::text(cx, UiText::PickDateTime));
+        let done = locale::text(cx, UiText::Done);
+        let dir = theme.direction;
         let label: SharedString = match (&self.label, &text) {
             (Some(label), Some(text)) => format!("{label}, {text}").into(),
             (Some(label), None) => label.clone(),
             (None, Some(text)) => text.clone().into(),
-            (None, None) => self.placeholder.clone(),
+            (None, None) => placeholder.clone(),
         };
         let trigger = popover_trigger((self.id.clone(), "trigger"), cx)
             .disabled(self.disabled)
@@ -558,13 +594,14 @@ impl RenderOnce for DateTimePicker {
                     .when(text.is_none(), |text| {
                         text.text_color(colors.muted_foreground)
                     })
-                    .child(text.unwrap_or_else(|| self.placeholder.to_string())),
+                    .child(text.unwrap_or_else(|| placeholder.to_string())),
             );
         let state = self.state.clone();
         let calendar = state.read(cx).calendar.clone();
         let calendar_focus = calendar.read(cx).focus.clone();
         let done_id = (self.id.clone(), "done");
         let popover = Popover::new(self.id)
+            .anchor(dir.anchor(gpui_kit::Anchor::TopLeft))
             .track_focus(&calendar_focus)
             .offset(theme.space(1.))
             .trigger(trigger)
@@ -585,7 +622,7 @@ impl RenderOnce for DateTimePicker {
                     .child(surface::divider(div(), &theme, gpui_kit::Axis::Horizontal))
                     .child(
                         div()
-                            .flex()
+                            .flex_row_in(dir)
                             .items_center()
                             .gap(theme.space(2.))
                             .p(theme.space(3.))
@@ -598,7 +635,7 @@ impl RenderOnce for DateTimePicker {
                             .child(
                                 Button::new(done_id)
                                     .size(ButtonSize::Sm)
-                                    .label("Done")
+                                    .label(done.clone())
                                     .on_click(move |_, window, cx| {
                                         popover
                                             .update(cx, |popover, cx| popover.dismiss(window, cx))

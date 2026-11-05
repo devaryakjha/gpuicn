@@ -22,7 +22,8 @@ use gpui_kit::{
 
 use super::button::{Button, ButtonSize, ButtonVariant};
 use super::theme::{
-    UiTheme, apply_style,
+    UiTheme, UiText, apply_style,
+    locale::{self, DirectionalStyled as _},
     primitives::{disabled, focus},
 };
 
@@ -237,6 +238,25 @@ impl CalendarDate {
             self.day,
             self.year
         )
+    }
+
+    /// The date read aloud, as a translatable [`UiText::LongDate`].
+    pub fn long_text(self) -> UiText {
+        UiText::LongDate {
+            weekday: self.weekday().index() as u8,
+            month: self.month,
+            day: self.day,
+            year: self.year,
+        }
+    }
+
+    /// The compact label, as a translatable [`UiText::ShortDate`].
+    pub fn short_text(self) -> UiText {
+        UiText::ShortDate {
+            month: self.month,
+            day: self.day,
+            year: self.year,
+        }
     }
 
     /// A compact label, such as "Mar 14, 2026".
@@ -518,12 +538,36 @@ impl RenderOnce for Calendar {
             .map(|week| week.map(|date| state.is_enabled(date)))
             .collect();
         let focus_handle = state.focus.clone();
-        let title: SharedString = format!("{} {}", month_name(cursor.month), cursor.year).into();
+        let title = locale::text(
+            cx,
+            UiText::MonthYear {
+                month: cursor.month,
+                year: cursor.year,
+            },
+        );
         let cell = theme.space(8.);
+        let dir = theme.direction;
+        let today_text = locale::text(cx, UiText::Today);
+        let unavailable_text = locale::text(cx, UiText::Unavailable);
+        let short_days: Vec<SharedString> = (0..7)
+            .map(|day| locale::text(cx, UiText::WeekdayShort(day)))
+            .collect();
+        let previous_label = locale::text(cx, UiText::PreviousMonth);
+        let next_label = locale::text(cx, UiText::NextMonth);
+        let long_labels: Vec<Vec<SharedString>> = weeks
+            .iter()
+            .map(|week| {
+                week.iter()
+                    .map(|date| locale::text(cx, date.long_text()))
+                    .collect()
+            })
+            .collect();
 
-        let nav = |direction: i32, label: &'static str, icon: LucideIcon, enabled: bool| {
+        let nav = |direction: i32, key: &'static str, label: SharedString, enabled: bool| {
             let state = self.state.clone();
-            Button::new((id.clone(), label))
+            // Previous points toward the reading start.
+            let icon = dir.icon(direction > 0, LucideIcon::ChevronLeft, LucideIcon::ChevronRight);
+            Button::new((id.clone(), key))
                 .variant(ButtonVariant::Ghost)
                 .size(ButtonSize::Icon)
                 .aria_label(label)
@@ -538,16 +582,11 @@ impl RenderOnce for Calendar {
                 )
         };
         let header = div()
-            .flex()
+            .flex_row_in(dir)
             .items_center()
             .justify_between()
             .h(cell)
-            .child(nav(
-                -1,
-                "Previous month",
-                LucideIcon::ChevronLeft,
-                can_go_back,
-            ))
+            .child(nav(-1, "Previous month", previous_label, can_go_back))
             .child(
                 div()
                     .id((id.clone(), "title"))
@@ -556,14 +595,9 @@ impl RenderOnce for Calendar {
                     .font_weight(FontWeight::MEDIUM)
                     .child(title.clone()),
             )
-            .child(nav(
-                1,
-                "Next month",
-                LucideIcon::ChevronRight,
-                can_go_forward,
-            ));
+            .child(nav(1, "Next month", next_label, can_go_forward));
 
-        let weekdays = div().flex().children((0..7).map(|column| {
+        let weekdays = div().flex_row_in(dir).children((0..7).map(|column| {
             let weekday = Weekday::ALL[(first_weekday.index() + column) % 7];
             div()
                 .w(cell)
@@ -571,25 +605,27 @@ impl RenderOnce for Calendar {
                 .justify_center()
                 .text_size(theme.text(12.8))
                 .text_color(colors.muted_foreground)
-                .child(weekday.short())
+                .child(short_days[weekday.index()].clone())
         }));
 
         let on_select = self.on_select.clone();
-        let rows = weeks.into_iter().zip(enabled).map(|(week, enabled)| {
+        let rows = weeks.into_iter().zip(enabled).zip(long_labels).map(|((week, enabled), labels)| {
             div()
-                .flex()
+                .flex_row_in(dir)
                 .mt(theme.space(1.))
-                .children(week.into_iter().zip(enabled).map(|(date, enabled)| {
+                .children(week.into_iter().zip(enabled).zip(labels).map(|((date, enabled), label)| {
                     let outside = date.month != cursor.month;
                     let is_selected = selected == Some(date);
                     let is_cursor = date == cursor;
                     let is_today = date == today;
-                    let mut label = date.long_label();
+                    let mut label = label.to_string();
                     if is_today {
-                        label.push_str(", today");
+                        label.push_str(", ");
+                        label.push_str(&today_text);
                     }
                     if !enabled {
-                        label.push_str(", unavailable");
+                        label.push_str(", ");
+                        label.push_str(&unavailable_text);
                     }
                     let state = self.state.clone();
                     let on_select = on_select.clone();
@@ -666,7 +702,9 @@ impl RenderOnce for Calendar {
                 if modifiers.control || modifiers.alt || modifiers.platform {
                     return;
                 }
-                let key = keystroke.key.as_str();
+                // Days run toward the reading end, so the arrows swap in
+                // right-to-left layouts.
+                let key = UiTheme::read(cx).direction.logical_key(keystroke.key.as_str());
                 let handled =
                     key_state.update(cx, |state, cx| state.handle_key(key, modifiers.shift, cx));
                 if !handled {

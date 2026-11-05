@@ -6,6 +6,7 @@ use super::{
     input::{Input, Textarea},
     theme::{
         UiTheme,
+        locale::DirectionalStyled as _,
         primitives::{control, disabled, focus},
     },
 };
@@ -260,7 +261,7 @@ impl RenderOnce for InputGroup {
         .children(block_start)
         .child(
             div()
-                .flex()
+                .flex_row_in(theme.direction)
                 .w_full()
                 .min_w_0()
                 .items_center()
@@ -324,7 +325,7 @@ impl InputGroupAddon {
         });
         let root = div()
             .id(self.id)
-            .flex()
+            .flex_row_in(theme.direction)
             .flex_none()
             .items_center()
             .gap(theme.space(2.))
@@ -334,11 +335,11 @@ impl InputGroupAddon {
             .cursor_text()
             .when(
                 matches!(alignment, InputGroupAddonAlignment::InlineStart),
-                |root| root.pl(theme.space(1.5)),
+                |root| root.padding_start(theme.direction, theme.space(1.5)),
             )
             .when(
                 matches!(alignment, InputGroupAddonAlignment::InlineEnd),
-                |root| root.pr(theme.space(1.5)),
+                |root| root.padding_end(theme.direction, theme.space(1.5)),
             )
             .when(
                 matches!(alignment, InputGroupAddonAlignment::BlockStart),
@@ -485,7 +486,7 @@ impl RenderOnce for InputGroupText {
     fn render(self, _: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx);
         let root = div()
-            .flex()
+            .flex_row_in(theme.direction)
             .items_center()
             .gap(theme.space(2.))
             .text_size(theme.text(14.))

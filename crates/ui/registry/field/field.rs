@@ -2,7 +2,7 @@
 
 use super::{
     input::{Input, InputState, Textarea},
-    theme::UiTheme,
+    theme::{UiText, UiTheme, locale, locale::DirectionalStyled as _},
 };
 use gpui_kit::{
     AnyElement, App, ClickEvent, Div, ElementId, Entity, FocusHandle, FontWeight,
@@ -158,14 +158,14 @@ impl<C: FieldControl> RenderOnce for Field<C> {
         let click = self.control.field_label_click();
         let inline = self.control.field_inline();
         let label = if self.required {
-            format!("{} (required)", self.label).into()
+            locale::text(cx, UiText::Required(self.label.clone()))
         } else {
             self.label.clone()
         };
         let interactive = !self.disabled && (focus.is_some() || click.is_some());
         let label_view = div()
             .id((self.id.clone(), "label"))
-            .flex()
+            .flex_row_in(t.direction)
             .items_center()
             .gap(t.space(1.))
             .font_weight(FontWeight::MEDIUM)
@@ -207,7 +207,7 @@ impl<C: FieldControl> RenderOnce for Field<C> {
             .id(self.id)
             .role(Role::Group)
             .w_full()
-            .flex()
+            .flex_row_in(t.direction)
             .gap(t.space(2.))
             .font_family(t.fonts.body.clone())
             .text_color(t.colors.foreground);
@@ -266,7 +266,7 @@ pub fn field_content(cx: &App) -> Div {
 pub fn field_title(cx: &App) -> Div {
     let t = UiTheme::read(cx);
     div()
-        .flex()
+        .flex_row_in(t.direction)
         .items_center()
         .gap(t.space(2.))
         .font_family(t.fonts.body.clone())

@@ -83,7 +83,7 @@ impl RenderOnce for Switch {
         let root = BaseSwitch::new(self.id)
             .checked(self.checked)
             .disabled(self.disabled)
-            .when(self.read_only, |root| root.aria_description("Read only"))
+            .when(self.read_only, |root| root.aria_description(super::theme::locale::text(cx, super::theme::UiText::ReadOnly)))
             .relative()
             .flex_shrink_0()
             .w(spacing * 8_f32)
@@ -136,7 +136,15 @@ impl RenderOnce for AnimatedThumb {
         div()
             .absolute()
             .top(inset)
-            .left(inset + travel * progress)
+            .map(|thumb| {
+                // On travels toward the reading end.
+                let offset = inset + travel * progress;
+                if theme.direction.is_rtl() {
+                    thumb.right(offset)
+                } else {
+                    thumb.left(offset)
+                }
+            })
             .size(thumb)
             .rounded_full()
             .bg(switch_colors(&theme, self.checked).1)
