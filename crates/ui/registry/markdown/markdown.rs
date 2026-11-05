@@ -549,6 +549,14 @@ pub fn selection_root(id: impl Into<ElementId>) -> gpui_kit::Stateful<gpui_kit::
         .key_context("SelectionRoot")
         .size_full()
         .relative()
+        // GPUI Kit's views copy the raw selection themselves; a selection
+        // across messages with copy prefixes is copied here first.
+        .capture_action(|_: &gpui_kit::base::input::Copy, window, cx| {
+            let text = TextSelection::selected_text(window, cx);
+            if super::message::has_copy_groups(&text) && copy_selection(window, cx) {
+                cx.stop_propagation();
+            }
+        })
         .on_key_down(|event, window, cx| {
             let keystroke = &event.keystroke;
             if keystroke.key != "c"
@@ -567,8 +575,12 @@ pub fn selection_root(id: impl Into<ElementId>) -> gpui_kit::Stateful<gpui_kit::
 
 /// Copies the window's text selection to the clipboard. Returns `false` when
 /// nothing is selected.
+///
+/// When the selection covers several messages with a
+/// [`Message::copy_prefix`](super::message::Message::copy_prefix), each
+/// message is one line that starts with its prefix.
 pub fn copy_selection(window: &mut Window, cx: &mut App) -> bool {
-    let text = TextSelection::selected_text(window, cx);
+    let text = super::message::apply_copy_prefixes(&TextSelection::selected_text(window, cx));
     let text = text.trim();
     if text.is_empty() {
         return false;

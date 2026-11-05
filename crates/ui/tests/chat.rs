@@ -193,6 +193,7 @@ impl Render for Selectable {
                     let bodies = bodies.clone();
                     Message::new(("post", index))
                         .author("Arya")
+                        .copy_prefix(format!("Arya [10:4{index}]: "))
                         .highlight(if selected == Some(index) {
                             MessageHighlight::Selected
                         } else {
@@ -288,9 +289,39 @@ fn transcript_keyboard_selection_and_copy_across_rows(cx: &mut TestAppContext) {
     assert!(text.contains("Message number 2"), "{text:?}");
     assert!(text.contains("Message number 3"), "{text:?}");
 
+    // Each message is one line that starts with its copy prefix.
     cx.simulate_keystrokes("secondary-c");
     let copied = cx.update(|_, cx| cx.read_from_clipboard().and_then(|item| item.text()));
-    assert_eq!(copied.as_deref(), Some(text.trim()));
+    assert_eq!(
+        copied.as_deref(),
+        Some(
+            "Arya [10:41]: Message number 1\nArya [10:42]: Message number 2\nArya [10:43]: Message number 3"
+        )
+    );
+
+    // A selection inside one message copies without a prefix.
+    let body = cx.update(|_, cx| view.read(cx).bodies.borrow()[&2]);
+    let start = gpui_kit::point(body.left() + px(2.), body.center().y);
+    let end = gpui_kit::point(body.right() - px(2.), body.center().y);
+    cx.simulate_mouse_down(
+        start,
+        gpui_kit::MouseButton::Left,
+        gpui_kit::Modifiers::default(),
+    );
+    cx.simulate_mouse_move(
+        end,
+        Some(gpui_kit::MouseButton::Left),
+        gpui_kit::Modifiers::default(),
+    );
+    cx.simulate_mouse_up(
+        end,
+        gpui_kit::MouseButton::Left,
+        gpui_kit::Modifiers::default(),
+    );
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    cx.simulate_keystrokes("secondary-c");
+    let copied = cx.update(|_, cx| cx.read_from_clipboard().and_then(|item| item.text()));
+    assert_eq!(copied.as_deref(), Some("Message number 2"));
 }
 
 struct ComposerView {

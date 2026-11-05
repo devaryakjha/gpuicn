@@ -140,6 +140,7 @@ pub struct Message {
     status: MessageStatus,
     on_retry: Option<Handler>,
     on_delete: Option<Handler>,
+    copy_prefix: Option<SharedString>,
 }
 
 impl Message {
@@ -170,6 +171,7 @@ impl Message {
             status: MessageStatus::Sent,
             on_retry: None,
             on_delete: None,
+            copy_prefix: None,
         }
     }
     /// Chooses the standard or compact row layout.
@@ -269,6 +271,14 @@ impl Message {
         handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.on_delete = Some(Rc::new(handler));
+        self
+    }
+    /// Sets the text written before this message's selected text when a
+    /// copy spans several messages, such as "Ada [12:24]: ", so the copy
+    /// reads one line per message. A selection inside one message copies
+    /// as before, with no prefix. Wrap the window in `selection_root`.
+    pub fn copy_prefix(mut self, prefix: impl Into<SharedString>) -> Self {
+        self.copy_prefix = Some(prefix.into());
         self
     }
     /// Sets the reaction chips shown under the body.
@@ -557,6 +567,8 @@ impl RenderOnce for Message {
             .children(reactions);
 
         let permalink = colors.warning;
+        let copy_prefix = self.copy_prefix.clone();
+        let marker_id = self.id.clone();
         let root = div()
             .id(self.id.clone())
             .group(group.clone())
@@ -589,6 +601,9 @@ impl RenderOnce for Message {
             .when(self.status == MessageStatus::Pending, |row| {
                 row.opacity(0.6)
             })
+            .when_some(copy_prefix.clone(), |row, prefix| {
+                row.child(copy_marker(&marker_id, &prefix, false, &theme))
+            })
             .child(gutter_content)
             .child(body)
             .when_some(self.actions, |row, actions| {
@@ -602,9 +617,125 @@ impl RenderOnce for Message {
                     group.clone(),
                     selected,
                 ))
+            })
+            .when_some(copy_prefix, |row, prefix| {
+                row.child(copy_marker(&marker_id, &prefix, true, &theme))
             });
         apply_style(root, &self.style)
     }
+}
+
+const MARK_OPEN: char = '\u{E000}';
+const MARK_CLOSE: char = '\u{E001}';
+
+/// An invisible selectable marker at the top (`end` false) or bottom of a
+/// copy group. A selection that reaches past it takes its text, which
+/// [`apply_copy_prefixes`] turns back into the group's prefix. It is a
+/// Markdown view so it joins the selection in paint order, like the bodies.
+fn copy_marker(id: &ElementId, prefix: &str, end: bool, theme: &UiTheme) -> AnyElement {
+    let hex: String = prefix.bytes().map(|byte| format!("{byte:02x}")).collect();
+    let kind = if end { 'E' } else { 'S' };
+    let text = format!("{MARK_OPEN}{kind}{hex}{MARK_CLOSE}");
+    div()
+        .absolute()
+        .left_0()
+        .map(|marker| if end { marker.bottom_0() } else { marker.top_0() })
+        .whitespace_nowrap()
+        .text_size(px(1.))
+        .line_height(px(1.))
+        .text_color(theme.colors.background.opacity(0.))
+        .child(
+            gpui_kit::component::text::TextView::markdown(
+                (id.clone(), if end { "copy-end" } else { "copy-start" }),
+                text,
+            )
+            .selectable(true),
+        )
+        .into_any_element()
+}
+
+/// Wraps `content` as one copy group with `prefix`, like
+/// [`Message::copy_prefix`] for a region that is not a `Message`.
+pub fn selection_group(
+    id: impl Into<ElementId>,
+    prefix: impl Into<SharedString>,
+    content: impl IntoElement,
+    cx: &App,
+) -> gpui_kit::Div {
+    let theme = UiTheme::read(cx);
+    let id = id.into();
+    let prefix = prefix.into();
+    div()
+        .relative()
+        .child(copy_marker(&id, &prefix, false, theme))
+        .child(content)
+        .child(copy_marker(&id, &prefix, true, theme))
+}
+
+/// Whether a selection's text crosses a copy group's edge.
+#[doc(hidden)]
+pub fn has_copy_groups(text: &str) -> bool {
+    text.contains(MARK_OPEN)
+}
+
+/// Turns the copy-group markers in a selection's text into prefixes: when
+/// the selection covers more than one group, each group's text becomes one
+/// line that starts with its prefix; otherwise the markers are dropped.
+/// `copy_selection` calls this, so apps only need it for their own copy.
+pub fn apply_copy_prefixes(text: &str) -> String {
+    if !text.contains(MARK_OPEN) {
+        return text.to_string();
+    }
+    let decode = |hex: &str| -> String {
+        let bytes: Vec<u8> = (0..hex.len() / 2)
+            .filter_map(|i| u8::from_str_radix(&hex[i * 2..i * 2 + 2], 16).ok())
+            .collect();
+        String::from_utf8_lossy(&bytes).into_owned()
+    };
+    let mut segments: Vec<(Option<String>, String)> = Vec::new();
+    let mut current: Option<String> = None;
+    let mut buffer = String::new();
+    let mut rest = text;
+    while let Some(open) = rest.find(MARK_OPEN) {
+        buffer.push_str(&rest[..open]);
+        let after = &rest[open + MARK_OPEN.len_utf8()..];
+        let Some(close) = after.find(MARK_CLOSE) else {
+            rest = after;
+            break;
+        };
+        let mark = &after[..close];
+        rest = &after[close + MARK_CLOSE.len_utf8()..];
+        let (kind, hex) = mark.split_at(mark.len().min(1));
+        match kind {
+            // A group starts: what came before belongs to the group already open.
+            "S" => {
+                segments.push((current.take(), std::mem::take(&mut buffer)));
+                current = Some(decode(hex));
+            }
+            // A group ends: what came before is its text, even when the
+            // selection began inside it, after its start marker.
+            "E" => {
+                segments.push((Some(decode(hex)), std::mem::take(&mut buffer)));
+                current = None;
+            }
+            _ => {}
+        }
+    }
+    buffer.push_str(rest);
+    segments.push((current, buffer));
+    let segments: Vec<_> = segments
+        .into_iter()
+        .map(|(prefix, text)| (prefix, text.trim().to_string()))
+        .filter(|(_, text)| !text.is_empty())
+        .collect();
+    if segments.len() < 2 {
+        return segments.into_iter().map(|(_, text)| text).collect();
+    }
+    segments
+        .into_iter()
+        .map(|(prefix, text)| format!("{}{text}", prefix.unwrap_or_default()))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Adds the full-date tooltip to a time label when one is set.
@@ -817,6 +948,28 @@ pub fn new_messages_divider(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn copy_markers_become_one_line_per_group() {
+        let mark = |kind: char, prefix: &str| {
+            let hex: String = prefix.bytes().map(|b| format!("{b:02x}")).collect();
+            format!("{MARK_OPEN}{kind}{hex}{MARK_CLOSE}")
+        };
+        // Starts inside Ada's message and ends inside Niklaus's.
+        let text = format!(
+            "worked!\n{}\n{}\nBack online.",
+            mark('E', "Ada [12:24]: "),
+            mark('S', "Niklaus [12:24]: ")
+        );
+        assert_eq!(
+            apply_copy_prefixes(&text),
+            "Ada [12:24]: worked!\nNiklaus [12:24]: Back online."
+        );
+        // Only one group has text: no prefix.
+        let text = format!("{}\nhello", mark('S', "Ada: "));
+        assert_eq!(apply_copy_prefixes(&text), "hello");
+        assert_eq!(apply_copy_prefixes("plain"), "plain");
+    }
     use gpui_kit::{Context, Pixels, Render, TestAppContext, VisualTestContext};
 
     struct Probe(MessageDensity);
