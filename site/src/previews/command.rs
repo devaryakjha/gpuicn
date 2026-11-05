@@ -96,10 +96,12 @@ fn command_items() -> Vec<gpuicn::command::CommandItem> {
     vec![
         CommandItem::new("town-square", "Town Square")
             .group("Channels")
-            .icon(LucideIcon::Hash),
+            .icon(LucideIcon::Hash)
+            .description("128 members"),
         CommandItem::new("off-topic", "Off-Topic")
             .group("Channels")
-            .icon(LucideIcon::Hash),
+            .icon(LucideIcon::Hash)
+            .description("Anything goes"),
         CommandItem::new("gpuicn", "gpuicn")
             .group("Channels")
             .icon(LucideIcon::Lock),

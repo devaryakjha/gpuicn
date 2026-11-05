@@ -56,7 +56,23 @@ impl Showcase {
                     .field("Duration", "6m 41s", true)
                     .footer("gpuicn")
                     .footer_icon(image)
-                    .timestamp("Today at 10:42");
+                    .timestamp("Today at 10:42")
+                    .action(
+                        Button::new("embed.action.approve")
+                            .size(ButtonSize::Sm)
+                            .tint(gpui_kit::rgb(0x3f51b5))
+                            .label("Approve")
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.demo_action = "Approved the release".into();
+                                cx.notify();
+                            })),
+                    )
+                    .action(
+                        Button::new("embed.action.logs")
+                            .size(ButtonSize::Sm)
+                            .variant(ButtonVariant::Outline)
+                            .label("View logs"),
+                    );
                 if image_loaded {
                     embed.image(image, 460, 460)
                 } else {

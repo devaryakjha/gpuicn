@@ -20,10 +20,34 @@ impl Showcase {
         });
         let moved = order.clone();
         let regrouped = order.clone();
+        let bookmarks = window.use_keyed_state("sortable.bookmarks", cx, |_, _| {
+            vec![vec!["Roadmap", "Design specs", "On-call", "Runbook"]]
+        });
+        let rebooked = bookmarks.clone();
+        let bar = Sortable::new("sortable.bookmarks", "Bookmarks")
+            .horizontal()
+            .group(
+                SortableGroup::new("sortable.bookmarks.bar", "Bookmarks")
+                    .header(|_, _| div())
+                    .rows(bookmarks.read(cx)[0].iter().map(|&name| {
+                        SortableRow::new(name, name, move |_, _| {
+                            Button::new(gpui_kit::ElementId::from(format!("sortable.bookmark.{name}")))
+                                .size(ButtonSize::Sm)
+                                .variant(ButtonVariant::Secondary)
+                                .child(lucide(LucideIcon::Bookmark).size(px(14.)))
+                                .label(name)
+                        })
+                    })),
+            )
+            .on_reorder(move |movement, _, cx| {
+                rebooked.update(cx, |items, cx| {
+                    movement.apply(items);
+                    cx.notify();
+                })
+            });
         let current = order.read(cx);
         let theme = UiTheme::read(cx);
-        // A sidebar surface, as in a chat app's channel list.
-        div()
+        let sidebar = div()
             .w(px(260.))
             .p(px(8.))
             .rounded(theme.radius.lg)
@@ -58,7 +82,14 @@ impl Showcase {
                         cx.notify();
                     })
                 }),
-        )
+        );
+        div()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(16.))
+            .child(div().max_w(px(460.)).child(bar))
+            .child(sidebar)
     }
 }
 

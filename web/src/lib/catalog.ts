@@ -422,6 +422,7 @@ export function previewHeight(slug: string) {
       "message",
       "message-list",
       "sidebar",
+      "sortable",
       "virtual-list",
     ].includes(slug)
   )
@@ -441,11 +442,19 @@ export function previewHeight(slug: string) {
   )
     return 432
   if (
-    ["autocomplete", "combobox", "popover", "preview-card", "select"].includes(
-      slug
-    )
+    [
+      "autocomplete",
+      "combobox",
+      "date-picker",
+      "date-time-picker",
+      "field",
+      "popover",
+      "preview-card",
+      "select",
+    ].includes(slug)
   )
     return 360
+  if (["alert", "calendar"].includes(slug)) return 432
   return 288
 }
 
