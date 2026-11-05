@@ -163,7 +163,9 @@ the emoji picker, the lightbox and sortable lists. The direction lives on
 `theme.direction` and survives `UiTheme::set` and `UiTheme::switch`; set it
 with `locale::set_direction`, not on the theme.
 
-In your own views, `DirectionalStyled` (`flex_row_in`, `mirror_row`,
+Text alignment is inherited, so put `.text_start(theme.direction)` on your
+window's root view; components that own a whole region (sidebars, messages,
+popovers, tooltips) set it themselves. In your own views, `DirectionalStyled` (`flex_row_in`, `mirror_row`,
 `padding_start`, `inset_end`, `border_start_1`, `rounded_start`, …) and
 `Direction::{placement, align, anchor, icon, logical_key}` do the same.
 

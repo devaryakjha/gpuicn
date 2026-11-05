@@ -893,6 +893,7 @@ impl RenderOnce for SidebarLayout {
         let change = self.on_change.clone();
         let main = div()
             .track_focus(&content_focus)
+            .text_start(theme.direction)
             .flex_1()
             .min_w_0()
             .min_h_0()
@@ -935,6 +936,7 @@ impl RenderOnce for SidebarLayout {
                 .trap(div(), true)
                 .id(id)
                 .track_focus(&popup_focus)
+                .text_start(theme.direction)
                 .aria_label(locale::text(cx, UiText::Navigation))
                 .occlude()
                 .h_full()
@@ -979,6 +981,7 @@ impl RenderOnce for SidebarLayout {
         } else {
             let navigation = div()
                 .track_focus(&navigation_focus)
+                .text_start(theme.direction)
                 .w(width)
                 .h_full()
                 .flex_shrink_0()

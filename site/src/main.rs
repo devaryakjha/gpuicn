@@ -4,6 +4,7 @@ mod previews;
 #[cfg(not(target_family = "wasm"))]
 mod workspace;
 
+use gpuicn::locale::DirectionalStyled as _;
 pub(crate) use previews::Demo;
 use previews::prelude::*;
 
@@ -211,6 +212,7 @@ impl Render for Showcase {
             .bg(theme.colors.background)
             .text_color(theme.colors.foreground)
             .font_family(theme.fonts.body)
+            .text_start(theme.direction)
             .when(!self.demo_action.is_empty(), |view| {
                 view.flex_col().gap(px(16.))
             })

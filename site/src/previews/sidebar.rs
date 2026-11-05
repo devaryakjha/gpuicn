@@ -82,7 +82,7 @@ impl Showcase {
             .clone();
         let team_menu = sidebar_dropdown(&state, "Switch workspace", collapsed, cx).trigger(
             div()
-                .flex()
+                .flex_row_in(t.direction)
                 .w_full()
                 .items_center()
                 .gap(s * 2_f32)
@@ -206,7 +206,7 @@ impl Showcase {
         if !collapsed {
             navigation = navigation.child(div().h(s * 4_f32).flex_shrink_0()).child(
                 div()
-                    .flex()
+                    .flex_row_in(t.direction)
                     .items_center()
                     .justify_between()
                     .child(sidebar_group_label("Projects", cx))
@@ -260,7 +260,7 @@ impl Showcase {
             .clone();
         let account = sidebar_dropdown(&state, "Account menu", collapsed, cx).trigger(
             div()
-                .flex()
+                .flex_row_in(t.direction)
                 .w_full()
                 .items_center()
                 .gap(s * 2_f32)
@@ -384,7 +384,7 @@ impl Showcase {
                     .px(s * 3_f32)
                     .border_b_1()
                     .border_color(t.colors.border)
-                    .flex()
+                    .flex_row_in(t.direction)
                     .items_center()
                     .gap(s * 3_f32)
                     .when(mode != SidebarCollapsible::None, |el| {
@@ -688,7 +688,7 @@ impl Showcase {
                 div()
                     .h(s * 14_f32)
                     .px(s * 3_f32)
-                    .flex()
+                    .flex_row_in(t.direction)
                     .items_center()
                     .gap(s * 3_f32)
                     .border_b_1()
@@ -900,7 +900,7 @@ impl Showcase {
             _ => "Build native interfaces with components that share a consistent visual language.",
         };
         let content = div().size_full().flex().flex_col()
-            .child(div().h(s * 14_f32).px(s * 3_f32).flex_shrink_0().flex().items_center().gap(s * 3_f32)
+            .child(div().h(s * 14_f32).px(s * 3_f32).flex_shrink_0().flex_row_in(t.direction).items_center().gap(s * 3_f32)
                 .border_b_1().border_color(t.colors.border)
                 .child(sidebar_trigger("docs.toggle", cx.listener(move |this, _, _, cx| { this.sidebar_state.toggle(mobile); cx.notify(); }), cx))
                 .child(div().text_size(px(12.) * t.text_scale).line_height(px(16.) * t.text_scale).text_color(t.colors.muted_foreground).child(groups[selected / 4].0)))

@@ -578,6 +578,7 @@ impl RenderOnce for Message {
             .relative()
             .w_full()
             .flex_row_in(dir)
+            .text_start(dir)
             .gap(theme.space(2.))
             .px(theme.space(4.))
             .py(theme.space(if compact { 0.25 } else { 0.5 }))
