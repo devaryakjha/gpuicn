@@ -61,15 +61,16 @@ impl RenderOnce for Spinner {
             )
             .into_any_element()
         };
-        let root = div()
-            .id(self.id)
-            .role(Role::Status)
-            .aria_label(self.label.unwrap_or_else(|| {
-                super::theme::locale::text(cx, super::theme::UiText::Loading)
-            }))
-            .size(theme.space(4.))
-            .flex_shrink_0()
-            .child(icon);
+        let root =
+            div()
+                .id(self.id)
+                .role(Role::Status)
+                .aria_label(self.label.unwrap_or_else(|| {
+                    super::theme::locale::text(cx, super::theme::UiText::Loading)
+                }))
+                .size(theme.space(4.))
+                .flex_shrink_0()
+                .child(icon);
         super::theme::apply_style(root, &self.style)
     }
 }

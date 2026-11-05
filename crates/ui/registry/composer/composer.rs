@@ -21,7 +21,7 @@ use gpui_kit::{
 
 use super::input::{InputEvent, Misspellings, SpellingMenu, Textarea, TextareaState};
 use super::theme::{
-    UiTheme, UiText, apply_style,
+    UiText, UiTheme, apply_style,
     locale::{self, DirectionalStyled as _},
     primitives::surface,
 };

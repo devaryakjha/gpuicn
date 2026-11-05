@@ -96,7 +96,7 @@ impl RenderOnce for Tag {
                 colors.destructive.opacity(0.2),
             ),
         };
-        let remove_label = locale::text(cx, UiText::Remove(locale::isolate(&self.label)));
+        let remove_label = locale::text(cx, UiText::Remove(self.label.clone()));
         let root = div()
             .id(self.id.clone())
             .flex_row_in(theme.direction)

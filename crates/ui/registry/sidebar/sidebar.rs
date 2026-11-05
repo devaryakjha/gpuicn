@@ -4,7 +4,8 @@
 use super::{
     scroll_area::*,
     theme::{
-        UiTheme,
+        Direction, UiText, UiTheme,
+        locale::{self, DirectionalStyled as _},
         primitives::{disabled, text},
     },
     tooltip::text_tooltip,
@@ -359,7 +360,7 @@ pub fn sidebar_group_label(label: impl Into<SharedString>, cx: &App) -> Div {
     let theme = UiTheme::read(cx).clone();
     let spacing = theme.spacing.unit;
     div()
-        .flex()
+        .flex_row_in(theme.direction)
         .items_center()
         .h(spacing * 8_f32)
         .px(spacing * 2_f32)
@@ -482,17 +483,21 @@ impl RenderOnce for SidebarItem {
         let outline = self.outline;
         let collapsed = self.collapsed;
         let mut accessible = self.label.to_string();
+        let mut append = |text: UiText| {
+            accessible.push_str(", ");
+            accessible.push_str(&locale::text(cx, text));
+        };
         if selected {
-            accessible.push_str(", current destination");
+            append(UiText::CurrentDestination);
         }
         if self.disabled {
-            accessible.push_str(", unavailable");
+            append(UiText::Unavailable);
         }
         if let Some(expanded) = self.expanded {
-            accessible.push_str(if expanded {
-                ", expanded"
+            append(if expanded {
+                UiText::Expanded
             } else {
-                ", collapsed"
+                UiText::Collapsed
             });
         }
         let icon = self.icon.or_else(|| {
@@ -521,7 +526,7 @@ impl RenderOnce for SidebarItem {
                             .tooltip(move |_, cx| text_tooltip(label.clone(), cx));
                     }
                     base.relative()
-                        .flex()
+                        .flex_row_in(theme.direction)
                         .w_full()
                         .h(spacing
                             * if collapsed {
@@ -626,10 +631,23 @@ impl gpui_kit::Styled for SidebarItem {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum SidebarSide {
     #[default]
-    /// Navigation before the content.
+    /// Navigation before the content: on the left, or the right in
+    /// right-to-left layouts.
     Left,
-    /// Navigation after the content.
+    /// Navigation after the content: on the right, or the left in
+    /// right-to-left layouts.
     Right,
+}
+
+impl SidebarSide {
+    /// The edge on screen for this layout direction.
+    pub fn physical(self, direction: Direction) -> Self {
+        match (direction, self) {
+            (Direction::Rtl, Self::Left) => Self::Right,
+            (Direction::Rtl, Self::Right) => Self::Left,
+            _ => self,
+        }
+    }
 }
 /// The three shadcn application layouts.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -814,6 +832,7 @@ impl RenderOnce for SidebarLayout {
         use super::theme::transition_value;
         let theme = UiTheme::read(cx).clone();
         let s = theme.spacing.unit;
+        let side = self.side.physical(theme.direction);
         let mobile = self.mobile && self.collapsible != SidebarCollapsible::None;
         let inset = self.variant == SidebarVariant::Inset && !mobile;
         let floating = self.variant == SidebarVariant::Floating && !mobile;
@@ -881,12 +900,8 @@ impl RenderOnce for SidebarLayout {
             .bg(theme.colors.background)
             .when(inset, |el| {
                 el.m(s * 2_f32)
-                    .when(!collapsed && self.side == SidebarSide::Left, |el| {
-                        el.ml(px(0.))
-                    })
-                    .when(!collapsed && self.side == SidebarSide::Right, |el| {
-                        el.mr(px(0.))
-                    })
+                    .when(!collapsed && side == SidebarSide::Left, |el| el.ml(px(0.)))
+                    .when(!collapsed && side == SidebarSide::Right, |el| el.mr(px(0.)))
                     .rounded(theme.radius.xl)
                     .shadow(theme.shadows.sm.to_vec())
             })
@@ -899,7 +914,7 @@ impl RenderOnce for SidebarLayout {
             .flex()
             .bg(theme.colors.sidebar)
             .map(|el| text::sm(el, &theme))
-            .when(self.side == SidebarSide::Right, |el| el.flex_row_reverse())
+            .when(side == SidebarSide::Right, |el| el.flex_row_reverse())
             .on_key_down(move |event, window, cx| {
                 if event.keystroke.key == "b"
                     && (event.keystroke.modifiers.platform || event.keystroke.modifiers.control)
@@ -920,7 +935,7 @@ impl RenderOnce for SidebarLayout {
                 .trap(div(), true)
                 .id(id)
                 .track_focus(&popup_focus)
-                .aria_label("Navigation")
+                .aria_label(locale::text(cx, UiText::Navigation))
                 .occlude()
                 .h_full()
                 .w(mobile_width)
@@ -957,7 +972,7 @@ impl RenderOnce for SidebarLayout {
                         .absolute()
                         .inset_0()
                         .flex()
-                        .when(self.side == SidebarSide::Right, |el| el.justify_end())
+                        .when(side == SidebarSide::Right, |el| el.justify_end())
                         .child(popup),
                 );
             shell = shell.child(main).child(root);
@@ -971,8 +986,8 @@ impl RenderOnce for SidebarLayout {
                 .when(padded, |el| el.p(s * 2_f32))
                 .when(!padded, |el| {
                     el.border_color(theme.colors.sidebar_border)
-                        .when(self.side == SidebarSide::Left, |el| el.border_r_1())
-                        .when(self.side == SidebarSide::Right, |el| el.border_l_1())
+                        .when(side == SidebarSide::Left, |el| el.border_r_1())
+                        .when(side == SidebarSide::Right, |el| el.border_l_1())
                 })
                 // Fully hidden navigation is removed immediately from focus traversal.
                 .when(!hidden, |el| {
@@ -1004,10 +1019,10 @@ impl RenderOnce for SidebarLayout {
                     )
                     .absolute()
                     .top_0()
-                    .when(self.side == SidebarSide::Left, |el| {
+                    .when(side == SidebarSide::Left, |el| {
                         el.left((width - s).max(px(0.)))
                     })
-                    .when(self.side == SidebarSide::Right, |el| {
+                    .when(side == SidebarSide::Right, |el| {
                         el.right((width - s).max(px(0.)))
                     }),
                 );
@@ -1026,11 +1041,15 @@ pub fn sidebar_trigger(
     super::button::Button::new(id)
         .variant(super::button::ButtonVariant::Ghost)
         .size(super::button::ButtonSize::IconSm)
-        .aria_label("Toggle sidebar")
+        .aria_label(locale::text(cx, UiText::ToggleSidebar))
         .child(
-            gpui_icons::lucide(gpui_icons::LucideIcon::PanelLeft)
-                .size(UiTheme::read(cx).spacing.unit * 4_f32)
-                .text_color(UiTheme::read(cx).colors.sidebar_foreground),
+            gpui_icons::lucide(UiTheme::read(cx).direction.icon(
+                false,
+                gpui_icons::LucideIcon::PanelLeft,
+                gpui_icons::LucideIcon::PanelRight,
+            ))
+            .size(UiTheme::read(cx).spacing.unit * 4_f32)
+            .text_color(UiTheme::read(cx).colors.sidebar_foreground),
         )
         .on_click(on_toggle)
 }
@@ -1055,7 +1074,7 @@ pub fn sidebar_menu_sub(cx: &App) -> Div {
         .mx(s * 3.5_f32)
         .px(s * 2.5_f32)
         .py(s * 0.5_f32)
-        .border_l_1()
+        .border_start_1(t.direction)
         .border_color(t.colors.sidebar_border)
 }
 /// Noninteractive count that inherits sidebar colors.
@@ -1111,7 +1130,7 @@ pub fn sidebar_menu_skeleton(show_icon: bool, cx: &App) -> Div {
     div()
         .h(s * 8_f32)
         .px(s * 2_f32)
-        .flex()
+        .flex_row_in(t.direction)
         .items_center()
         .gap(s * 2_f32)
         .when(show_icon, |el| {

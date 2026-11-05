@@ -234,9 +234,7 @@ impl RenderOnce for Avatar {
             )
         });
         let label = match (self.aria_label, &self.status) {
-            (Some(label), Some(status)) => Some(
-                format!("{}, {}", locale::isolate(&label), status.text(cx)).into(),
-            ),
+            (Some(label), Some(status)) => Some(format!("{}, {}", label, status.text(cx)).into()),
             (label, _) => label,
         };
         let frame_theme = theme.clone();

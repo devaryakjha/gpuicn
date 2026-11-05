@@ -12,7 +12,7 @@ use gpui_kit::{
 
 use super::button::{Button, ButtonSize, ButtonVariant};
 use super::theme::{
-    UiTheme, UiText, apply_style,
+    UiText, UiTheme, apply_style,
     locale::{self, DirectionalStyled as _},
     primitives::{clipped_image, disabled},
 };
@@ -181,16 +181,14 @@ impl RenderOnce for Attachment {
         };
         let description = status_text.clone().or(self.meta.clone());
         let accessible: SharedString = match &description {
-            Some(description) => {
-                format!("{}, {}", locale::isolate(&self.name), description).into()
-            }
+            Some(description) => format!("{}, {}", self.name.clone(), description).into(),
             None => self.name.clone(),
         };
         let remove = self.on_remove.clone().map(|handler| {
             icon_button(
                 (self.id.clone(), "remove").into(),
                 LucideIcon::X,
-                locale::text(cx, UiText::Remove(locale::isolate(&self.name))),
+                locale::text(cx, UiText::Remove(self.name.clone())),
                 handler,
                 &theme,
             )
@@ -199,7 +197,7 @@ impl RenderOnce for Attachment {
             icon_button(
                 (self.id.clone(), "retry").into(),
                 LucideIcon::RotateCw,
-                locale::text(cx, UiText::RetryUpload(locale::isolate(&self.name))),
+                locale::text(cx, UiText::RetryUpload(self.name.clone())),
                 handler,
                 &theme,
             )

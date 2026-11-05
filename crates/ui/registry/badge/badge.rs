@@ -6,7 +6,7 @@ use gpui_kit::{
     prelude::FluentBuilder as _, px, relative,
 };
 
-use super::theme::UiTheme;
+use super::theme::{UiTheme, locale::DirectionalStyled as _};
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 /// Nova badge color treatments.
@@ -89,7 +89,7 @@ impl RenderOnce for Badge {
             BadgeVariant::Ghost => (colors.background.opacity(0.), colors.foreground, None),
         };
         let root = div()
-            .flex()
+            .flex_row_in(theme.direction)
             .flex_shrink_0()
             .items_center()
             .justify_center()

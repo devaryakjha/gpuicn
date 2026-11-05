@@ -94,7 +94,11 @@ impl Direction {
     /// The chevron or arrow pointing toward the reading end (`forward`) or
     /// start, from the left-to-right `right` icon and `left` icon.
     pub fn icon<T>(self, forward: bool, left: T, right: T) -> T {
-        if forward == self.is_rtl() { left } else { right }
+        if forward == self.is_rtl() {
+            left
+        } else {
+            right
+        }
     }
 }
 
@@ -104,7 +108,8 @@ impl Direction {
 pub const RTL_INPUT_CONTEXT: &str = "GpuicnRtl";
 
 /// Binds the mirrored arrow keys of right-to-left text inputs.
-pub(super) fn bind_keys(cx: &mut App) {
+#[doc(hidden)]
+pub fn bind_keys(cx: &mut App) {
     use gpui_kit::KeyBinding;
     use gpui_kit::base::actions::{SelectLeft, SelectRight};
     use gpui_kit::base::input::{
@@ -116,7 +121,12 @@ pub(super) fn bind_keys(cx: &mut App) {
     let words = if cfg!(target_os = "macos") {
         ["alt-left", "alt-right", "alt-shift-left", "alt-shift-right"]
     } else {
-        ["ctrl-left", "ctrl-right", "ctrl-shift-left", "ctrl-shift-right"]
+        [
+            "ctrl-left",
+            "ctrl-right",
+            "ctrl-shift-left",
+            "ctrl-shift-right",
+        ]
     };
     cx.bind_keys([
         KeyBinding::new("left", MoveRight, context),
@@ -356,6 +366,12 @@ pub enum UiText {
     Navigation,
     /// "Toggle sidebar".
     ToggleSidebar,
+    /// "current destination", read after the selected sidebar item.
+    CurrentDestination,
+    /// "expanded", read after an open disclosure.
+    Expanded,
+    /// "collapsed", read after a closed disclosure.
+    Collapsed,
     /// "Cut", in the text context menu.
     Cut,
     /// "Copy", in the text context menu.
@@ -544,6 +560,38 @@ pub enum UiText {
     StatusOffline,
     /// A list of names, such as "Ana, Ben and Chen", for avatar stacks.
     Names(Vec<SharedString>),
+    /// "Clear selection", on a searchable select.
+    ClearSelection,
+    /// "Show options", on a searchable select.
+    ShowOptions,
+    /// How to move a sortable row with the keyboard; the keys are already
+    /// in reading order.
+    SortInstructions {
+        /// The key that moves toward the start, such as "Up".
+        previous: SharedString,
+        /// The key that moves toward the end, such as "Down".
+        next: SharedString,
+    },
+    /// A sortable group header's label with its move keys.
+    SortGroup {
+        /// The group's name.
+        label: SharedString,
+        /// The key that moves toward the start.
+        previous: SharedString,
+        /// The key that moves toward the end.
+        next: SharedString,
+    },
+    /// The announcement after a keyboard move in a sortable list.
+    Moved {
+        /// The moved row or group.
+        label: SharedString,
+        /// The new place, counted from 1.
+        position: usize,
+        /// How many places there are.
+        count: usize,
+        /// The group the row moved into, if rows are grouped.
+        group: Option<SharedString>,
+    },
 }
 
 const WEEKDAYS: [&str; 7] = [
@@ -604,6 +652,9 @@ impl UiText {
             Self::InvalidSelection(_) => "invalid-selection",
             Self::Navigation => "navigation",
             Self::ToggleSidebar => "toggle-sidebar",
+            Self::CurrentDestination => "current-destination",
+            Self::Expanded => "expanded",
+            Self::Collapsed => "collapsed",
             Self::Cut => "cut",
             Self::Copy => "copy",
             Self::Paste => "paste",
@@ -685,6 +736,11 @@ impl UiText {
             Self::StatusDnd => "status-dnd",
             Self::StatusOffline => "status-offline",
             Self::Names(_) => "names",
+            Self::ClearSelection => "clear-selection",
+            Self::ShowOptions => "show-options",
+            Self::SortInstructions { .. } => "sort-instructions",
+            Self::SortGroup { .. } => "sort-group",
+            Self::Moved { .. } => "moved",
         }
     }
 
@@ -742,6 +798,33 @@ impl UiText {
                 };
             }
             Self::Position { index, count } => return format!("{index} of {count}").into(),
+            Self::SortInstructions { previous, next } => {
+                return format!(
+                    "Press Alt+Shift+{previous} or Alt+Shift+{next} to move the focused row."
+                )
+                .into();
+            }
+            Self::SortGroup {
+                label,
+                previous,
+                next,
+            } => return format!("{label}, move with Alt+Shift+{previous} or {next}").into(),
+            Self::Moved {
+                label,
+                position,
+                count,
+                group,
+            } => {
+                return match group {
+                    Some(group) => {
+                        format!("{label} moved to position {position} of {count} in {group}")
+                    }
+                    None => format!("{label} moved to position {position} of {count}"),
+                }
+                .into();
+            }
+            Self::ClearSelection => "Clear selection",
+            Self::ShowOptions => "Show options",
             Self::Zoom(percent) => return format!("Zoom {percent}%").into(),
             Self::SkinToneName(tone) => SKIN_TONES[usize::from(*tone).min(SKIN_TONES.len() - 1)],
             Self::Close => "Close",
@@ -761,6 +844,9 @@ impl UiText {
             Self::SelectPlaceholder => "Select…",
             Self::Navigation => "Navigation",
             Self::ToggleSidebar => "Toggle sidebar",
+            Self::CurrentDestination => "current destination",
+            Self::Expanded => "expanded",
+            Self::Collapsed => "collapsed",
             Self::Cut => "Cut",
             Self::Copy => "Copy",
             Self::Paste => "Paste",

@@ -103,7 +103,12 @@ impl RenderOnce for OtpField {
                 super::theme::locale::text(cx, super::theme::UiText::OneTimeCode)
             }))
             .aria_value(value)
-            .when(self.read_only, |root| root.aria_description(super::theme::locale::text(cx, super::theme::UiText::ReadOnly)))
+            .when(self.read_only, |root| {
+                root.aria_description(super::theme::locale::text(
+                    cx,
+                    super::theme::UiText::ReadOnly,
+                ))
+            })
             .when(self.disabled, disabled::style)
             .when(!self.disabled, |root| {
                 root.on_mouse_down(MouseButton::Left, move |_, window, cx| {

@@ -2,8 +2,8 @@
 
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
-    AppContext as _, Bounds, InteractiveElement as _, Context, Entity, IntoElement, ParentElement, Pixels, Render, Styled,
-    TestAppContext, VisualTestContext, Window, div, px, size,
+    AppContext as _, Bounds, Context, Entity, InteractiveElement as _, IntoElement, ParentElement,
+    Pixels, Render, Styled, TestAppContext, VisualTestContext, Window, div, px, size,
 };
 use gpuicn::{
     Button, Direction,
@@ -105,7 +105,10 @@ fn button_icons_lead_from_the_reading_start(cx: &mut TestAppContext) {
     let (_, mut rtl) = open(Direction::Rtl, &mut rtl_app);
     let icon = bounds(&mut rtl, "save-icon");
     let label = bounds(&mut rtl, "save-label");
-    assert!(icon.left() > label.left(), "{icon:?} should follow {label:?}");
+    assert!(
+        icon.left() > label.left(),
+        "{icon:?} should follow {label:?}"
+    );
 }
 
 #[gpui_kit::test]

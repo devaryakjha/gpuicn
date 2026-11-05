@@ -4,7 +4,7 @@ use std::ops::Range;
 use std::rc::Rc;
 
 use super::theme::{
-    UiTheme, UiText, locale,
+    UiText, UiTheme, locale,
     primitives::{control, disabled, focus},
 };
 pub use gpui_kit::base::input::{InputEvent, InputState, TextareaState};
@@ -658,7 +658,9 @@ impl InputCore {
             .aria_placeholder(placeholder)
             .when(self.read_only, |root| root.aria_description(read_only_text))
             .when(self.invalid, |root| root.aria_description(invalid_text))
-            .when(direction.is_rtl(), |root| root.key_context(locale::RTL_INPUT_CONTEXT))
+            .when(direction.is_rtl(), |root| {
+                root.key_context(locale::RTL_INPUT_CONTEXT)
+            })
             .when(!self.disabled, |root| {
                 root.on_a11y_action(AccessibleAction::Focus, move |_, window, cx| {
                     a11y_focus.update(cx, |state, cx| state.focus(window, cx));

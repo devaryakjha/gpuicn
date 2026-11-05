@@ -22,7 +22,7 @@ use super::calendar::{Calendar, CalendarDate, CalendarEvent, CalendarState};
 use super::date_picker::calendar_popup;
 use super::popover::popover_trigger;
 use super::theme::{
-    UiTheme, UiText, apply_style,
+    UiText, UiTheme, apply_style,
     locale::{self, DirectionalStyled as _},
     primitives::{control, focus, surface},
 };
@@ -75,7 +75,14 @@ impl CalendarTime {
                     0 => 12,
                     hour => hour,
                 };
-                let half = locale::text(cx, if self.hour < 12 { UiText::Am } else { UiText::Pm });
+                let half = locale::text(
+                    cx,
+                    if self.hour < 12 {
+                        UiText::Am
+                    } else {
+                        UiText::Pm
+                    },
+                );
                 format!("{hour}:{:02} {half}", self.minute)
             }
         }
@@ -381,14 +388,13 @@ impl DateTimeState {
     /// The date and time as the trigger shows them, such as
     /// "Mar 14, 2026, 9:30 AM".
     pub fn label(&self, cx: &App) -> Option<String> {
-        self.date(cx)
-            .map(|date| {
-                format!(
-                    "{}, {}",
-                    locale::text(cx, date.short_text()),
-                    self.time.label_in(self.cycle, cx)
-                )
-            })
+        self.date(cx).map(|date| {
+            format!(
+                "{}, {}",
+                locale::text(cx, date.short_text()),
+                self.time.label_in(self.cycle, cx)
+            )
+        })
     }
 }
 
@@ -461,7 +467,14 @@ impl RenderOnce for TimeField {
         let hour_label = locale::text(cx, UiText::Hour);
         let minute_label = locale::text(cx, UiText::Minute);
         let period_label = locale::text(cx, UiText::DayPeriod);
-        let period = locale::text(cx, if time.hour < 12 { UiText::Am } else { UiText::Pm });
+        let period = locale::text(
+            cx,
+            if time.hour < 12 {
+                UiText::Am
+            } else {
+                UiText::Pm
+            },
+        );
         focus::shown(control::frame(div(), &theme, false), &theme, focused)
             .id(id.clone())
             .test_support()

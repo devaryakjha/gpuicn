@@ -107,11 +107,7 @@ impl RenderOnce for AvatarGroup {
         let colors = theme.colors;
         let ring = self.ring_color.unwrap_or(colors.background);
         let names: Vec<SharedString> = self.people.iter().map(|(name, _)| name.clone()).collect();
-        let listed = locale::text(
-            cx,
-            UiText::Names(names.iter().map(locale::isolate).collect()),
-        )
-        .to_string();
+        let listed = locale::text(cx, UiText::Names(names)).to_string();
         let label: SharedString = match &self.label {
             Some(label) if !listed.is_empty() => format!("{label} {listed}").into(),
             Some(label) => label.clone(),

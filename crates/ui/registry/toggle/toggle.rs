@@ -10,6 +10,7 @@ use gpui_kit::{
 
 use super::theme::{
     UiTheme,
+    locale::DirectionalStyled as _,
     primitives::{control, focus},
 };
 
@@ -121,7 +122,7 @@ impl RenderOnce for Toggle {
         let disabled = self.disabled;
         let base = BaseToggle::new(self.id).pressed(pressed).disabled(disabled);
         let base = base
-            .flex()
+            .flex_row_in(UiTheme::read(cx).direction)
             .items_center()
             .justify_center()
             .gap(spacing * 1_f32)

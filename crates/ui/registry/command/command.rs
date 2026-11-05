@@ -19,7 +19,7 @@ use gpui_kit::{
 use super::input::{Input, InputEvent, InputState};
 use super::kbd::{format_shortcut, key_label};
 use super::theme::{
-    UiTheme, UiText, apply_style,
+    UiText, UiTheme, apply_style,
     locale::{self, DirectionalStyled as _},
     primitives::{disabled, surface},
 };

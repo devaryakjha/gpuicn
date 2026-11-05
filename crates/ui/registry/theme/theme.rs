@@ -1980,7 +1980,8 @@ impl RovingFocus {
             .filter_map(|(i, h)| h.as_ref().map(|h| (i, h)))
             .collect();
         let current = enabled.iter().position(|(_, h)| h.is_focused(window))?;
-        let next = match event.keystroke.key.as_str() {
+        let direction = UiTheme::read(cx).direction;
+        let next = match direction.logical_key(event.keystroke.key.as_str()) {
             "home" => 0,
             "end" => enabled.len() - 1,
             "left" if axis != Some(gpui_kit::Axis::Vertical) => {

@@ -471,7 +471,7 @@ impl Render for SelectState {
             let clear = Button::new((id.clone(), "clear"))
                 .focusable(false)
                 .disabled(self.disabled)
-                .accessibility_label("Clear selection")
+                .accessibility_label(locale::text(cx, UiText::ClearSelection))
                 .size(theme.space(6.))
                 .on_click(cx.listener(|this, _, window, cx| this.clear(window, cx)))
                 .child(
@@ -482,7 +482,7 @@ impl Render for SelectState {
             let toggle = Button::new((id.clone(), "toggle"))
                 .focusable(false)
                 .disabled(self.disabled)
-                .accessibility_label("Show options")
+                .accessibility_label(locale::text(cx, UiText::ShowOptions))
                 .size(theme.space(6.))
                 .on_click(cx.listener(|this, _, window, cx| this.set_open(!this.open, window, cx)))
                 .child(

@@ -557,7 +557,7 @@ impl Render for MenuState {
                                 LucideIcon::ChevronRight,
                             ))
                             .size(t.space(4.))
-                                .text_color(t.colors.popover_foreground),
+                            .text_color(t.colors.popover_foreground),
                         )
                     });
                 popup = popup.child(row);

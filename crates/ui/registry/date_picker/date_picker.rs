@@ -14,7 +14,7 @@ use gpui_kit::{
 
 use super::calendar::{Calendar, CalendarDate, CalendarState};
 use super::popover::popover_trigger;
-use super::theme::{UiTheme, UiText, apply_style, locale, primitives::surface};
+use super::theme::{UiText, UiTheme, apply_style, locale, primitives::surface};
 
 type Format = std::rc::Rc<dyn Fn(CalendarDate) -> SharedString>;
 
@@ -106,7 +106,7 @@ impl RenderOnce for DatePicker {
         let label: SharedString = match (&self.label, spoken) {
             (Some(label), Some(date)) => format!("{label}, {date}").into(),
             (Some(label), None) => label.clone(),
-            (None, Some(date)) => date.into(),
+            (None, Some(date)) => date,
             (None, None) => placeholder.clone(),
         };
         let trigger = popover_trigger((self.id.clone(), "trigger"), cx)

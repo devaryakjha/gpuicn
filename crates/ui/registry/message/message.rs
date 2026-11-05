@@ -18,7 +18,7 @@ use gpui_kit::base::ElementExt as _;
 
 use super::button::{Button, ButtonSize, ButtonVariant};
 use super::theme::{
-    UiTheme, UiText, apply_style,
+    UiText, UiTheme, apply_style,
     locale::{self, DirectionalStyled as _},
     primitives::{focus, hover_reveal_in_group, surface, text},
 };

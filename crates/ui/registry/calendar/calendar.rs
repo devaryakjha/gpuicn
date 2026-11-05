@@ -22,7 +22,7 @@ use gpui_kit::{
 
 use super::button::{Button, ButtonSize, ButtonVariant};
 use super::theme::{
-    UiTheme, UiText, apply_style,
+    UiText, UiTheme, apply_style,
     locale::{self, DirectionalStyled as _},
     primitives::{disabled, focus},
 };
@@ -566,7 +566,11 @@ impl RenderOnce for Calendar {
         let nav = |direction: i32, key: &'static str, label: SharedString, enabled: bool| {
             let state = self.state.clone();
             // Previous points toward the reading start.
-            let icon = dir.icon(direction > 0, LucideIcon::ChevronLeft, LucideIcon::ChevronRight);
+            let icon = dir.icon(
+                direction > 0,
+                LucideIcon::ChevronLeft,
+                LucideIcon::ChevronRight,
+            );
             Button::new((id.clone(), key))
                 .variant(ButtonVariant::Ghost)
                 .size(ButtonSize::Icon)
@@ -609,75 +613,82 @@ impl RenderOnce for Calendar {
         }));
 
         let on_select = self.on_select.clone();
-        let rows = weeks.into_iter().zip(enabled).zip(long_labels).map(|((week, enabled), labels)| {
-            div()
-                .flex_row_in(dir)
-                .mt(theme.space(1.))
-                .children(week.into_iter().zip(enabled).zip(labels).map(|((date, enabled), label)| {
-                    let outside = date.month != cursor.month;
-                    let is_selected = selected == Some(date);
-                    let is_cursor = date == cursor;
-                    let is_today = date == today;
-                    let mut label = label.to_string();
-                    if is_today {
-                        label.push_str(", ");
-                        label.push_str(&today_text);
-                    }
-                    if !enabled {
-                        label.push_str(", ");
-                        label.push_str(&unavailable_text);
-                    }
-                    let state = self.state.clone();
-                    let on_select = on_select.clone();
-                    div()
-                        .id((id.clone(), SharedString::from(date.to_string())))
-                        .test_support()
-                        .role(Role::GridCell)
-                        .aria_label(SharedString::from(label))
-                        .aria_selected(is_selected)
-                        .when(is_cursor, |cell| cell.aria_active_descendant())
-                        .size(cell)
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .rounded(theme.radius.md)
-                        .text_size(theme.text(14.))
-                        .text_color(if outside {
-                            colors.muted_foreground
-                        } else {
-                            colors.foreground
-                        })
-                        .when(is_today && !is_selected, |cell| {
-                            cell.bg(colors.accent).text_color(colors.accent_foreground)
-                        })
-                        .when(is_selected, |cell| {
-                            cell.bg(colors.primary)
-                                .text_color(colors.primary_foreground)
-                                .font_weight(FontWeight::MEDIUM)
-                        })
-                        .when(is_cursor && focused, |cell| {
-                            cell.shadow(focus::shadow(theme.control().ring))
-                        })
-                        .map(|cell| {
-                            if enabled {
-                                cell.cursor_pointer()
-                                    .when(!is_selected, |cell| {
-                                        cell.hover(move |style| style.bg(colors.accent))
+        let rows =
+            weeks
+                .into_iter()
+                .zip(enabled)
+                .zip(long_labels)
+                .map(|((week, enabled), labels)| {
+                    div().flex_row_in(dir).mt(theme.space(1.)).children(
+                        week.into_iter().zip(enabled).zip(labels).map(
+                            |((date, enabled), label)| {
+                                let outside = date.month != cursor.month;
+                                let is_selected = selected == Some(date);
+                                let is_cursor = date == cursor;
+                                let is_today = date == today;
+                                let mut label = label.to_string();
+                                if is_today {
+                                    label.push_str(", ");
+                                    label.push_str(&today_text);
+                                }
+                                if !enabled {
+                                    label.push_str(", ");
+                                    label.push_str(&unavailable_text);
+                                }
+                                let state = self.state.clone();
+                                let on_select = on_select.clone();
+                                div()
+                                    .id((id.clone(), SharedString::from(date.to_string())))
+                                    .test_support()
+                                    .role(Role::GridCell)
+                                    .aria_label(SharedString::from(label))
+                                    .aria_selected(is_selected)
+                                    .when(is_cursor, |cell| cell.aria_active_descendant())
+                                    .size(cell)
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .rounded(theme.radius.md)
+                                    .text_size(theme.text(14.))
+                                    .text_color(if outside {
+                                        colors.muted_foreground
+                                    } else {
+                                        colors.foreground
                                     })
-                                    .on_click(move |_, window, cx| {
-                                        let picked =
-                                            state.update(cx, |state, cx| state.pick(date, cx));
-                                        if picked && let Some(handler) = &on_select {
-                                            handler(date, window, cx);
+                                    .when(is_today && !is_selected, |cell| {
+                                        cell.bg(colors.accent).text_color(colors.accent_foreground)
+                                    })
+                                    .when(is_selected, |cell| {
+                                        cell.bg(colors.primary)
+                                            .text_color(colors.primary_foreground)
+                                            .font_weight(FontWeight::MEDIUM)
+                                    })
+                                    .when(is_cursor && focused, |cell| {
+                                        cell.shadow(focus::shadow(theme.control().ring))
+                                    })
+                                    .map(|cell| {
+                                        if enabled {
+                                            cell.cursor_pointer()
+                                                .when(!is_selected, |cell| {
+                                                    cell.hover(move |style| style.bg(colors.accent))
+                                                })
+                                                .on_click(move |_, window, cx| {
+                                                    let picked = state.update(cx, |state, cx| {
+                                                        state.pick(date, cx)
+                                                    });
+                                                    if picked && let Some(handler) = &on_select {
+                                                        handler(date, window, cx);
+                                                    }
+                                                })
+                                        } else {
+                                            disabled::style(cell)
                                         }
                                     })
-                            } else {
-                                disabled::style(cell)
-                            }
-                        })
-                        .child(date.day.to_string())
-                }))
-        });
+                                    .child(date.day.to_string())
+                            },
+                        ),
+                    )
+                });
 
         let key_state = self.state.clone();
         let on_select = self.on_select;
@@ -704,7 +715,9 @@ impl RenderOnce for Calendar {
                 }
                 // Days run toward the reading end, so the arrows swap in
                 // right-to-left layouts.
-                let key = UiTheme::read(cx).direction.logical_key(keystroke.key.as_str());
+                let key = UiTheme::read(cx)
+                    .direction
+                    .logical_key(keystroke.key.as_str());
                 let handled =
                     key_state.update(cx, |state, cx| state.handle_key(key, modifiers.shift, cx));
                 if !handled {

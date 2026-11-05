@@ -1,6 +1,7 @@
 //! Nova tabs with controlled selection and automatic keyboard activation.
 use super::theme::{
     RovingFocus, UiTheme, apply_style,
+    locale::DirectionalStyled as _,
     primitives::{disabled, focus, text},
 };
 use gpui_kit::{
@@ -178,7 +179,7 @@ impl RenderOnce for Tabs {
             .collect::<Vec<_>>();
         let on_change = self.on_change;
         let root = gpui_kit::base::Tabs::new(self.id)
-            .flex()
+            .flex_row_in(theme.direction)
             .items_center()
             .when_some(self.label, |root, label| root.aria_label(label))
             .when(self.variant == TabsVariant::Default, |root| {

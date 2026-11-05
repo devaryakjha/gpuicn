@@ -83,7 +83,12 @@ impl RenderOnce for Switch {
         let root = BaseSwitch::new(self.id)
             .checked(self.checked)
             .disabled(self.disabled)
-            .when(self.read_only, |root| root.aria_description(super::theme::locale::text(cx, super::theme::UiText::ReadOnly)))
+            .when(self.read_only, |root| {
+                root.aria_description(super::theme::locale::text(
+                    cx,
+                    super::theme::UiText::ReadOnly,
+                ))
+            })
             .relative()
             .flex_shrink_0()
             .w(spacing * 8_f32)

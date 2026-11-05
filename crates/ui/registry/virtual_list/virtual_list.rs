@@ -629,7 +629,10 @@ impl RenderOnce for VirtualList {
                 div()
                     .p(theme.spacing.unit * 4_f32)
                     .text_color(theme.colors.muted_foreground)
-                    .child(super::theme::locale::text(cx, super::theme::UiText::NoItems))
+                    .child(super::theme::locale::text(
+                        cx,
+                        super::theme::UiText::NoItems,
+                    ))
                     .into_any_element()
             }));
         } else {

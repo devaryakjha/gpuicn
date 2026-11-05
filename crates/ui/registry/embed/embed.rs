@@ -26,7 +26,7 @@ use super::avatar::{Avatar, AvatarSize};
 use super::button::{Button, ButtonSize, ButtonVariant};
 pub use super::message::MessageDensity;
 use super::theme::{
-    UiTheme, UiText, apply_style,
+    UiText, UiTheme, apply_style,
     locale::{self, DirectionalStyled as _},
     primitives::{clipped_image, focus, icon, round_image, text},
 };
@@ -236,9 +236,9 @@ fn placeholder_button(
 ) -> Button {
     let colors = theme.colors;
     let loaded = window.use_keyed_state((id.clone(), "loaded"), cx, |_, _| false);
-    let aria_label = placeholder.aria_label.unwrap_or_else(|| {
-        locale::text(cx, UiText::LoadImageFrom(placeholder.host.clone()))
-    });
+    let aria_label = placeholder
+        .aria_label
+        .unwrap_or_else(|| locale::text(cx, UiText::LoadImageFrom(placeholder.host.clone())));
     let label = placeholder
         .label
         .unwrap_or_else(|| locale::text(cx, UiText::LoadImage));
@@ -556,9 +556,11 @@ impl RenderOnce for LinkPreview {
             .map(|handler| {
                 let (icon, label) = if collapsed {
                     (
-                        theme
-                            .direction
-                            .icon(true, LucideIcon::ChevronLeft, LucideIcon::ChevronRight),
+                        theme.direction.icon(
+                            true,
+                            LucideIcon::ChevronLeft,
+                            LucideIcon::ChevronRight,
+                        ),
                         locale::text(cx, UiText::ExpandPreview),
                     )
                 } else {
@@ -1292,7 +1294,7 @@ impl RenderOnce for QuotedMessage {
             .fallback(initials)
             .when_some(self.avatar, |avatar, source| avatar.image(source));
         let dir = theme.direction;
-        let author = locale::isolate(&self.author);
+        let author = self.author.clone();
         let jump_text = locale::text(cx, UiText::Jump);
         let jump_label = locale::text(cx, UiText::JumpToMessageFrom(author.clone()));
         let jump = self.on_jump.map(|handler| {

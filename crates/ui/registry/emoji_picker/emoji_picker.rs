@@ -19,7 +19,7 @@ use gpui_kit::{
 
 use super::input::{Input, InputEvent, InputState};
 use super::theme::{
-    UiTheme, UiText, apply_style,
+    UiText, UiTheme, apply_style,
     locale::{self, DirectionalStyled as _},
     primitives::surface,
 };
@@ -402,7 +402,7 @@ impl EmojiPickerState {
                 emoji.push(at);
             }
         }
-        (!emoji.is_empty()).then(|| Section {
+        (!emoji.is_empty()).then_some(Section {
             name: SectionName::Builtin(title),
             icon,
             emoji,
@@ -432,8 +432,11 @@ impl EmojiPickerState {
                 tab: false,
             }]
         } else {
-            let frequent =
-                self.named_section(&self.frequent, UiText::FrequentlyUsed, LucideIcon::TrendingUp);
+            let frequent = self.named_section(
+                &self.frequent,
+                UiText::FrequentlyUsed,
+                LucideIcon::TrendingUp,
+            );
             let recent = self.named_section(&self.recents, UiText::RecentlyUsed, LucideIcon::Clock);
             frequent
                 .into_iter()

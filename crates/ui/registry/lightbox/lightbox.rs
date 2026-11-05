@@ -387,11 +387,7 @@ pub fn lightbox(
     let escape = handle.clone();
     let (current, count, zoom) = {
         let state = state.read(cx);
-        (
-            state.current().cloned(),
-            state.images().len(),
-            state.zoom(),
-        )
+        (state.current().cloned(), state.images().len(), state.zoom())
     };
     let white = hsla(0., 0., 1., 1.);
     let dim = hsla(0., 0., 1., 0.7);
@@ -406,7 +402,7 @@ pub fn lightbox(
     let zoom_out_label = locale::text(cx, UiText::ZoomOut);
     let zoom_in_label = locale::text(cx, UiText::ZoomIn);
     let close_label = locale::text(cx, UiText::Close);
-    let viewer_label = locale::text(cx, UiText::ImageViewer(locale::isolate(&name)));
+    let viewer_label = locale::text(cx, UiText::ImageViewer(name.clone()));
     let zoom_out = state.clone();
     let zoom_in = state.clone();
     let top = div()
