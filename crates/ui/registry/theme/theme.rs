@@ -30,6 +30,10 @@ gpui_kit::actions!(
 struct Initialized;
 impl Global for Initialized {}
 
+/// The key context of a one-time-code field, which binds the paste shortcut.
+#[doc(hidden)]
+pub const OTP_CONTEXT: &str = "GpuicnOtp";
+
 /// Installs component actions, keyboard traversal and the default theme once.
 /// Call this from application startup for both copied source and crate usage.
 pub fn init(cx: &mut App) {
@@ -50,6 +54,14 @@ pub fn init(cx: &mut App) {
         gpui_kit::KeyBinding::new("shift-tab", FocusPrevious, None),
     ]);
     locale::bind_keys(cx);
+    {
+        use gpui_kit::{KeyBinding, base::input::Paste};
+        let context = Some(OTP_CONTEXT);
+        #[cfg(any(target_os = "macos", target_family = "wasm"))]
+        cx.bind_keys([KeyBinding::new("cmd-v", Paste, context)]);
+        #[cfg(not(target_os = "macos"))]
+        cx.bind_keys([KeyBinding::new("ctrl-v", Paste, context)]);
+    }
     cx.on_action(|_: &FocusNext, cx| advance_focus(false, cx));
     cx.on_action(|_: &FocusPrevious, cx| advance_focus(true, cx));
     // Scoped component bindings take precedence over these window-wide defaults.

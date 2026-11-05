@@ -22,7 +22,7 @@ use gpui_kit::component::text::{
 use gpui_kit::{
     App, ClipboardItem, ElementId, HighlightStyle, ImageSource, InteractiveElement as _,
     IntoElement, ObjectFit, ParentElement as _, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, StyledImage as _, Window, div, img, prelude::FluentBuilder as _, px,
+    StyleRefinement, Styled, StyledImage as _, Window, div, prelude::FluentBuilder as _, px,
     relative, rems,
 };
 
@@ -326,7 +326,7 @@ fn emoji_element(
         return div().child(node.as_text().to_string()).into_any_element();
     };
     match resolve(&emoji.key, window, cx) {
-        Some(source) => img(source)
+        Some(source) => super::theme::primitives::image(source)
             .size(size)
             .object_fit(ObjectFit::Contain)
             .into_any_element(),
@@ -509,7 +509,7 @@ impl MarkdownPlugin for MarkdownImages {
                 (Some(source), Some((width, height))) => {
                     let (width, height) = markdown_image_box(width, height);
                     frame.child(
-                        img(source)
+                        super::theme::primitives::image(source)
                             .debug_selector(|| "markdown-image".into())
                             .w(px(width))
                             .h(px(height))
@@ -519,7 +519,7 @@ impl MarkdownPlugin for MarkdownImages {
                     )
                 }
                 (Some(source), None) => frame.child(
-                    img(source)
+                    super::theme::primitives::image(source)
                         .debug_selector(|| "markdown-image".into())
                         .h(px(MARKDOWN_IMAGE_MAX_HEIGHT))
                         .max_w(px(MARKDOWN_IMAGE_MAX_WIDTH))

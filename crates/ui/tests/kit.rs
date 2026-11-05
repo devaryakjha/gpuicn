@@ -421,6 +421,61 @@ fn menu_skips_disabled_opens_submenu_and_restores_focus(cx: &mut TestAppContext)
     }
 }
 
+#[gpui_kit::test]
+fn menu_item_handlers_can_rebuild_the_menu(cx: &mut TestAppContext) {
+    use gpuicn::menu::{MenuItem, MenuState};
+    use std::{cell::RefCell, rc::Rc};
+    cx.update(gpuicn::init);
+    // Presence pickers rebuild their radio items from the click; that used to
+    // panic with a double lease because the handler ran inside the update.
+    thread_local! {
+        static REBUILT: RefCell<Vec<&'static str>> = const { RefCell::new(Vec::new()) };
+    }
+    fn items(selected: &str, menu: Rc<RefCell<Option<Entity<MenuState>>>>) -> Vec<MenuItem> {
+        ["online", "away"]
+            .into_iter()
+            .map(|id| {
+                let menu = menu.clone();
+                MenuItem::new(id, id)
+                    .radio(id == selected)
+                    .on_click(move |_, _, cx| {
+                        let entity = menu.borrow().clone().unwrap();
+                        let next = items(id, menu.clone());
+                        entity.update(cx, |state, cx| state.set_items(next, cx));
+                        REBUILT.with(|rebuilt| rebuilt.borrow_mut().push(id));
+                    })
+            })
+            .collect()
+    }
+    let slot = Rc::new(RefCell::new(None));
+    let initial = slot.clone();
+    let (view, cx) = cx.add_window_view(move |_, cx| {
+        let menu = cx.new(|cx| MenuState::new(items("online", initial.clone()), cx));
+        *initial.borrow_mut() = Some(menu.clone());
+        Menus {
+            menu,
+            context: false,
+        }
+    });
+    cx.update(|window, cx| {
+        window.activate_window();
+        window.draw(cx).clear(cx);
+    });
+    cx.update(|window, cx| {
+        let menu = view.read(cx).menu.clone();
+        menu.update(cx, |menu, cx| menu.open(window, cx));
+        window.draw(cx).clear(cx);
+    });
+    for key in ["down", "enter"] {
+        cx.simulate_keystrokes(key);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+    }
+    cx.update(|_, cx| {
+        assert!(!view.read(cx).menu.read(cx).is_open());
+        REBUILT.with(|rebuilt| assert_eq!(*rebuilt.borrow(), ["away"]));
+    });
+}
+
 struct DrawerView {
     handle: gpuicn::drawer::DrawerHandle,
     side: gpuicn::drawer::DrawerSide,
@@ -768,4 +823,55 @@ fn long_dialog_content_can_scroll_to_the_footer(cx: &mut TestAppContext) {
     cx.update(|window, cx| window.draw(cx).clear(cx));
     let footer = cx.debug_bounds("long-footer").unwrap();
     assert!(footer.top() >= viewport.top() && footer.bottom() <= viewport.bottom());
+}
+
+struct OtpView {
+    state: Entity<gpuicn::otp_field::OtpState>,
+}
+impl Render for OtpView {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        gpuicn::otp_field::OtpField::new(&self.state)
+    }
+}
+
+#[gpui_kit::test]
+fn otp_field_pastes_a_code_from_the_clipboard(cx: &mut TestAppContext) {
+    use gpuicn::otp_field::{OtpEvent, OtpState};
+    use std::{cell::RefCell, rc::Rc};
+    cx.update(gpuicn::init);
+    let events = Rc::new(RefCell::new(Vec::new()));
+    let seen = events.clone();
+    let (view, cx) = cx.add_window_view(move |window, cx| {
+        let state = cx.new(|cx| OtpState::new(6, window, cx));
+        cx.subscribe(&state, move |_, _, event: &OtpEvent, _| {
+            seen.borrow_mut().push(*event)
+        })
+        .detach();
+        OtpView { state }
+    });
+    cx.update(|window, cx| {
+        window.activate_window();
+        view.read(cx)
+            .state
+            .read(cx)
+            .focus_handle(cx)
+            .focus(window, cx);
+        window.draw(cx).clear(cx);
+        cx.write_to_clipboard(gpui_kit::ClipboardItem::new_string("123 456".into()));
+    });
+    cx.simulate_keystrokes(if cfg!(target_os = "macos") {
+        "cmd-v"
+    } else {
+        "ctrl-v"
+    });
+    cx.update(|_, cx| {
+        assert_eq!(view.read(cx).state.read(cx).value().as_ref(), "123456");
+    });
+    let events: Vec<_> = events
+        .borrow()
+        .iter()
+        .copied()
+        .filter(|event| matches!(event, OtpEvent::Change | OtpEvent::Complete))
+        .collect();
+    assert_eq!(events, [OtpEvent::Change, OtpEvent::Complete]);
 }

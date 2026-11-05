@@ -64,6 +64,8 @@ impl MenuItem {
         self
     }
     /// Handles activation by pointer, keyboard or an accessibility action.
+    /// It runs after the menu closes and its state update returns, so it may
+    /// call [`MenuState::set_items`].
     pub fn on_click(
         mut self,
         handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
@@ -330,8 +332,11 @@ impl MenuState {
             }
             self.close(true, window, cx);
             cx.emit(MenuEvent { path, checked });
+            // The handler runs once this update returns, so it can update the
+            // menu, for example to rebuild its items from a radio choice.
             if let Some(handler) = item.handler {
-                handler(event, window, cx);
+                let event = event.clone();
+                window.defer(cx, move |window, cx| handler(&event, window, cx));
             }
         }
     }

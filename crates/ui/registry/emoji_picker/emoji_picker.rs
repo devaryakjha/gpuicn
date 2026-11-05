@@ -14,7 +14,7 @@ use gpui_kit::{
     Focusable, FontWeight, ImageSource, InteractiveElement as _, IntoElement, Keystroke, ObjectFit,
     ParentElement as _, Render, RenderOnce, Role, ScrollStrategy, SharedString,
     StatefulInteractiveElement as _, StyleRefinement, Styled, StyledImage as _, Subscription,
-    UniformListScrollHandle, Window, div, img, prelude::FluentBuilder as _, uniform_list,
+    UniformListScrollHandle, Window, div, prelude::FluentBuilder as _, uniform_list,
 };
 
 use super::input::{Input, InputEvent, InputState};
@@ -916,7 +916,7 @@ impl Render for EmojiPickerState {
 /// Draws an emoji's glyph or image at `size`.
 fn emoji_face(emoji: &Emoji, size: gpui_kit::Pixels) -> AnyElement {
     match (&emoji.image, &emoji.glyph) {
-        (Some(image), _) => img(image.clone())
+        (Some(image), _) => super::theme::primitives::image(image.clone())
             .size(size)
             .object_fit(ObjectFit::Contain)
             .into_any_element(),

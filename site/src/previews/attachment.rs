@@ -5,6 +5,11 @@ use crate::*;
 impl Showcase {
     pub(crate) fn attachment_preview(&self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let image = "https://raw.githubusercontent.com/devaryakjha/devaryakjha/6526e3d7415b2fb573ba3da4523b5c6948aa5d08/avatar.png";
+        // Animated pictures play in thumbnails, avatars and custom emoji.
+        let animated = std::sync::Arc::new(gpui_kit::Image::from_bytes(
+            gpui_kit::ImageFormat::Gif,
+            include_bytes!("../../assets/spinner.gif").to_vec(),
+        ));
         let removed = self.checked;
         div()
             .w_full()
@@ -57,6 +62,7 @@ impl Showcase {
                             .image(image)
                             .status(AttachmentStatus::Uploading(0.3)),
                     ),
+                    Some(Attachment::new("attachment.image.animated", "spinner.gif").image(animated)),
                     (!removed).then(|| {
                         Attachment::new("attachment.image.removable", "avatar-3.png")
                             .image(image)
