@@ -161,6 +161,7 @@ pub struct Sortable {
     label: SharedString,
     groups: Vec<SortableGroup>,
     reorder_groups: bool,
+    horizontal: bool,
     on_reorder: Option<MoveHandler>,
     on_reorder_group: Option<GroupMoveHandler>,
     style: gpui_kit::StyleRefinement,
@@ -174,6 +175,7 @@ impl Sortable {
             label: label.into(),
             groups: Vec::new(),
             reorder_groups: false,
+            horizontal: false,
             on_reorder: None,
             on_reorder_group: None,
             style: gpui_kit::StyleRefinement::default(),
@@ -193,6 +195,13 @@ impl Sortable {
     /// Alt+Shift+Up and Down. Off by default.
     pub fn reorder_groups(mut self, reorder: bool) -> Self {
         self.reorder_groups = reorder;
+        self
+    }
+    /// Lays rows out in a row, such as a bar of bookmark chips, instead of a
+    /// column. The drop line turns vertical, and Alt+Shift+Left and
+    /// Alt+Shift+Right move the focused item, with the same announcements.
+    pub fn horizontal(mut self) -> Self {
+        self.horizontal = true;
         self
     }
     /// Reports a row move, by mouse or keyboard.
@@ -318,35 +327,32 @@ fn drop_move(from: SortablePosition, target: Target, lens: &[usize]) -> Option<S
     (to != from).then_some(SortableMove { from, to })
 }
 
-/// Whether a key press is the move-one-place shortcut, and which way.
-fn move_key(event: &KeyDownEvent) -> Option<bool> {
+/// Whether a key press is the move-one-place shortcut, and whether it moves
+/// toward the start: Up and Down, or Left and Right in a horizontal list.
+fn move_key(event: &KeyDownEvent, horizontal: bool) -> Option<bool> {
     let modifiers = &event.keystroke.modifiers;
     if !(modifiers.alt && modifiers.shift) || modifiers.control || modifiers.platform {
         return None;
     }
-    match event.keystroke.key.as_str() {
-        "up" => Some(true),
-        "down" => Some(false),
+    match (event.keystroke.key.as_str(), horizontal) {
+        ("up", false) | ("left", true) => Some(true),
+        ("down", false) | ("right", true) => Some(false),
         _ => None,
     }
 }
 
-/// The 2px line that shows where a drop lands.
-fn drop_line(top: bool, theme: &UiTheme) -> gpui_kit::Div {
-    div()
-        .absolute()
-        .left_0()
-        .right_0()
-        .h(px(2.))
-        .rounded_full()
-        .bg(theme.colors.ring)
-        .map(|line| {
-            if top {
-                line.top(px(-1.))
-            } else {
-                line.bottom(px(-1.))
-            }
-        })
+/// The 2px line that shows where a drop lands: across a column, or down
+/// beside an item in a horizontal list.
+fn drop_line(before: bool, horizontal: bool, theme: &UiTheme) -> gpui_kit::Div {
+    let line = div().absolute().rounded_full().bg(theme.colors.ring);
+    // Half the gap between items, so the line sits between them.
+    let offset = -(theme.space(1.) + px(1.));
+    match (horizontal, before) {
+        (false, true) => line.left_0().right_0().h(px(2.)).top(px(-1.)),
+        (false, false) => line.left_0().right_0().h(px(2.)).bottom(px(-1.)),
+        (true, true) => line.top_0().bottom_0().w(px(2.)).left(offset),
+        (true, false) => line.top_0().bottom_0().w(px(2.)).right(offset),
+    }
 }
 
 impl RenderOnce for Sortable {
@@ -380,15 +386,24 @@ impl RenderOnce for Sortable {
         let on_reorder = self.on_reorder.clone();
         let on_reorder_group = self.on_reorder_group.clone();
         let reorder_groups = self.reorder_groups && on_reorder_group.is_some();
+        let horizontal = self.horizontal;
+        let (previous_key, next_key) = if horizontal {
+            ("Left", "Right")
+        } else {
+            ("Up", "Down")
+        };
 
         let mut root = div()
             .id(self.id.clone())
             .role(Role::List)
             .aria_label(self.label.clone())
-            .aria_description("Press Alt+Shift+Up or Alt+Shift+Down to move the focused row.")
+            .aria_description(format!(
+                "Press Alt+Shift+{previous_key} or Alt+Shift+{next_key} to move the focused row."
+            ))
             .relative()
             .flex()
-            .flex_col()
+            .when(horizontal, |root| root.flex_row().flex_wrap().items_center())
+            .when(!horizontal, |root| root.flex_col())
             .gap(theme.space(2.))
             .child(
                 div()
@@ -502,7 +517,10 @@ impl RenderOnce for Sortable {
                     header = header
                         .track_focus(&focus)
                         .role(Role::Button)
-                        .aria_label(format!("{}, move with Alt+Shift+Up or Down", group.label))
+                        .aria_label(format!(
+                            "{}, move with Alt+Shift+{previous_key} or {next_key}",
+                            group.label
+                        ))
                         .rounded(theme.radius.md)
                         .focus_visible(move |style| focus::ring(style, &ring));
                 }
@@ -539,7 +557,9 @@ impl RenderOnce for Sortable {
                 let on_reorder_group = on_reorder_group.clone();
                 let labels = group_labels.clone();
                 header = header.on_key_down(move |event, window, cx| {
-                    let Some(up) = move_key(event) else { return };
+                    let Some(up) = move_key(event, horizontal) else {
+                        return;
+                    };
                     cx.stop_propagation();
                     let to = if up {
                         group_index.checked_sub(1)
@@ -561,7 +581,15 @@ impl RenderOnce for Sortable {
                 });
             }
 
-            let mut rows = div().flex().flex_col();
+            let mut rows = div()
+                .flex()
+                .when(horizontal, |rows| {
+                    rows.flex_row()
+                        .flex_wrap()
+                        .items_center()
+                        .gap(theme.space(2.))
+                })
+                .when(!horizontal, |rows| rows.flex_col());
             if !group.collapsed {
                 let row_count = group.rows.len();
                 for (index, row) in group.rows.into_iter().enumerate() {
@@ -619,7 +647,11 @@ impl RenderOnce for Sortable {
                                 {
                                     return;
                                 }
-                                let after = event.event.position.y > event.bounds.center().y;
+                                let after = if horizontal {
+                                    event.event.position.x > event.bounds.center().x
+                                } else {
+                                    event.event.position.y > event.bounds.center().y
+                                };
                                 let target = Target::Slot {
                                     group: group_index,
                                     slot: index + usize::from(after),
@@ -631,7 +663,9 @@ impl RenderOnce for Sortable {
                             },
                         )
                         .on_key_down(move |event, window, cx| {
-                            let Some(up) = move_key(event) else { return };
+                            let Some(up) = move_key(event, horizontal) else {
+                                return;
+                            };
                             cx.stop_propagation();
                             let Some(to) =
                                 keyboard_target(position, up, &lens_for_keys, &collapsed_for_keys)
@@ -657,8 +691,12 @@ impl RenderOnce for Sortable {
                             }
                         })
                         .child((row.render)(window, cx))
-                        .when(line_before, |row| row.child(drop_line(true, &theme)))
-                        .when(line_after, |row| row.child(drop_line(false, &theme)));
+                        .when(line_before, |row| {
+                            row.child(drop_line(true, horizontal, &theme))
+                        })
+                        .when(line_after, |row| {
+                            row.child(drop_line(false, horizontal, &theme))
+                        });
                     rows = rows.child(element);
                 }
             }
@@ -670,7 +708,8 @@ impl RenderOnce for Sortable {
             let mut container = div()
                 .relative()
                 .flex()
-                .flex_col()
+                .when(horizontal, |container| container.flex_row().items_center())
+                .when(!horizontal, |container| container.flex_col())
                 .rounded(theme.radius.md)
                 .when(highlighted, |container| container.bg(theme.colors.accent))
                 .when(dragging_group == Some(group_index), |container| {
@@ -687,7 +726,11 @@ impl RenderOnce for Sortable {
                         {
                             return;
                         }
-                        let after = event.event.position.y > event.bounds.center().y;
+                        let after = if horizontal {
+                            event.event.position.x > event.bounds.center().x
+                        } else {
+                            event.event.position.y > event.bounds.center().y
+                        };
                         let slot = group_index + usize::from(after);
                         if state.read(cx).group_target != Some(slot) {
                             state.update(cx, |state, _| state.group_target = Some(slot));
@@ -696,10 +739,10 @@ impl RenderOnce for Sortable {
                     },
                 );
                 if group_target == Some(group_index) {
-                    container = container.child(drop_line(true, &theme));
+                    container = container.child(drop_line(true, horizontal, &theme));
                 }
                 if group_index + 1 == group_count && group_target == Some(group_count) {
-                    container = container.child(drop_line(false, &theme));
+                    container = container.child(drop_line(false, horizontal, &theme));
                 }
             }
             root = root.child(container);
@@ -929,6 +972,75 @@ mod tests {
         cx.update(|_, cx| {
             assert_eq!(view.read(cx).names, ["Archive", "Channels", "Favorites"]);
         });
+    }
+
+    struct Bookmarks {
+        items: Vec<Vec<&'static str>>,
+    }
+
+    impl Render for Bookmarks {
+        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            let view = cx.entity();
+            div().w(px(480.)).child(
+                Sortable::new("bookmarks", "Bookmarks")
+                    .horizontal()
+                    .group(
+                        SortableGroup::new("bar", "Bookmarks")
+                            .header(|_, _| div())
+                            .rows(self.items[0].iter().map(|&name| {
+                                SortableRow::new(name, name, move |_, _| {
+                                    div()
+                                        .w(px(80.))
+                                        .h(px(28.))
+                                        .debug_selector(move || format!("chip-{name}"))
+                                        .child(
+                                            super::super::button::Button::new(
+                                                gpui_kit::ElementId::from(format!("{name}-chip")),
+                                            )
+                                            .label(name),
+                                        )
+                                })
+                            })),
+                    )
+                    .on_reorder(move |movement, _, cx| {
+                        view.update(cx, |this, cx| {
+                            movement.apply(&mut this.items);
+                            cx.notify();
+                        })
+                    }),
+            )
+        }
+    }
+
+    #[gpui_kit::test]
+    fn a_horizontal_list_moves_by_left_and_right_and_by_drag(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let (view, cx) = cx.add_window_view(|_, _| Bookmarks {
+            items: vec![vec!["Docs", "Board", "Wiki"]],
+        });
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let docs = cx.debug_bounds("chip-Docs").expect("drawn");
+        let board = cx.debug_bounds("chip-Board").expect("drawn");
+        assert_eq!(docs.top(), board.top(), "chips share a row");
+        assert!(board.left() > docs.right());
+        cx.update(|window, cx| {
+            window.activate_window();
+            window.focus_next(cx);
+            window.draw(cx).clear(cx);
+            assert_eq!(window.find_by_label("Docs").focused(), Some(true));
+        });
+        cx.simulate_keystrokes("alt-shift-down");
+        cx.update(|_, cx| assert_eq!(view.read(cx).items[0], ["Docs", "Board", "Wiki"]));
+        cx.simulate_keystrokes("alt-shift-right");
+        cx.update(|window, cx| {
+            assert_eq!(view.read(cx).items[0], ["Board", "Docs", "Wiki"]);
+            window.draw(cx).clear(cx);
+            window.find_by_label("Docs moved to position 2 of 3 in Bookmarks");
+        });
+        let board = cx.debug_bounds("chip-Board").expect("drawn");
+        let wiki = cx.debug_bounds("chip-Wiki").expect("drawn");
+        drag(cx, board.center(), point(wiki.right() - px(4.), wiki.center().y));
+        cx.update(|_, cx| assert_eq!(view.read(cx).items[0], ["Docs", "Wiki", "Board"]));
     }
 
     fn drag(
