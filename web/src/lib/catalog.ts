@@ -25,6 +25,12 @@ export const components: CatalogComponent[] = [
       "A vertically stacked set of interactive headings that reveal content.",
   },
   {
+    slug: "alert",
+    name: "Alert",
+    description:
+      "An inline callout with an icon, title and description for form errors, warnings and notes.",
+  },
+  {
     slug: "alert-dialog",
     name: "Alert Dialog",
     description: "A modal dialog that expects a response from the user.",
@@ -47,6 +53,12 @@ export const components: CatalogComponent[] = [
     description: "An image element with a fallback for representing a user.",
   },
   {
+    slug: "avatar-group",
+    name: "Avatar Group",
+    description:
+      "Overlapping avatars with a +N overflow chip and one accessible list of names.",
+  },
+  {
     slug: "badge",
     name: "Badge",
     description: "Labels and unread or mention counts in a compact pill.",
@@ -56,6 +68,12 @@ export const components: CatalogComponent[] = [
     slug: "button",
     name: "Button",
     description: "Displays a button or a component that looks like a button.",
+  },
+  {
+    slug: "calendar",
+    name: "Calendar",
+    description:
+      "A keyboard-driven month grid for picking a date, with limits and a configurable first weekday.",
   },
   {
     slug: "carousel",
@@ -100,6 +118,18 @@ export const components: CatalogComponent[] = [
     slug: "context-menu",
     name: "Context Menu",
     description: "A menu opened by a secondary pointer action.",
+  },
+  {
+    slug: "date-picker",
+    name: "Date Picker",
+    description:
+      "A trigger that opens a Calendar popover and shows the chosen date.",
+  },
+  {
+    slug: "date-time-picker",
+    name: "Date Time Picker",
+    description:
+      "A date and time picker: a Calendar popover with an hour and minute field, 12- or 24-hour.",
   },
   {
     slug: "dialog",

@@ -1205,3 +1205,48 @@ mod sortable {
             })
     }
 }
+
+mod alert {
+    use crate::ui::alert::*;
+    use gpui_kit::IntoElement;
+
+    fn example() -> impl IntoElement {
+        Alert::new()
+    }
+}
+
+mod avatar_group {
+    use crate::ui::avatar_group::*;
+    use gpui_kit::IntoElement;
+
+    fn example() -> impl IntoElement {
+        AvatarGroup::new()
+    }
+}
+
+mod calendar {
+    use crate::ui::calendar::*;
+    use gpui_kit::IntoElement;
+
+    fn example() -> impl IntoElement {
+        Calendar::new()
+    }
+}
+
+mod date_picker {
+    use crate::ui::date_picker::*;
+    use gpui_kit::IntoElement;
+
+    fn example() -> impl IntoElement {
+        DatePicker::new()
+    }
+}
+
+mod date_time_picker {
+    use crate::ui::date_time_picker::*;
+    use gpui_kit::IntoElement;
+
+    fn example() -> impl IntoElement {
+        DateTimePicker::new()
+    }
+}

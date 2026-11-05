@@ -108,3 +108,19 @@ description = "Link previews, message attachments and quoted posts under a chat 
 dependencies = ["avatar", "button", "message"]
 [components.sortable]
 description = "Rows people drag, or move with the keyboard, to reorder them and move them between groups."
+[components.alert]
+description = "An inline callout with an icon, title and description for form errors, warnings and notes."
+[components.avatar_group]
+title = "Avatar Group"
+description = "Overlapping avatars with a +N overflow chip and one accessible list of names."
+dependencies = ["avatar", "tooltip"]
+[components.calendar]
+description = "A keyboard-driven month grid for picking a date, with limits and a configurable first weekday."
+[components.date_picker]
+title = "Date Picker"
+description = "A trigger that opens a Calendar popover and shows the chosen date."
+dependencies = ["calendar", "button"]
+[components.date_time_picker]
+title = "Date Time Picker"
+description = "A date and time picker: a Calendar popover with an hour and minute field, 12- or 24-hour."
+dependencies = ["date_picker", "calendar", "button", "input"]
