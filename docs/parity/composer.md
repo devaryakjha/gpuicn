@@ -43,3 +43,9 @@ and a space, and emits `ComposerEvent::Accept`.
 
 The popup is a `ListBox` with `ListBoxOption` rows named by their labels, and
 the highlighted row is the active descendant.
+
+Triggers inside inline code or a fenced block no longer open suggestions
+(`set_ignore_triggers_in_code`). `open_suggestions(range, items)` opens the
+popup for a range the application chose, such as a slash command's
+argument, and accepting replaces that range (`ComposerEvent::AcceptRange`).
+`set_misspellings` underlines words in the composer as in `Textarea`.

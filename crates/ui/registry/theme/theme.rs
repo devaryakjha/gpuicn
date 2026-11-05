@@ -239,6 +239,58 @@ pub struct UiColors {
     pub sidebar_ring: Rgba,
     /// Scrim behind modal surfaces.
     pub overlay: Rgba,
+    /// Markdown link text. `None` follows `primary`; read it with `link()`.
+    pub link: Option<Rgba>,
+    /// Fill behind a mention of the reader, and the tint of a mention row.
+    /// `None` follows `primary`; read it with `mention_highlight()`.
+    pub mention_highlight: Option<Rgba>,
+    /// Text on `mention_highlight`. `None` follows `primary_foreground`.
+    pub mention_highlight_foreground: Option<Rgba>,
+    /// The rule and label marking where new messages start. `None` follows
+    /// `destructive`; read it with `new_messages()`.
+    pub new_messages: Option<Rgba>,
+    /// Quiet sidebar text: read rows, icons and section labels. `None`
+    /// follows `sidebar_foreground` at 70%.
+    pub sidebar_muted_foreground: Option<Rgba>,
+    /// Sidebar mention badges. `None` follows `sidebar_primary`.
+    pub sidebar_badge: Option<Rgba>,
+    /// Text on `sidebar_badge`. `None` follows `sidebar_primary_foreground`.
+    pub sidebar_badge_foreground: Option<Rgba>,
+}
+
+impl UiColors {
+    /// Markdown link text: `link`, or `primary`.
+    pub fn link(&self) -> Rgba {
+        self.link.unwrap_or(self.primary)
+    }
+    /// Mention fill: `mention_highlight`, or `primary`.
+    pub fn mention_highlight(&self) -> Rgba {
+        self.mention_highlight.unwrap_or(self.primary)
+    }
+    /// Text on the mention fill: `mention_highlight_foreground`, or `primary_foreground`.
+    pub fn mention_highlight_foreground(&self) -> Rgba {
+        self.mention_highlight_foreground
+            .unwrap_or(self.primary_foreground)
+    }
+    /// The new-messages rule: `new_messages`, or `destructive`.
+    pub fn new_messages(&self) -> Rgba {
+        self.new_messages.unwrap_or(self.destructive)
+    }
+    /// Quiet sidebar text: `sidebar_muted_foreground`, or `sidebar_foreground` at 70%.
+    pub fn sidebar_muted_foreground(&self) -> Rgba {
+        self.sidebar_muted_foreground
+            .unwrap_or(self.sidebar_foreground.opacity(0.7))
+    }
+    /// Sidebar mention badge fill: `sidebar_badge`, or `sidebar_primary`.
+    pub fn sidebar_badge(&self) -> Rgba {
+        self.sidebar_badge.unwrap_or(self.sidebar_primary)
+    }
+    /// Text on a sidebar mention badge: `sidebar_badge_foreground`, or
+    /// `sidebar_primary_foreground`.
+    pub fn sidebar_badge_foreground(&self) -> Rgba {
+        self.sidebar_badge_foreground
+            .unwrap_or(self.sidebar_primary_foreground)
+    }
 }
 
 /// Theme font family names. Applications own font loading.
@@ -561,6 +613,180 @@ pub struct UiTheme {
     pub typography: UiTypography,
     /// Window widths at which layouts change shape.
     pub breakpoints: UiBreakpoints,
+    /// Syntax colors and surface of Markdown code blocks.
+    pub code_theme: CodeTheme,
+}
+
+/// The syntax theme of Markdown code blocks, as in Mattermost's `codeTheme`.
+///
+/// `Default` follows the light or dark mode on the theme's muted code
+/// surface. The named themes bring their own background and text color, so
+/// a dark code theme stays readable in a light window.
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+pub enum CodeTheme {
+    /// GPUI Kit's light or dark syntax colors, by mode.
+    #[default]
+    Default,
+    /// GitHub's light syntax colors.
+    GitHub,
+    /// Monokai: bright syntax on a dark olive surface.
+    Monokai,
+    /// Solarized, dark variant.
+    SolarizedDark,
+    /// Solarized, light variant.
+    SolarizedLight,
+}
+
+impl CodeTheme {
+    /// Every code theme, for a settings picker.
+    pub const ALL: [CodeTheme; 5] = [
+        CodeTheme::Default,
+        CodeTheme::GitHub,
+        CodeTheme::Monokai,
+        CodeTheme::SolarizedDark,
+        CodeTheme::SolarizedLight,
+    ];
+
+    /// Reads Mattermost's names: `github`, `monokai`, `solarized-dark`,
+    /// `solarized-light`, and `default`.
+    pub fn from_name(name: &str) -> Option<Self> {
+        Some(match name.trim().to_ascii_lowercase().as_str() {
+            "default" | "" => Self::Default,
+            "github" => Self::GitHub,
+            "monokai" => Self::Monokai,
+            "solarized-dark" | "solarized_dark" => Self::SolarizedDark,
+            "solarized-light" | "solarized_light" => Self::SolarizedLight,
+            _ => return None,
+        })
+    }
+
+    /// The name `from_name` reads.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::GitHub => "github",
+            Self::Monokai => "monokai",
+            Self::SolarizedDark => "solarized-dark",
+            Self::SolarizedLight => "solarized-light",
+        }
+    }
+
+    /// The code block's own background and text color, or `None` for the
+    /// theme's muted surface.
+    pub fn surface(self) -> Option<(Rgba, Rgba)> {
+        let hex = |value: u32| gpui_kit::rgb(value);
+        match self {
+            Self::Default => None,
+            Self::GitHub => Some((hex(0xf6f8fa), hex(0x24292e))),
+            Self::Monokai => Some((hex(0x272822), hex(0xf8f8f2))),
+            Self::SolarizedDark => Some((hex(0x002b36), hex(0x839496))),
+            Self::SolarizedLight => Some((hex(0xfdf6e3), hex(0x657b83))),
+        }
+    }
+
+    /// The Kit highlight theme for this code theme in `mode`, built once.
+    #[doc(hidden)]
+    pub fn highlight_theme(
+        self,
+        mode: ThemeMode,
+    ) -> Arc<gpui_kit::component::highlighter::HighlightTheme> {
+        use gpui_kit::component::highlighter::HighlightTheme;
+        use std::sync::OnceLock;
+        static BUILT: [OnceLock<Arc<HighlightTheme>>; 4] = [const { OnceLock::new() }; 4];
+        // (keyword, string, comment, function, number, type, tag, attribute,
+        //  property, operator, variable)
+        let (index, palette, dark) = match self {
+            Self::Default => {
+                return match mode {
+                    ThemeMode::Light => HighlightTheme::default_light(),
+                    ThemeMode::Dark => HighlightTheme::default_dark(),
+                };
+            }
+            Self::GitHub => (
+                0,
+                [
+                    "#d73a49", "#032f62", "#6a737d", "#6f42c1", "#005cc5", "#e36209", "#22863a",
+                    "#6f42c1", "#005cc5", "#d73a49", "#24292e",
+                ],
+                false,
+            ),
+            Self::Monokai => (
+                1,
+                [
+                    "#f92672", "#e6db74", "#75715e", "#a6e22e", "#ae81ff", "#66d9ef", "#f92672",
+                    "#a6e22e", "#fd971f", "#f92672", "#f8f8f2",
+                ],
+                true,
+            ),
+            Self::SolarizedDark => (
+                2,
+                [
+                    "#859900", "#2aa198", "#586e75", "#268bd2", "#d33682", "#b58900", "#268bd2",
+                    "#93a1a1", "#268bd2", "#859900", "#839496",
+                ],
+                true,
+            ),
+            Self::SolarizedLight => (
+                3,
+                [
+                    "#859900", "#2aa198", "#93a1a1", "#268bd2", "#d33682", "#b58900", "#268bd2",
+                    "#586e75", "#268bd2", "#859900", "#657b83",
+                ],
+                false,
+            ),
+        };
+        BUILT[index]
+            .get_or_init(|| {
+                let [
+                    keyword,
+                    string,
+                    comment,
+                    function,
+                    number,
+                    kind,
+                    tag,
+                    attribute,
+                    property,
+                    operator,
+                    variable,
+                ] = palette;
+                let color = |value: &str| gpui_kit::private::serde_json::json!({ "color": value });
+                let json = gpui_kit::private::serde_json::json!({
+                    "name": self.name(),
+                    "appearance": if dark { "dark" } else { "light" },
+                    "style": {
+                        "syntax": {
+                            "keyword": color(keyword),
+                            "string": color(string),
+                            "string.escape": color(number),
+                            "comment": { "color": comment, "font_style": "italic" },
+                            "comment.doc": { "color": comment, "font_style": "italic" },
+                            "function": color(function),
+                            "constructor": color(function),
+                            "number": color(number),
+                            "boolean": color(number),
+                            "constant": color(number),
+                            "type": color(kind),
+                            "enum": color(kind),
+                            "tag": color(tag),
+                            "attribute": color(attribute),
+                            "property": color(property),
+                            "operator": color(operator),
+                            "variable": color(variable),
+                            "punctuation": color(variable),
+                            "title": { "color": function, "font_weight": 700 },
+                            "link_uri": color(string),
+                            "link_text": color(function),
+                        }
+                    }
+                });
+                Arc::new(
+                    gpui_kit::private::serde_json::from_value::<HighlightTheme>(json)
+                        .expect("the code theme palettes are valid"),
+                )
+            })
+            .clone()
+    }
 }
 
 impl Global for UiTheme {}
@@ -698,6 +924,10 @@ impl UiTheme {
                     *slot = css_color(value).ok_or_else(|| {
                         ThemeCssError(format!("unsupported color `--{name}: {value}`"))
                     })?;
+                } else if let Some(slot) = theme.colors.optional_slot(name) {
+                    *slot = Some(css_color(value).ok_or_else(|| {
+                        ThemeCssError(format!("unsupported color `--{name}: {value}`"))
+                    })?);
                 }
             }
         }
@@ -742,6 +972,7 @@ impl UiTheme {
             text_scale: 1.,
             typography: UiTypography::default(),
             breakpoints: UiBreakpoints::default(),
+            code_theme: CodeTheme::Default,
             spacing: UiSpacing { unit: px(4.) },
             shadows: UiShadows {
                 sm: Arc::from([
@@ -813,6 +1044,21 @@ impl UiTheme {
             ring: colors.ring.opacity(0.50),
             invalid_ring: colors.destructive.opacity(0.20),
             surface_border: colors.foreground.opacity(0.10),
+        }
+    }
+
+    /// `color` composited over the `background` token: the same color with
+    /// no transparency. A translucent fill lets a focus ring's shadow, which
+    /// GPUI paints under the whole box, show through it; this one does not.
+    pub fn opaque(&self, color: Rgba) -> Rgba {
+        let under = self.colors.background;
+        let alpha = color.a.clamp(0., 1.);
+        let mix = |top: f32, bottom: f32| top * alpha + bottom * (1. - alpha);
+        Rgba {
+            r: mix(color.r, under.r),
+            g: mix(color.g, under.g),
+            b: mix(color.b, under.b),
+            a: 1.,
         }
     }
 
@@ -939,9 +1185,9 @@ fn sync_component_theme(cx: &mut App, theme: UiTheme) {
     component.status_bar = colors.sidebar.into();
     component.status_bar_border = colors.border.into();
     // Rich text: links, selection, table headings and code highlighting.
-    component.link = colors.primary.into();
-    component.link_hover = colors.primary.opacity(0.9).into();
-    component.link_active = colors.primary.opacity(0.8).into();
+    component.link = colors.link().into();
+    component.link_hover = colors.link().opacity(0.9).into();
+    component.link_active = colors.link().opacity(0.8).into();
     component.selection = colors.ring.opacity(0.3).into();
     component.description_list_label = colors.muted.into();
     component.description_list_label_foreground = colors.muted_foreground.into();
@@ -979,10 +1225,7 @@ fn sync_component_theme(cx: &mut App, theme: UiTheme) {
     component.tab_active_foreground = colors.foreground.into();
     component.drag_border = colors.ring.into();
     component.drop_target = colors.ring.opacity(0.15).into();
-    component.highlight_theme = match theme.mode {
-        ThemeMode::Light => gpui_kit::component::highlighter::HighlightTheme::default_light(),
-        ThemeMode::Dark => gpui_kit::component::highlighter::HighlightTheme::default_dark(),
-    };
+    component.highlight_theme = theme.code_theme.highlight_theme(theme.mode);
     component.tokens = ThemeTokens::from(&component.colors);
 
     Theme::sync_base(cx);
@@ -1042,6 +1285,21 @@ impl UiColors {
             "sidebar-accent-foreground" => &mut self.sidebar_accent_foreground,
             "sidebar-border" => &mut self.sidebar_border,
             "sidebar-ring" => &mut self.sidebar_ring,
+            _ => return None,
+        })
+    }
+
+    /// The optional tokens that follow another one until set.
+    #[doc(hidden)]
+    pub fn optional_slot(&mut self, variable: &str) -> Option<&mut Option<Rgba>> {
+        Some(match variable {
+            "link" => &mut self.link,
+            "mention-highlight" => &mut self.mention_highlight,
+            "mention-highlight-foreground" => &mut self.mention_highlight_foreground,
+            "new-messages" => &mut self.new_messages,
+            "sidebar-muted-foreground" => &mut self.sidebar_muted_foreground,
+            "sidebar-badge" => &mut self.sidebar_badge,
+            "sidebar-badge-foreground" => &mut self.sidebar_badge_foreground,
             _ => return None,
         })
     }
@@ -1255,6 +1513,13 @@ fn neutral_light_colors() -> UiColors {
         sidebar_border: neutral(0.922),
         sidebar_ring: neutral(0.708),
         overlay: black().alpha(0.10).into(),
+        link: None,
+        mention_highlight: None,
+        mention_highlight_foreground: None,
+        new_messages: None,
+        sidebar_muted_foreground: None,
+        sidebar_badge: None,
+        sidebar_badge_foreground: None,
     }
 }
 
@@ -1301,6 +1566,13 @@ fn neutral_dark_colors() -> UiColors {
         // shadcn pairs black/10 with a backdrop blur GPUI lacks; without it a
         // 10% scrim disappears on a near-black page.
         overlay: black().alpha(0.50).into(),
+        link: None,
+        mention_highlight: None,
+        mention_highlight_foreground: None,
+        new_messages: None,
+        sidebar_muted_foreground: None,
+        sidebar_badge: None,
+        sidebar_badge_foreground: None,
     }
 }
 
@@ -1340,6 +1612,45 @@ fn srgb_channel(channel: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn code_themes_build_with_their_own_surface() {
+        for theme in CodeTheme::ALL {
+            assert_eq!(CodeTheme::from_name(theme.name()), Some(theme));
+            let built = theme.highlight_theme(ThemeMode::Light);
+            // Built once: the Kit shares one highlighter per theme instance.
+            assert!(Arc::ptr_eq(
+                &built,
+                &theme.highlight_theme(ThemeMode::Light)
+            ));
+            if theme.surface().is_some() {
+                assert_eq!(built.name, theme.name());
+                assert!(built.keyword.is_some());
+            }
+        }
+        assert_eq!(
+            CodeTheme::from_name("Solarized-Dark"),
+            Some(CodeTheme::SolarizedDark)
+        );
+        assert_eq!(CodeTheme::from_name("dracula"), None);
+    }
+
+    #[test]
+    fn optional_tokens_follow_their_base_until_set() {
+        let mut theme = UiTheme::neutral_light();
+        theme.colors.primary = gpui_kit::rgb(0x1c58d9);
+        assert_eq!(theme.colors.link(), theme.colors.primary);
+        assert_eq!(theme.colors.mention_highlight(), theme.colors.primary);
+        assert_eq!(theme.colors.new_messages(), theme.colors.destructive);
+        assert_eq!(theme.colors.sidebar_badge(), theme.colors.sidebar_primary);
+        theme.colors.link = Some(gpui_kit::rgb(0x2389d7));
+        assert_eq!(theme.colors.link(), gpui_kit::rgb(0x2389d7));
+        let css = ":root { --primary: #111111; --link: #2389d7; --sidebar-badge: #ff0000; }";
+        let parsed = UiTheme::from_shadcn_css(css, ThemeMode::Light).unwrap();
+        assert_eq!(parsed.colors.link(), gpui_kit::rgb(0x2389d7));
+        assert_eq!(parsed.colors.sidebar_badge(), gpui_kit::rgb(0xff0000));
+        assert_eq!(parsed.colors.mention_highlight(), gpui_kit::rgb(0x111111));
+    }
 
     #[test]
     fn converts_pinned_neutral_tokens() {

@@ -24,3 +24,6 @@ The six site examples cover workspace navigation, searchable documentation, sear
 Sidebar rows use Kit buttons; selected and expanded state also appear in the accessible name. Native tooltips do not add tab stops. macOS checks and browser checks do not establish Windows/Linux or full screen-reader coverage. See `docs/internal/validation/sidebar.md` for evidence and remaining limits.
 
 In the embedded web preview, Shift-Tab can cross the iframe boundary even while GPUI navigation is modal. Native focus traversal is separately verified; browser modal containment remains a platform limitation.
+
+`sidebar_mention_badge` is the rounded unread-mention count in the
+`sidebar_badge` token; group labels use `sidebar_muted_foreground`.

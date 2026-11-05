@@ -21,3 +21,8 @@ itself: `on_reorder` reports a `SortableMove` (`from` and `to` positions, with
 application's own data. Row IDs are unique across the whole list, so a row
 keeps its state and focus when it changes group. Group
 headers are headings named by the group label.
+
+`horizontal` lays rows out in a wrapping row, such as a bookmarks bar. The
+drop line is a 2px vertical line between items, the drop side follows the
+pointer's x, and Alt+Shift+Left and Alt+Shift+Right move the focused item
+with the same announcements.

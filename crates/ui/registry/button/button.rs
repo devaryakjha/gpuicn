@@ -9,7 +9,7 @@ use std::rc::Rc;
 use gpui_kit::base::Button as BaseButton;
 use gpui_kit::{
     AnyElement, App, ClickEvent, ElementId, FontWeight, IntoElement, ParentElement, RenderOnce,
-    SharedString, Styled, Window, px,
+    Rgba, SharedString, Styled, Window, px,
 };
 
 use super::theme::{
@@ -118,6 +118,7 @@ pub struct Button {
     aria_label: Option<SharedString>,
     on_click: Option<ButtonClickHandler>,
     style_with: Option<ButtonStyleHandler>,
+    tint: Option<Rgba>,
     children: Vec<AnyElement>,
 }
 
@@ -133,6 +134,7 @@ impl Button {
             aria_label: None,
             on_click: None,
             style_with: None,
+            tint: None,
             children: Vec::new(),
         }
     }
@@ -178,6 +180,15 @@ impl Button {
         self
     }
 
+    /// Fills the button with one app-chosen color, such as an integration's
+    /// `#3f51b5`. Hover moves the fill toward the text, and the text is the
+    /// theme's foreground or background, whichever reads better on the fill,
+    /// so it keeps its contrast in light and dark mode. Replaces the variant.
+    pub fn tint(mut self, color: impl Into<Rgba>) -> Self {
+        self.tint = Some(color.into());
+        self
+    }
+
     /// Replaces the visual styling while retaining button interaction.
     /// Include a visible keyboard focus treatment in custom styles.
     pub fn style_with(mut self, handler: impl Fn(BaseButton) -> BaseButton + 'static) -> Self {
@@ -198,9 +209,10 @@ impl RenderOnce for Button {
         let variant = self.variant;
         let size = self.size;
         let root = BaseButton::new(self.id).disabled(self.disabled);
-        let root = match self.style_with {
-            Some(style) => style(root),
-            None => style_button(root, self.disabled, variant, size, &theme),
+        let root = match (self.style_with, self.tint) {
+            (Some(style), _) => style(root),
+            (None, Some(tint)) => style_tinted_button(root, self.disabled, tint, size, &theme),
+            (None, None) => style_button(root, self.disabled, variant, size, &theme),
         };
         let mut root = super::theme::apply_style(root, &self.style).children(self.children);
 
@@ -220,6 +232,19 @@ pub fn style_button<T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude
     base: T,
     disabled: bool,
     variant: ButtonVariant,
+    size: ButtonSize,
+    theme: &UiTheme,
+) -> T {
+    style_button_with(base, disabled, variant, None, size, theme)
+}
+
+fn style_button_with<
+    T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude::FluentBuilder,
+>(
+    base: T,
+    disabled: bool,
+    variant: ButtonVariant,
+    tint: Option<Rgba>,
     size: ButtonSize,
     theme: &UiTheme,
 ) -> T {
@@ -251,6 +276,14 @@ pub fn style_button<T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude
             base.px(theme.space(metrics.horizontal_padding / 4.))
         });
 
+    if let Some(tint) = tint {
+        let (fill, hover, foreground) = tint_colors(tint, theme);
+        let base = base
+            .bg(fill)
+            .text_color(foreground)
+            .when(!disabled, |base| base.hover(move |style| style.bg(hover)));
+        return disabled_style::interactive(base, disabled);
+    }
     let base = match variant {
         ButtonVariant::Default => base
             .bg(colors.primary)
@@ -294,6 +327,58 @@ pub fn style_button<T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude
     disabled_style::interactive(base, disabled)
 }
 
+/// WCAG relative luminance of an opaque color.
+fn luminance(color: Rgba) -> f32 {
+    let channel = |c: f32| {
+        if c <= 0.039_28 {
+            c / 12.92
+        } else {
+            ((c + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b)
+}
+
+/// The WCAG contrast ratio between two opaque colors, from 1 to 21.
+pub fn contrast_ratio(a: Rgba, b: Rgba) -> f32 {
+    let (a, b) = (luminance(a), luminance(b));
+    (a.max(b) + 0.05) / (a.min(b) + 0.05)
+}
+
+/// The fill, hover fill and text of a button tinted with `tint`.
+pub fn tint_colors(tint: Rgba, theme: &UiTheme) -> (Rgba, Rgba, Rgba) {
+    let fill = theme.opaque(tint);
+    let colors = theme.colors;
+    let foreground =
+        if contrast_ratio(fill, colors.foreground) >= contrast_ratio(fill, colors.background) {
+            colors.foreground
+        } else {
+            colors.background
+        };
+    let hover = fill.blend(foreground.opacity(0.14));
+    (fill, hover, foreground)
+}
+
+#[doc(hidden)]
+pub fn style_tinted_button<
+    T: Styled + gpui_kit::InteractiveElement + gpui_kit::prelude::FluentBuilder,
+>(
+    base: T,
+    disabled: bool,
+    tint: Rgba,
+    size: ButtonSize,
+    theme: &UiTheme,
+) -> T {
+    style_button_with(
+        base,
+        disabled,
+        ButtonVariant::Default,
+        Some(tint),
+        size,
+        theme,
+    )
+}
+
 impl gpui_kit::Styled for Button {
     fn style(&mut self) -> &mut gpui_kit::StyleRefinement {
         &mut self.style
@@ -303,6 +388,23 @@ impl gpui_kit::Styled for Button {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tints_pick_readable_text_in_both_themes() {
+        let indigo = Rgba::try_from("#3f51b5").unwrap();
+        let lime = Rgba::try_from("#cddc39").unwrap();
+        for theme in [UiTheme::neutral_light(), UiTheme::neutral_dark()] {
+            for tint in [indigo, lime] {
+                let (fill, hover, text) = tint_colors(tint, &theme);
+                assert!(contrast_ratio(fill, text) >= 4.5, "{tint:?} reads");
+                assert_ne!(fill, hover);
+            }
+            let (_, _, text) = tint_colors(indigo, &theme);
+            assert!(luminance(text) > 0.5, "indigo takes light text");
+            let (_, _, text) = tint_colors(lime, &theme);
+            assert!(luminance(text) < 0.1, "lime takes dark text");
+        }
+    }
 
     #[test]
     fn all_variants_expose_clickable_and_disabled_cursors() {

@@ -12,6 +12,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "A vertically stacked set of interactive headings that reveal content.",
     ),
     (
+        "alert",
+        "Alert",
+        "An inline callout with an icon, title and description for form errors, warnings and notes.",
+    ),
+    (
         "alert-dialog",
         "Alert Dialog",
         "A modal dialog that expects a response from the user.",
@@ -32,6 +37,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "An image element with a fallback for representing a user.",
     ),
     (
+        "avatar-group",
+        "Avatar Group",
+        "Overlapping avatars with a +N overflow chip and one accessible list of names.",
+    ),
+    (
         "badge",
         "Badge",
         "Labels and unread or mention counts in a compact pill.",
@@ -40,6 +50,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "button",
         "Button",
         "Displays a button or a component that looks like a button.",
+    ),
+    (
+        "calendar",
+        "Calendar",
+        "A keyboard-driven month grid for picking a date, with limits and a configurable first weekday.",
     ),
     (
         "carousel",
@@ -80,6 +95,16 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "context-menu",
         "Context Menu",
         "A menu opened by a secondary pointer action.",
+    ),
+    (
+        "date-picker",
+        "Date Picker",
+        "A trigger that opens a Calendar popover and shows the chosen date.",
+    ),
+    (
+        "date-time-picker",
+        "Date Time Picker",
+        "A date and time picker: a Calendar popover with an hour and minute field, 12- or 24-hour.",
     ),
     (
         "dialog",

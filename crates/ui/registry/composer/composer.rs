@@ -19,7 +19,7 @@ use gpui_kit::{
     Subscription, Window, anchored, deferred, div, point, prelude::FluentBuilder as _, px,
 };
 
-use super::input::{InputEvent, Textarea, TextareaState};
+use super::input::{InputEvent, Misspellings, SpellingMenu, Textarea, TextareaState};
 use super::theme::{UiTheme, apply_style, primitives::surface};
 
 type KeyHandler = Rc<dyn Fn(&Keystroke, &mut Window, &mut App) -> bool + 'static>;
@@ -87,6 +87,13 @@ pub enum ComposerEvent {
         /// The accepted suggestion's value.
         value: SharedString,
     },
+    /// A suggestion opened with `open_suggestions` replaced its range.
+    AcceptRange {
+        /// The byte range that was replaced, in the text before the edit.
+        range: Range<usize>,
+        /// The accepted suggestion's value.
+        value: SharedString,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -100,7 +107,84 @@ struct ActiveTrigger {
 /// text or after whitespace, followed by non-whitespace up to the caret.
 /// `/` only counts at the very start, as a command. Returns the trigger, its
 /// byte offset and the query after it.
+///
+/// A trigger inside Markdown code, an unclosed backtick span on its line or
+/// an open ``` fence, does not count, so `` `npm i @types/node` `` opens no
+/// popup. Use [`active_trigger_with`] to count those too.
 pub fn active_trigger<'a>(
+    text: &'a str,
+    cursor: usize,
+    triggers: &[char],
+) -> Option<(char, usize, &'a str)> {
+    active_trigger_with(text, cursor, triggers, true)
+}
+
+/// [`active_trigger`], with `ignore_code` choosing whether triggers inside
+/// Markdown code spans and fences are skipped.
+pub fn active_trigger_with<'a>(
+    text: &'a str,
+    cursor: usize,
+    triggers: &[char],
+    ignore_code: bool,
+) -> Option<(char, usize, &'a str)> {
+    let found = find_trigger(text, cursor, triggers)?;
+    if ignore_code && in_code(text, found.1) {
+        return None;
+    }
+    Some(found)
+}
+
+/// Whether byte `offset` of `text` is inside Markdown code: an open fenced
+/// block (``` or ~~~) or an unclosed backtick span earlier on its line.
+pub fn in_code(text: &str, offset: usize) -> bool {
+    let Some(before) = text.get(..offset) else {
+        return false;
+    };
+    let line_start = before.rfind('\n').map_or(0, |index| index + 1);
+    let mut fence: Option<(char, usize)> = None;
+    for line in before[..line_start].lines() {
+        let trimmed = line.trim_start();
+        let marker = trimmed.chars().next().filter(|c| *c == '`' || *c == '~');
+        let Some(marker) = marker else {
+            continue;
+        };
+        let run = trimmed.chars().take_while(|c| *c == marker).count();
+        if run < 3 {
+            continue;
+        }
+        fence = match fence {
+            None => Some((marker, run)),
+            Some((open, length)) if open == marker && run >= length => None,
+            open => open,
+        };
+    }
+    let line = &before[line_start..];
+    let trimmed = line.trim_start();
+    if fence.is_some() || trimmed.starts_with("```") || trimmed.starts_with("~~~") {
+        return true;
+    }
+    // A span opens with a run of backticks and closes with a run as long.
+    let mut open: Option<usize> = None;
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c != '`' {
+            continue;
+        }
+        let mut run = 1;
+        while chars.peek() == Some(&'`') {
+            chars.next();
+            run += 1;
+        }
+        open = match open {
+            None => Some(run),
+            Some(length) if length == run => None,
+            open => open,
+        };
+    }
+    open.is_some()
+}
+
+fn find_trigger<'a>(
     text: &'a str,
     cursor: usize,
     triggers: &[char],
@@ -125,8 +209,12 @@ pub fn active_trigger<'a>(
 /// Retained composer state: the editor, triggers and autocomplete.
 pub struct ComposerState {
     input: Entity<TextareaState>,
+    misspellings: Entity<Misspellings>,
     triggers: Vec<char>,
+    ignore_code: bool,
     active: Option<ActiveTrigger>,
+    /// A range the application opened suggestions for; it wins over triggers.
+    custom: Option<Range<usize>>,
     dismissed: Option<usize>,
     suggestions: Vec<ComposerSuggestion>,
     highlighted: usize,
@@ -186,10 +274,14 @@ impl ComposerState {
                 }
             }),
         ];
+        let misspellings = cx.new(|cx| Misspellings::new(&input, cx));
         Self {
             input,
+            misspellings,
             triggers: vec!['@', '~', ':', '/'],
+            ignore_code: true,
             active: None,
+            custom: None,
             dismissed: None,
             suggestions: Vec::new(),
             highlighted: 0,
@@ -205,6 +297,35 @@ impl ComposerState {
     /// The editing state, for anything not covered here.
     pub fn input(&self) -> &Entity<TextareaState> {
         &self.input
+    }
+
+    /// The misspelled ranges the composer underlines.
+    pub fn misspellings(&self) -> &Entity<Misspellings> {
+        &self.misspellings
+    }
+
+    /// Underlines misspelled byte ranges of the current text with a wavy
+    /// line. Pass fresh ranges a moment after typing stops; edits move or
+    /// drop the old ones meanwhile.
+    pub fn set_misspellings(
+        &mut self,
+        ranges: impl IntoIterator<Item = Range<usize>>,
+        cx: &mut Context<Self>,
+    ) {
+        self.misspellings
+            .update(cx, |misspellings, cx| misspellings.set(ranges, cx));
+    }
+
+    /// Builds the right-click menu for a misspelled word: suggestions, which
+    /// replace it in one undoable edit, and app items such as "Ignore". They
+    /// go above Cut, Copy, Paste and Select All.
+    pub fn set_on_misspelling_menu(
+        &mut self,
+        handler: impl Fn(&mut SpellingMenu, &mut Window, &mut App) + 'static,
+        cx: &mut Context<Self>,
+    ) {
+        self.misspellings
+            .update(cx, |misspellings, _| misspellings.on_menu(handler));
     }
 
     /// The number of lines the editor grows to before it scrolls.
@@ -246,6 +367,13 @@ impl ComposerState {
         cx: &mut Context<Self>,
     ) {
         self.triggers = triggers.into_iter().collect();
+        self.refresh_trigger(cx);
+    }
+
+    /// Whether triggers inside Markdown code spans and fences are ignored, as
+    /// in the Mattermost web app. On by default.
+    pub fn set_ignore_triggers_in_code(&mut self, ignore: bool, cx: &mut Context<Self>) {
+        self.ignore_code = ignore;
         self.refresh_trigger(cx);
     }
 
@@ -378,9 +506,53 @@ impl ComposerState {
         cx.notify();
     }
 
+    /// Opens the suggestion popup for a byte range the application chose,
+    /// such as the argument after `/jira create `, anchored at its start.
+    ///
+    /// Accepting a suggestion replaces the range with its value and a space
+    /// and emits `ComposerEvent::AcceptRange`. Keys work as for a trigger.
+    /// Call it again with a new range or list as the text changes (an empty
+    /// list hides the popup), and `close_suggestions` when it no longer
+    /// applies. While it is open, trigger characters do not open their own.
+    pub fn open_suggestions(
+        &mut self,
+        range: Range<usize>,
+        suggestions: impl IntoIterator<Item = ComposerSuggestion>,
+        cx: &mut Context<Self>,
+    ) {
+        let len = self.value(cx).len();
+        let start = range.start.min(len);
+        let range = start..range.end.clamp(start, len);
+        let same_range = self.custom.as_ref() == Some(&range);
+        let previous = self.highlighted_suggestion().map(|item| item.value.clone());
+        self.active = None;
+        self.custom = Some(range);
+        self.suggestions = suggestions.into_iter().collect();
+        // Updating the list for the same range keeps the highlighted entry.
+        self.highlighted = previous
+            .filter(|_| same_range)
+            .and_then(|value| self.suggestions.iter().position(|item| item.value == value))
+            .unwrap_or(0);
+        cx.notify();
+    }
+
+    /// Closes suggestions opened with `open_suggestions`.
+    pub fn close_suggestions(&mut self, cx: &mut Context<Self>) {
+        if self.custom.take().is_some() {
+            self.suggestions.clear();
+            cx.notify();
+            self.refresh_trigger(cx);
+        }
+    }
+
+    /// The range suggestions were opened for with `open_suggestions`.
+    pub fn suggestion_range(&self) -> Option<Range<usize>> {
+        self.custom.clone()
+    }
+
     /// Whether the autocomplete popup is showing.
     pub fn is_autocomplete_open(&self) -> bool {
-        self.active.is_some() && !self.suggestions.is_empty()
+        (self.active.is_some() || self.custom.is_some()) && !self.suggestions.is_empty()
     }
 
     /// The highlighted suggestion while the popup is open.
@@ -392,6 +564,24 @@ impl ComposerState {
 
     /// Replaces the trigger and query with suggestion `index` and a space.
     pub fn accept(&mut self, index: usize, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(range) = self.custom.clone() {
+            let Some(suggestion) = self.suggestions.get(index).cloned() else {
+                return;
+            };
+            let text = format!("{} ", suggestion.value);
+            self.custom = None;
+            self.suggestions.clear();
+            self.input.update(cx, |input, cx| {
+                input.set_selected_range(range.clone(), cx);
+                input.replace(text, window, cx);
+            });
+            cx.emit(ComposerEvent::AcceptRange {
+                range,
+                value: suggestion.value,
+            });
+            cx.notify();
+            return;
+        }
         let (Some(active), Some(suggestion)) =
             (self.active.clone(), self.suggestions.get(index).cloned())
         else {
@@ -413,6 +603,12 @@ impl ComposerState {
     }
 
     fn close_autocomplete(&mut self, cx: &mut Context<Self>) {
+        if self.custom.take().is_some() {
+            self.suggestions.clear();
+            cx.emit(ComposerEvent::AutocompleteClosed);
+            cx.notify();
+            return;
+        }
         if self.active.take().is_some() {
             self.suggestions.clear();
             cx.emit(ComposerEvent::AutocompleteClosed);
@@ -421,11 +617,14 @@ impl ComposerState {
     }
 
     fn refresh_trigger(&mut self, cx: &mut Context<Self>) {
+        if self.custom.is_some() {
+            return;
+        }
         let input = self.input.read(cx);
         let value = input.value();
         let range = input.selected_range();
         let found = (range.is_empty())
-            .then(|| active_trigger(&value, range.end, &self.triggers))
+            .then(|| active_trigger_with(&value, range.end, &self.triggers, self.ignore_code))
             .flatten()
             .map(|(trigger, start, query)| ActiveTrigger {
                 trigger,
@@ -502,6 +701,7 @@ impl Render for ComposerState {
         let id = ElementId::from(("composer", cx.entity_id()));
         let on_paste = self.on_paste.clone();
         let textarea = Textarea::new(&self.input)
+            .misspellings(&self.misspellings)
             .aria_label("Message")
             .bordered(false)
             .min_h(px(0.))
@@ -511,15 +711,19 @@ impl Render for ComposerState {
                 textarea.on_paste(move |item, window, cx| handler(item, window, cx))
             });
 
-        let popup = self
-            .active
-            .clone()
+        let open = match (&self.custom, &self.active) {
+            (Some(range), _) => Some((None, range.start)),
+            (None, Some(active)) => Some((Some(active.trigger), active.start)),
+            (None, None) => None,
+        };
+        let popup = open
             .filter(|_| !self.suggestions.is_empty())
-            .and_then(|active| {
+            .and_then(|(trigger, start)| {
                 // Both rectangles come from the editor's last layout, so their
                 // difference stays right even if the page moved since then.
                 let input = self.input.read(cx);
-                let trigger = input.range_to_bounds(&(active.start..active.start));
+                let active = trigger;
+                let trigger = input.range_to_bounds(&(start..start));
                 let (Some(trigger), Some(text)) = (trigger, input.text_bounds()) else {
                     // The caret has no position until the editor's first layout.
                     window.request_animation_frame();
@@ -608,11 +812,11 @@ impl Render for ComposerState {
                             div()
                                 .id((id.clone(), "suggestions"))
                                 .role(Role::ListBox)
-                                .aria_label(match active.trigger {
-                                    '@' => "People",
-                                    '~' => "Channels",
-                                    ':' => "Emoji",
-                                    '/' => "Commands",
+                                .aria_label(match active {
+                                    Some('@') => "People",
+                                    Some('~') => "Channels",
+                                    Some(':') => "Emoji",
+                                    Some('/') => "Commands",
                                     _ => "Suggestions",
                                 })
                                 .occlude()
@@ -740,7 +944,7 @@ impl RenderOnce for Composer {
 
 #[cfg(test)]
 mod tests {
-    use super::{active_trigger, rows_within};
+    use super::{active_trigger, active_trigger_with, rows_within};
     use gpui_kit::px;
 
     #[test]
@@ -778,5 +982,40 @@ mod tests {
         assert_eq!(active_trigger("x /cmd", 6, &TRIGGERS), None);
         // The caret, not the end of the text, ends the query.
         assert_eq!(active_trigger("@arya", 3, &TRIGGERS), Some(('@', 0, "ar")));
+    }
+
+    #[test]
+    fn triggers_inside_code_do_not_count() {
+        assert_eq!(active_trigger("run `@x", 7, &TRIGGERS), None);
+        assert_eq!(active_trigger("`npm i @types", 13, &TRIGGERS), None);
+        assert_eq!(active_trigger("`:wq", 4, &TRIGGERS), None);
+        assert_eq!(active_trigger("```\n@x", 6, &TRIGGERS), None);
+        assert_eq!(
+            active_trigger("~~~ rust\nlet a = 1;\n :ta", 23, &TRIGGERS),
+            None
+        );
+        // A closed span or fence ends the code.
+        assert_eq!(
+            active_trigger("`code` @ar", 10, &TRIGGERS),
+            Some(('@', 7, "ar"))
+        );
+        assert_eq!(
+            active_trigger("```\nx\n```\n@ar", 13, &TRIGGERS),
+            Some(('@', 10, "ar"))
+        );
+        assert_eq!(
+            active_trigger("``a ` b`` @ar", 13, &TRIGGERS),
+            Some(('@', 10, "ar"))
+        );
+        // The span is per line.
+        assert_eq!(
+            active_trigger("`open\n@ar", 9, &TRIGGERS),
+            Some(('@', 6, "ar"))
+        );
+        // The option turns it off.
+        assert_eq!(
+            active_trigger_with("`npm i @types", 13, &TRIGGERS, false),
+            Some(('@', 7, "types"))
+        );
     }
 }

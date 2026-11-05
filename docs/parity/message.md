@@ -40,3 +40,6 @@ layout. Implementation: `crates/ui/registry/message/message.rs`.
 `day_divider` and `new_messages_divider` draw the date pill and the destructive
 "New messages" rule. Message content, grouping rules, time formatting and the
 emoji picker stay with the application.
+
+`copy_prefix("Ada [12:24]: ")` names the message in copies that span several
+messages (see the Markdown notes on `copy_selection`).

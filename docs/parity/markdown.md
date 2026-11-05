@@ -34,3 +34,13 @@ URL for opening a lightbox. `CustomEmoji` handles images with its own scheme,
 such as `![:party:](emoji:party)`, drawing them at the height of the text with
 the alt text kept for selection, copy and assistive technology. Add
 `CustomEmoji` before `MarkdownImages`.
+
+`MarkdownImages::placeholder` returns an `ImagePlaceholder` for an image the
+application has not loaded, drawn in the image's box. `image_size` gives an
+image URL's pixel size, so the image and its placeholder take their own box,
+scaled to fit 360 by 200, instead of the fixed 200px height.
+
+A copy across several `Message`s with `copy_prefix` (or `selection_group`
+regions) writes one line per message, starting with its prefix, as Slack
+does. Each group carries an invisible selectable marker at its top and
+bottom; a selection inside one message copies as before.

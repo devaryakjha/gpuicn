@@ -14,3 +14,9 @@ The Rust source and Usage example define the supported API. Browser DOM/CSS beha
 exact exit animations and cross-platform screen-reader parity are not implied by
 the native component. See [migration qualification](../internal/validation/gpui-kit-migration.md)
 for the checks completed on this revision.
+
+`Field::from_control` also takes a `Checkbox`, which sits before its label on
+one row with the description or error under the label (a click on the label
+toggles it), and a `RadioGroup`, which takes the label as the group's name.
+`FieldControl::field_label_focus`, `field_label_click` and `field_inline` let
+other controls choose the same behavior.

@@ -1205,3 +1205,78 @@ mod sortable {
             })
     }
 }
+
+mod alert {
+    use crate::ui::alert::*;
+    use gpui_kit::IntoElement;
+
+    // A form-level error above the fields; destructive alerts are announced.
+    fn example() -> impl IntoElement {
+        Alert::new("dialog.error")
+            .variant(AlertVariant::Destructive)
+            .title("The integration refused this")
+            .description("Check the channel name and try again.")
+    }
+}
+
+mod avatar_group {
+    use crate::ui::avatar::Avatar;
+    use crate::ui::avatar_group::*;
+    use gpui_kit::IntoElement;
+
+    // "Acknowledged by Ana, Ben, Cy and 2 more" stacks; the rest become +N.
+    fn example() -> impl IntoElement {
+        ["Ana", "Ben", "Cy", "Dee", "Eve"].into_iter().fold(
+            AvatarGroup::new("post-1.acks")
+                .aria_label("Acknowledged by")
+                .max(4),
+            |group, name| group.person(name, Avatar::new(name).fallback(&name[..1])),
+        )
+    }
+}
+
+mod calendar {
+    use crate::ui::calendar::*;
+    use gpui_kit::{App, AppContext as _, Entity, IntoElement};
+
+    // The state owns the picked date; subscribe to CalendarEvent::Select.
+    fn state(cx: &mut App) -> Entity<CalendarState> {
+        cx.new(|cx| {
+            let mut state = CalendarState::new(cx);
+            state.set_limits(Some(CalendarDate::today_utc()), None, cx);
+            state
+        })
+    }
+
+    fn example(state: &Entity<CalendarState>) -> impl IntoElement {
+        Calendar::new(state).on_select(|date, _, _| println!("picked {date}"))
+    }
+}
+
+mod date_picker {
+    use crate::ui::calendar::CalendarState;
+    use crate::ui::date_picker::*;
+    use gpui_kit::{Entity, IntoElement};
+
+    fn example(state: &Entity<CalendarState>) -> impl IntoElement {
+        DatePicker::new("task.due", state).aria_label("Due date")
+    }
+}
+
+mod date_time_picker {
+    use crate::ui::date_time_picker::*;
+    use gpui_kit::{App, AppContext as _, Entity, IntoElement};
+
+    // Schedule a message: the locale's clock, and nothing in the past.
+    fn state(cx: &mut App) -> Entity<DateTimeState> {
+        cx.new(|cx| {
+            let mut state = DateTimeState::new(cx);
+            state.set_hour_cycle(HourCycle::for_locale("en-US"), cx);
+            state
+        })
+    }
+
+    fn example(state: &Entity<DateTimeState>) -> impl IntoElement {
+        DateTimePicker::new("schedule.send-at", state).aria_label("Send at")
+    }
+}

@@ -2,8 +2,8 @@
 
 use gpui_kit::{
     App, ElementId, ImageSource, InteractiveElement as _, IntoElement, ObjectFit, ParentElement,
-    RenderOnce, Rgba, SharedString, StatefulInteractiveElement as _, Styled, StyledImage, Window,
-    div, px,
+    Pixels, RenderOnce, Rgba, SharedString, StatefulInteractiveElement as _, Styled, StyledImage,
+    Window, div, px,
 };
 
 use gpui_kit::base::TestSupportExt as _;
@@ -20,6 +20,7 @@ pub struct Avatar {
     aria_label: Option<SharedString>,
     size: AvatarSize,
     status: Option<AvatarStatus>,
+    status_size: Option<Pixels>,
     ring_color: Option<Rgba>,
 }
 
@@ -83,6 +84,7 @@ impl Avatar {
             aria_label: None,
             size: AvatarSize::Default,
             status: None,
+            status_size: None,
             ring_color: None,
         }
     }
@@ -113,6 +115,12 @@ impl Avatar {
         self.status = Some(status);
         self
     }
+    /// Sets the presence dot's diameter, ring included, instead of deriving
+    /// it from the avatar's size.
+    pub fn status_size(mut self, size: impl Into<Pixels>) -> Self {
+        self.status_size = Some(size.into());
+        self
+    }
     /// Sets the ring drawn behind the presence dot. It should match the
     /// surface under the avatar; the default is the `background` token, so
     /// pass `colors.sidebar` for avatars in a sidebar.
@@ -122,11 +130,36 @@ impl Avatar {
     }
 }
 
-/// The presence dot and its surface ring, sized for an avatar of `size` pixels.
-fn status_dot(status: &AvatarStatus, size: f32, ring: Rgba, theme: &UiTheme) -> gpui_kit::Div {
-    // 8, 10 and 12px dots for the 24, 32 and 40px avatars.
-    let diameter = theme.space(size / 16. + 0.5);
-    let ring_width = px(if size < 32. { 1.5 } else { 2. });
+/// The presence dot's outer diameter (ring included) and ring width for an
+/// avatar of `size` pixels.
+///
+/// The three `AvatarSize` presets get 11, 14 and 16px dots. An avatar drawn
+/// at another width, through `.w()` or `.size()`, gets a third of its width,
+/// clamped to 6 to 14px, so an 18px avatar does not lose its face to the dot.
+fn status_metrics(size: f32, preset: bool, theme: &UiTheme) -> (Pixels, Pixels) {
+    let ring_width = px(if size < 24. {
+        1.
+    } else if size < 32. {
+        1.5
+    } else {
+        2.
+    });
+    if preset {
+        // 8, 10 and 12px dots for the 24, 32 and 40px avatars.
+        return (theme.space(size / 16. + 0.5) + ring_width * 2., ring_width);
+    }
+    (px((size / 3.).clamp(6., 14.)), ring_width)
+}
+
+/// The presence dot and its surface ring, `outer` across with the ring.
+fn status_dot(
+    status: &AvatarStatus,
+    outer: Pixels,
+    ring_width: Pixels,
+    ring: Rgba,
+    theme: &UiTheme,
+) -> gpui_kit::Div {
+    let ring_width = ring_width.min(outer / 4.);
     let dot = div().size_full().rounded_full();
     let dot = match status {
         AvatarStatus::Online => dot.bg(theme.colors.success),
@@ -143,7 +176,7 @@ fn status_dot(status: &AvatarStatus, size: f32, ring: Rgba, theme: &UiTheme) -> 
         .absolute()
         .right(px(-1.))
         .bottom(px(-1.))
-        .size(diameter + ring_width * 2.)
+        .size(outer)
         .p(ring_width)
         .rounded_full()
         .bg(ring)
@@ -159,10 +192,26 @@ impl RenderOnce for Avatar {
             AvatarSize::Lg => 40.,
         };
         let image_size = theme.space(size / 4.);
+        // A width set through `Styled` wins over the preset for the dot.
+        let styled_width = match self.style.size.width {
+            Some(gpui_kit::Length::Definite(gpui_kit::DefiniteLength::Absolute(
+                gpui_kit::AbsoluteLength::Pixels(width),
+            ))) if width != image_size => Some(width),
+            _ => None,
+        };
         let dot = self.status.as_ref().map(|status| {
+            let (outer, ring_width) = match (self.status_size, styled_width) {
+                (Some(outer), width) => (
+                    outer,
+                    status_metrics(width.map_or(size, f32::from), false, &theme).1,
+                ),
+                (None, Some(width)) => status_metrics(f32::from(width), false, &theme),
+                (None, None) => status_metrics(size, true, &theme),
+            };
             status_dot(
                 status,
-                size,
+                outer,
+                ring_width,
                 self.ring_color.unwrap_or(theme.colors.background),
                 &theme,
             )
@@ -295,6 +344,38 @@ mod tests {
             // Bottom-right corner of the avatar at (8, 8), overhanging by 1px.
             assert_eq!(bounds.right(), px(8. + avatar + 1.), "{size:?}");
             assert_eq!(bounds.bottom(), px(8. + avatar + 1.), "{size:?}");
+        }
+    }
+
+    struct Small {
+        status_size: Option<Pixels>,
+    }
+
+    impl Render for Small {
+        fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+            div().p(px(8.)).child(
+                Avatar::new("dm")
+                    .aria_label("Ana Lopez")
+                    .fallback("AL")
+                    .size(AvatarSize::Sm)
+                    .w(px(18.))
+                    .h(px(18.))
+                    .status(AvatarStatus::Online)
+                    .when_some(self.status_size, |avatar, size| avatar.status_size(size)),
+            )
+        }
+    }
+
+    #[gpui_kit::test]
+    fn a_resized_avatar_gets_a_dot_a_third_of_its_width(cx: &mut TestAppContext) {
+        for (status_size, expected) in [(None, 6.), (Some(px(9.)), 9.)] {
+            cx.update(super::super::theme::init);
+            let window = cx.add_window(move |_, _| Small { status_size });
+            let mut cx = VisualTestContext::from_window(window.into(), cx);
+            cx.update(|window, cx| window.draw(cx).clear(cx));
+            let bounds = cx.debug_bounds("avatar-status").expect("the dot is drawn");
+            assert_eq!(bounds.size.width, px(expected));
+            assert_eq!(bounds.right(), px(8. + 18. + 1.));
         }
     }
 

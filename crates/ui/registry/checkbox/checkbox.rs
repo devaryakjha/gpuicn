@@ -106,3 +106,37 @@ impl Styled for Checkbox {
         &mut self.style
     }
 }
+
+impl super::field::FieldControl for Checkbox {
+    fn field_label_focus(&self, _: &App) -> Option<gpui_kit::FocusHandle> {
+        None
+    }
+
+    fn field_label_click(&self) -> Option<super::field::FieldLabelClick> {
+        if self.disabled || self.read_only {
+            return None;
+        }
+        let handler = self.on_change.clone()?;
+        let next = self.indeterminate || !self.checked;
+        Some(Rc::new(move |event, window, cx| {
+            handler(next, event, window, cx)
+        }))
+    }
+
+    fn field_inline(&self) -> bool {
+        true
+    }
+
+    fn into_field_control(
+        self,
+        label: SharedString,
+        disabled: bool,
+        _invalid: bool,
+    ) -> gpui_kit::AnyElement {
+        let disabled = self.disabled || disabled;
+        self.aria_label(label)
+            .disabled(disabled)
+            .mt(gpui_kit::px(2.))
+            .into_any_element()
+    }
+}

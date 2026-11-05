@@ -193,6 +193,7 @@ impl Render for Selectable {
                     let bodies = bodies.clone();
                     Message::new(("post", index))
                         .author("Arya")
+                        .copy_prefix(format!("Arya [10:4{index}]: "))
                         .highlight(if selected == Some(index) {
                             MessageHighlight::Selected
                         } else {
@@ -288,9 +289,39 @@ fn transcript_keyboard_selection_and_copy_across_rows(cx: &mut TestAppContext) {
     assert!(text.contains("Message number 2"), "{text:?}");
     assert!(text.contains("Message number 3"), "{text:?}");
 
+    // Each message is one line that starts with its copy prefix.
     cx.simulate_keystrokes("secondary-c");
     let copied = cx.update(|_, cx| cx.read_from_clipboard().and_then(|item| item.text()));
-    assert_eq!(copied.as_deref(), Some(text.trim()));
+    assert_eq!(
+        copied.as_deref(),
+        Some(
+            "Arya [10:41]: Message number 1\nArya [10:42]: Message number 2\nArya [10:43]: Message number 3"
+        )
+    );
+
+    // A selection inside one message copies without a prefix.
+    let body = cx.update(|_, cx| view.read(cx).bodies.borrow()[&2]);
+    let start = gpui_kit::point(body.left() + px(2.), body.center().y);
+    let end = gpui_kit::point(body.right() - px(2.), body.center().y);
+    cx.simulate_mouse_down(
+        start,
+        gpui_kit::MouseButton::Left,
+        gpui_kit::Modifiers::default(),
+    );
+    cx.simulate_mouse_move(
+        end,
+        Some(gpui_kit::MouseButton::Left),
+        gpui_kit::Modifiers::default(),
+    );
+    cx.simulate_mouse_up(
+        end,
+        gpui_kit::MouseButton::Left,
+        gpui_kit::Modifiers::default(),
+    );
+    cx.update(|window, cx| window.draw(cx).clear(cx));
+    cx.simulate_keystrokes("secondary-c");
+    let copied = cx.update(|_, cx| cx.read_from_clipboard().and_then(|item| item.text()));
+    assert_eq!(copied.as_deref(), Some("Message number 2"));
 }
 
 struct ComposerView {
@@ -703,5 +734,81 @@ fn emoji_picker_skin_tones_and_frequently_used(cx: &mut TestAppContext) {
     assert_eq!(
         events.borrow().last(),
         Some(&EmojiPickerEvent::Pick("eyes".into()))
+    );
+}
+
+#[gpui_kit::test]
+fn composer_opens_suggestions_for_an_app_chosen_range(cx: &mut TestAppContext) {
+    cx.update(gpuicn::init);
+    let events = Rc::new(RefCell::new(Vec::new()));
+    let (view, cx) = cx.add_window_view(|window, cx| {
+        let state = cx.new(|cx| ComposerState::new(6, window, cx));
+        let sink = events.clone();
+        cx.subscribe(
+            &state,
+            move |view: &mut ComposerView, state, event: &ComposerEvent, cx| {
+                sink.borrow_mut().push(event.clone());
+                if let ComposerEvent::Change = event {
+                    let text = state.read(cx).value(cx);
+                    if let Some(argument) = text.strip_prefix("/jira create ") {
+                        let start = text.len() - argument.len();
+                        let projects = ["APP", "API", "WEB"]
+                            .into_iter()
+                            .filter(|name| name.starts_with(&argument.to_uppercase()))
+                            .map(|name| ComposerSuggestion::new(name, name));
+                        view.state.update(cx, |state, cx| {
+                            state.open_suggestions(start..text.len(), projects, cx)
+                        });
+                    }
+                }
+            },
+        )
+        .detach();
+        ComposerView { state }
+    });
+    let state = cx.update(|window, cx| {
+        window.activate_window();
+        let state = view.read(cx).state.clone();
+        state.update(cx, |state, cx| state.focus(window, cx));
+        window.draw(cx).clear(cx);
+        state
+    });
+
+    // Spaces and the trigger rules do not matter: the app chose the range.
+    cx.simulate_input("/jira create a");
+    cx.run_until_parked();
+    cx.update(|window, cx| {
+        window.draw(cx).clear(cx);
+        assert!(state.read(cx).is_autocomplete_open());
+        assert_eq!(state.read(cx).suggestion_range(), Some(13..14));
+    });
+    cx.simulate_keystrokes("down enter");
+    cx.update(|_, cx| {
+        assert_eq!(state.read(cx).value(cx), "/jira create API ");
+        assert!(!state.read(cx).is_autocomplete_open());
+    });
+    assert!(events.borrow().contains(&ComposerEvent::AcceptRange {
+        range: 13..14,
+        value: "API".into()
+    }));
+    assert!(
+        !events
+            .borrow()
+            .iter()
+            .any(|event| matches!(event, ComposerEvent::Submit(_)))
+    );
+
+    // Escape closes it; close_suggestions hands control back to triggers.
+    cx.update(|window, cx| {
+        state.update(cx, |state, cx| {
+            state.set_value("/jira create ", window, cx);
+            state.open_suggestions(13..13, [ComposerSuggestion::new("APP", "APP")], cx);
+        })
+    });
+    cx.simulate_keystrokes("escape");
+    cx.update(|_, cx| assert!(!state.read(cx).is_autocomplete_open()));
+    assert_eq!(
+        events.borrow().last(),
+        Some(&ComposerEvent::AutocompleteClosed)
     );
 }

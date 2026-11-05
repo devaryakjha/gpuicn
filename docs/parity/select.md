@@ -13,3 +13,8 @@ The Rust source and Usage example define the supported API. Browser DOM/CSS beha
 exact exit animations and cross-platform screen-reader parity are not implied by
 the native component. See [migration qualification](../internal/validation/gpui-kit-migration.md)
 for the checks completed on this revision.
+
+`SelectState::set_items` replaces the items while open, for results fetched
+as the person types, keeping the query, the value and the highlight when it
+is still shown. `set_loading` shows a "Loading…" status row, and the trigger
+keeps the picked item's label after the items change.

@@ -7,6 +7,8 @@
 
 #[path = "../registry/accordion/accordion.rs"]
 pub mod accordion;
+#[path = "../registry/alert/alert.rs"]
+pub mod alert;
 #[path = "../registry/alert_dialog/alert_dialog.rs"]
 pub mod alert_dialog;
 #[path = "../registry/app/app.rs"]
@@ -19,10 +21,14 @@ pub mod audit;
 pub mod autocomplete;
 #[path = "../registry/avatar/avatar.rs"]
 pub mod avatar;
+#[path = "../registry/avatar_group/avatar_group.rs"]
+pub mod avatar_group;
 #[path = "../registry/badge/badge.rs"]
 pub mod badge;
 #[path = "../registry/button/button.rs"]
 pub mod button;
+#[path = "../registry/calendar/calendar.rs"]
+pub mod calendar;
 #[path = "../registry/carousel/carousel.rs"]
 pub mod carousel;
 #[path = "../registry/checkbox/checkbox.rs"]
@@ -39,6 +45,10 @@ pub mod command;
 pub mod composer;
 #[path = "../registry/context_menu/context_menu.rs"]
 pub mod context_menu;
+#[path = "../registry/date_picker/date_picker.rs"]
+pub mod date_picker;
+#[path = "../registry/date_time_picker/date_time_picker.rs"]
+pub mod date_time_picker;
 #[path = "../registry/dialog/dialog.rs"]
 pub mod dialog;
 #[path = "../registry/drawer/drawer.rs"]
