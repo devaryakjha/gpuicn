@@ -307,6 +307,35 @@ fn large_placeholder(
         .into_any_element()
 }
 
+/// A placeholder in a box of exactly `width` by `height`, for images laid
+/// out by another component, such as inline Markdown images.
+#[doc(hidden)]
+pub fn placeholder_in_box(
+    id: impl Into<ElementId>,
+    placeholder: ImagePlaceholder,
+    width: gpui_kit::Pixels,
+    height: gpui_kit::Pixels,
+    window: &mut Window,
+    cx: &mut App,
+) -> AnyElement {
+    let theme = UiTheme::read(cx).clone();
+    let id = id.into();
+    div()
+        .w(width)
+        .h(height)
+        .max_w_full()
+        .debug_selector(|| "markdown-image-placeholder".into())
+        .child(placeholder_button(id, placeholder, window, cx, &theme))
+        .into_any_element()
+}
+
+impl ImagePlaceholder {
+    /// The size set with [`ImagePlaceholder::size`], if any.
+    pub fn known_size(&self) -> Option<(u32, u32)> {
+        self.size
+    }
+}
+
 /// A placeholder in a thumbnail's box.
 fn thumbnail_placeholder(
     id: ElementId,

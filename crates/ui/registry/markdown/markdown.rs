@@ -12,7 +12,7 @@
 //! resolve each image URL through the application's media cache, and
 //! `CustomEmoji` for `:emoji:` images sized to the text.
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use gpui_kit::base::{SelectableText, TextSelection, TextSelectionLayer};
 use gpui_kit::component::text::{
@@ -28,6 +28,7 @@ use gpui_kit::{
 
 pub use gpui_kit::component::text::TextView as MarkdownView;
 
+use super::embed::{ImagePlaceholder, placeholder_in_box};
 use super::theme::UiTheme;
 
 /// Renders Markdown with Nova typography, code blocks, quotes and tables.
@@ -333,17 +334,41 @@ fn emoji_element(
     }
 }
 
+type PlaceholderFor =
+    Arc<dyn Fn(&str, &mut Window, &mut App) -> Option<ImagePlaceholder> + Send + Sync>;
+
+/// The widest an inline Markdown image shows.
+pub const MARKDOWN_IMAGE_MAX_WIDTH: f32 = 360.;
+/// The tallest an inline Markdown image shows, and the height of one whose
+/// size is unknown.
+pub const MARKDOWN_IMAGE_MAX_HEIGHT: f32 = 200.;
+
+/// The box an inline image of `width` by `height` pixels takes: its own size,
+/// scaled down to fit 360 by 200 with its aspect ratio kept.
+pub fn markdown_image_box(width: u32, height: u32) -> (f32, f32) {
+    let (width, height) = (width.max(1) as f32, height.max(1) as f32);
+    let scale = (MARKDOWN_IMAGE_MAX_WIDTH / width)
+        .min(MARKDOWN_IMAGE_MAX_HEIGHT / height)
+        .min(1.);
+    ((width * scale).round(), (height * scale).round())
+}
+
 /// Resolves every Markdown image through the application, so nothing is
 /// fetched by the view itself.
 ///
 /// The resolver gets the image URL and returns a source, such as a decoded
 /// image from the application's media cache. An image it cannot supply yet
-/// renders as its alt text in a muted frame. Images show 200px tall, at most
-/// 360px wide. Add `CustomEmoji` first so its
-/// images are not taken as ordinary images.
+/// renders as the `placeholder` the application returns for it, such as a
+/// click-to-load [`ImagePlaceholder`], or else as its alt text in a muted
+/// frame. Images with a size from [`MarkdownImages::image_size`] take their
+/// own box, scaled to fit 360 by 200; others show 200px tall, at most 360px
+/// wide. Add `CustomEmoji` first so its images are not taken as ordinary
+/// images.
 pub struct MarkdownImages {
     resolve: ImageResolver,
     on_click: Option<ImageClick>,
+    placeholder: Option<PlaceholderFor>,
+    sizes: HashMap<SharedString, (u32, u32)>,
 }
 
 impl MarkdownImages {
@@ -354,6 +379,8 @@ impl MarkdownImages {
         Self {
             resolve: Arc::new(resolve),
             on_click: None,
+            placeholder: None,
+            sizes: HashMap::new(),
         }
     }
 
@@ -363,6 +390,40 @@ impl MarkdownImages {
         handler: impl Fn(&SharedString, &mut Window, &mut App) + Send + Sync + 'static,
     ) -> Self {
         self.on_click = Some(Arc::new(handler));
+        self
+    }
+
+    /// Shows a placeholder for an image the resolver cannot supply yet, such
+    /// as `ImagePlaceholder::new(host, load)` when remote images load on
+    /// request. Return `None` to show the alt text instead. The placeholder
+    /// takes the image's box from [`MarkdownImages::image_size`].
+    pub fn placeholder(
+        mut self,
+        placeholder: impl Fn(&str, &mut Window, &mut App) -> Option<ImagePlaceholder>
+        + Send
+        + Sync
+        + 'static,
+    ) -> Self {
+        self.placeholder = Some(Arc::new(placeholder));
+        self
+    }
+
+    /// Gives an image URL's pixel size, such as from Mattermost's
+    /// `metadata.images`, so the image and its placeholder reserve the right
+    /// box before it loads.
+    pub fn image_size(mut self, url: impl Into<SharedString>, width: u32, height: u32) -> Self {
+        self.sizes.insert(url.into(), (width, height));
+        self
+    }
+
+    /// Gives several image sizes; see [`MarkdownImages::image_size`].
+    pub fn image_sizes(
+        mut self,
+        sizes: impl IntoIterator<Item = (impl Into<SharedString>, u32, u32)>,
+    ) -> Self {
+        for (url, width, height) in sizes {
+            self.sizes.insert(url.into(), (width, height));
+        }
         self
     }
 }
@@ -405,10 +466,35 @@ impl MarkdownPlugin for MarkdownImages {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
         let source = (self.resolve)(&image.key, window, cx);
+        let known = self.sizes.get(&image.key).copied();
+        let id = ElementId::Name(format!("image:{}", image.key).into());
+        if source.is_none()
+            && let Some(placeholder) = self
+                .placeholder
+                .as_ref()
+                .and_then(|placeholder| placeholder(&image.key, window, cx))
+        {
+            // 16:9 at the usual height when nothing gives the size.
+            let (width, height) = known
+                .or(placeholder.known_size())
+                .map(|(w, h)| markdown_image_box(w, h))
+                .unwrap_or((356., MARKDOWN_IMAGE_MAX_HEIGHT));
+            return div()
+                .my(theme.space(1.))
+                .child(placeholder_in_box(
+                    (id, "placeholder"),
+                    placeholder,
+                    px(width),
+                    px(height),
+                    window,
+                    cx,
+                ))
+                .into_any_element();
+        }
         let on_click = self.on_click.clone();
         let key = image.key.clone();
         div()
-            .id(ElementId::Name(format!("image:{}", image.key).into()))
+            .id(id)
             .my(theme.space(1.))
             .rounded(theme.radius.lg)
             .overflow_hidden()
@@ -419,15 +505,28 @@ impl MarkdownPlugin for MarkdownImages {
                     .cursor_pointer()
                     .on_click(move |_, window, cx| handler(&key, window, cx))
             })
-            .map(|frame| match source {
-                Some(source) => frame.child(
+            .map(|frame| match (source, known) {
+                (Some(source), Some((width, height))) => {
+                    let (width, height) = markdown_image_box(width, height);
+                    frame.child(
+                        img(source)
+                            .debug_selector(|| "markdown-image".into())
+                            .w(px(width))
+                            .h(px(height))
+                            .max_w_full()
+                            .rounded(theme.radius.lg - px(1.))
+                            .object_fit(ObjectFit::Contain),
+                    )
+                }
+                (Some(source), None) => frame.child(
                     img(source)
-                        .h(px(200.))
-                        .max_w(px(360.))
+                        .debug_selector(|| "markdown-image".into())
+                        .h(px(MARKDOWN_IMAGE_MAX_HEIGHT))
+                        .max_w(px(MARKDOWN_IMAGE_MAX_WIDTH))
                         .rounded(theme.radius.lg - px(1.))
                         .object_fit(ObjectFit::Contain),
                 ),
-                None => frame
+                (None, _) => frame
                     .px(theme.space(3.))
                     .py(theme.space(2.))
                     .bg(colors.muted)
@@ -491,4 +590,63 @@ pub fn selectable_text(
         .text_size(theme.text(14.))
         .text_color(theme.colors.foreground)
         .child(SelectableText::new(id, text))
+}
+
+#[cfg(test)]
+mod image_tests {
+    use super::*;
+    use gpui_kit::{Context, Render, TestAppContext, VisualTestContext, test::TestQueryExt as _};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn known_sizes_scale_to_fit_and_keep_their_shape() {
+        assert_eq!(markdown_image_box(1200, 600), (360., 180.));
+        assert_eq!(markdown_image_box(400, 800), (100., 200.));
+        assert_eq!(markdown_image_box(64, 48), (64., 48.));
+    }
+
+    struct Post {
+        loads: Arc<AtomicUsize>,
+    }
+
+    impl Render for Post {
+        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            let loads = self.loads.clone();
+            div().w(px(480.)).child(
+                markdown("post", "Look:\n\n![Chart](https://cdn.example.com/chart.png)", cx)
+                    .plugin(
+                        MarkdownImages::new(|_, _, _| None)
+                            .image_size("https://cdn.example.com/chart.png", 1200, 600)
+                            .placeholder(move |url, _, _| {
+                                let loads = loads.clone();
+                                url.starts_with("https://cdn.example.com/").then(|| {
+                                    ImagePlaceholder::new("cdn.example.com", move |_, _, _| {
+                                        loads.fetch_add(1, Ordering::SeqCst);
+                                    })
+                                })
+                            }),
+                    ),
+            )
+        }
+    }
+
+    #[gpui_kit::test]
+    fn unloaded_images_show_a_placeholder_in_their_box(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let loads = Arc::new(AtomicUsize::new(0));
+        let window = cx.add_window({
+            let loads = loads.clone();
+            move |_, _| Post { loads }
+        });
+        let mut cx = VisualTestContext::from_window(window.into(), cx);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let frame = cx
+            .debug_bounds("markdown-image-placeholder")
+            .expect("the placeholder is drawn");
+        assert_eq!(frame.size.width, px(360.));
+        assert_eq!(frame.size.height, px(180.));
+        let button = cx.update(|window, _| window.find_by_label("Load image from cdn.example.com"));
+        cx.simulate_click(button.bounds().center(), gpui_kit::Modifiers::default());
+        assert_eq!(loads.load(Ordering::SeqCst), 1);
+    }
 }
