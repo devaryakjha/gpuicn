@@ -22,6 +22,15 @@ Notable changes to gpuicn. Detailed notes for each release are in
   `DirectionalStyled` start/end helpers for your own views (#143).
 - Sortable `wrap(false)` and `gap(px)` for one-line horizontal bars
   (#145).
+- OtpField pastes a code: Cmd/Ctrl+V and the Edit menu's Paste fill the
+  cells from the clipboard's digits (#147).
+- Animated GIFs play in attachments, avatars, custom emoji, Markdown
+  pictures and the lightbox, through the new `primitives::image` (#149).
+
+### Fixed
+
+- A menu item's `on_click` can rebuild its menu with `set_items` instead of
+  panicking (#148).
 
 ## 0.9.6
 
