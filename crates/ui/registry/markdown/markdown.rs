@@ -49,6 +49,10 @@ pub fn markdown(
         .bg(colors.muted.opacity(0.5))
         .font_family(theme.fonts.mono.clone())
         .text_size(theme.text(13.));
+    // A named code theme brings its own surface, so its colors stay legible.
+    if let Some((background, foreground)) = theme.code_theme.surface() {
+        code_block = code_block.bg(background).text_color(foreground);
+    }
     code_block.overflow.x = Some(gpui_kit::Overflow::Scroll);
     let mut table = StyleRefinement::default()
         .rounded(theme.radius.lg)
@@ -192,14 +196,14 @@ impl MarkdownPlugin for EntityLinks {
             .rounded(theme.radius.sm)
             .font_weight(gpui_kit::FontWeight::MEDIUM)
             .bg(if strong {
-                colors.primary
+                colors.mention_highlight()
             } else {
-                colors.primary.opacity(0.1)
+                colors.link().opacity(0.1)
             })
             .text_color(if strong {
-                colors.primary_foreground
+                colors.mention_highlight_foreground()
             } else {
-                colors.primary
+                colors.link()
             })
             .when_some(on_click, move |chip, handler| {
                 chip.cursor_pointer()

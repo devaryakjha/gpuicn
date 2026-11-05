@@ -576,8 +576,8 @@ impl RenderOnce for Message {
                 row.hover(move |style| style.bg(colors.muted.opacity(0.5)))
             })
             .when(self.highlight == MessageHighlight::Mention, |row| {
-                row.bg(colors.primary.opacity(0.06))
-                    .border_color(colors.primary)
+                row.bg(colors.mention_highlight().opacity(0.06))
+                    .border_color(colors.mention_highlight())
             })
             .when(selected, |row| row.bg(colors.muted))
             .when(self.highlight == MessageHighlight::Permalink, |row| {
@@ -803,13 +803,13 @@ pub fn new_messages_divider(
         .px(theme.space(4.))
         .py(theme.space(1.))
         .child(
-            surface::divider(div().flex_1(), theme, Axis::Horizontal).bg(theme.colors.destructive),
+            surface::divider(div().flex_1(), theme, Axis::Horizontal).bg(theme.colors.new_messages()),
         )
         .child(
             div()
                 .text_size(theme.text(12.))
                 .font_weight(FontWeight::SEMIBOLD)
-                .text_color(theme.colors.destructive)
+                .text_color(theme.colors.new_messages())
                 .child(label.into()),
         )
 }

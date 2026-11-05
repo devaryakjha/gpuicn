@@ -365,7 +365,7 @@ pub fn sidebar_group_label(label: impl Into<SharedString>, cx: &App) -> Div {
         .px(spacing * 2_f32)
         .map(|el| text::xs(el, &theme))
         .font_weight(FontWeight::MEDIUM)
-        .text_color(theme.colors.sidebar_foreground.opacity(0.7))
+        .text_color(theme.colors.sidebar_muted_foreground())
         .child(label.into())
 }
 
@@ -1073,6 +1073,16 @@ pub fn sidebar_badge(label: impl Into<SharedString>, cx: &App) -> Div {
         .map(|el| text::xs(el, t))
         .font_weight(FontWeight::MEDIUM)
         .child(label.into())
+}
+/// A mention count on the `sidebar_badge` fill, for unread mentions of the
+/// reader; `sidebar_badge` is the plain count.
+pub fn sidebar_mention_badge(label: impl Into<SharedString>, cx: &App) -> Div {
+    let t = UiTheme::read(cx);
+    sidebar_badge(label, cx)
+        .rounded_full()
+        .px(t.spacing.unit * 1.5_f32)
+        .bg(t.colors.sidebar_badge())
+        .text_color(t.colors.sidebar_badge_foreground())
 }
 /// Separator between navigation groups.
 pub fn sidebar_separator(cx: &App) -> Div {
