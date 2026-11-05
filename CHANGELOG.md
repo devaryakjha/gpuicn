@@ -4,6 +4,27 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.9.6
+
+[Notes](docs/releases/v0.9.6.md)
+
+### Added
+
+- Alert, Avatar Group, Calendar, Date Picker and Date Time Picker
+  components (#135, #138, #140).
+- Avatar status dots scale with resized avatars (#127). Button `tint`
+  (#134). Command item descriptions (#133).
+- Composer: triggers ignored in code (#129), app-chosen suggestion ranges
+  (#136) and misspelling underlines (#139).
+- Field takes checkboxes and radio groups; focused inputs get an opaque fill
+  (#135). Textarea misspellings with a suggestions menu (#139).
+- MarkdownImages placeholders and known sizes (#131). Message copy prefixes
+  for multi-message copy (#128). MessageEmbed actions (#134).
+- Select `set_items` and `set_loading` for async results (#141). Horizontal
+  Sortable (#137).
+- Theme: link, mention, new-messages and sidebar badge tokens, code block
+  themes and `UiTheme::opaque` (#132).
+
 ## 0.9.5
 
 [Notes](docs/releases/v0.9.5.md)

@@ -30,3 +30,7 @@ value does and closes the dialog itself.
 Unlike GPUI Kit's `Command`, which dispatches GPUI actions and draws GPUI Kit
 icons, this palette reports stable string values and draws Lucide icons from
 gpui-icons. Highlighted rows are exposed as the active descendant of a listbox.
+
+`CommandItem::description` adds muted 12px trailing text, such as a slash
+command's usage, which shrinks and ellipsizes first and is read as the
+row's description.

@@ -2,8 +2,8 @@
 
 use gpui_kit::{
     App, ElementId, ImageSource, InteractiveElement as _, IntoElement, ObjectFit, ParentElement,
-    Pixels, RenderOnce, Rgba, SharedString, StatefulInteractiveElement as _, Styled, StyledImage, Window,
-    div, px,
+    Pixels, RenderOnce, Rgba, SharedString, StatefulInteractiveElement as _, Styled, StyledImage,
+    Window, div, px,
 };
 
 use gpui_kit::base::TestSupportExt as _;

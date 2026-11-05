@@ -118,7 +118,9 @@ impl super::field::FieldControl for Checkbox {
         }
         let handler = self.on_change.clone()?;
         let next = self.indeterminate || !self.checked;
-        Some(Rc::new(move |event, window, cx| handler(next, event, window, cx)))
+        Some(Rc::new(move |event, window, cx| {
+            handler(next, event, window, cx)
+        }))
     }
 
     fn field_inline(&self) -> bool {

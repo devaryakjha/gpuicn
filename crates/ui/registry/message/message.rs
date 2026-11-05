@@ -639,10 +639,16 @@ fn copy_marker(id: &ElementId, prefix: &str, end: bool, theme: &UiTheme) -> AnyE
     div()
         .absolute()
         .left_0()
-        .map(|marker| if end { marker.bottom_0() } else { marker.top_0() })
+        .map(|marker| {
+            if end {
+                marker.bottom_0()
+            } else {
+                marker.top_0()
+            }
+        })
         .whitespace_nowrap()
-        .text_size(px(1.))
-        .line_height(px(1.))
+        .text_size(theme.text(1.))
+        .line_height(theme.text(1.))
         .text_color(theme.colors.background.opacity(0.))
         .child(
             gpui_kit::component::text::TextView::markdown(
@@ -934,7 +940,8 @@ pub fn new_messages_divider(
         .px(theme.space(4.))
         .py(theme.space(1.))
         .child(
-            surface::divider(div().flex_1(), theme, Axis::Horizontal).bg(theme.colors.new_messages()),
+            surface::divider(div().flex_1(), theme, Axis::Horizontal)
+                .bg(theme.colors.new_messages()),
         )
         .child(
             div()

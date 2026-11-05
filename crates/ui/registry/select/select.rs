@@ -154,7 +154,11 @@ impl SelectState {
     /// committed value keeps its label even when the new options leave it
     /// out. The highlighted row stays on the same value when it is still
     /// listed, and otherwise moves to the first enabled match.
-    pub fn set_items(&mut self, items: impl IntoIterator<Item = SelectItem>, cx: &mut Context<Self>) {
+    pub fn set_items(
+        &mut self,
+        items: impl IntoIterator<Item = SelectItem>,
+        cx: &mut Context<Self>,
+    ) {
         let highlighted = self
             .highlighted
             .and_then(|index| self.items.get(index))
@@ -354,9 +358,7 @@ mod tests {
     }
 
     #[gpui_kit::test]
-    fn replacing_items_keeps_the_query_highlight_and_selection(
-        cx: &mut gpui_kit::TestAppContext,
-    ) {
+    fn replacing_items_keeps_the_query_highlight_and_selection(cx: &mut gpui_kit::TestAppContext) {
         let window = cx.add_empty_window();
         window.update(|window, cx| {
             super::super::theme::init(cx);

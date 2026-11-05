@@ -8,8 +8,8 @@
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
     AnyElement, App, ElementId, FontWeight, InteractiveElement as _, IntoElement, ParentElement,
-    RenderOnce, Rgba, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement,
-    Styled, Window, div, prelude::FluentBuilder as _,
+    RenderOnce, Rgba, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled,
+    Window, div, prelude::FluentBuilder as _,
 };
 
 use gpui_kit::base::TestSupportExt as _;

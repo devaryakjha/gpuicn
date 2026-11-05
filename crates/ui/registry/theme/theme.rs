@@ -1619,13 +1619,19 @@ mod tests {
             assert_eq!(CodeTheme::from_name(theme.name()), Some(theme));
             let built = theme.highlight_theme(ThemeMode::Light);
             // Built once: the Kit shares one highlighter per theme instance.
-            assert!(Arc::ptr_eq(&built, &theme.highlight_theme(ThemeMode::Light)));
+            assert!(Arc::ptr_eq(
+                &built,
+                &theme.highlight_theme(ThemeMode::Light)
+            ));
             if theme.surface().is_some() {
                 assert_eq!(built.name, theme.name());
                 assert!(built.keyword.is_some());
             }
         }
-        assert_eq!(CodeTheme::from_name("Solarized-Dark"), Some(CodeTheme::SolarizedDark));
+        assert_eq!(
+            CodeTheme::from_name("Solarized-Dark"),
+            Some(CodeTheme::SolarizedDark)
+        );
         assert_eq!(CodeTheme::from_name("dracula"), None);
     }
 

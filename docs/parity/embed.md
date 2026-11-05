@@ -47,3 +47,8 @@ a "Show more" toggle that appears only when the body is taller, and an
 optional strip for the quoted post's files. It uses the card frame and
 density of the other embeds and is named "Quoted message from {author}".
 Interactive attachment buttons and menus are not supported yet.
+
+`MessageEmbed::action` adds Buttons, Selects or Comboboxes to a wrapping row
+inside the card after the fields and footer, so interactive attachments share
+the card's bar and padding. `Button::tint` colors an integration's action
+button from one hex color.

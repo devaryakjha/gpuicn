@@ -8,8 +8,7 @@
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::base::Popover;
 use gpui_kit::{
-    App, ElementId, Entity, InteractiveElement as _, IntoElement,
-    ParentElement as _, RenderOnce,
+    App, ElementId, Entity, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce,
     SharedString, StyleRefinement, Styled, Window, div, prelude::FluentBuilder as _,
 };
 
@@ -119,7 +118,9 @@ impl RenderOnce for DatePicker {
             )
             .child(
                 div()
-                    .when(text.is_none(), |text| text.text_color(colors.muted_foreground))
+                    .when(text.is_none(), |text| {
+                        text.text_color(colors.muted_foreground)
+                    })
                     .child(text.unwrap_or_else(|| self.placeholder.clone())),
             );
         let state = self.state.clone();
@@ -187,16 +188,16 @@ mod tests {
         cx.update(|window, cx| window.draw(cx).clear(cx));
         let state = cx.update(|_, cx| view.read(cx).state.clone());
         cx.update(|window, cx| {
-            assert!(state.read(cx).focus.is_focused(window), "the grid takes focus");
+            assert!(
+                state.read(cx).focus.is_focused(window),
+                "the grid takes focus"
+            );
             window.find_by_label("March 2026");
         });
         cx.simulate_keystrokes("right right enter");
         cx.update(|window, cx| window.draw(cx).clear(cx));
         cx.update(|window, cx| {
-            assert_eq!(
-                state.read(cx).selected(),
-                CalendarDate::new(2026, 3, 16)
-            );
+            assert_eq!(state.read(cx).selected(), CalendarDate::new(2026, 3, 16));
             window.find_by_label("Due date, Monday, March 16, 2026");
             assert!(window.try_find_by_label("March 2026").is_none(), "closed");
         });

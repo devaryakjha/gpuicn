@@ -17,3 +17,6 @@ The Rust source and Usage example define the supported API. Browser DOM/CSS beha
 exact exit animations and cross-platform screen-reader parity are not implied by
 the native component. See [migration qualification](../internal/validation/gpui-kit-migration.md)
 for the checks completed on this revision.
+
+A status dot on an avatar resized through `Styled` (or with `status_size`)
+is a third of its width, clamped to 6 to 14px, with a 1px ring under 24px.

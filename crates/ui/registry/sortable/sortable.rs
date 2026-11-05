@@ -402,7 +402,9 @@ impl RenderOnce for Sortable {
             ))
             .relative()
             .flex()
-            .when(horizontal, |root| root.flex_row().flex_wrap().items_center())
+            .when(horizontal, |root| {
+                root.flex_row().flex_wrap().items_center()
+            })
             .when(!horizontal, |root| root.flex_col())
             .gap(theme.space(2.))
             .child(
@@ -1039,7 +1041,11 @@ mod tests {
         });
         let board = cx.debug_bounds("chip-Board").expect("drawn");
         let wiki = cx.debug_bounds("chip-Wiki").expect("drawn");
-        drag(cx, board.center(), point(wiki.right() - px(4.), wiki.center().y));
+        drag(
+            cx,
+            board.center(),
+            point(wiki.right() - px(4.), wiki.center().y),
+        );
         cx.update(|_, cx| assert_eq!(view.read(cx).items[0], ["Docs", "Wiki", "Board"]));
     }
 

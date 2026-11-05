@@ -45,6 +45,29 @@
       ]
     },
     {
+      "name": "alert",
+      "type": "registry:item",
+      "title": "Alert",
+      "description": "An inline callout with an icon, title and description for form errors, warnings and notes.",
+      "files": [
+        {
+          "path": "registry/theme/primitives.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/primitives.rs"
+        },
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/alert/alert.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/alert.rs"
+        }
+      ]
+    },
+    {
       "name": "alert-dialog",
       "type": "registry:item",
       "title": "Alert Dialog",
@@ -195,6 +218,39 @@
       ]
     },
     {
+      "name": "avatar-group",
+      "type": "registry:item",
+      "title": "Avatar Group",
+      "description": "Overlapping avatars with a +N overflow chip and one accessible list of names.",
+      "files": [
+        {
+          "path": "registry/theme/primitives.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/primitives.rs"
+        },
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/avatar/avatar.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/avatar.rs"
+        },
+        {
+          "path": "registry/tooltip/tooltip.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/tooltip.rs"
+        },
+        {
+          "path": "registry/avatar_group/avatar_group.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/avatar_group.rs"
+        }
+      ]
+    },
+    {
       "name": "badge",
       "type": "registry:item",
       "title": "Badge",
@@ -241,6 +297,29 @@
       ]
     },
     {
+      "name": "calendar",
+      "type": "registry:item",
+      "title": "Calendar",
+      "description": "A keyboard-driven month grid for picking a date, with limits and a configurable first weekday.",
+      "files": [
+        {
+          "path": "registry/theme/primitives.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/primitives.rs"
+        },
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/calendar/calendar.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/calendar.rs"
+        }
+      ]
+    },
+    {
       "name": "carousel",
       "type": "registry:item",
       "title": "Carousel",
@@ -278,6 +357,16 @@
           "path": "registry/theme/theme.rs",
           "type": "registry:file",
           "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/field/field.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/field.rs"
         },
         {
           "path": "registry/checkbox/checkbox.rs",
@@ -481,6 +570,82 @@
           "path": "registry/context_menu/context_menu.rs",
           "type": "registry:file",
           "target": "~/src/ui/context_menu.rs"
+        }
+      ]
+    },
+    {
+      "name": "date-picker",
+      "type": "registry:item",
+      "title": "Date Picker",
+      "description": "A trigger that opens a Calendar popover and shows the chosen date.",
+      "files": [
+        {
+          "path": "registry/theme/primitives.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/primitives.rs"
+        },
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/calendar/calendar.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/calendar.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/date_picker/date_picker.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/date_picker.rs"
+        }
+      ]
+    },
+    {
+      "name": "date-time-picker",
+      "type": "registry:item",
+      "title": "Date Time Picker",
+      "description": "A date and time picker: a Calendar popover with an hour and minute field, 12- or 24-hour.",
+      "files": [
+        {
+          "path": "registry/theme/primitives.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/primitives.rs"
+        },
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/calendar/calendar.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/calendar.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/date_picker/date_picker.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/date_picker.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/date_time_picker/date_time_picker.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/date_time_picker.rs"
         }
       ]
     },
@@ -862,6 +1027,31 @@
           "target": "~/src/ui/theme.rs"
         },
         {
+          "path": "registry/avatar/avatar.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/avatar.rs"
+        },
+        {
+          "path": "registry/button/button.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/button.rs"
+        },
+        {
+          "path": "registry/tooltip/tooltip.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/tooltip.rs"
+        },
+        {
+          "path": "registry/message/message.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/message.rs"
+        },
+        {
+          "path": "registry/embed/embed.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/embed.rs"
+        },
+        {
           "path": "registry/markdown/markdown.rs",
           "type": "registry:file",
           "target": "~/src/ui/markdown.rs"
@@ -1196,6 +1386,16 @@
           "path": "registry/theme/theme.rs",
           "type": "registry:file",
           "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/input/input.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/input.rs"
+        },
+        {
+          "path": "registry/field/field.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/field.rs"
         },
         {
           "path": "registry/radio_group/radio_group.rs",

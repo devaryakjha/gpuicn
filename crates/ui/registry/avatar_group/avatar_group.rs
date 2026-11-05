@@ -7,8 +7,8 @@
 
 use gpui_kit::{
     App, ElementId, FontWeight, InteractiveElement as _, IntoElement, ParentElement as _,
-    RenderOnce, Rgba, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement,
-    Styled, Window, div, prelude::FluentBuilder as _,
+    RenderOnce, Rgba, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled,
+    Window, div, prelude::FluentBuilder as _,
 };
 
 use gpui_kit::base::TestSupportExt as _;
@@ -115,7 +115,13 @@ impl RenderOnce for AvatarGroup {
         };
         let total = self.people.len();
         // A lone overflow face is shown instead of a "+1" chip.
-        let shown = if total > self.max { self.max - 1 } else { total }.max(1).min(total);
+        let shown = if total > self.max {
+            self.max - 1
+        } else {
+            total
+        }
+        .max(1)
+        .min(total);
         let hidden = total - shown;
         let side = match self.size {
             AvatarSize::Sm => 24.,
@@ -151,7 +157,11 @@ impl RenderOnce for AvatarGroup {
                     .justify_center()
                     .bg(colors.muted)
                     .text_color(colors.muted_foreground)
-                    .text_size(theme.text(if self.size == AvatarSize::Sm { 11. } else { 12. }))
+                    .text_size(theme.text(if self.size == AvatarSize::Sm {
+                        11.
+                    } else {
+                        12.
+                    }))
                     .font_weight(FontWeight::MEDIUM)
                     .debug_selector(|| "avatar-group-overflow".into())
                     .child(format!("+{hidden}"))
@@ -188,7 +198,9 @@ mod tests {
         fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
             let names = ["Ana", "Ben", "Cy", "Dee", "Eve", "Fay"];
             names.into_iter().take(self.count).fold(
-                AvatarGroup::new("acks").aria_label("Acknowledged by").max(4),
+                AvatarGroup::new("acks")
+                    .aria_label("Acknowledged by")
+                    .max(4),
                 |group, name| group.person(name, Avatar::new(name).fallback(&name[..1])),
             )
         }

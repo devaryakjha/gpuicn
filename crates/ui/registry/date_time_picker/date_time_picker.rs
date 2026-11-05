@@ -12,9 +12,9 @@ use gpui_kit::base::Popover;
 use gpui_kit::base::TestSupportExt as _;
 use gpui_kit::{
     App, AppContext as _, Context, ElementId, Entity, EventEmitter, FocusHandle, Focusable,
-    FontWeight, InteractiveElement as _, IntoElement, KeyDownEvent, ParentElement as _,
-    RenderOnce, Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled,
-    Subscription, Window, div, prelude::FluentBuilder as _,
+    FontWeight, InteractiveElement as _, IntoElement, KeyDownEvent, ParentElement as _, RenderOnce,
+    Role, SharedString, StatefulInteractiveElement as _, StyleRefinement, Styled, Subscription,
+    Window, div, prelude::FluentBuilder as _,
 };
 
 use super::button::{Button, ButtonSize};
@@ -364,9 +364,8 @@ impl DateTimeState {
     /// The date and time as the trigger shows them, such as
     /// "Mar 14, 2026, 9:30 AM".
     pub fn label(&self, cx: &App) -> Option<String> {
-        self.date(cx).map(|date| {
-            format!("{}, {}", date.short_label(), self.time.label(self.cycle))
-        })
+        self.date(cx)
+            .map(|date| format!("{}, {}", date.short_label(), self.time.label(self.cycle)))
     }
 }
 
@@ -397,7 +396,14 @@ impl RenderOnce for TimeField {
         let id = ElementId::from(("time-field", self.state.entity_id()));
         let display_hour = match cycle {
             HourCycle::H23 => format!("{:02}", time.hour),
-            HourCycle::H12 => format!("{:02}", if time.hour % 12 == 0 { 12 } else { time.hour % 12 }),
+            HourCycle::H12 => format!(
+                "{:02}",
+                if time.hour.is_multiple_of(12) {
+                    12
+                } else {
+                    time.hour % 12
+                }
+            ),
         };
         let segment = |kind: TimeSegment, text: String, name: &'static str| {
             let active = focused && kind == current;
@@ -428,7 +434,7 @@ impl RenderOnce for TimeField {
         };
         let key_state = self.state.clone();
         let label = time.label(cycle);
-        let root = control::frame(div(), &theme, false)
+        focus::shown(control::frame(div(), &theme, false), &theme, focused)
             .id(id.clone())
             .test_support()
             .key_context("TimeField")
@@ -441,11 +447,10 @@ impl RenderOnce for TimeField {
             .items_center()
             .gap(theme.space(0.5))
             .font_family(theme.fonts.mono.clone())
-            .when(focused, |root| {
-                root.border_color(colors.ring)
-                    .shadow(focus::shadow(theme.control().ring))
-                    .bg(theme.opaque(theme.control().background))
-            })
+            .when_some(
+                focused.then(|| theme.opaque(theme.control().background)),
+                |root, fill| root.bg(fill),
+            )
             .on_key_down(move |event: &KeyDownEvent, _, cx| {
                 let modifiers = event.keystroke.modifiers;
                 if modifiers.control || modifiers.alt || modifiers.platform {
@@ -469,8 +474,7 @@ impl RenderOnce for TimeField {
                     if time.hour < 12 { "AM" } else { "PM" }.to_string(),
                     "AM or PM",
                 ))
-            });
-        root
+            })
     }
 }
 
@@ -551,7 +555,9 @@ impl RenderOnce for DateTimePicker {
             )
             .child(
                 div()
-                    .when(text.is_none(), |text| text.text_color(colors.muted_foreground))
+                    .when(text.is_none(), |text| {
+                        text.text_color(colors.muted_foreground)
+                    })
                     .child(text.unwrap_or_else(|| self.placeholder.to_string())),
             );
         let state = self.state.clone();
@@ -576,13 +582,7 @@ impl RenderOnce for DateTimePicker {
                                 dismiss.update(cx, |popover, cx| popover.dismiss(window, cx))
                             }),
                     )
-                    .child(
-                        surface::divider(
-                            div(),
-                            &theme,
-                            gpui_kit::Axis::Horizontal,
-                        ),
-                    )
+                    .child(surface::divider(div(), &theme, gpui_kit::Axis::Horizontal))
                     .child(
                         div()
                             .flex()
@@ -666,7 +666,10 @@ mod tests {
         // Today is picked; the earliest time today is 1 PM.
         cx.simulate_keystrokes("enter");
         cx.update(|window, cx| {
-            assert!(state.read(cx).focus.is_focused(window), "focus moves to the time");
+            assert!(
+                state.read(cx).focus.is_focused(window),
+                "focus moves to the time"
+            );
             assert_eq!(state.read(cx).time(), CalendarTime::new(13, 0).unwrap());
             window.draw(cx).clear(cx);
         });

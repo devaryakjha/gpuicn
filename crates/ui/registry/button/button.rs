@@ -349,13 +349,12 @@ pub fn contrast_ratio(a: Rgba, b: Rgba) -> f32 {
 pub fn tint_colors(tint: Rgba, theme: &UiTheme) -> (Rgba, Rgba, Rgba) {
     let fill = theme.opaque(tint);
     let colors = theme.colors;
-    let foreground = if contrast_ratio(fill, colors.foreground)
-        >= contrast_ratio(fill, colors.background)
-    {
-        colors.foreground
-    } else {
-        colors.background
-    };
+    let foreground =
+        if contrast_ratio(fill, colors.foreground) >= contrast_ratio(fill, colors.background) {
+            colors.foreground
+        } else {
+            colors.background
+        };
     let hover = fill.blend(foreground.opacity(0.14));
     (fill, hover, foreground)
 }
@@ -370,7 +369,14 @@ pub fn style_tinted_button<
     size: ButtonSize,
     theme: &UiTheme,
 ) -> T {
-    style_button_with(base, disabled, ButtonVariant::Default, Some(tint), size, theme)
+    style_button_with(
+        base,
+        disabled,
+        ButtonVariant::Default,
+        Some(tint),
+        size,
+        theme,
+    )
 }
 
 impl gpui_kit::Styled for Button {

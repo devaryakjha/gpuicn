@@ -21,7 +21,10 @@ use gpui_kit::{
 };
 
 use super::button::{Button, ButtonSize, ButtonVariant};
-use super::theme::{UiTheme, apply_style, primitives::focus};
+use super::theme::{
+    UiTheme, apply_style,
+    primitives::{disabled, focus},
+};
 
 /// A calendar date with no time or time zone, such as 2026-03-14.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -149,9 +152,8 @@ impl CalendarDate {
         let era = year.div_euclid(400);
         let year_of_era = year - era * 400;
         let month = i64::from(self.month);
-        let day_of_year = (153 * (month + if month > 2 { -3 } else { 9 }) + 2) / 5
-            + i64::from(self.day)
-            - 1;
+        let day_of_year =
+            (153 * (month + if month > 2 { -3 } else { 9 }) + 2) / 5 + i64::from(self.day) - 1;
         let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
         era * 146_097 + day_of_era - 719_468
     }
@@ -412,8 +414,7 @@ impl CalendarState {
 
     /// Handles a calendar key. Returns whether it was used.
     pub fn handle_key(&mut self, key: &str, shift: bool, cx: &mut Context<Self>) -> bool {
-        let weekday_column =
-            (self.cursor.weekday().index() + 7 - self.first_weekday.index()) % 7;
+        let weekday_column = (self.cursor.weekday().index() + 7 - self.first_weekday.index()) % 7;
         let next = match key {
             "left" => self.cursor.add_days(-1),
             "right" => self.cursor.add_days(1),
@@ -473,7 +474,10 @@ impl Calendar {
     }
 
     /// Runs after a date is picked, for example to close a popover.
-    pub fn on_select(mut self, handler: impl Fn(CalendarDate, &mut Window, &mut App) + 'static) -> Self {
+    pub fn on_select(
+        mut self,
+        handler: impl Fn(CalendarDate, &mut Window, &mut App) + 'static,
+    ) -> Self {
         self.on_select = Some(Rc::new(handler));
         self
     }
@@ -514,8 +518,7 @@ impl RenderOnce for Calendar {
             .map(|week| week.map(|date| state.is_enabled(date)))
             .collect();
         let focus_handle = state.focus.clone();
-        let title: SharedString =
-            format!("{} {}", month_name(cursor.month), cursor.year).into();
+        let title: SharedString = format!("{} {}", month_name(cursor.month), cursor.year).into();
         let cell = theme.space(8.);
 
         let nav = |direction: i32, label: &'static str, icon: LucideIcon, enabled: bool| {
@@ -535,7 +538,12 @@ impl RenderOnce for Calendar {
             .items_center()
             .justify_between()
             .h(cell)
-            .child(nav(-1, "Previous month", LucideIcon::ChevronLeft, can_go_back))
+            .child(nav(
+                -1,
+                "Previous month",
+                LucideIcon::ChevronLeft,
+                can_go_back,
+            ))
             .child(
                 div()
                     .id((id.clone(), "title"))
@@ -544,7 +552,12 @@ impl RenderOnce for Calendar {
                     .font_weight(FontWeight::MEDIUM)
                     .child(title.clone()),
             )
-            .child(nav(1, "Next month", LucideIcon::ChevronRight, can_go_forward));
+            .child(nav(
+                1,
+                "Next month",
+                LucideIcon::ChevronRight,
+                can_go_forward,
+            ));
 
         let weekdays = div().flex().children((0..7).map(|column| {
             let weekday = Weekday::ALL[(first_weekday.index() + column) % 7];
@@ -559,8 +572,10 @@ impl RenderOnce for Calendar {
 
         let on_select = self.on_select.clone();
         let rows = weeks.into_iter().zip(enabled).map(|(week, enabled)| {
-            div().flex().mt(theme.space(1.)).children(
-                week.into_iter().zip(enabled).map(|(date, enabled)| {
+            div()
+                .flex()
+                .mt(theme.space(1.))
+                .children(week.into_iter().zip(enabled).map(|(date, enabled)| {
                     let outside = date.month != cursor.month;
                     let is_selected = selected == Some(date);
                     let is_cursor = date == cursor;
@@ -617,12 +632,11 @@ impl RenderOnce for Calendar {
                                         }
                                     })
                             } else {
-                                cell.opacity(0.5).cursor_not_allowed()
+                                disabled::style(cell)
                             }
                         })
                         .child(date.day.to_string())
-                }),
-            )
+                }))
         });
 
         let key_state = self.state.clone();
@@ -649,8 +663,8 @@ impl RenderOnce for Calendar {
                     return;
                 }
                 let key = keystroke.key.as_str();
-                let handled = key_state
-                    .update(cx, |state, cx| state.handle_key(key, modifiers.shift, cx));
+                let handled =
+                    key_state.update(cx, |state, cx| state.handle_key(key, modifiers.shift, cx));
                 if !handled {
                     return;
                 }
@@ -696,7 +710,10 @@ mod tests {
         for days in [-800_000, -1, 0, 19_000, 2_000_000] {
             assert_eq!(CalendarDate::from_days(days).to_days(), days);
         }
-        assert_eq!(CalendarDate::parse_iso("2026-03-14"), Some(date(2026, 3, 14)));
+        assert_eq!(
+            CalendarDate::parse_iso("2026-03-14"),
+            Some(date(2026, 3, 14))
+        );
         assert_eq!(CalendarDate::parse_iso("2026-02-30"), None);
         assert_eq!(date(2026, 3, 4).to_string(), "2026-03-04");
         assert_eq!(date(2026, 3, 14).long_label(), "Saturday, March 14, 2026");
@@ -789,7 +806,11 @@ mod tests {
             });
             let weeks = state.read(cx).weeks();
             assert_eq!(weeks.len(), 6);
-            assert_eq!(weeks[0][0], date(2026, 3, 1), "March 2026 starts on a Sunday");
+            assert_eq!(
+                weeks[0][0],
+                date(2026, 3, 1),
+                "March 2026 starts on a Sunday"
+            );
             state.update(cx, |state, cx| state.set_first_weekday(Weekday::Monday, cx));
             assert_eq!(state.read(cx).weeks()[0][0], date(2026, 2, 23));
         });

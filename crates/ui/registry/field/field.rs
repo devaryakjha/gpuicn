@@ -5,9 +5,10 @@ use super::{
     theme::UiTheme,
 };
 use gpui_kit::{
-    AnyElement, App, ClickEvent, Div, ElementId, Entity, FocusHandle, FontWeight, InteractiveElement as _,
-    IntoElement, MouseButton, ParentElement as _, RenderOnce, Role, SharedString,
-    StatefulInteractiveElement as _, Styled, Window, div, prelude::FluentBuilder as _, px,
+    AnyElement, App, ClickEvent, Div, ElementId, Entity, FocusHandle, FontWeight,
+    InteractiveElement as _, IntoElement, MouseButton, ParentElement as _, RenderOnce, Role,
+    SharedString, StatefulInteractiveElement as _, Styled, Window, div,
+    prelude::FluentBuilder as _, px,
 };
 use std::rc::Rc;
 
@@ -285,8 +286,7 @@ mod choice_tests {
     use super::super::radio_group::{RadioGroup, RadioItem};
     use super::*;
     use gpui_kit::{
-        Context, Entity, Render, TestAppContext, VisualTestContext,
-        test::TestQueryExt as _,
+        Context, Entity, Render, TestAppContext, VisualTestContext, test::TestQueryExt as _,
     };
 
     struct Form {
@@ -302,14 +302,14 @@ mod choice_tests {
                 .child(
                     Field::from_control(
                         "notify",
-                        Checkbox::new("notify-box")
-                            .checked(self.checked)
-                            .on_change(move |next, _, _, cx| {
+                        Checkbox::new("notify-box").checked(self.checked).on_change(
+                            move |next, _, _, cx| {
                                 view.update(cx, |form, cx| {
                                     form.checked = next;
                                     cx.notify()
                                 })
-                            }),
+                            },
+                        ),
                     )
                     .label("Notify the channel")
                     .error("Pick at least one option."),
@@ -342,6 +342,11 @@ mod choice_tests {
         // The label sits on the checkbox's row, after it.
         let on_label = gpui_kit::point(bounds.right() + px(40.), bounds.center().y);
         cx.simulate_click(on_label, gpui_kit::Modifiers::default());
-        cx.update(|_, cx| assert!(view.read(cx).checked, "a click on the label toggles the box"));
+        cx.update(|_, cx| {
+            assert!(
+                view.read(cx).checked,
+                "a click on the label toggles the box"
+            )
+        });
     }
 }

@@ -1533,7 +1533,10 @@ mod tests {
         cx.update(|window, _| {
             let approve = window.find_by_label("Approve").bounds();
             window.find_by_label("Reject");
-            assert!(approve.left() > bar.right(), "inside the card, past the bar");
+            assert!(
+                approve.left() > bar.right(),
+                "inside the card, past the bar"
+            );
             assert!(approve.bottom() <= bar.bottom(), "within the bar's height");
         });
     }

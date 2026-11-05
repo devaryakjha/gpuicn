@@ -148,7 +148,10 @@ impl Misspellings {
     /// Builds the menu for a right-click inside a misspelled range. Its items
     /// go above Cut, Copy, Paste and Select All; a right-click elsewhere shows
     /// only those.
-    pub fn on_menu(&mut self, handler: impl Fn(&mut SpellingMenu, &mut Window, &mut App) + 'static) {
+    pub fn on_menu(
+        &mut self,
+        handler: impl Fn(&mut SpellingMenu, &mut Window, &mut App) + 'static,
+    ) {
         self.menu = Some(Rc::new(handler));
     }
 
@@ -555,7 +558,11 @@ fn install_spelling_menu(
             let mut menu = NativeMenu::new();
             if let (Some(range), Some(handler), true) = (found, handler, editable) {
                 let mut spelling = SpellingMenu {
-                    word: value.get(range.clone()).unwrap_or_default().to_string().into(),
+                    word: value
+                        .get(range.clone())
+                        .unwrap_or_default()
+                        .to_string()
+                        .into(),
                     range,
                     menu,
                 };
@@ -667,7 +674,10 @@ impl InputCore {
             )
             // The ring is a shadow painted under the whole box; a translucent
             // fill would show it across a tall textarea.
-            .when(focused, |root| root.bg(theme.opaque(theme.control().background)))
+            .when_some(
+                focused.then(|| theme.opaque(theme.control().background)),
+                |root, fill| root.bg(fill),
+            )
         } else {
             super::theme::primitives::text::sm(root, theme)
         };
@@ -841,7 +851,11 @@ mod spelling_tests {
         });
         cx.update(|_, cx| misspellings.update(cx, |m, cx| m.set([0..3, 15..18, 30..40], cx)));
         cx.update(|_, cx| {
-            assert_eq!(misspellings.read(cx).ranges(), [0..3, 15..18], "out of range dropped")
+            assert_eq!(
+                misspellings.read(cx).ranges(),
+                [0..3, 15..18],
+                "out of range dropped"
+            )
         });
         // Typing before the second word moves it.
         cx.update(|window, cx| {
@@ -862,7 +876,7 @@ mod spelling_tests {
         cx.run_until_parked();
         cx.update(|_, cx| {
             let misspellings = misspellings.read(cx);
-            assert_eq!(misspellings.ranges(), [20..23]);
+            assert_eq!(misspellings.ranges(), vec![20..23]);
             assert_eq!(misspellings.range_at(21), Some(20..23));
             assert_eq!(misspellings.range_at(5), None);
         });
@@ -876,7 +890,7 @@ mod spelling_tests {
             view.read(cx)
                 .misspellings
                 .clone()
-                .update(cx, |m, cx| m.set([4..7], cx));
+                .update(cx, |m, cx| m.set(std::iter::once(4..7), cx));
         });
         cx.dispatch_action(ReplaceMisspelling {
             range: 4..7,

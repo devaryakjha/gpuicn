@@ -625,19 +625,23 @@ mod image_tests {
         fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
             let loads = self.loads.clone();
             div().w(px(480.)).child(
-                markdown("post", "Look:\n\n![Chart](https://cdn.example.com/chart.png)", cx)
-                    .plugin(
-                        MarkdownImages::new(|_, _, _| None)
-                            .image_size("https://cdn.example.com/chart.png", 1200, 600)
-                            .placeholder(move |url, _, _| {
-                                let loads = loads.clone();
-                                url.starts_with("https://cdn.example.com/").then(|| {
-                                    ImagePlaceholder::new("cdn.example.com", move |_, _, _| {
-                                        loads.fetch_add(1, Ordering::SeqCst);
-                                    })
+                markdown(
+                    "post",
+                    "Look:\n\n![Chart](https://cdn.example.com/chart.png)",
+                    cx,
+                )
+                .plugin(
+                    MarkdownImages::new(|_, _, _| None)
+                        .image_size("https://cdn.example.com/chart.png", 1200, 600)
+                        .placeholder(move |url, _, _| {
+                            let loads = loads.clone();
+                            url.starts_with("https://cdn.example.com/").then(|| {
+                                ImagePlaceholder::new("cdn.example.com", move |_, _, _| {
+                                    loads.fetch_add(1, Ordering::SeqCst);
                                 })
-                            }),
-                    ),
+                            })
+                        }),
+                ),
             )
         }
     }

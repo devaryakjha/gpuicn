@@ -990,7 +990,10 @@ mod tests {
         assert_eq!(active_trigger("`npm i @types", 13, &TRIGGERS), None);
         assert_eq!(active_trigger("`:wq", 4, &TRIGGERS), None);
         assert_eq!(active_trigger("```\n@x", 6, &TRIGGERS), None);
-        assert_eq!(active_trigger("~~~ rust\nlet a = 1;\n :ta", 23, &TRIGGERS), None);
+        assert_eq!(
+            active_trigger("~~~ rust\nlet a = 1;\n :ta", 23, &TRIGGERS),
+            None
+        );
         // A closed span or fence ends the code.
         assert_eq!(
             active_trigger("`code` @ar", 10, &TRIGGERS),
@@ -1005,7 +1008,10 @@ mod tests {
             Some(('@', 10, "ar"))
         );
         // The span is per line.
-        assert_eq!(active_trigger("`open\n@ar", 9, &TRIGGERS), Some(('@', 6, "ar")));
+        assert_eq!(
+            active_trigger("`open\n@ar", 9, &TRIGGERS),
+            Some(('@', 6, "ar"))
+        );
         // The option turns it off.
         assert_eq!(
             active_trigger_with("`npm i @types", 13, &TRIGGERS, false),

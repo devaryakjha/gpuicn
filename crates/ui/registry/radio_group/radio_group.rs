@@ -189,8 +189,6 @@ impl super::field::FieldControl for RadioGroup {
         _invalid: bool,
     ) -> gpui_kit::AnyElement {
         let disabled = self.disabled || disabled;
-        self.aria_label(label)
-            .disabled(disabled)
-            .into_any_element()
+        self.aria_label(label).disabled(disabled).into_any_element()
     }
 }
