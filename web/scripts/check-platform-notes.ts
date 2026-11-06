@@ -18,7 +18,7 @@ for (const name of files) {
   if (docs.parity.includes("[migration qualification]")) {
     assert.match(
       html,
-      /<a href="https:\/\/github\.com\/devaryakjha\/gpuicn\/blob\/main\/docs\/internal\/validation\/gpui-kit-migration\.md">migration qualification<\/a>/,
+      /<a href="https:\/\/github\.com\/karyalabs\/gpuicn\/blob\/main\/docs\/internal\/validation\/gpui-kit-migration\.md">migration qualification<\/a>/,
       name
     )
   }

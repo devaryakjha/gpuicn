@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 
 const source = new URL("../../CHANGELOG.md", import.meta.url);
-const base = "https://github.com/devaryakjha/gpuicn/blob/main/";
+const base = "https://github.com/karyalabs/gpuicn/blob/main/";
 
 export function renderChangelog(markdown) {
   const html = Bun.markdown.html(markdown, { noHtmlBlocks: true, noHtmlSpans: true });

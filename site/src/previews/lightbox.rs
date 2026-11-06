@@ -70,7 +70,7 @@ impl Showcase {
 }
 
 fn lightbox_images() -> Vec<LightboxImage> {
-    let repo = "https://raw.githubusercontent.com/devaryakjha/gpuicn/0f4ecbfad9ccd443af0925137c88d87996e999f7";
+    let repo = "https://raw.githubusercontent.com/karyalabs/gpuicn/0f4ecbfad9ccd443af0925137c88d87996e999f7";
     vec![
         LightboxImage::new(format!("{repo}/docs/images/catalog-hero.png"), "catalog-hero.png")
             .caption("Arya in ~gpuicn, 10:42 AM"),

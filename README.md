@@ -7,7 +7,7 @@
     <a href="https://ui.imajha.com/">Catalog</a> ·
     <a href="docs/registry.md">Install</a> ·
     <a href="docs/theming.md">Theming</a> ·
-    <a href="https://github.com/devaryakjha/gpuicn/issues">Issues</a>
+    <a href="https://github.com/karyalabs/gpuicn/issues">Issues</a>
   </p>
 </div>
 
@@ -96,7 +96,7 @@ crate, so every component reads the same theme.
 - [Install and update](docs/registry.md): what `init` does, manual setup, upgrading
 - [Theming](docs/theming.md): colors, density, type, radius, motion, and importing shadcn themes
 - [Changelog](CHANGELOG.md) and [release notes](docs/releases/)
-- [gpui-icons](https://github.com/devaryakjha/gpui-icons): the full Lucide icon set the components use
+- [gpui-icons](https://github.com/karyalabs/gpui-icons): the full Lucide icon set the components use
 
 ## Requirements and platform scope
 
@@ -122,7 +122,7 @@ gpuicn Workspace combines projects, tasks and local chat with saved state; pass
 ## Contributing
 
 Bug reports, parity gaps and component requests are welcome as
-[issues](https://github.com/devaryakjha/gpuicn/issues). See
+[issues](https://github.com/karyalabs/gpuicn/issues). See
 [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, the checks to run,
 and how to add a component. Project planning and validation records live in
 [docs/internal](docs/internal/).

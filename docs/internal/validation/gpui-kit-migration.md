@@ -1,9 +1,9 @@
 # Direct GPUI Kit migration qualification — 2026-09-10
 
-[PR #55](https://github.com/devaryakjha/gpuicn/pull/55) replaces the previous
+[PR #55](https://github.com/karyalabs/gpuicn/pull/55) replaces the previous
 compatibility approach. This qualification covers the changes for
 gpuicn v0.5.0-beta.2, including the sidebar follow-up in
-[PR #56](https://github.com/devaryakjha/gpuicn/pull/56).
+[PR #56](https://github.com/karyalabs/gpuicn/pull/56).
 
 ## Implementation
 
@@ -21,7 +21,7 @@ gpuicn v0.5.0-beta.2, including the sidebar follow-up in
   dropped. Selectors currently select one value; navigation menus use link popups.
 - The runtime and platform stay pinned to `gpui-pre` 0.3.4. The direct platform
   dependency enables native shader compilation flags. The released
-  [gpui-icons 0.4.0](https://github.com/devaryakjha/gpui-icons/releases/tag/v0.4.0)
+  [gpui-icons 0.4.0](https://github.com/karyalabs/gpui-icons/releases/tag/v0.4.0)
   pin supplies all 1,818 Lucide icons and 259 aliases on the same runtime.
 
 Native builds use Rust 1.97.1. WASM uses nightly-2026-08-17, wasm-bindgen 0.2.121

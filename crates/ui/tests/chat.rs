@@ -462,7 +462,7 @@ impl Render for CappedComposer {
 }
 
 /// A pixel cap follows the window without rebuilding the state, so the draft
-/// survives (devaryakjha/gpuicn#101).
+/// survives (karyalabs/gpuicn#101).
 #[gpui_kit::test]
 fn composer_cap_follows_max_height_and_keeps_the_draft(cx: &mut TestAppContext) {
     cx.update(gpuicn::init);

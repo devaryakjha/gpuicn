@@ -51,7 +51,7 @@ jobs:
           tag="v$version"
           sha="$(git rev-parse HEAD)"
           published() {
-            curl -fsS -o /dev/null -A "gpuicn-release (https://github.com/devaryakjha/gpuicn)" \
+            curl -fsS -o /dev/null -A "gpuicn-release (https://github.com/karyalabs/gpuicn)" \
               "https://crates.io/api/v1/crates/$1/$2"
           }
           # The peeled line (^{}) of an annotated tag comes last.
@@ -141,7 +141,7 @@ jobs:
           VERSION: ${{ needs.plan.outputs.version }}
         run: |
           for crate in gpuicn gpuicn-cli; do
-            if curl -fsS -o /dev/null -A "gpuicn-release (https://github.com/devaryakjha/gpuicn)" \
+            if curl -fsS -o /dev/null -A "gpuicn-release (https://github.com/karyalabs/gpuicn)" \
               "https://crates.io/api/v1/crates/$crate/$VERSION"; then
               echo "$crate $VERSION is already on crates.io"
             else

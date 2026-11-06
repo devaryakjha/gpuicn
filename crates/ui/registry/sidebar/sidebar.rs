@@ -1397,7 +1397,7 @@ mod sidebar_tests {
 
     /// A roving sidebar is one tab stop that lands on the selected (later the
     /// last focused) row, and the arrows, Home and End move between rows,
-    /// skipping disabled ones (devaryakjha/gpuicn#100).
+    /// skipping disabled ones (karyalabs/gpuicn#100).
     #[test]
     fn roving_rows_are_one_tab_stop_moved_with_the_arrows() {
         use gpui_kit::{

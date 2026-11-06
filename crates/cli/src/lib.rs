@@ -23,7 +23,7 @@ use theme::{
 /// Raw files from the release this CLI was built from, so the default registry,
 /// fonts, and Cargo pins always match the CLI version.
 const RELEASE: &str = concat!(
-    "https://raw.githubusercontent.com/devaryakjha/gpuicn/v",
+    "https://raw.githubusercontent.com/karyalabs/gpuicn/v",
     env!("CARGO_PKG_VERSION")
 );
 const MAX_ITEM_BYTES: u64 = 4 * 1024 * 1024;

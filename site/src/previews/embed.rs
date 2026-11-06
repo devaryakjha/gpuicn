@@ -17,7 +17,7 @@ impl Showcase {
             .flex_col()
             .gap(px(16.))
             .child(
-                LinkPreview::new("embed.link", "devaryakjha/gpuicn: shadcn-style components for GPUI")
+                LinkPreview::new("embed.link", "karyalabs/gpuicn: shadcn-style components for GPUI")
                     .site_name("GitHub")
                     .description(
                         "Copy-in components for GPUI applications: dialogs, menus, chat \
@@ -26,7 +26,7 @@ impl Showcase {
                     .image(image, 460, 460)
                     .collapsed(collapsed)
                     .on_click(cx.listener(|this, _, _, cx| {
-                        this.demo_action = "Opened github.com/devaryakjha/gpuicn".into();
+                        this.demo_action = "Opened github.com/karyalabs/gpuicn".into();
                         cx.notify();
                     }))
                     .on_toggle(cx.listener(|this, collapsed: &bool, _, cx| {

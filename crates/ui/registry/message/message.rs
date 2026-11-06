@@ -1058,7 +1058,7 @@ mod tests {
     }
 
     /// The gutter of a continuation row is a click target, and the body is not
-    /// (devaryakjha/gpuicn#98).
+    /// (karyalabs/gpuicn#98).
     #[gpui_kit::test]
     fn the_gutter_selects_the_row_and_the_body_does_not(cx: &mut TestAppContext) {
         cx.update(super::super::theme::init);
@@ -1112,7 +1112,7 @@ mod tests {
     }
 
     /// The name opens something with the pointer or the keyboard and reports
-    /// its bounds, and `author_element` replaces it (devaryakjha/gpuicn#123).
+    /// its bounds, and `author_element` replaces it (karyalabs/gpuicn#123).
     #[gpui_kit::test]
     fn the_author_name_is_a_button_with_its_bounds(cx: &mut TestAppContext) {
         use gpui_kit::test::TestQueryExt as _;
