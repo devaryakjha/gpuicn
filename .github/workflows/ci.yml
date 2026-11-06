@@ -1,14 +1,22 @@
 name: CI
 
-# Quick checks for every pull request, and for every push to main through
-# release.yml, which also keeps the caches warm for pull requests. The slow
-# end-to-end checks are in verify.yml and run only when a release happens.
+# The tiers of the Karya Labs engineering process (karyalabs/matty,
+# docs/engineering-process.md, section 5.2):
 #
-# Jobs run on Karya's self-hosted runners when the repository variables
-# GPUICN_LINUX_RUNNER and GPUICN_MACOS_RUNNER hold a runs-on value as JSON,
-# such as ["self-hosted","Linux","X64","matty"]. Unset, they use GitHub's
-# runners, so deleting a variable is the way back when a machine is down.
-# Pull requests from forks always get GitHub's runners. See docs/ci.md.
+# - T1, every pull request: fmt and clippy on macOS, the registry and
+#   version checks, the package list, the WASM check and the website lint.
+# - T2, every push to main (from release.yml, before it releases): T1 plus
+#   the macOS tests and the MSRV tests on Linux.
+#
+# The `tests` label runs T2 on a pull request (add it, then push). canary.yml builds Matty
+# against this tree; verify.yml has the slow end-to-end checks a release
+# runs.
+#
+# Jobs run on Karya's self-hosted runners when the organization variables
+# KARYA_LINUX_RUNNER and KARYA_MACOS_RUNNER (or the older repository
+# variables GPUICN_*_RUNNER) hold a runs-on value as JSON. Unset, they use
+# GitHub's runners. Pull requests from forks always get GitHub's runners.
+# See docs/ci.md.
 on:
   pull_request:
   workflow_call:
@@ -23,18 +31,18 @@ env:
 
 jobs:
   rust:
-    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.GPUICN_MACOS_RUNNER || '"macos-15"') }}
+    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (vars.KARYA_MACOS_RUNNER || vars.GPUICN_MACOS_RUNNER) || '"macos-15"') }}
     steps:
       - uses: actions/checkout@v4
         with:
           # A self-hosted runner keeps target/ warm between jobs; the next
           # step clears the rest.
           clean: ${{ runner.environment != 'self-hosted' }}
-      - if: runner.environment == 'self-hosted'
-        run: scripts/ci/prepare-workspace
-      - uses: dtolnay/rust-toolchain@master
+      - uses: karyalabs/.github/actions/self-hosted-prep@v1
+      - uses: karyalabs/.github/actions/rust-toolchain@v1
         with:
-          toolchain: 1.99.1
+          file: release-pins.toml
+          key: rust.toolchain
           components: rustfmt, clippy
       # Self-hosted runners keep target/ instead.
       - if: runner.environment == 'github-hosted'
@@ -43,33 +51,37 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --locked --features gpui_platform/runtime_shaders -- -D warnings
-      - run: cargo test --workspace --locked --features gpui_platform/runtime_shaders
+      - if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'tests')
+        run: cargo test --workspace --locked --features gpui_platform/runtime_shaders
 
   linux:
     # Linux on the minimum supported Rust.
-    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.GPUICN_LINUX_RUNNER || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (vars.KARYA_LINUX_RUNNER || vars.GPUICN_LINUX_RUNNER) || '"ubuntu-latest"') }}
     steps:
       - uses: actions/checkout@v4
         with:
           # A self-hosted runner keeps target/ warm between jobs; the next
           # step clears the rest.
           clean: ${{ runner.environment != 'self-hosted' }}
-      - if: runner.environment == 'self-hosted'
-        run: scripts/ci/prepare-workspace
+      - uses: karyalabs/.github/actions/self-hosted-prep@v1
       - name: Check every release version reference agrees
         run: python3 scripts/release-version.py check
       - name: Check ejectable components use no crate-private items
         # An ejected file reaches the crate through `super::`.
         run: if grep -rnE "pub\((crate|super)\)" crates/ui/registry; then exit 1; fi
-      - uses: dtolnay/rust-toolchain@1.98.0
+      - id: msrv
+        run: echo "version=$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["rust-version"])')" >>"$GITHUB_OUTPUT"
+      - uses: karyalabs/.github/actions/rust-toolchain@v1
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
       # Self-hosted runners keep target/ instead.
       - if: runner.environment == 'github-hosted'
         uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
-      - name: Install GPUI build dependencies
-        run: scripts/ci/apt-install libfontconfig-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
-      - run: cargo test -p gpuicn -p gpuicn-cli --locked
+      - uses: karyalabs/.github/actions/gpui-deps@v1
+      - if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'tests')
+        run: cargo test -p gpuicn -p gpuicn-cli --locked
       - uses: oven-sh/setup-bun@v2
       - name: Check the generated registry is up to date
         run: |
@@ -81,16 +93,15 @@ jobs:
 
   wasm:
     # Named wasm so branch protection that requires the old check keeps working.
-    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.GPUICN_LINUX_RUNNER || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (vars.KARYA_LINUX_RUNNER || vars.GPUICN_LINUX_RUNNER) || '"ubuntu-latest"') }}
     steps:
       - uses: actions/checkout@v4
         with:
           # A self-hosted runner keeps target/ warm between jobs; the next
           # step clears the rest.
           clean: ${{ runner.environment != 'self-hosted' }}
-      - if: runner.environment == 'self-hosted'
-        run: scripts/ci/prepare-workspace
-      - uses: dtolnay/rust-toolchain@master
+      - uses: karyalabs/.github/actions/self-hosted-prep@v1
+      - uses: karyalabs/.github/actions/rust-toolchain@v1
         with:
           toolchain: nightly-2026-08-17
           targets: wasm32-unknown-unknown
@@ -120,3 +131,18 @@ jobs:
           bun scripts/check-highlighting.ts
           bun scripts/check-platform-notes.ts
           bun ../scripts/check-preview-updates.mjs
+
+  # The one check to wait on.
+  ci:
+    if: ${{ !cancelled() }}
+    needs: [rust, linux, wasm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          RESULTS: ${{ needs.rust.result }} ${{ needs.linux.result }} ${{ needs.wasm.result }}
+        run: |
+          echo "$RESULTS"
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) exit 1 ;; esac
+          done

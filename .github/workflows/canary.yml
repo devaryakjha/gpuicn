@@ -1,0 +1,53 @@
+name: Canary
+
+# Builds Matty's master branch against this tree (section 7.4 of the Karya
+# Labs engineering process), so a change here that breaks Matty shows up
+# before it is released and Matty bumps its pin. It runs on every push to
+# main, nightly, and on a pull request with the `canary` label. It does not
+# block a release yet; a failure on main opens an issue.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  schedule:
+    - cron: "53 2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: canary-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  matty:
+    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'canary')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: karyalabs/.github/actions/gpui-deps@v1
+      - uses: karyalabs/.github/actions/downstream-canary@v1
+        with:
+          repository: karyalabs/matty
+          crates: gpuicn
+          command: cargo check --workspace --all-targets
+      - name: Report a break on main
+        if: failure() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Matty no longer builds against gpuicn main"
+          body="The canary failed on ${GITHUB_SHA::7}: $RUN_URL"
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$title\"" --json number --jq '.[0].number')
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"
+          fi
