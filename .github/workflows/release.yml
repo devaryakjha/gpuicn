@@ -207,3 +207,17 @@ jobs:
       # after a later merge does not roll the site back.
       site_ref: main
     secrets: inherit
+
+  # Matty's own CI checks the new version in the pull request this opens.
+  bump-matty:
+    needs: [plan, crates]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: karyalabs/.github/actions/bump-downstream@v1
+        with:
+          repository: karyalabs/matty
+          crate: gpuicn
+          version: ${{ needs.plan.outputs.version }}
+          app-id: ${{ secrets.KARYA_BOT_APP_ID }}
+          private-key: ${{ secrets.KARYA_BOT_PRIVATE_KEY }}
