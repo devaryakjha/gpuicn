@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Run right after actions/checkout on a self-hosted runner (docs/ci.md).
+#
+# A self-hosted runner reuses its checkout from job to job, and the workflows
+# check out with `clean: false` there so target/ survives and cargo builds
+# stay warm. This clears everything else a previous job left behind. target/
+# itself goes once it grows past GPUICN_CI_TARGET_MAX_GB (default 40).
+set -euo pipefail
+
+cd "$(dirname "$0")/../.."
+git clean -ffdx -e /target/
+
+max_gb="${GPUICN_CI_TARGET_MAX_GB:-40}"
+if [[ -d target ]]; then
+	used_kb="$(du -sk target | cut -f1)"
+	echo "target/ holds $((used_kb / 1024 / 1024)) GB (limit ${max_gb} GB)"
+	if ((used_kb > max_gb * 1024 * 1024)); then
+		echo "Removing target/ to free disk space; this build starts cold"
+		rm -rf target
+	fi
+fi
+df -h . | tail -n 1
