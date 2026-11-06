@@ -5,7 +5,8 @@ name: CI
 #
 # - T1, every pull request: fmt and clippy on macOS, the registry and
 #   version checks, the package list, the WASM check and the website lint.
-# - T2, every push to main (from release.yml, before it releases): T1 plus
+# - T2, the merge queue and every push to main (from release.yml, before
+#   it releases): T1 plus
 #   the macOS tests and the MSRV tests on Linux.
 #
 # The `tests` label runs T2 on a pull request (add it, then push). canary.yml builds Matty
@@ -19,6 +20,8 @@ name: CI
 # See docs/ci.md.
 on:
   pull_request:
+  # The merge queue checks the tree about to land.
+  merge_group:
   workflow_call:
 
 # A new push to a pull request cancels its older run.
