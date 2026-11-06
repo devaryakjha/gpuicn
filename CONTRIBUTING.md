@@ -1,7 +1,7 @@
 # Contributing to gpuicn
 
 Thanks for helping. Bug reports, parity gaps and component requests go in
-[GitHub issues](https://github.com/devaryakjha/gpuicn/issues). Focused pull
+[GitHub issues](https://github.com/karyalabs/gpuicn/issues). Focused pull
 requests are welcome; say which checks you ran.
 
 ## Layout

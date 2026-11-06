@@ -22,15 +22,22 @@ jobs:
   registry-install:
     # Installs every component into a fixture app with the gpuicn CLI and with
     # the stock shadcn CLI, then builds it.
-    runs-on: macos-14
+    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.GPUICN_MACOS_RUNNER || '"macos-15"') }}
     steps:
       - uses: actions/checkout@v4
         with:
+          # A self-hosted runner keeps target/ warm between jobs; the next
+          # step clears the rest.
+          clean: ${{ runner.environment != 'self-hosted' }}
           ref: ${{ inputs.ref || github.sha }}
+      - if: runner.environment == 'self-hosted'
+        run: scripts/ci/prepare-workspace
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.99.1
-      - uses: Swatinem/rust-cache@v2
+      # Self-hosted runners keep target/ instead.
+      - if: runner.environment == 'github-hosted'
+        uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: oven-sh/setup-bun@v2
@@ -68,19 +75,24 @@ jobs:
 
   new-apps:
     # Fresh apps in both modes, the way a new user sets them up.
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.GPUICN_LINUX_RUNNER || '"ubuntu-latest"') }}
     steps:
       - uses: actions/checkout@v4
         with:
+          # A self-hosted runner keeps target/ warm between jobs; the next
+          # step clears the rest.
+          clean: ${{ runner.environment != 'self-hosted' }}
           ref: ${{ inputs.ref || github.sha }}
+      - if: runner.environment == 'self-hosted'
+        run: scripts/ci/prepare-workspace
       - uses: dtolnay/rust-toolchain@1.98.0
-      - uses: Swatinem/rust-cache@v2
+      # Self-hosted runners keep target/ instead.
+      - if: runner.environment == 'github-hosted'
+        uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Install GPUI build dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
+        run: scripts/ci/apt-install libfontconfig-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
       - name: Set up and check a new app
         run: |
           cargo build -p gpuicn-cli --locked

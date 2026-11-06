@@ -19,7 +19,7 @@ env:
 
 jobs:
   macos:
-    runs-on: macos-14
+    runs-on: macos-15
     # Holds the Apple signing secrets. Without them the app is ad-hoc signed.
     environment: release
     steps:

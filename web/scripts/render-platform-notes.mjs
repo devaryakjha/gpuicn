@@ -6,7 +6,7 @@ export function renderPlatformNotes(markdown) {
     .on("h1", { element: (element) => element.remove() })
     .on("a", {
       element(element) {
-        const url = new URL(element.getAttribute("href"), "https://github.com/devaryakjha/gpuicn/blob/main/docs/parity/");
+        const url = new URL(element.getAttribute("href"), "https://github.com/karyalabs/gpuicn/blob/main/docs/parity/");
         if (["https:", "http:", "mailto:"].includes(url.protocol)) {
           element.setAttribute("href", url.href);
         } else {

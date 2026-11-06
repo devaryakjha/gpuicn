@@ -26,7 +26,7 @@ REFERENCES = [
     ("crates/ui/README.md", r"cargo install gpuicn-cli --version " + V + " --locked"),
     ("docs/registry.md", r"cargo install gpuicn-cli --version " + V + " --locked"),
     ("docs/registry.md", r"gpuicn v" + V + " supports"),
-    ("docs/registry.md", r"devaryakjha/gpuicn/v" + V + "/"),
+    ("docs/registry.md", r"karyalabs/gpuicn/v" + V + "/"),
     ("web/src/lib/release.ts", r'export const release = "v' + V + '"'),
 ]
 

@@ -1143,7 +1143,7 @@ mod embed {
                     // Width and height from the post's metadata reserve the box.
                     .image("https://example.com/og.png", 1200, 630)
                     .collapsed(collapsed)
-                    .on_click(|_, _, cx| cx.open_url("https://github.com/devaryakjha/gpuicn"))
+                    .on_click(|_, _, cx| cx.open_url("https://github.com/karyalabs/gpuicn"))
                     .on_toggle(|collapsed, _, _| println!("collapsed: {collapsed}"))
                     .on_remove(|_, _, _| println!("remove the preview")),
             )

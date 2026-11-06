@@ -521,7 +521,7 @@ mod tests {
 
     /// Tab from the stack reaches a notice's action before its close button,
     /// and pressing it runs the handler and dismisses the notice
-    /// (devaryakjha/gpuicn#95).
+    /// (karyalabs/gpuicn#95).
     #[gpui_kit::test]
     fn an_action_runs_and_dismisses_its_notice(cx: &mut TestAppContext) {
         use gpui_kit::{KeyDownEvent, KeyUpEvent, Keystroke};
@@ -578,7 +578,7 @@ mod tests {
     }
 
     /// The app hears why each notice left and can ask whether one is still
-    /// showing (devaryakjha/gpuicn#122).
+    /// showing (karyalabs/gpuicn#122).
     #[gpui_kit::test]
     fn on_dismiss_reports_timeouts_replacements_and_dismissals(cx: &mut TestAppContext) {
         cx.update(super::super::theme::init);
@@ -634,7 +634,7 @@ mod tests {
     }
 
     /// "Later" and the close button report that the reader dismissed the
-    /// notice, which the action does not (devaryakjha/gpuicn#122).
+    /// notice, which the action does not (karyalabs/gpuicn#122).
     #[gpui_kit::test]
     fn buttons_report_which_one_dismissed_the_notice(cx: &mut TestAppContext) {
         use gpui_kit::{KeyDownEvent, KeyUpEvent, Keystroke};

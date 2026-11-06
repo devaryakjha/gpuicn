@@ -2,13 +2,19 @@
 
 use super::*;
 
-const REPOSITORY: &str = "https://raw.githubusercontent.com/devaryakjha/gpuicn";
-const LATEST_RELEASE: &str = "https://api.github.com/repos/devaryakjha/gpuicn/releases/latest";
+const REPOSITORY: &str = "https://raw.githubusercontent.com/karyalabs/gpuicn";
+/// Where the repository lived before it moved to karyalabs; apps installed
+/// then still name it in `gpuicn.toml`.
+const OLD_REPOSITORY: &str = "https://raw.githubusercontent.com/devaryakjha/gpuicn";
+const LATEST_RELEASE: &str = "https://api.github.com/repos/karyalabs/gpuicn/releases/latest";
 const CLI_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// The release tag a default-shaped registry URL points at.
 pub(super) fn registry_version(registry: &str) -> Option<&str> {
-    let rest = registry.strip_prefix(REPOSITORY)?.strip_prefix("/v")?;
+    let rest = registry
+        .strip_prefix(REPOSITORY)
+        .or_else(|| registry.strip_prefix(OLD_REPOSITORY))?
+        .strip_prefix("/v")?;
     let version = rest.split('/').next()?;
     (!version.is_empty()).then_some(version)
 }
@@ -478,15 +484,21 @@ mod tests {
     fn registry_urls_name_their_release() {
         assert_eq!(
             registry_version(
-                "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.8.0/site/pages/r"
+                "https://raw.githubusercontent.com/karyalabs/gpuicn/v0.8.0/site/pages/r"
             ),
             Some("0.8.0")
         );
         assert_eq!(
             registry_version(
-                "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.9.0-beta.1/site/pages/r"
+                "https://raw.githubusercontent.com/karyalabs/gpuicn/v0.9.0-beta.1/site/pages/r"
             ),
             Some("0.9.0-beta.1")
+        );
+        assert_eq!(
+            registry_version(
+                "https://raw.githubusercontent.com/devaryakjha/gpuicn/v0.9.7/site/pages/r"
+            ),
+            Some("0.9.7")
         );
         assert_eq!(registry_version("../../site/pages/r"), None);
     }

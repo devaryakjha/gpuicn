@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Installs the Debian packages a CI job needs, only when one is missing.
+#
+#   scripts/ci/apt-install libxkbcommon-dev libfontconfig-dev ...
+#
+# GitHub's Ubuntu runners have passwordless sudo, so there it installs what
+# the job asks for. The self-hosted Linux box has the packages preinstalled
+# (docs/ci.md), so it runs no sudo at all.
+set -euo pipefail
+
+if status="$(dpkg-query -W -f='${db:Status-Status}\n' "$@" 2>/dev/null)" &&
+	! grep -qv '^installed$' <<<"$status"; then
+	echo "Already installed: $*"
+	exit 0
+fi
+echo "Installing: $*"
+sudo apt-get update -qq
+sudo apt-get install -y -qq --no-install-recommends "$@"

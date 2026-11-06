@@ -3,6 +3,12 @@ name: CI
 # Quick checks for every pull request, and for every push to main through
 # release.yml, which also keeps the caches warm for pull requests. The slow
 # end-to-end checks are in verify.yml and run only when a release happens.
+#
+# Jobs run on Karya's self-hosted runners when the repository variables
+# GPUICN_LINUX_RUNNER and GPUICN_MACOS_RUNNER hold a runs-on value as JSON,
+# such as ["self-hosted","Linux","X64","matty"]. Unset, they use GitHub's
+# runners, so deleting a variable is the way back when a machine is down.
+# Pull requests from forks always get GitHub's runners. See docs/ci.md.
 on:
   pull_request:
   workflow_call:
@@ -17,14 +23,22 @@ env:
 
 jobs:
   rust:
-    runs-on: macos-14
+    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.GPUICN_MACOS_RUNNER || '"macos-15"') }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # A self-hosted runner keeps target/ warm between jobs; the next
+          # step clears the rest.
+          clean: ${{ runner.environment != 'self-hosted' }}
+      - if: runner.environment == 'self-hosted'
+        run: scripts/ci/prepare-workspace
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.99.1
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
+      # Self-hosted runners keep target/ instead.
+      - if: runner.environment == 'github-hosted'
+        uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: cargo fmt --all -- --check
@@ -33,22 +47,28 @@ jobs:
 
   linux:
     # Linux on the minimum supported Rust.
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.GPUICN_LINUX_RUNNER || '"ubuntu-latest"') }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # A self-hosted runner keeps target/ warm between jobs; the next
+          # step clears the rest.
+          clean: ${{ runner.environment != 'self-hosted' }}
+      - if: runner.environment == 'self-hosted'
+        run: scripts/ci/prepare-workspace
       - name: Check every release version reference agrees
         run: python3 scripts/release-version.py check
       - name: Check ejectable components use no crate-private items
         # An ejected file reaches the crate through `super::`.
         run: if grep -rnE "pub\((crate|super)\)" crates/ui/registry; then exit 1; fi
       - uses: dtolnay/rust-toolchain@1.98.0
-      - uses: Swatinem/rust-cache@v2
+      # Self-hosted runners keep target/ instead.
+      - if: runner.environment == 'github-hosted'
+        uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Install GPUI build dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libfontconfig1-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
+        run: scripts/ci/apt-install libfontconfig-dev libxcb1-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev
       - run: cargo test -p gpuicn -p gpuicn-cli --locked
       - uses: oven-sh/setup-bun@v2
       - name: Check the generated registry is up to date
@@ -61,15 +81,23 @@ jobs:
 
   wasm:
     # Named wasm so branch protection that requires the old check keeps working.
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.GPUICN_LINUX_RUNNER || '"ubuntu-latest"') }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # A self-hosted runner keeps target/ warm between jobs; the next
+          # step clears the rest.
+          clean: ${{ runner.environment != 'self-hosted' }}
+      - if: runner.environment == 'self-hosted'
+        run: scripts/ci/prepare-workspace
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly-2026-08-17
           targets: wasm32-unknown-unknown
           components: rust-src
-      - uses: Swatinem/rust-cache@v2
+      # Self-hosted runners keep target/ instead.
+      - if: runner.environment == 'github-hosted'
+        uses: Swatinem/rust-cache@v2
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Check the WASM preview compiles

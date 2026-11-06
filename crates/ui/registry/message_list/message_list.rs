@@ -546,7 +546,7 @@ mod tests {
     }
 
     /// The thumb describes the whole transcript, not only the rows GPUI has
-    /// measured (devaryakjha/gpuicn#83).
+    /// measured (karyalabs/gpuicn#83).
     #[gpui_kit::test]
     fn the_scrollbar_tracks_position_through_unmeasured_rows(cx: &mut TestAppContext) {
         cx.update(super::super::theme::init);
@@ -626,7 +626,7 @@ mod tests {
     }
 
     /// With `on_jump`, the pill hands the jump to the application, which may
-    /// need to load the newest page first (devaryakjha/gpuicn#97).
+    /// need to load the newest page first (karyalabs/gpuicn#97).
     #[gpui_kit::test]
     fn the_jump_pill_runs_on_jump_instead_of_scrolling(cx: &mut TestAppContext) {
         cx.update(super::super::theme::init);
