@@ -114,10 +114,12 @@ impl Reaction {
     }
 }
 
+type BuildActions = Box<dyn FnOnce(&mut Window, &mut App) -> AnyElement>;
+
 /// A row's hover action bar, built up front or only when shown.
 enum Actions {
     Built(AnyElement),
-    Lazy(Box<dyn FnOnce(&mut Window, &mut App) -> AnyElement>),
+    Lazy(BuildActions),
 }
 
 /// Whether the pointer is on a row or on its action bar, which floats partly
@@ -1150,17 +1152,26 @@ mod tests {
     impl Render for ActionsProbe {
         fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
             let builds = self.0.clone();
-            div().w(px(600.)).pt(px(40.)).flex().flex_col().children(["a", "b", "c"].map(|id| {
-                let builds = builds.clone();
-                let row = Message::new(id).author("Arya").child("Hello").actions_with(move |_, _| {
-                        builds.set(builds.get() + 1);
-                        div()
-                            .size(px(20.))
-                            .debug_selector(move || format!("bar-{id}"))
-                            .into_any_element()
-                    });
-                div().debug_selector(move || format!("row-{id}")).child(row)
-            }))
+            div()
+                .w(px(600.))
+                .pt(px(40.))
+                .flex()
+                .flex_col()
+                .children(["a", "b", "c"].map(|id| {
+                    let builds = builds.clone();
+                    let row =
+                        Message::new(id)
+                            .author("Arya")
+                            .child("Hello")
+                            .actions_with(move |_, _| {
+                                builds.set(builds.get() + 1);
+                                div()
+                                    .size(px(20.))
+                                    .debug_selector(move || format!("bar-{id}"))
+                                    .into_any_element()
+                            });
+                    div().debug_selector(move || format!("row-{id}")).child(row)
+                }))
         }
     }
 
@@ -1182,12 +1193,17 @@ mod tests {
         let row = cx.debug_bounds("row-b").expect("row drew");
         cx.simulate_mouse_move(row.center(), None, gpui_kit::Modifiers::default());
         cx.update(|window, cx| window.draw(cx).clear(cx));
-        let bar = cx.debug_bounds("bar-b").expect("the hovered row shows its bar");
+        let bar = cx
+            .debug_bounds("bar-b")
+            .expect("the hovered row shows its bar");
         assert!(cx.debug_bounds("bar-a").is_none() && cx.debug_bounds("bar-c").is_none());
         // Onto the bar, which floats over the row's top edge.
         cx.simulate_mouse_move(bar.center(), None, gpui_kit::Modifiers::default());
         cx.update(|window, cx| window.draw(cx).clear(cx));
-        assert!(cx.debug_bounds("bar-b").is_some(), "the bar stays under the pointer");
+        assert!(
+            cx.debug_bounds("bar-b").is_some(),
+            "the bar stays under the pointer"
+        );
     }
 
     type Clicked = Rc<std::cell::RefCell<Vec<Bounds<Pixels>>>>;
