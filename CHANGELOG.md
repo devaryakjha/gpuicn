@@ -4,6 +4,15 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.9.9
+
+[Notes](docs/releases/v0.9.9.md)
+
+### Fixed
+
+- Sized `Attachment` images shrink with a narrow column (matty#683).
+- `ShowMore`'s chevron is visible.
+
 ## 0.9.8
 
 [Notes](docs/releases/v0.9.8.md)

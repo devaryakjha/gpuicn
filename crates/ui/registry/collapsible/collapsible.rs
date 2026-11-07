@@ -212,7 +212,8 @@ impl gpui_kit::RenderOnce for ShowMore {
                                 } else {
                                     LucideIcon::ChevronDown
                                 })
-                                .size(theme.space(3.5)),
+                                .size(theme.space(3.5))
+                                .text_color(colors.primary),
                             )
                             .child(label)
                             .on_click(move |_, window, cx| {

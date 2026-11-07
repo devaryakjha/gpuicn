@@ -551,6 +551,9 @@ impl RenderOnce for Message {
             .children(header)
             .child(
                 div()
+                    // Wide content (an image, a table) shrinks with the
+                    // column instead of widening the row past it.
+                    .min_w_0()
                     .text_size(theme.text(14.))
                     .line_height(relative(1.45))
                     .text_color(colors.foreground)
