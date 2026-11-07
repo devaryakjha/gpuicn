@@ -23,12 +23,20 @@ gpui_kit::actions!(
         /// Move to the next keyboard tab stop.
         FocusNext,
         /// Move to the previous keyboard tab stop.
-        FocusPrevious
+        FocusPrevious,
+        /// Close the innermost dismissable overlay (Escape).
+        Dismiss
     ]
 );
 
 struct Initialized;
 impl Global for Initialized {}
+
+/// The key context of an overlay that closes on Escape: dialogs, popovers
+/// and the lightbox. Its Escape binding is deeper than any application
+/// context around the overlay, so an app's own Escape shortcut (such as
+/// "mark read") never swallows the key while an overlay has focus.
+pub const DISMISS_CONTEXT: &str = "GpuicnDismiss";
 
 /// The key context of a one-time-code field, which binds the paste shortcut.
 #[doc(hidden)]
@@ -52,6 +60,7 @@ pub fn init(cx: &mut App) {
     cx.bind_keys([
         gpui_kit::KeyBinding::new("tab", FocusNext, None),
         gpui_kit::KeyBinding::new("shift-tab", FocusPrevious, None),
+        gpui_kit::KeyBinding::new("escape", Dismiss, Some(DISMISS_CONTEXT)),
     ]);
     locale::bind_keys(cx);
     {

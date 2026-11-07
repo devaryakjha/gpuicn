@@ -5,7 +5,7 @@ use super::{
     theme::{
         UiTheme, apply_style,
         locale::DirectionalStyled as _,
-        primitives::{focus, surface},
+        primitives::{dismiss, focus, surface},
     },
 };
 use gpui_kit::base::{Align, Button, ElementExt as _, POPUP_PRIORITY, Placement, Positioner};
@@ -320,13 +320,14 @@ impl RenderOnce for HoverPopover {
                     state.set_open(!close, true, window, cx);
                 })
             })
-            .on_key_down(move |event, window, cx| {
-                if event.keystroke.key == "escape" && escape.read(cx).open {
-                    escape.update(cx, |state, cx| state.set_open(false, false, window, cx));
-                    cx.stop_propagation();
-                }
-            })
             .children(self.trigger);
+        let trigger = dismiss::on_escape(trigger, move |window, cx| {
+            if !escape.read(cx).open {
+                return false;
+            }
+            escape.update(cx, |state, cx| state.set_open(false, false, window, cx));
+            true
+        });
 
         let mut root = div()
             .id(self.id.clone())
@@ -342,41 +343,38 @@ impl RenderOnce for HoverPopover {
             let outside = state.clone();
             let escape = state.clone();
             let measured = state.clone();
-            let popup = div()
-                .id((self.id.clone(), "content"))
-                .role(Role::Dialog)
-                .tab_group()
-                .track_focus(&content_focus)
-                .font_family(t.fonts.body.clone())
-                .on_prepaint(move |bounds, _, cx| {
-                    measured.update(cx, |state, _| state.content_bounds = bounds)
+            let popup = dismiss::on_escape(div(), move |window, cx| {
+                escape.update(cx, |state, cx| {
+                    state.set_open(false, false, window, cx);
+                    state.trigger_focus.focus(window, cx);
+                });
+                true
+            })
+            .id((self.id.clone(), "content"))
+            .role(Role::Dialog)
+            .tab_group()
+            .track_focus(&content_focus)
+            .font_family(t.fonts.body.clone())
+            .on_prepaint(move |bounds, _, cx| {
+                measured.update(cx, |state, _| state.content_bounds = bounds)
+            })
+            .on_hover(move |over, window, cx| {
+                hover.update(cx, |state, cx| {
+                    state.over_content = *over;
+                    state.pointer_moved(open_delay, close_delay, window, cx);
                 })
-                .on_hover(move |over, window, cx| {
-                    hover.update(cx, |state, cx| {
-                        state.over_content = *over;
-                        state.pointer_moved(open_delay, close_delay, window, cx);
-                    })
-                })
-                .on_key_down(move |event, window, cx| {
-                    if event.keystroke.key == "escape" {
-                        escape.update(cx, |state, cx| {
-                            state.set_open(false, false, window, cx);
-                            state.trigger_focus.focus(window, cx);
-                        });
-                        cx.stop_propagation();
-                    }
-                })
-                .on_mouse_down_out(move |event, window, cx| {
-                    let inside = {
-                        let state = outside.read(cx);
-                        state.trigger_bounds.contains(&event.position)
-                            || state.content_bounds.contains(&event.position)
-                    };
-                    if !inside {
-                        outside.update(cx, |state, cx| state.set_open(false, false, window, cx));
-                    }
-                })
-                .child(content(window, cx));
+            })
+            .on_mouse_down_out(move |event, window, cx| {
+                let inside = {
+                    let state = outside.read(cx);
+                    state.trigger_bounds.contains(&event.position)
+                        || state.content_bounds.contains(&event.position)
+                };
+                if !inside {
+                    outside.update(cx, |state, cx| state.set_open(false, false, window, cx));
+                }
+            })
+            .child(content(window, cx));
             root = root.child(
                 gpui_kit::deferred(
                     Positioner::side(anchor)

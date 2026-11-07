@@ -8,8 +8,8 @@ use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
     AnyElement, App, Context, ElementId, Entity, EventEmitter, ImageSource,
     InteractiveElement as _, IntoElement, KeyDownEvent, MouseButton, ObjectFit, ParentElement as _,
-    Pixels, Point, Render, Role, SharedString, StatefulInteractiveElement as _, Styled,
-    StyledImage as _, Window, div, hsla, point, prelude::FluentBuilder as _, px,
+    Pixels, Point, Render, Role, SharedString, Size, StatefulInteractiveElement as _, Styled,
+    StyledImage as _, Window, div, hsla, point, prelude::FluentBuilder as _, px, size,
 };
 
 use super::button::{Button, ButtonSize, ButtonVariant};
@@ -17,6 +17,7 @@ use super::dialog::{Dialog, DialogHandle, modal_focus};
 use super::theme::{
     UiText, UiTheme,
     locale::{self, DirectionalStyled as _},
+    primitives::dismiss,
 };
 
 /// The largest zoom, as a multiple of the fitted size.
@@ -34,6 +35,9 @@ pub struct LightboxImage {
     pub name: SharedString,
     /// Secondary text, such as who posted it and when.
     pub caption: Option<SharedString>,
+    /// The image's natural size in pixels, when known. A known size keeps a
+    /// small image at that size instead of blowing it up to the window.
+    pub size: Option<Size<Pixels>>,
 }
 
 impl LightboxImage {
@@ -43,7 +47,15 @@ impl LightboxImage {
             source: source.into(),
             name: name.into(),
             caption: None,
+            size: None,
         }
+    }
+    /// Sets the image's natural size in pixels, such as the width and
+    /// height a server reports for an upload. The fitted image is never
+    /// larger than this, so small images stay sharp.
+    pub fn dimensions(mut self, width: u32, height: u32) -> Self {
+        self.size = (width > 0 && height > 0).then(|| size(px(width as f32), px(height as f32)));
+        self
     }
     /// Adds secondary text under the name.
     pub fn caption(mut self, caption: impl Into<SharedString>) -> Self {
@@ -67,6 +79,14 @@ pub struct LightboxState {
     pan: Point<Pixels>,
     drag: Option<Point<Pixels>>,
     stage: Point<Pixels>,
+    /// The image's size at zoom 1: the stage, or less for a small image.
+    fit: Point<Pixels>,
+    /// The pointer went down on the image or a control, not the backdrop.
+    press_inside: bool,
+    /// The pointer went down on the backdrop around the image.
+    backdrop_press: bool,
+    /// Closes the lightbox from a click on the backdrop.
+    dialog: Option<DialogHandle>,
 }
 
 impl EventEmitter<LightboxEvent> for LightboxState {}
@@ -81,6 +101,10 @@ impl LightboxState {
             pan: Point::default(),
             drag: None,
             stage: point(px(800.), px(600.)),
+            fit: point(px(800.), px(600.)),
+            press_inside: false,
+            backdrop_press: false,
+            dialog: None,
         }
     }
 
@@ -182,9 +206,34 @@ impl LightboxState {
     }
 
     fn clamp_pan(&mut self) {
-        let limit = |stage: Pixels| (stage * (self.zoom - 1.) / 2.).max(px(0.));
-        self.pan.x = self.pan.x.clamp(-limit(self.stage.x), limit(self.stage.x));
-        self.pan.y = self.pan.y.clamp(-limit(self.stage.y), limit(self.stage.y));
+        // The zoomed image moves until its edge meets the stage's.
+        let limit = |fit: Pixels, stage: Pixels| ((fit * self.zoom - stage) / 2.).max(px(0.));
+        let (x, y) = (
+            limit(self.fit.x, self.stage.x),
+            limit(self.fit.y, self.stage.y),
+        );
+        self.pan.x = self.pan.x.clamp(-x, x);
+        self.pan.y = self.pan.y.clamp(-y, y);
+    }
+
+    /// The image's size at zoom 1: its natural size scaled down to fit the
+    /// stage, never up; the whole stage when the size is unknown.
+    fn fitted(&self) -> Point<Pixels> {
+        match self.current().and_then(|image| image.size) {
+            Some(natural) => {
+                let scale = (self.stage.x / natural.width)
+                    .min(self.stage.y / natural.height)
+                    .min(1.);
+                point(natural.width * scale, natural.height * scale)
+            }
+            None => self.stage,
+        }
+    }
+
+    /// Whether a click at the end of this press should close the viewer:
+    /// it started on the backdrop around a fitted image.
+    fn take_backdrop_click(&mut self) -> bool {
+        std::mem::take(&mut self.backdrop_press) && self.zoom <= 1.
     }
 
     /// Handles a key press: Left and Right change images, `+`, `-` and `0`
@@ -225,6 +274,7 @@ impl Render for LightboxState {
         let viewport = window.viewport_size();
         let bar = theme.space(BAR);
         self.stage = point(viewport.width, (viewport.height - bar).max(px(0.)));
+        self.fit = self.fitted();
         self.clamp_pan();
         let white = hsla(0., 0., 1., 1.);
         let count = self.images.len();
@@ -242,6 +292,10 @@ impl Render for LightboxState {
         };
         let side = |button: Button| {
             div()
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(|this, _, _, _| this.press_inside = true),
+                )
                 .absolute()
                 .top_1_2()
                 .mt(-theme.space(5.))
@@ -270,6 +324,8 @@ impl Render for LightboxState {
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(|this, event: &gpui_kit::MouseDownEvent, _, cx| {
+                    // The image and the controls mark their presses first.
+                    this.backdrop_press = !std::mem::take(&mut this.press_inside);
                     if this.zoom > 1. {
                         this.drag = Some(event.position);
                         cx.notify();
@@ -302,27 +358,45 @@ impl Render for LightboxState {
                 this.set_zoom(this.zoom * factor, cx);
                 cx.stop_propagation();
             }))
-            .on_click(cx.listener(|this, event: &gpui_kit::ClickEvent, _, cx| {
-                // Double-click toggles between fitted and 2×.
-                if event.click_count() == 2 {
-                    if this.zoom > 1. {
-                        this.reset_zoom(cx);
-                    } else {
-                        this.set_zoom(2., cx);
+            .on_click(
+                cx.listener(|this, event: &gpui_kit::ClickEvent, window, cx| {
+                    // A click on the dark area around a fitted image closes the
+                    // viewer, as in every image viewer.
+                    if this.take_backdrop_click() {
+                        if let Some(dialog) = this.dialog.clone() {
+                            dialog.close(window, cx);
+                        }
+                        return;
                     }
-                }
-            }))
+                    // Double-click toggles between fitted and 2×.
+                    if event.click_count() == 2 {
+                        if this.zoom > 1. {
+                            this.reset_zoom(cx);
+                        } else {
+                            this.set_zoom(2., cx);
+                        }
+                    }
+                }),
+            )
             .when_some(current.clone(), |stage, image| {
-                let width = self.stage.x * zoom;
-                let height = self.stage.y * zoom;
+                let width = self.fit.x * zoom;
+                let height = self.fit.y * zoom;
                 stage.child(
-                    super::theme::primitives::image(image.source)
+                    div()
                         .absolute()
                         .left((self.stage.x - width) / 2. + self.pan.x)
                         .top((self.stage.y - height) / 2. + self.pan.y)
                         .w(width)
                         .h(height)
-                        .object_fit(ObjectFit::Contain),
+                        .on_mouse_down(
+                            MouseButton::Left,
+                            cx.listener(|this, _, _, _| this.press_inside = true),
+                        )
+                        .child(
+                            super::theme::primitives::image(image.source)
+                                .size_full()
+                                .object_fit(ObjectFit::Contain),
+                        ),
                 )
             })
             .when(count > 1, |stage| {
@@ -357,7 +431,8 @@ impl Render for LightboxState {
 ///
 /// Keep it mounted while closed, like `dialog`. Toolbar `actions` render
 /// before the close button, such as a download or open-in-browser button.
-/// Escape and the close button close it; focus returns to where it was.
+/// Escape, the close button and a click on the dark area around the image
+/// close it; focus returns to where it was.
 pub fn lightbox(
     id: impl Into<ElementId>,
     handle: &DialogHandle,
@@ -385,6 +460,7 @@ pub fn lightbox(
     );
     let close = handle.clone();
     let escape = handle.clone();
+    state.update(cx, |state, _| state.dialog = Some(handle.clone()));
     let (current, count, zoom) = {
         let state = state.read(cx);
         (state.current().cloned(), state.images().len(), state.zoom())
@@ -481,28 +557,30 @@ pub fn lightbox(
                 .on_click(move |_, window, cx| close.close(window, cx)),
         );
     let key_state = state.clone();
-    let popup = div()
-        .id(id.clone())
-        .role(Role::Dialog)
-        .aria_label(viewer_label)
-        .track_focus(&focus)
-        .relative()
-        .size_full()
-        .occlude()
-        .on_key_down(move |event, window, cx| {
-            if event.keystroke.key == "escape" {
-                escape.close(window, cx);
-                cx.stop_propagation();
-            } else if key_state.update(cx, |state, cx| state.handle_key(event, cx)) {
-                cx.stop_propagation();
-            }
-        })
-        .flex()
-        .flex_col()
-        .font_family(theme.fonts.body.clone())
-        .text_size(theme.text(14.))
-        .child(top)
-        .child(state.clone());
+    // Escape is an action in the lightbox's own key context, so an app's
+    // Escape shortcut around it doesn't swallow the key.
+    let popup = dismiss::on_escape(div(), move |window, cx| {
+        escape.close(window, cx);
+        true
+    })
+    .id(id.clone())
+    .role(Role::Dialog)
+    .aria_label(viewer_label)
+    .track_focus(&focus)
+    .relative()
+    .size_full()
+    .occlude()
+    .on_key_down(move |event, _, cx| {
+        if key_state.update(cx, |state, cx| state.handle_key(event, cx)) {
+            cx.stop_propagation();
+        }
+    })
+    .flex()
+    .flex_col()
+    .font_family(theme.fonts.body.clone())
+    .text_size(theme.text(14.))
+    .child(top)
+    .child(state.clone());
     Dialog::new(cx)
         .handle(handle.clone())
         .close_on_escape(false)
@@ -546,6 +624,100 @@ mod tests {
             assert_eq!(state.index(), 0);
             state.previous(cx);
             assert_eq!(state.index(), 1);
+        });
+    }
+
+    gpui_kit::actions!(lightbox_test, [MarkRead]);
+
+    struct App {
+        handle: super::DialogHandle,
+        state: gpui_kit::Entity<LightboxState>,
+        marked: bool,
+    }
+
+    impl gpui_kit::Render for App {
+        fn render(
+            &mut self,
+            window: &mut gpui_kit::Window,
+            cx: &mut gpui_kit::Context<Self>,
+        ) -> impl gpui_kit::IntoElement {
+            use gpui_kit::{InteractiveElement as _, ParentElement as _, Styled as _};
+            gpui_kit::div()
+                .key_context("App")
+                .size_full()
+                .on_action(cx.listener(|this, _: &MarkRead, _, _| this.marked = true))
+                .child(super::lightbox(
+                    "viewer",
+                    &self.handle,
+                    &self.state,
+                    [],
+                    window,
+                    cx,
+                ))
+        }
+    }
+
+    #[gpui_kit::test]
+    fn escape_closes_it_inside_an_app_escape_shortcut(cx: &mut TestAppContext) {
+        cx.update(|cx| {
+            super::super::theme::init(cx);
+            // An app shortcut on Escape around the viewer, like "mark read".
+            cx.bind_keys([gpui_kit::KeyBinding::new("escape", MarkRead, Some("App"))]);
+        });
+        let (app, cx) = cx.add_window_view(|_, cx| App {
+            handle: super::DialogHandle::new(false),
+            state: cx.new(|_| LightboxState::new([LightboxImage::new("a.png", "a.png")])),
+            marked: false,
+        });
+        cx.update(|window, cx| {
+            window.activate_window();
+            window.draw(cx).clear(cx);
+            let handle = app.read(cx).handle.clone();
+            handle.open(window, cx);
+        });
+        cx.run_until_parked();
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        cx.run_until_parked();
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        assert!(app.read_with(cx, |app, _| app.handle.is_open()));
+        cx.simulate_keystrokes("escape");
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        app.read_with(cx, |app, _| {
+            assert!(!app.handle.is_open(), "Escape closes the viewer");
+            assert!(!app.marked, "the app's shortcut doesn't run");
+        });
+    }
+
+    #[gpui_kit::test]
+    fn small_images_keep_their_natural_size(cx: &mut TestAppContext) {
+        let state = cx.new(|_| {
+            LightboxState::new([
+                LightboxImage::new("small.png", "small.png").dimensions(400, 200),
+                LightboxImage::new("large.png", "large.png").dimensions(3200, 1200),
+                LightboxImage::new("unknown.png", "unknown.png"),
+            ])
+        });
+        state.update(cx, |state, cx| {
+            // The default stage is 800×600.
+            assert_eq!(state.fitted(), point(px(400.), px(200.)));
+            state.next(cx);
+            assert_eq!(state.fitted(), point(px(800.), px(300.)));
+            state.next(cx);
+            assert_eq!(state.fitted(), point(px(800.), px(600.)));
+        });
+    }
+
+    #[gpui_kit::test]
+    fn only_a_press_on_the_backdrop_of_a_fitted_image_closes(cx: &mut TestAppContext) {
+        let state = cx.new(|_| LightboxState::new([LightboxImage::new("a.png", "a.png")]));
+        state.update(cx, |state, cx| {
+            state.backdrop_press = true;
+            assert!(state.take_backdrop_click());
+            // A click without a new backdrop press doesn't close.
+            assert!(!state.take_backdrop_click());
+            state.set_zoom(2., cx);
+            state.backdrop_press = true;
+            assert!(!state.take_backdrop_click());
         });
     }
 }
