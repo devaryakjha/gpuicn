@@ -28,10 +28,16 @@ use gpui_kit::{
 
 pub use gpui_kit::component::text::TextView as MarkdownView;
 
+use gpui_icons::{LucideIcon, lucide};
+
+use super::button::{Button, ButtonSize, ButtonVariant};
 use super::embed::{ImagePlaceholder, placeholder_in_box};
-use super::theme::UiTheme;
+use super::theme::{UiText, UiTheme, locale};
 
 /// Renders Markdown with Nova typography, code blocks, quotes and tables.
+///
+/// Every fenced code block shows its language and a copy button in its top
+/// corner; the button copies the raw code, without the fences.
 ///
 /// The result is GPUI Kit's `TextView`: chain `plugin`, `on_link_click`,
 /// `selectable` or `max_lines` onto it. Keep `id` stable for the message.
@@ -75,6 +81,10 @@ pub fn markdown(
         });
     TextView::markdown(id, source)
         .style(style)
+        .code_block_actions(|block, _, _| CodeBlockActions {
+            lang: block.lang().filter(|lang| !lang.is_empty()),
+            code: block.code(),
+        })
         .inline_code_style(
             StyleRefinement::default()
                 .font_family(theme.fonts.mono.clone())
@@ -95,6 +105,81 @@ pub fn markdown(
         .text_size(theme.text(14.))
         .line_height(relative(1.45))
         .text_color(colors.foreground)
+}
+
+/// How long a copy button shows "Copied" after a click.
+const COPIED_FOR: std::time::Duration = std::time::Duration::from_millis(1500);
+
+/// The language and copy button in a code block's corner.
+#[derive(gpui_kit::IntoElement)]
+struct CodeBlockActions {
+    lang: Option<SharedString>,
+    code: SharedString,
+}
+
+/// Whether the copy button just copied, and the task that resets it.
+#[derive(Default)]
+struct CopyState {
+    copied: bool,
+    reset: Option<gpui_kit::Task<()>>,
+}
+
+impl gpui_kit::RenderOnce for CodeBlockActions {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let theme = UiTheme::read(cx).clone();
+        // Scoped by the code block's own element id.
+        let state = window.use_keyed_state("copy-state", cx, |_, _| CopyState::default());
+        let copied = state.read(cx).copied;
+        let label = locale::text(
+            cx,
+            if copied {
+                UiText::Copied
+            } else {
+                UiText::CopyCode
+            },
+        );
+        let code = self.code;
+        div()
+            .flex()
+            .items_center()
+            .gap(theme.space(1.))
+            .children(self.lang.map(|lang| {
+                div()
+                    .pl(theme.space(1.5))
+                    .text_size(theme.text(12.))
+                    .text_color(theme.colors.muted_foreground)
+                    .child(lang)
+            }))
+            .child(
+                Button::new("copy")
+                    .size(ButtonSize::IconXs)
+                    .variant(ButtonVariant::Ghost)
+                    .aria_label(label)
+                    .child(
+                        lucide(if copied {
+                            LucideIcon::Check
+                        } else {
+                            LucideIcon::Copy
+                        })
+                        .size(theme.space(3.5))
+                        .text_color(theme.colors.muted_foreground),
+                    )
+                    .on_click(move |_, window, cx| {
+                        cx.write_to_clipboard(ClipboardItem::new_string(code.to_string()));
+                        state.update(cx, |state, cx| {
+                            state.copied = true;
+                            state.reset = Some(cx.spawn_in(window, async move |this, cx| {
+                                cx.background_executor().timer(COPIED_FOR).await;
+                                _ = this.update(cx, |state, cx| {
+                                    state.copied = false;
+                                    cx.notify();
+                                });
+                            }));
+                            cx.notify();
+                        });
+                    }),
+            )
+    }
 }
 
 type EntityClick = Arc<dyn Fn(&SharedString, &mut Window, &mut App) + Send + Sync + 'static>;
@@ -664,5 +749,35 @@ mod image_tests {
         let button = cx.update(|window, _| window.find_by_label("Load image from cdn.example.com"));
         cx.simulate_click(button.bounds().center(), gpui_kit::Modifiers::default());
         assert_eq!(loads.load(Ordering::SeqCst), 1);
+    }
+
+    struct Snippet;
+
+    impl Render for Snippet {
+        fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+            div().w(px(480.)).child(markdown(
+                "snippet",
+                "Payload:\n\n```json\n{\"ok\": true}\n```",
+                cx,
+            ))
+        }
+    }
+
+    #[gpui_kit::test]
+    fn the_copy_button_copies_the_raw_code(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let window = cx.add_window(|_, _| Snippet);
+        let mut cx = VisualTestContext::from_window(window.into(), cx);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let button = cx.update(|window, _| window.find_by_label("Copy code"));
+        cx.simulate_click(button.bounds().center(), gpui_kit::Modifiers::default());
+        assert_eq!(
+            cx.read_from_clipboard().and_then(|item| item.text()),
+            Some("{\"ok\": true}".to_string())
+        );
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        cx.update(|window, _| {
+            window.find_by_label("Copied");
+        });
     }
 }
