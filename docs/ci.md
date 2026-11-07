@@ -6,11 +6,13 @@ gpuicn follows the tiers of the Karya Labs engineering process
 | Tier | When | What |
 | --- | --- | --- |
 | T1 | every pull request | macOS fmt and clippy, the registry and version checks, the package list, the WASM check, the website build and lint |
-| T2 | every push to main, in `release.yml` before it releases | T1 plus the macOS workspace tests and the MSRV tests on Linux |
+| T2 | the merge queue, and `release.yml` once more before a release | T1 plus the macOS workspace tests and the MSRV tests on Linux |
 | Canary | push to main, nightly, or the `canary` label | `canary.yml` builds Matty's master against this tree; a failure on main opens an issue |
 | Release | merging a version bump | `verify.yml`, crates.io, the showcase builds, the GitHub release, the site, then Matty's pin bump PR |
 
-Add the `tests` label, then push, to run T2 on a pull request. Setup steps
+The merge queue lands exactly the commit it checked, so a push to main that
+releases nothing runs no CI again. Add the `tests` label, then push, to run
+T2 on a pull request. Setup steps
 come from the shared actions in
 [karyalabs/.github](https://github.com/karyalabs/.github/tree/main/actions);
 the Rust toolchain is read from `release-pins.toml`.
