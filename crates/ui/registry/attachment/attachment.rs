@@ -263,7 +263,13 @@ impl RenderOnce for Attachment {
             Some(source) => root
                 .map(|root| match sized {
                     // The muted fill shows until the bytes arrive.
-                    Some((width, height)) => root.w(width).h(height).bg(colors.muted),
+                    // Narrower than its box in a narrow column, it keeps
+                    // the aspect ratio instead of overflowing.
+                    Some((width, height)) => root
+                        .w(width)
+                        .max_w_full()
+                        .aspect_ratio(f32::from(width) / f32::from(height).max(1.))
+                        .bg(colors.muted),
                     None => root.size(theme.space(16.)),
                 })
                 .child(disabled::dim(
@@ -417,5 +423,40 @@ mod tests {
         assert_eq!(fit_within(1080., 1920., cap), (px(135.), px(240.)));
         // Small images keep their own size.
         assert_eq!(fit_within(120., 80., cap), (px(120.), px(80.)));
+    }
+
+    struct Column;
+
+    impl gpui_kit::Render for Column {
+        fn render(
+            &mut self,
+            _: &mut gpui_kit::Window,
+            _: &mut gpui_kit::Context<Self>,
+        ) -> impl gpui_kit::IntoElement {
+            use gpui_kit::{InteractiveElement as _, ParentElement as _, Styled as _};
+            gpui_kit::div().flex().flex_col().items_start().child(
+                gpui_kit::div().w(px(200.)).flex().flex_col().child(
+                    gpui_kit::div().debug_selector(|| "picture".into()).child(
+                        super::Attachment::new("banner", "banner.png")
+                            .image("banner.png")
+                            .dimensions(1600, 600)
+                            .max_size(px(480.), px(350.)),
+                    ),
+                ),
+            )
+        }
+    }
+
+    #[gpui_kit::test]
+    fn a_sized_image_shrinks_with_a_narrow_column(cx: &mut gpui_kit::TestAppContext) {
+        cx.update(super::super::theme::init);
+        let (_, cx) = cx.add_window_view(|_, _| Column);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        // 480 × 180 in its box; a 200 px column shrinks it to 200 × 75.
+        let bounds = cx.debug_bounds("picture").unwrap();
+        assert!(
+            (f32::from(bounds.size.height) - 75.).abs() < 1.,
+            "{bounds:?}"
+        );
     }
 }
