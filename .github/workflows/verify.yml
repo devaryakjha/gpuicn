@@ -22,7 +22,7 @@ jobs:
   registry-install:
     # Installs every component into a fixture app with the gpuicn CLI and with
     # the stock shadcn CLI, then builds it.
-    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.GPUICN_MACOS_RUNNER || '"macos-15"') }}
+    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (vars.KARYA_MACOS_RUNNER || vars.GPUICN_MACOS_RUNNER) || '"macos-15"') }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -75,7 +75,7 @@ jobs:
 
   new-apps:
     # Fresh apps in both modes, the way a new user sets them up.
-    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && vars.GPUICN_LINUX_RUNNER || '"ubuntu-latest"') }}
+    runs-on: ${{ fromJSON((github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && (vars.KARYA_LINUX_RUNNER || vars.GPUICN_LINUX_RUNNER) || '"ubuntu-latest"') }}
     steps:
       - uses: actions/checkout@v4
         with:
