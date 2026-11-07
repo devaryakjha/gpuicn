@@ -4,6 +4,19 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.9.10
+
+[Notes](docs/releases/v0.9.10.md)
+
+### Added
+
+- `Message::actions_with`, building the hover action bar only when it shows
+  (matty#674).
+
+### Changed
+
+- `Message` lays out its action bar only for the hovered or selected row.
+
 ## 0.9.9
 
 [Notes](docs/releases/v0.9.9.md)
