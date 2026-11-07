@@ -382,6 +382,8 @@ pub struct SidebarItem {
     disabled: bool,
     collapsed: bool,
     icon: Option<AnyElement>,
+    label_suffix: Option<AnyElement>,
+    label_suffix_tooltip: Option<SharedString>,
     trailing: Option<AnyElement>,
     size: SidebarItemSize,
     outline: bool,
@@ -399,6 +401,8 @@ impl SidebarItem {
             disabled: false,
             collapsed: false,
             icon: None,
+            label_suffix: None,
+            label_suffix_tooltip: None,
             trailing: None,
             size: SidebarItemSize::Default,
             outline: false,
@@ -424,6 +428,20 @@ impl SidebarItem {
     /// Sets a caller-rendered leading icon.
     pub fn icon(mut self, icon: impl IntoElement) -> Self {
         self.icon = Some(icon.into_any_element());
+        self
+    }
+    /// Adds content right after the label, such as a person's status emoji.
+    /// Unlike `trailing`, it follows the text, so a hover-revealed action at
+    /// the row's end never covers it; a long label truncates before it.
+    pub fn label_suffix(mut self, child: impl IntoElement) -> Self {
+        self.label_suffix = Some(child.into_any_element());
+        self
+    }
+    /// Shows `text` in a tooltip while the pointer is over the label suffix,
+    /// such as the status text behind a status emoji. It is also read after
+    /// the label by assistive technology.
+    pub fn label_suffix_tooltip(mut self, text: impl Into<SharedString>) -> Self {
+        self.label_suffix_tooltip = Some(text.into());
         self
     }
     /// Adds noninteractive trailing content, such as a count. Separate actions belong beside the item.
@@ -483,6 +501,14 @@ impl RenderOnce for SidebarItem {
         let outline = self.outline;
         let collapsed = self.collapsed;
         let mut accessible = self.label.to_string();
+        if let Some(text) = self
+            .label_suffix
+            .as_ref()
+            .and(self.label_suffix_tooltip.as_ref())
+        {
+            accessible.push_str(", ");
+            accessible.push_str(text);
+        }
         let mut append = |text: UiText| {
             accessible.push_str(", ");
             accessible.push_str(&locale::text(cx, text));
@@ -599,13 +625,38 @@ impl RenderOnce for SidebarItem {
             })
             .when_some(icon, |el, icon| el.child(div().flex_shrink_0().child(icon)))
             .when(!collapsed, |el| {
-                el.child(
-                    div()
-                        .flex_1()
-                        .min_w_0()
-                        .truncate()
-                        .child(Text::new_inaccessible(self.label.clone())),
-                )
+                let label = div()
+                    .min_w_0()
+                    .truncate()
+                    .child(Text::new_inaccessible(self.label.clone()));
+                match self.label_suffix {
+                    None => el.child(label.flex_1()),
+                    Some(suffix) => {
+                        let tooltip = self.label_suffix_tooltip.clone();
+                        el.child(
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .flex_row_in(theme.direction)
+                                .items_center()
+                                .gap(spacing * 1.5_f32)
+                                .child(label.flex_shrink(1.))
+                                .child(
+                                    div()
+                                        .id(part(&self.id, "suffix"))
+                                        .flex_none()
+                                        .flex()
+                                        .items_center()
+                                        .when_some(tooltip, |suffix, text| {
+                                            suffix.tooltip(move |_, cx| {
+                                                text_tooltip(text.clone(), cx)
+                                            })
+                                        })
+                                        .child(suffix),
+                                ),
+                        )
+                    }
+                }
             })
             .when(!collapsed, |el| {
                 el.when_some(self.trailing, |el, content| {
@@ -1283,6 +1334,45 @@ mod sidebar_tests {
                 assert_eq!(header.size.height, px(32.));
             }
         }
+    }
+
+    #[gpui_kit::test]
+    fn the_label_suffix_follows_the_label_and_stays_visible(cx: &mut gpui_kit::TestAppContext) {
+        use gpui_kit::{Context, Render, test::TestQueryExt as _};
+        struct Probe(&'static str);
+        impl Render for Probe {
+            fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+                div().w(px(200.)).child(
+                    SidebarItem::new("dm", self.0)
+                        .label_suffix(div().size(px(16.)).debug_selector(|| "suffix".into()))
+                        .label_suffix_tooltip("In a meeting")
+                        .trailing(div().size(px(16.)).debug_selector(|| "trailing".into())),
+                )
+            }
+        }
+        cx.update(super::super::theme::init);
+        let (_, short) = cx.add_window_view(|_, _| Probe("Ana"));
+        short.update(|window, cx| window.draw(cx).clear(cx));
+        let (suffix, trailing) = (
+            short.debug_bounds("suffix").unwrap(),
+            short.debug_bounds("trailing").unwrap(),
+        );
+        // Right after a short name, not at the row's end.
+        assert!(suffix.right() < trailing.left() - px(80.));
+        short.update(|window, _| {
+            assert!(window.find_by_label("Ana, In a meeting").role().is_some());
+        });
+        let (_, long) = cx.add_window_view(|_, _| {
+            Probe("A very long display name that cannot fit in the sidebar row")
+        });
+        long.update(|window, cx| window.draw(cx).clear(cx));
+        let (suffix, trailing) = (
+            long.debug_bounds("suffix").unwrap(),
+            long.debug_bounds("trailing").unwrap(),
+        );
+        // The name truncates; the suffix keeps its size before the trailing slot.
+        assert_eq!(suffix.size.width, px(16.));
+        assert!(suffix.right() <= trailing.left());
     }
 
     #[test]

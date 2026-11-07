@@ -499,6 +499,10 @@ pub enum UiText {
     ShowMore,
     /// "Show less", collapsing long quotes.
     ShowLess,
+    /// "Copy code", on a code block's copy button.
+    CopyCode,
+    /// "Copied", after a copy button copied.
+    Copied,
     /// "Quoted message from {author}".
     QuotedMessageFrom(SharedString),
     /// "Search emoji", the emoji picker's placeholder and input name.
@@ -708,6 +712,8 @@ impl UiText {
             Self::OriginallyPostedIn(_) => "originally-posted-in",
             Self::ShowMore => "show-more",
             Self::ShowLess => "show-less",
+            Self::CopyCode => "copy-code",
+            Self::Copied => "copied",
             Self::QuotedMessageFrom(_) => "quoted-message-from",
             Self::SearchEmoji => "emoji-search",
             Self::SearchResults => "emoji-search-results",
@@ -886,6 +892,8 @@ impl UiText {
             Self::Jump => "Jump",
             Self::ShowMore => "Show more",
             Self::ShowLess => "Show less",
+            Self::CopyCode => "Copy code",
+            Self::Copied => "Copied",
             Self::SearchEmoji => "Search emoji",
             Self::SearchResults => "Search results",
             Self::FrequentlyUsed => "Frequently used",

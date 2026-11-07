@@ -4,7 +4,7 @@ use super::{
     theme::{
         UiTheme, apply_style,
         locale::DirectionalStyled as _,
-        primitives::{disabled, surface},
+        primitives::{disabled, dismiss, surface},
     },
 };
 use gpui_icons::{LucideIcon, lucide};
@@ -427,10 +427,21 @@ impl Render for MenuState {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t = UiTheme::read(cx).clone();
         let viewport = window.viewport_size();
-        let mut root = div()
-            .id(("menu", cx.entity_id()))
-            .track_focus(&self.focus)
-            .capture_key_down(cx.listener(Self::key));
+        let escape = cx.entity().downgrade();
+        let mut root = dismiss::on_escape(div(), move |window, cx| {
+            escape
+                .update(cx, |this, cx| {
+                    let open = this.open;
+                    if open {
+                        this.close(true, window, cx);
+                    }
+                    open
+                })
+                .unwrap_or(false)
+        })
+        .id(("menu", cx.entity_id()))
+        .track_focus(&self.focus)
+        .capture_key_down(cx.listener(Self::key));
         if !self.open {
             return root;
         }

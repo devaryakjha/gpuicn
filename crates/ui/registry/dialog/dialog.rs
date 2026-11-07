@@ -8,7 +8,7 @@ use super::{
         UiText, UiTheme,
         locale::{self, DirectionalStyled as _},
         presence,
-        primitives::{surface, text},
+        primitives::{dismiss, surface, text},
     },
 };
 use gpui_icons::{LucideIcon, lucide};
@@ -136,24 +136,20 @@ pub fn dialog(
     // animated: a fade with a short rise, as in shadcn's `zoom-in-95`.
     let entrance = presence((id.clone(), "presence"), open, window, cx).progress;
     let t = UiTheme::read(cx).clone();
-    let popup = scope
-        .trap(div(), true)
-        .id(id.clone())
-        .track_focus(&focus)
-        .w_full()
-        .max_w(t.space(96.))
-        .relative()
-        .top(t.space(2.) * (1. - entrance))
-        .opacity(entrance)
-        .on_key_down(|event, window, cx| {
-            if event.keystroke.key == "escape" {
-                window.dispatch_action(Box::new(gpui_kit::base::actions::Cancel), cx);
-                cx.stop_propagation();
-            }
-        })
-        .child(scope.boundary(false))
-        .child(scope.boundary(true))
-        .child(modal_viewport((id.clone(), "viewport"), popup, window, cx));
+    let popup = dismiss::on_escape(scope.trap(div(), true), |window, cx| {
+        window.dispatch_action(Box::new(gpui_kit::base::actions::Cancel), cx);
+        true
+    })
+    .id(id.clone())
+    .track_focus(&focus)
+    .w_full()
+    .max_w(t.space(96.))
+    .relative()
+    .top(t.space(2.) * (1. - entrance))
+    .opacity(entrance)
+    .child(scope.boundary(false))
+    .child(scope.boundary(true))
+    .child(modal_viewport((id.clone(), "viewport"), popup, window, cx));
     Dialog::new(cx)
         .handle(handle.clone())
         .close_on_escape(false)

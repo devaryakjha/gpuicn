@@ -473,6 +473,28 @@ pub fn round_image(source: impl Into<ImageSource>, size: Pixels, theme: &UiTheme
 pub mod dismiss {
     use super::*;
 
+    /// Runs `handler` when Escape is pressed while focus is inside `element`.
+    /// `handler` returns whether it handled the key; when it did not, Escape
+    /// goes on to the overlay or shortcut around it.
+    ///
+    /// Escape arrives as the `Dismiss` action in its own key context, so it
+    /// wins over an application's Escape binding (bindings run before key
+    /// listeners, and a deeper context wins). The element takes that key
+    /// context, so don't use this on an element with a key context of its
+    /// own.
+    pub fn on_escape<E: InteractiveElement>(
+        element: E,
+        handler: impl Fn(&mut Window, &mut gpui_kit::App) -> bool + 'static,
+    ) -> E {
+        element
+            .key_context(super::super::DISMISS_CONTEXT)
+            .on_action(move |_: &super::super::Dismiss, window, cx| {
+                if !handler(window, cx) {
+                    cx.propagate();
+                }
+            })
+    }
+
     /// Runs `handler` when the pointer presses outside `element` or Escape is
     /// pressed while focus is inside it.
     pub fn on_outside<E: StatefulInteractiveElement>(
@@ -481,18 +503,17 @@ pub mod dismiss {
     ) -> E {
         let handler = std::rc::Rc::new(handler);
         let on_press = handler.clone();
-        element
-            .on_mouse_down_out(move |event, window, cx| {
+        on_escape(
+            element.on_mouse_down_out(move |event, window, cx| {
                 if event.button == MouseButton::Left {
                     on_press(window, cx)
                 }
-            })
-            .on_key_down(move |event, window, cx| {
-                if event.keystroke.key == "escape" {
-                    handler(window, cx);
-                    cx.stop_propagation();
-                }
-            })
+            }),
+            move |window, cx| {
+                handler(window, cx);
+                true
+            },
+        )
     }
 }
 

@@ -4,6 +4,27 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.9.8
+
+[Notes](docs/releases/v0.9.8.md)
+
+### Added
+
+- `SidebarItem::label_suffix` and `label_suffix_tooltip`, for a status
+  emoji right after a row's name (matty#681).
+- A copy button on every Markdown code block, and `collapsible::ShowMore`
+  for long content (matty#682).
+- `LightboxImage::dimensions`, so small images keep their natural size
+  (matty#676).
+- `primitives::dismiss::on_escape`, the `Dismiss` action and
+  `DISMISS_CONTEXT`.
+
+### Fixed
+
+- Escape closes dialogs, popovers, menus and the lightbox even when the
+  app binds Escape around them (matty#676).
+- The lightbox closes on a click around the image (matty#676).
+
 ## 0.9.7
 
 [Notes](docs/releases/v0.9.7.md)
