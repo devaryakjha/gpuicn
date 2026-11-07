@@ -152,6 +152,7 @@ previews! {
     checkbox => Checkbox,
     checkbox_group => CheckboxGroup,
     collapsible => Collapsible,
+    color_picker => ColorPicker,
     combobox => Combobox,
     command => Command,
     composer => Composer,

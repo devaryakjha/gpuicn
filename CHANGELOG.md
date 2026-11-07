@@ -4,6 +4,16 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.9.12
+
+[Notes](docs/releases/v0.9.12.md)
+
+### Added
+
+- `color_picker`: hue, chroma and lightness sliders in OKLCH, plus optional
+  swatches (matty#705).
+- `Slider::gradient`, for color sliders.
+
 ## 0.9.11
 
 [Notes](docs/releases/v0.9.11.md)

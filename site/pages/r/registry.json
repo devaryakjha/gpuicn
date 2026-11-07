@@ -502,6 +502,39 @@
       ]
     },
     {
+      "name": "color-picker",
+      "type": "registry:item",
+      "title": "Color Picker",
+      "description": "Picks a color with hue, chroma and lightness sliders in OKLCH, plus optional swatches.",
+      "files": [
+        {
+          "path": "registry/theme/locale.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/locale.rs"
+        },
+        {
+          "path": "registry/theme/primitives.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/primitives.rs"
+        },
+        {
+          "path": "registry/theme/theme.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/theme.rs"
+        },
+        {
+          "path": "registry/slider/slider.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/slider.rs"
+        },
+        {
+          "path": "registry/color_picker/color_picker.rs",
+          "type": "registry:file",
+          "target": "~/src/ui/color_picker.rs"
+        }
+      ]
+    },
+    {
       "name": "combobox",
       "type": "registry:item",
       "title": "Combobox",

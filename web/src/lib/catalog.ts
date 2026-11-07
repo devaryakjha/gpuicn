@@ -97,6 +97,12 @@ export const components: CatalogComponent[] = [
     description: "An interactive panel that expands and collapses.",
   },
   {
+    slug: "color-picker",
+    name: "Color Picker",
+    description:
+      "Picks a color with hue, chroma and lightness sliders in OKLCH, plus optional swatches.",
+  },
+  {
     slug: "combobox",
     name: "Combobox",
     description: "An input paired with a searchable list of choices.",

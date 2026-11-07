@@ -1304,3 +1304,29 @@ mod locale {
         format!("Posted by {}", locale::isolate(name)).into()
     }
 }
+
+mod color_picker {
+    use crate::ui::color_picker::*;
+    use gpui_kit::{AppContext as _, Context, Entity, IntoElement};
+
+    struct Accent {
+        picker: Entity<ColorPickerState>,
+    }
+
+    fn new(cx: &mut Context<Accent>) -> Accent {
+        let picker = cx.new(|cx| ColorPickerState::new(Oklch::new(0.55, 0.19, 262.), cx));
+        cx.subscribe(&picker, |_, _, event, _| {
+            let ColorPickerEvent::Change(color) = event;
+            let _ = color.to_rgba();
+        })
+        .detach();
+        Accent { picker }
+    }
+
+    fn example(accent: &Accent) -> impl IntoElement {
+        ColorPicker::new(&accent.picker).swatches([
+            ColorSwatch::new("Blue", Oklch::new(0.55, 0.19, 262.)),
+            ColorSwatch::new("Rose", Oklch::new(0.6, 0.2, 10.)),
+        ])
+    }
+}

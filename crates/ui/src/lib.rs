@@ -37,6 +37,8 @@ pub mod checkbox;
 pub mod checkbox_group;
 #[path = "../registry/collapsible/collapsible.rs"]
 pub mod collapsible;
+#[path = "../registry/color_picker/color_picker.rs"]
+pub mod color_picker;
 #[path = "../registry/combobox/combobox.rs"]
 pub mod combobox;
 #[path = "../registry/command/command.rs"]
