@@ -114,6 +114,20 @@ impl Reaction {
     }
 }
 
+/// A row's hover action bar, built up front or only when shown.
+enum Actions {
+    Built(AnyElement),
+    Lazy(Box<dyn FnOnce(&mut Window, &mut App) -> AnyElement>),
+}
+
+/// Whether the pointer is on a row or on its action bar, which floats partly
+/// outside the row; the bar shows while either is hovered.
+#[derive(Default)]
+struct HoverState {
+    row: bool,
+    bar: bool,
+}
+
 /// A transcript row with avatar, header, body, reactions and a hover action bar.
 #[derive(IntoElement)]
 pub struct Message {
@@ -133,7 +147,7 @@ pub struct Message {
     on_reaction: Option<ReactionHandler>,
     reaction_tooltip: Option<ReactionTooltip>,
     on_add_reaction: Option<Handler>,
-    actions: Option<AnyElement>,
+    actions: Option<Actions>,
     description: Option<SharedString>,
     continuation: bool,
     density: MessageDensity,
@@ -321,8 +335,21 @@ impl Message {
     }
     /// Sets the floating action bar shown while the row is hovered or selected,
     /// usually `message_actions` holding `message_action` buttons.
+    ///
+    /// Prefer [`Message::actions_with`] in long transcripts: this one asks the
+    /// caller to build the bar for every row, though only the hovered or
+    /// selected row shows it.
     pub fn actions(mut self, actions: impl IntoElement) -> Self {
-        self.actions = Some(actions.into_any_element());
+        self.actions = Some(Actions::Built(actions.into_any_element()));
+        self
+    }
+    /// Like [`Message::actions`], but builds the bar only while the row is
+    /// hovered or selected, so rows the pointer is not on cost nothing for it.
+    pub fn actions_with(
+        mut self,
+        actions: impl FnOnce(&mut Window, &mut App) -> AnyElement + 'static,
+    ) -> Self {
+        self.actions = Some(Actions::Lazy(Box::new(actions)));
         self
     }
 }
@@ -340,12 +367,26 @@ impl Styled for Message {
 }
 
 impl RenderOnce for Message {
-    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let theme = UiTheme::read(cx).clone();
         let colors = theme.colors;
         let dir = theme.direction;
         let group: SharedString = format!("message-{}", self.id).into();
         let selected = self.highlight == MessageHighlight::Selected;
+        // Only the hovered or selected row lays out its action bar; a hidden
+        // bar in every row cost each frame its layout, hitboxes and paint.
+        let hover = self.actions.is_some().then(|| {
+            window.use_keyed_state((self.id.clone(), "hover"), cx, |_, _| HoverState::default())
+        });
+        let show_actions = selected
+            || hover
+                .as_ref()
+                .is_some_and(|hover| hover.read(cx).row || hover.read(cx).bar);
+        let actions = match self.actions {
+            Some(Actions::Built(actions)) if show_actions => Some(actions),
+            Some(Actions::Lazy(build)) if show_actions => Some(build(window, cx)),
+            _ => None,
+        };
         let compact = self.density == MessageDensity::Compact;
         let gutter = if compact {
             theme.space(11.)
@@ -612,17 +653,36 @@ impl RenderOnce for Message {
             })
             .child(gutter_content)
             .child(body)
-            .when_some(self.actions, |row, actions| {
-                row.child(hover_reveal_in_group(
+            .when_some(hover.clone(), |row, hover| {
+                row.on_hover(move |hovered, _, cx| {
+                    hover.update(cx, |hover, cx| {
+                        if hover.row != *hovered {
+                            hover.row = *hovered;
+                            cx.notify();
+                        }
+                    })
+                })
+            })
+            .when_some(actions, |row, actions| {
+                let bar_hover = hover.clone();
+                row.child(
                     div()
                         .id((self.id.clone(), "actions"))
                         .absolute()
                         .top(-theme.space(3.))
                         .inset_end(dir, theme.space(4.))
+                        .when_some(bar_hover, |bar, hover| {
+                            bar.on_hover(move |hovered, _, cx| {
+                                hover.update(cx, |hover, cx| {
+                                    if hover.bar != *hovered {
+                                        hover.bar = *hovered;
+                                        cx.notify();
+                                    }
+                                })
+                            })
+                        })
                         .child(actions),
-                    group.clone(),
-                    selected,
-                ))
+                )
             })
             .when_some(copy_prefix, |row, prefix| {
                 row.child(copy_marker(&marker_id, &prefix, true, &theme))
@@ -1083,6 +1143,51 @@ mod tests {
             gpui_kit::Modifiers::default(),
         );
         assert_eq!(clicks.get(), 1);
+    }
+
+    struct ActionsProbe(Rc<std::cell::Cell<usize>>);
+
+    impl Render for ActionsProbe {
+        fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+            let builds = self.0.clone();
+            div().w(px(600.)).pt(px(40.)).flex().flex_col().children(["a", "b", "c"].map(|id| {
+                let builds = builds.clone();
+                let row = Message::new(id).author("Arya").child("Hello").actions_with(move |_, _| {
+                        builds.set(builds.get() + 1);
+                        div()
+                            .size(px(20.))
+                            .debug_selector(move || format!("bar-{id}"))
+                            .into_any_element()
+                    });
+                div().debug_selector(move || format!("row-{id}")).child(row)
+            }))
+        }
+    }
+
+    /// Only the hovered row builds and lays out its action bar, and the bar
+    /// stays while the pointer moves onto it (#670 perf: rows that are not
+    /// hovered cost nothing for their bar).
+    #[gpui_kit::test]
+    fn only_the_hovered_row_builds_its_action_bar(cx: &mut TestAppContext) {
+        cx.update(super::super::theme::init);
+        let builds = Rc::new(std::cell::Cell::new(0));
+        let window = cx.add_window({
+            let builds = builds.clone();
+            move |_, _| ActionsProbe(builds)
+        });
+        let mut cx = VisualTestContext::from_window(window.into(), cx);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        assert_eq!(builds.get(), 0, "no row is hovered");
+        assert!(cx.debug_bounds("bar-b").is_none());
+        let row = cx.debug_bounds("row-b").expect("row drew");
+        cx.simulate_mouse_move(row.center(), None, gpui_kit::Modifiers::default());
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let bar = cx.debug_bounds("bar-b").expect("the hovered row shows its bar");
+        assert!(cx.debug_bounds("bar-a").is_none() && cx.debug_bounds("bar-c").is_none());
+        // Onto the bar, which floats over the row's top edge.
+        cx.simulate_mouse_move(bar.center(), None, gpui_kit::Modifiers::default());
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        assert!(cx.debug_bounds("bar-b").is_some(), "the bar stays under the pointer");
     }
 
     type Clicked = Rc<std::cell::RefCell<Vec<Bounds<Pixels>>>>;
