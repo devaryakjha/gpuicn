@@ -1,9 +1,10 @@
 name: Release
 
-# Merging a version bump to main is the release. Every push to main runs the
-# quick CI checks here, and the release jobs start only when they pass. When
-# v<version> is already fully released, the version wasn't bumped and nothing
-# more happens. When an earlier run tagged it and then failed, this run
+# Merging a version bump to main is the release. When v<version> is already
+# fully released, the version wasn't bumped and nothing more happens: the
+# merge queue already checked that commit, so CI does not run again. A
+# release runs the quick CI checks here first, and the release jobs start
+# only when they pass. When an earlier run tagged it and then failed, this run
 # finishes that release from the tagged commit. Otherwise it runs the slow
 # end-to-end checks in verify.yml, tags the commit, publishes gpuicn and then
 # gpuicn-cli, builds the example apps, publishes the GitHub release and deploys
@@ -27,11 +28,7 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
-  ci:
-    uses: ./.github/workflows/ci.yml
-
   plan:
-    needs: ci
     runs-on: ubuntu-latest
     outputs:
       release: ${{ steps.plan.outputs.release }}
@@ -81,8 +78,13 @@ jobs:
           echo "Releasing $tag from $sha"
           echo "release=true" >> "$GITHUB_OUTPUT"
 
-  verify:
+  ci:
     needs: plan
+    if: needs.plan.outputs.release == 'true'
+    uses: ./.github/workflows/ci.yml
+
+  verify:
+    needs: [plan, ci]
     if: needs.plan.outputs.release == 'true'
     uses: ./.github/workflows/verify.yml
     with:
