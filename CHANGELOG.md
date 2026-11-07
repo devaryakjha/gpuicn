@@ -4,6 +4,20 @@ Notable changes to gpuicn. Detailed notes for each release are in
 [docs/releases](docs/releases/). Installed source never updates itself; run
 `gpuicn diff` after upgrading to see what a release changes in your copy.
 
+## 0.9.11
+
+[Notes](docs/releases/v0.9.11.md)
+
+### Added
+
+- `Message::on_click`, for opening a row's thread (matty#680).
+- `message::reaction_tooltip` with the emoji large, and
+  `message_emoji_action` for one-click reactions (matty#679).
+
+### Changed
+
+- A chip's plain tooltip text uses the new reaction tooltip.
+
 ## 0.9.10
 
 [Notes](docs/releases/v0.9.10.md)
