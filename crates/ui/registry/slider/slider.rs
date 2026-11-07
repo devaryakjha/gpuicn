@@ -8,8 +8,9 @@ pub use gpui_kit::base::slider::{SliderEvent, SliderState, SliderValue};
 use gpui_kit::base::{SliderIndicator, SliderThumb, SliderTrack};
 use gpui_kit::{
     AccessibleAction, App, ElementId, Entity, InteractiveElement as _, IntoElement, MouseButton,
-    ParentElement as _, RenderOnce, Role, SharedString, StatefulInteractiveElement as _,
-    StyleRefinement, Styled, Window, div, prelude::FluentBuilder as _, relative,
+    ParentElement as _, RenderOnce, Rgba, Role, SharedString, StatefulInteractiveElement as _,
+    StyleRefinement, Styled, Window, div, linear_color_stop, linear_gradient,
+    prelude::FluentBuilder as _, relative,
 };
 
 #[derive(IntoElement)]
@@ -18,6 +19,7 @@ pub struct Slider {
     state: Entity<SliderState>,
     disabled: bool,
     label: Option<SharedString>,
+    gradient: Vec<Rgba>,
     style: StyleRefinement,
 }
 impl Slider {
@@ -27,6 +29,7 @@ impl Slider {
             state: state.clone(),
             disabled: false,
             label: None,
+            gradient: Vec::new(),
             style: Default::default(),
         }
     }
@@ -38,6 +41,18 @@ impl Slider {
     /// Sets the accessible name of the control.
     pub fn aria_label(mut self, value: impl Into<SharedString>) -> Self {
         self.label = Some(value.into());
+        self
+    }
+    /// Paints the whole track with `stops`, evenly spaced from the start to
+    /// the end, in place of the filled range, and makes it taller to show
+    /// them: a color slider, such as the Color Picker's hue. Needs at least
+    /// two stops.
+    pub fn gradient(mut self, stops: impl IntoIterator<Item = Rgba>) -> Self {
+        self.gradient = stops.into_iter().collect();
+        assert!(
+            self.gradient.is_empty() || self.gradient.len() >= 2,
+            "a slider gradient needs at least two stops"
+        );
         self
     }
 }
@@ -70,6 +85,7 @@ impl RenderOnce for Slider {
                 && value.is_finite()
         );
         let percent = state.percentage().end;
+        let gradient = self.gradient;
         let focus = window
             .use_keyed_state(
                 ElementId::from(("slider-focus", self.state.entity_id())),
@@ -93,7 +109,11 @@ impl RenderOnce for Slider {
             .absolute()
             .left(relative(percent))
             .ml(-theme.space(1.5))
-            .top(-theme.space(1.))
+            .top(if gradient.is_empty() {
+                -theme.space(1.)
+            } else {
+                -theme.space(0.25)
+            })
             .size(theme.space(3.))
             .rounded_full()
             .border_1()
@@ -171,21 +191,46 @@ impl RenderOnce for Slider {
                     .disabled(self.disabled)
                     .relative()
                     .w_full()
-                    .h(theme.space(1.))
+                    .h(theme.space(if gradient.is_empty() { 1. } else { 2.5 }))
                     .child(
                         SliderIndicator::new(&self.state)
                             .relative()
                             .w_full()
                             .h_full()
                             .rounded_full()
-                            .bg(colors.muted)
-                            .child(
-                                div()
-                                    .h_full()
-                                    .w(relative(percent))
-                                    .rounded_full()
-                                    .bg(colors.primary),
-                            ),
+                            .when(gradient.is_empty(), |bar| {
+                                bar.bg(colors.muted).child(
+                                    div()
+                                        .h_full()
+                                        .w(relative(percent))
+                                        .rounded_full()
+                                        .bg(colors.primary),
+                                )
+                            })
+                            .when(!gradient.is_empty(), |bar| {
+                                bar.flex()
+                                    .overflow_hidden()
+                                    .border_1()
+                                    .border_color(colors.border)
+                                    .children(gradient.windows(2).enumerate().map(
+                                        |(index, pair)| {
+                                            // A clip is square, so the end
+                                            // segments round themselves.
+                                            div()
+                                                .h_full()
+                                                .flex_1()
+                                                .when(index == 0, |d| d.rounded_l_full())
+                                                .when(index + 2 == gradient.len(), |d| {
+                                                    d.rounded_r_full()
+                                                })
+                                                .bg(linear_gradient(
+                                                    90.,
+                                                    linear_color_stop(pair[0], 0.),
+                                                    linear_color_stop(pair[1], 1.),
+                                                ))
+                                        },
+                                    ))
+                            }),
                     )
                     .child(thumb),
             );

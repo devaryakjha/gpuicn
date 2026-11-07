@@ -77,6 +77,11 @@ const COMPONENTS: &[(&str, &str, &str)] = &[
         "An interactive panel that expands and collapses.",
     ),
     (
+        "color-picker",
+        "Color Picker",
+        "Picks a color with hue, chroma and lightness sliders in OKLCH, plus optional swatches.",
+    ),
+    (
         "combobox",
         "Combobox",
         "An input paired with a searchable list of choices.",

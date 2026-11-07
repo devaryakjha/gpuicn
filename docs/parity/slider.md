@@ -3,7 +3,7 @@
 Visual reference: shadcn/ui 4.19.0, Neutral Nova. Implementation:
 `crates/ui/registry/slider/slider.rs`, using GPUI Kit 0.6.4.
 
-Slider takes a retained Kit SliderState configured with range, step and initial value. Kit owns pointer and keyboard changes, including range thumbs; gpuicn supplies the Nova track, range and thumb styles.
+Slider takes a retained Kit SliderState configured with range, step and initial value. Kit owns pointer and keyboard changes, including range thumbs; gpuicn supplies the Nova track, range and thumb styles. `Slider::gradient` paints the whole track with color stops instead of the filled range, for color sliders such as the Color Picker's.
 
 The Rust source and Usage example define the supported API. Browser DOM/CSS behavior,
 exact exit animations and cross-platform screen-reader parity are not implied by

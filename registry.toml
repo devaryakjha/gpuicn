@@ -129,3 +129,6 @@ dependencies = ["date_picker", "calendar", "button", "input"]
 dependencies = ["field"]
 [components.radio_group]
 dependencies = ["field"]
+[components.color_picker]
+description = "Picks a color with hue, chroma and lightness sliders in OKLCH, plus optional swatches."
+dependencies = ["slider"]

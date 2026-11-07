@@ -568,6 +568,12 @@ pub enum UiText {
     ClearSelection,
     /// "Show options", on a searchable select.
     ShowOptions,
+    /// "Hue", the Color Picker's hue slider.
+    ColorHue,
+    /// "Chroma", the Color Picker's colorfulness slider.
+    ColorChroma,
+    /// "Lightness", the Color Picker's lightness slider.
+    ColorLightness,
     /// How to move a sortable row with the keyboard; the keys are already
     /// in reading order.
     SortInstructions {
@@ -744,6 +750,9 @@ impl UiText {
             Self::Names(_) => "names",
             Self::ClearSelection => "clear-selection",
             Self::ShowOptions => "show-options",
+            Self::ColorHue => "color-hue",
+            Self::ColorChroma => "color-chroma",
+            Self::ColorLightness => "color-lightness",
             Self::SortInstructions { .. } => "sort-instructions",
             Self::SortGroup { .. } => "sort-group",
             Self::Moved { .. } => "moved",
@@ -831,6 +840,9 @@ impl UiText {
             }
             Self::ClearSelection => "Clear selection",
             Self::ShowOptions => "Show options",
+            Self::ColorHue => "Hue",
+            Self::ColorChroma => "Chroma",
+            Self::ColorLightness => "Lightness",
             Self::Zoom(percent) => return format!("Zoom {percent}%").into(),
             Self::SkinToneName(tone) => SKIN_TONES[usize::from(*tone).min(SKIN_TONES.len() - 1)],
             Self::Close => "Close",
