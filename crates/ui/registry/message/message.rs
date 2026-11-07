@@ -14,7 +14,7 @@ use gpui_kit::{
     relative,
 };
 
-use gpui_kit::base::ElementExt as _;
+use gpui_kit::base::{ElementExt as _, TextSelection};
 
 use super::button::{Button, ButtonSize, ButtonVariant};
 use super::theme::{
@@ -143,6 +143,7 @@ pub struct Message {
     timestamp_tooltip: Option<SharedString>,
     gutter_time: Option<SharedString>,
     on_gutter_click: Option<Handler>,
+    on_click: Option<Handler>,
     header: Vec<AnyElement>,
     children: Vec<AnyElement>,
     reactions: Vec<Reaction>,
@@ -174,6 +175,7 @@ impl Message {
             timestamp_tooltip: None,
             gutter_time: None,
             on_gutter_click: None,
+            on_click: None,
             header: Vec::new(),
             children: Vec::new(),
             reactions: Vec::new(),
@@ -246,6 +248,20 @@ impl Message {
         handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.on_gutter_click = Some(Rc::new(handler));
+        self
+    }
+    /// Runs when the reader clicks the row itself, for opening the message's
+    /// thread as Mattermost does. It does not run for a click that made a
+    /// text selection (a drag, a double or triple click), nor for one on
+    /// something in the row that handles its own clicks: a link, a button,
+    /// a reaction, the name or the gutter. Content the caller adds that is
+    /// clickable should call `cx.stop_propagation()` in its handler so the
+    /// row does not also open.
+    pub fn on_click(
+        mut self,
+        handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_click = Some(Rc::new(handler));
         self
     }
     /// Adds an element after the time in the header, such as a "Bot" tag.
@@ -449,9 +465,10 @@ impl RenderOnce for Message {
         let gutter_content = gutter_content.id((self.id.clone(), "gutter")).when_some(
             self.on_gutter_click.clone(),
             |gutter, handler| {
-                gutter
-                    .cursor_pointer()
-                    .on_click(move |event, window, cx| handler(event, window, cx))
+                gutter.cursor_pointer().on_click(move |event, window, cx| {
+                    cx.stop_propagation();
+                    handler(event, window, cx)
+                })
             },
         );
 
@@ -655,6 +672,13 @@ impl RenderOnce for Message {
             })
             .child(gutter_content)
             .child(body)
+            .when_some(self.on_click, |row, handler| {
+                row.on_click(move |event, window, cx| {
+                    if is_plain_click(event) && !TextSelection::has_selection(window, cx) {
+                        handler(event, window, cx)
+                    }
+                })
+            })
             .when_some(hover.clone(), |row, hover| {
                 row.on_hover(move |hovered, _, cx| {
                     hover.update(cx, |hover, cx| {
@@ -673,6 +697,9 @@ impl RenderOnce for Message {
                         .absolute()
                         .top(-theme.space(3.))
                         .inset_end(dir, theme.space(4.))
+                        // A click between the bar's buttons is not a click
+                        // on the row.
+                        .on_click(|_, _, cx| cx.stop_propagation())
                         .when_some(bar_hover, |bar, hover| {
                             bar.on_hover(move |hovered, _, cx| {
                                 hover.update(cx, |hover, cx| {
@@ -690,6 +717,91 @@ impl RenderOnce for Message {
                 row.child(copy_marker(&marker_id, &prefix, true, &theme))
             });
         apply_style(root, &self.style)
+    }
+}
+
+/// Whether `event` is a single click that stayed in place: a drag that
+/// selects text, or the double or triple click that selects a word or a
+/// line, is not a click on the row.
+fn is_plain_click(event: &ClickEvent) -> bool {
+    match event {
+        ClickEvent::Mouse(click) => {
+            click.down.click_count == 1
+                && (click.up.position - click.down.position).magnitude() < CLICK_SLOP
+        }
+        ClickEvent::Touch(tap) => tap.tap_count == 1 && !tap.long_press,
+        ClickEvent::Keyboard(_) => true,
+    }
+}
+
+/// How far the pointer may move between press and release for a click.
+const CLICK_SLOP: f64 = 4.;
+
+/// The tooltip of a reaction chip: the emoji large on top, `text` (who
+/// reacted, such as "Ana and Ben reacted with :tada:") under it, and an
+/// optional muted `hint` such as "(click to add)". The default tooltip of a
+/// chip with [`Reaction::tooltip`]; a [`Message::reaction_tooltip`] builder
+/// can return it with a hint.
+pub fn reaction_tooltip(
+    reaction: &Reaction,
+    text: SharedString,
+    hint: Option<SharedString>,
+    cx: &mut App,
+) -> AnyView {
+    use gpui_kit::AppContext as _;
+    let tip = ReactionTip {
+        emoji: reaction.emoji.clone(),
+        image: reaction.image.clone(),
+        text,
+        hint,
+    };
+    cx.new(|_| tip).into()
+}
+
+struct ReactionTip {
+    emoji: SharedString,
+    image: Option<ImageSource>,
+    text: SharedString,
+    hint: Option<SharedString>,
+}
+
+impl gpui_kit::Render for ReactionTip {
+    fn render(&mut self, _: &mut Window, cx: &mut gpui_kit::Context<Self>) -> impl IntoElement {
+        let theme = UiTheme::read(cx);
+        let big = theme.space(12.);
+        let emoji = match self.image.clone() {
+            Some(image) => super::theme::primitives::image(image)
+                .size(big)
+                .into_any_element(),
+            None => div()
+                .text_size(theme.text(36.))
+                .line_height(big)
+                .child(self.emoji.clone())
+                .into_any_element(),
+        };
+        surface::tooltip(gpui_kit::base::Tooltip::new("reaction-tooltip"), theme).child(
+            div()
+                .max_w(theme.space(64.))
+                .flex()
+                .flex_col()
+                .items_center()
+                .gap(theme.space(1.))
+                .py(theme.space(1.))
+                .text_center()
+                .child(emoji)
+                .child(
+                    div()
+                        .debug_selector(|| "reaction-tooltip-text".into())
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .child(self.text.clone()),
+                )
+                .children(self.hint.clone().map(|hint| {
+                    div()
+                        .debug_selector(|| "reaction-tooltip-hint".into())
+                        .opacity(0.7)
+                        .child(hint)
+                })),
+        )
     }
 }
 
@@ -859,6 +971,7 @@ fn reaction_chip(
         })
         .aria_label(label)
         .on_click(move |_, window, cx| {
+            cx.stop_propagation();
             if let Some(handler) = &on_reaction {
                 handler(&emoji, window, cx);
             }
@@ -878,7 +991,9 @@ fn reaction_chip(
     let tooltip: Option<ReactionTooltip> = match (tooltip, reaction.tooltip.clone()) {
         (Some(builder), _) => Some(builder),
         (None, Some(text)) => Some(Rc::new(
-            move |_: &Reaction, _: &mut Window, cx: &mut App| text_tooltip(text.clone(), cx),
+            move |reaction: &Reaction, _: &mut Window, cx: &mut App| {
+                reaction_tooltip(reaction, text.clone(), None, cx)
+            },
         )),
         (None, None) => None,
     };
@@ -915,7 +1030,10 @@ fn author_button(
                 .hover(|style| style.underline())
                 .focus_visible(move |style| focus::ring(style, &focus_theme))
         })
-        .on_click(move |event, window, cx| handler(event, bounds.get(), window, cx))
+        .on_click(move |event, window, cx| {
+            cx.stop_propagation();
+            handler(event, bounds.get(), window, cx)
+        })
         .child(name)
         .on_prepaint(move |bounds, _, _| measured.set(bounds))
         .into_any_element()
@@ -953,6 +1071,34 @@ pub fn message_action(
                 .size(theme.space(4.))
                 .text_color(theme.colors.muted_foreground),
         )
+}
+
+/// A one-click reaction for `message_actions`, such as a recent emoji next
+/// to the picker button: `emoji` as its glyph, or `image` for a custom
+/// emoji, named `label` for assistive technology.
+pub fn message_emoji_action(
+    id: impl Into<ElementId>,
+    emoji: impl Into<SharedString>,
+    image: Option<ImageSource>,
+    label: impl Into<SharedString>,
+    cx: &App,
+) -> Button {
+    let theme = UiTheme::read(cx);
+    let glyph = match image {
+        Some(image) => super::theme::primitives::image(image)
+            .size(theme.space(4.5))
+            .into_any_element(),
+        None => div()
+            .text_size(theme.text(16.))
+            .line_height(theme.space(5.))
+            .child(emoji.into())
+            .into_any_element(),
+    };
+    Button::new(id)
+        .variant(ButtonVariant::Ghost)
+        .size(ButtonSize::IconSm)
+        .aria_label(label)
+        .child(glyph)
 }
 
 /// A centered date label between two rules, such as "Today" or "Monday, October 27".
@@ -1145,6 +1291,75 @@ mod tests {
             gpui_kit::Modifiers::default(),
         );
         assert_eq!(clicks.get(), 1);
+    }
+
+    struct RowClickProbe(Rc<std::cell::Cell<usize>>);
+
+    impl Render for RowClickProbe {
+        fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+            let clicks = self.0.clone();
+            div().w(px(600.)).child(
+                div().debug_selector(|| "row".into()).child(
+                    Message::new("row")
+                        .continuation(true)
+                        .gutter_time("10:43")
+                        .on_gutter_click(|_, _, _| {})
+                        .reactions([Reaction::new("👍", 2, false)])
+                        .on_reaction(|_, _, _| {})
+                        .on_click(move |_, _, _| clicks.set(clicks.get() + 1))
+                        .child(div().h(px(40.)).child("Body")),
+                ),
+            )
+        }
+    }
+
+    /// A click on the row runs `on_click`; one on the gutter or a reaction,
+    /// or a drag across the body, does not (#670: click a message to open
+    /// its thread).
+    #[gpui_kit::test]
+    fn a_click_on_the_row_opens_it_but_not_one_on_its_controls(cx: &mut TestAppContext) {
+        use gpui_kit::{MouseButton, MouseDownEvent, MouseUpEvent};
+        cx.update(super::super::theme::init);
+        let clicks = Rc::new(std::cell::Cell::new(0));
+        let probe = clicks.clone();
+        let window = cx.add_window(move |_, _| RowClickProbe(probe));
+        let mut cx = VisualTestContext::from_window(window.into(), cx);
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let row = cx.debug_bounds("row").expect("row drew");
+        let body = gpui_kit::point(row.left() + px(300.), row.top() + px(20.));
+        cx.simulate_click(body, gpui_kit::Modifiers::default());
+        assert_eq!(clicks.get(), 1, "a click on the body opens the row");
+
+        cx.simulate_click(
+            gpui_kit::point(row.left() + px(30.), row.top() + px(20.)),
+            gpui_kit::Modifiers::default(),
+        );
+        assert_eq!(clicks.get(), 1, "the gutter keeps its own click");
+
+        cx.update(|window, cx| window.draw(cx).clear(cx));
+        let chip = cx.update(|window, _| {
+            use gpui_kit::test::TestQueryExt as _;
+            let buttons = window.find_all_by_role(Role::Button);
+            buttons.first().expect("the reaction chip drew").bounds()
+        });
+        cx.simulate_click(chip.center(), gpui_kit::Modifiers::default());
+        assert_eq!(clicks.get(), 1, "a reaction keeps its own click");
+
+        let far = gpui_kit::point(body.x + px(80.), body.y);
+        cx.simulate_event(MouseDownEvent {
+            button: MouseButton::Left,
+            position: body,
+            modifiers: gpui_kit::Modifiers::default(),
+            click_count: 1,
+            first_mouse: false,
+        });
+        cx.simulate_event(MouseUpEvent {
+            button: MouseButton::Left,
+            position: far,
+            modifiers: gpui_kit::Modifiers::default(),
+            click_count: 1,
+        });
+        assert_eq!(clicks.get(), 1, "a drag is a selection, not a click");
     }
 
     struct ActionsProbe(Rc<std::cell::Cell<usize>>);
